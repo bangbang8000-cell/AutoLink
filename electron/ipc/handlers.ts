@@ -1,8 +1,8 @@
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
-import { getWorkspacePath, getTemplatePath, getBackendPath } from '../config'
-import { pythonService } from '../services/python.service'
+import { getWorkspacePath, getTemplatePath, getBackendPath } from '../config.js'
+import { pythonService } from '../services/python.service.js'
 
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== Project Management =====

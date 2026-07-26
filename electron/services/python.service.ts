@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import * as path from 'path'
-import { getBackendPath } from '../config'
+import { getBackendPath } from '../config.js'
 
 interface PythonCallRequest {
   action: string

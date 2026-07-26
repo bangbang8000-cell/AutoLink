@@ -1,7 +1,11 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron'
 import * as path from 'path'
-import { isDev, initializeAppDirs } from './config'
-import { setupIpcHandlers } from './ipc/handlers'
+import { fileURLToPath } from 'url'
+import { isDev, initializeAppDirs } from './config.js'
+import { setupIpcHandlers } from './ipc/handlers.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 class AutoLinkApp {
   private mainWindow: BrowserWindow | null = null
