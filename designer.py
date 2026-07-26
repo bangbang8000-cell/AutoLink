@@ -59,6 +59,9 @@ class NetworkDesigner:
 
         # 解析配置
         self.num_servers = int(self.config.get('DEFAULT', 'num_servers', fallback=256))
+        self.additional_storage = int(self.config.get('DEFAULT', 'additional_storage_servers', fallback=0))
+        self.additional_compute = int(self.config.get('DEFAULT', 'additional_compute_servers', fallback=0))
+        self.total_servers = self.num_servers + self.additional_storage + self.additional_compute
         self.param_ports_per_server = int(self.config.get('DEFAULT', 'param_ports_per_server', fallback=8))
         self.storage_ports_per_server = int(self.config.get('DEFAULT', 'storage_ports_per_server', fallback=1))
         self.param_switch_ports = int(self.config.get('DEFAULT', 'param_switch_ports', fallback=64))
@@ -134,44 +137,28 @@ class NetworkDesigner:
             self.param_pods = math.ceil(self.num_servers / max_2tier)
             self.param_servers_per_pod = min(max_2tier, self.num_servers)
         else:
-            self.param_servers_per_group = min(self.param_switch_ports // 2, self.num_servers)
+            # 每Leaf下联不超过25口 (端口26+禁止接服务器)
+            self.param_servers_per_group = min(min(self.param_switch_ports // 2, 25), self.num_servers)
             self.param_groups = math.ceil(self.num_servers / self.param_servers_per_group)
             self.param_leaf_per_group = self.param_ports_per_server
             self.param_leaf_count = self.param_groups * self.param_leaf_per_group
+            # Spine = Leaf的一半, 每Leaf用2个400G口连每台Spine(33-64全用)
             self.param_spine_count = max(1, self.param_leaf_count // 2)
             self.param_core_count = 0
             self.param_pods = 0
             self.param_servers_per_pod = 0
 
-        # 存储网络
-        storage_topology = FatTreeTopology(
-            self.storage_ports_per_server, self.storage_switch_ports,
-            self.storage_speed, self.cable_types['storage'], "storage"
-        )
-
-        self.storage_3tier_needed, storage_leaves, storage_spines, storage_cores = \
-            storage_topology.calculate_hierarchy(self.num_servers)
-
-        if self.storage_3tier_needed:
-            self.storage_leaf_count = storage_leaves
-            self.storage_spine_count = storage_spines
-            self.storage_core_count = storage_cores
-            max_2tier = calc_max_2tier(self.storage_switch_ports, self.storage_ports_per_server)
-            self.storage_pods = math.ceil(self.num_servers / max_2tier)
-            self.storage_servers_per_pod = min(max_2tier, self.num_servers)
-        else:
-            self.storage_servers_per_group = min(self.storage_switch_ports // 2, self.num_servers)
-            self.storage_groups = math.ceil(self.num_servers / self.storage_servers_per_group)
-            self.storage_leaf_per_group = self.storage_ports_per_server
-            self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
-            self.storage_spine_count = max(1, self.storage_leaf_count // 2)
-            self.storage_core_count = 0
-            self.storage_pods = 0
-            self.storage_servers_per_pod = 0
+        # 存储网络: 固定8+4架构 (40口交换机, 下联前20/上联后20)
+        self.storage_3tier_needed = False
+        self.storage_leaf_count = 8
+        self.storage_spine_count = 4
+        self.storage_core_count = 0
+        self.storage_groups = 0
+        self.storage_servers_per_group = 0
 
     def create_network_objects(self):
         """创建网络设备对象"""
-        # 创建服务器
+        # 创建GPU服务器 (接参数网)
         for server_idx in range(1, self.num_servers + 1):
             if self.param_3tier_needed:
                 pod_id = (server_idx - 1) // self.param_servers_per_pod + 1
@@ -179,8 +166,8 @@ class NetworkDesigner:
                 podid = f"pod-{pod_id}"
             else:
                 group_id = (server_idx - 1) // self.param_servers_per_group + 1
-                group_name = f"服务器组{group_id}"
-                podid = f"pod-{group_id}"
+                group_name = f"GPU服务器组{group_id}"
+                podid = f"pod-gpu-{group_id}"
 
             server = NetworkObject(
                 name=f"GPU服务器_{server_idx}",
@@ -191,6 +178,26 @@ class NetworkDesigner:
             self.servers.append(server)
             self.server_groups[server.name] = group_name
             self.podid_map[server.name] = podid
+
+        # 创建存储服务器 (不接参数网, 接OOB/业务/存储)
+        for i in range(1, self.additional_storage + 1):
+            s = NetworkObject(
+                name=f"存储服务器_{i}", obj_type='server',
+                group="存储服务器组", podid="pod-storage"
+            )
+            self.servers.append(s)
+            self.server_groups[s.name] = s.group
+            self.podid_map[s.name] = s.podid
+
+        # 创建通算服务器 (不接参数网, 接OOB/业务/存储)
+        for i in range(1, self.additional_compute + 1):
+            s = NetworkObject(
+                name=f"通算服务器_{i}", obj_type='server',
+                group="通算服务器组", podid="pod-general"
+            )
+            self.servers.append(s)
+            self.server_groups[s.name] = s.group
+            self.podid_map[s.name] = s.podid
 
         # 参数网络交换机
         if self.param_3tier_needed:
@@ -207,20 +214,8 @@ class NetworkDesigner:
         else:
             self._create_param_2tier_switches()
 
-        # 存储网络交换机
-        if self.storage_3tier_needed:
-            storage_topology = FatTreeTopology(
-                self.storage_ports_per_server, self.storage_switch_ports,
-                self.storage_speed, self.cable_types['storage'], "storage"
-            )
-            storage_topology.create_network_objects(self.storage_pods, self.storage_servers_per_pod)
-            self.storage_leaves = storage_topology.leaves
-            self.storage_spines = storage_topology.spines
-            self.storage_cores = storage_topology.cores
-            self.switch_groups.update(storage_topology.switch_groups)
-            self.podid_map.update(storage_topology.podid_map)
-        else:
-            self._create_storage_2tier_switches()
+        # 存储网络交换机 (固定8+4)
+        self._create_storage_8p4_switches()
 
     def _create_param_2tier_switches(self):
         """创建参数网络二层交换机"""
@@ -249,36 +244,37 @@ class NetworkDesigner:
             self.switch_groups[spine_name] = spine.group
             self.podid_map[spine_name] = spine.podid
 
-    def _create_storage_2tier_switches(self):
-        """创建存储网络二层交换机"""
-        for group in range(1, self.storage_groups + 1):
-            for leaf_idx in range(1, self.storage_leaf_per_group + 1):
-                leaf_name = f"存储Leaf_G{group}_{leaf_idx}"
-                leaf = NetworkObject(
-                    name=leaf_name, obj_type='storage_leaf',
-                    group=f"存储Leaf组{group}",
-                    max_ports=self.storage_switch_ports,
-                    podid=f"pod-{group}"
-                )
-                self.storage_leaves.append(leaf)
-                self.switch_groups[leaf_name] = leaf.group
-                self.podid_map[leaf_name] = leaf.podid
+    def _create_storage_8p4_switches(self):
+        """创建存储网络8+4交换机 (40口, 下联1-20/上联21-40)"""
+        for i in range(1, 9):  # 8 Leaf
+            sw = NetworkObject(
+                name=f"存储Leaf_{i}", obj_type='storage_leaf',
+                group="存储Leaf组", max_ports=self.storage_switch_ports,
+                podid=f"pod-storage-leaf-{i}"
+            )
+            sw.downlink_counter = 1
+            sw.downlink_limit = 20
+            sw.uplink_counter = 21
+            sw.uplink_limit = 40
+            self.storage_leaves.append(sw)
+            self.switch_groups[sw.name] = sw.group
+            self.podid_map[sw.name] = sw.podid
 
-        for spine_idx in range(1, self.storage_spine_count + 1):
-            spine_name = f"存储Spine_{spine_idx}"
-            spine = NetworkObject(
-                name=spine_name, obj_type='storage_spine',
-                group="存储Spine组",
-                max_ports=self.storage_switch_ports,
+        for i in range(1, 5):  # 4 Spine
+            sw = NetworkObject(
+                name=f"存储Spine_{i}", obj_type='storage_spine',
+                group="存储Spine组", max_ports=self.storage_switch_ports,
                 podid="superpod"
             )
-            self.storage_spines.append(spine)
-            self.switch_groups[spine_name] = spine.group
-            self.podid_map[spine_name] = spine.podid
+            sw.downlink_counter = 1
+            sw.downlink_limit = 20
+            self.storage_spines.append(sw)
+            self.switch_groups[sw.name] = sw.group
+            self.podid_map[sw.name] = sw.podid
 
     def generate_connections(self):
         """生成网络连接"""
-        # 参数网络连接
+        # 参数网络连接 (仅GPU服务器)
         if self.param_3tier_needed:
             param_topology = FatTreeTopology(
                 self.param_ports_per_server, self.param_switch_ports,
@@ -287,28 +283,21 @@ class NetworkDesigner:
             param_topology.leaves = self.param_leaves
             param_topology.spines = self.param_spines
             param_topology.cores = self.param_cores
-            param_topology.generate_connections(self.servers, self.param_pods, self.param_servers_per_pod)
+            gpu_servers = self.servers[:self.num_servers]  # 仅GPU
+            param_topology.generate_connections(gpu_servers, self.param_pods, self.param_servers_per_pod)
         else:
             self._generate_param_2tier_connections()
 
-        # 存储网络连接
-        if self.storage_3tier_needed:
-            storage_topology = FatTreeTopology(
-                self.storage_ports_per_server, self.storage_switch_ports,
-                self.storage_speed, self.cable_types['storage'], "storage"
-            )
-            storage_topology.leaves = self.storage_leaves
-            storage_topology.spines = self.storage_spines
-            storage_topology.cores = self.storage_cores
-            storage_topology.generate_connections(self.servers, self.storage_pods, self.storage_servers_per_pod)
-        else:
-            self._generate_storage_2tier_connections()
+        # 存储网络连接 (8+4, 所有服务器)
+        self._generate_storage_8p4_connections()
 
     def _generate_param_2tier_connections(self):
-        """生成参数网络二层组网连接"""
+        """生成参数网络二层组网连接 (仅GPU服务器, 每Spine 2×400G)"""
         from models import Connection
 
-        for server in self.servers:
+        gpu_servers = self.servers[:self.num_servers]  # 仅GPU
+
+        for server in gpu_servers:
             server_idx = int(server.name.split('_')[1])
             group_id = (server_idx - 1) // self.param_servers_per_group + 1
 
@@ -342,111 +331,93 @@ class NetworkDesigner:
                     print(f"警告: {str(e)}")
                     continue
 
+        # Leaf→Spine: 每Leaf连全部Spine, 每Spine 2口 (33-64全用)
         for leaf in self.param_leaves:
-            max_uplinks = leaf.uplink_limit - leaf.uplink_counter + 1
-            spines_per_leaf = min(max_uplinks, self.param_spine_count)
-
-            for spine_idx in range(1, spines_per_leaf + 1):
-                spine_name = f"参数Spine_{spine_idx}"
-                spine = next((s for s in self.param_spines if s.name == spine_name), None)
-                if not spine:
-                    continue
-
-                try:
-                    leaf_port = leaf.get_uplink_port()
-                    spine_port = spine.get_downlink_port()
+            port_offset = leaf.uplink_counter  # =33
+            for si in range(self.param_spine_count):
+                for p in range(2):  # 每Spine 2口
+                    spine = self.param_spines[si]
+                    lf_port = f"端口{port_offset}"
+                    sp_port_num = ((port_offset - 33) % spine.downlink_limit) + 1
+                    spine.downlink_counter = max(spine.downlink_counter, sp_port_num + 1)
+                    port_offset += 1
 
                     conn_leaf_to_spine = Connection(
-                        a_device=leaf.name, a_port=leaf_port, a_module=self.param_speed,
-                        z_device=spine.name, z_port=spine_port, z_module=self.param_speed,
+                        a_device=leaf.name, a_port=lf_port, a_module=self.param_speed,
+                        z_device=spine.name, z_port=f"端口{sp_port_num}", z_module=self.param_speed,
                         cable_type=self.cable_types['param']['leaf_spine'],
                         description="参数Leaf到Spine"
                     )
                     conn_spine_to_leaf = Connection(
-                        a_device=spine.name, a_port=spine_port, a_module=self.param_speed,
-                        z_device=leaf.name, z_port=leaf_port, z_module=self.param_speed,
+                        a_device=spine.name, a_port=f"端口{sp_port_num}", a_module=self.param_speed,
+                        z_device=leaf.name, z_port=lf_port, z_module=self.param_speed,
                         cable_type=self.cable_types['param']['leaf_spine'],
                         description="参数Spine到Leaf"
                     )
-
                     leaf.add_connection(conn_leaf_to_spine)
                     spine.add_connection(conn_spine_to_leaf)
 
-                except ValueError as e:
-                    print(f"警告: {str(e)}")
-                    continue
-
-    def _generate_storage_2tier_connections(self):
-        """生成存储网络二层组网连接"""
+    def _generate_storage_8p4_connections(self):
+        """生成存储网络8+4连接 (所有服务器, 每Leaf对每Spine 5×200G)"""
         from models import Connection
 
+        # 服务器→存储Leaf: 所有服务器轮转分配到8个Leaf (各≤17台)
+        servers_per_leaf = math.ceil(self.total_servers / self.storage_leaf_count)
+
         for server in self.servers:
-            server_idx = int(server.name.split('_')[1])
-            group_id = (server_idx - 1) // self.storage_servers_per_group + 1
+            server_idx = self.servers.index(server)
+            leaf_idx = server_idx // servers_per_leaf  # 0-based
+            if leaf_idx >= len(self.storage_leaves):
+                leaf_idx = len(self.storage_leaves) - 1
+            leaf = self.storage_leaves[leaf_idx]
 
-            for port_idx in range(1, self.storage_ports_per_server + 1):
-                leaf_name = f"存储Leaf_G{group_id}_{port_idx}"
-                leaf = next((l for l in self.storage_leaves if l.name == leaf_name), None)
-                if not leaf:
-                    continue
+            try:
+                server_port = f"存储网卡1"
+                leaf_port = leaf.get_downlink_port()
 
-                try:
-                    server_port = f"存储网卡{port_idx}"
-                    leaf_port = leaf.get_downlink_port()
+                conn_down = Connection(
+                    a_device=server.name, a_port=server_port, a_module=self.storage_speed,
+                    z_device=leaf.name, z_port=leaf_port, z_module=self.storage_speed,
+                    cable_type=self.cable_types['storage']['server_leaf'],
+                    description="服务器到存储Leaf"
+                )
+                conn_up = Connection(
+                    a_device=leaf.name, a_port=leaf_port, a_module=self.storage_speed,
+                    z_device=server.name, z_port=server_port, z_module=self.storage_speed,
+                    cable_type=self.cable_types['storage']['server_leaf'],
+                    description="存储Leaf到服务器"
+                )
+                server.add_connection(conn_down)
+                leaf.add_connection(conn_up)
+            except ValueError as e:
+                print(f"警告: {str(e)}")
+                continue
 
-                    conn_down = Connection(
-                        a_device=server.name, a_port=server_port, a_module=self.storage_speed,
-                        z_device=leaf.name, z_port=leaf_port, z_module=self.storage_speed,
-                        cable_type=self.cable_types['storage']['server_leaf'],
-                        description="服务器到存储"
-                    )
-                    conn_up = Connection(
-                        a_device=leaf.name, a_port=leaf_port, a_module=self.storage_speed,
-                        z_device=server.name, z_port=server_port, z_module=self.storage_speed,
-                        cable_type=self.cable_types['storage']['server_leaf'],
-                        description="存储下行连接"
-                    )
-
-                    server.add_connection(conn_down)
-                    leaf.add_connection(conn_up)
-
-                except ValueError as e:
-                    print(f"警告: {str(e)}")
-                    continue
-
-        for leaf in self.storage_leaves:
-            max_uplinks = leaf.uplink_limit - leaf.uplink_counter + 1
-            spines_per_leaf = min(max_uplinks, self.storage_spine_count)
-
-            for spine_idx in range(1, spines_per_leaf + 1):
-                spine_name = f"存储Spine_{spine_idx}"
-                spine = next((s for s in self.storage_spines if s.name == spine_name), None)
-                if not spine:
-                    continue
-
-                try:
-                    leaf_port = leaf.get_uplink_port()
-                    spine_port = spine.get_downlink_port()
+        # Leaf→Spine: 每Leaf连4台Spine, 每Spine 5口 (21-40全用)
+        for li, leaf in enumerate(self.storage_leaves):
+            port_offset = 21
+            for si in range(self.storage_spine_count):
+                for p in range(5):  # 每Spine 5口
+                    spine = self.storage_spines[si]
+                    lf_port = f"端口{port_offset}"
+                    sp_port_num = ((port_offset - 21) % spine.downlink_limit) + 1
+                    spine.downlink_counter = max(spine.downlink_counter, sp_port_num + 1)
+                    port_offset += 1
 
                     conn_leaf_to_spine = Connection(
-                        a_device=leaf.name, a_port=leaf_port, a_module=self.storage_speed,
-                        z_device=spine.name, z_port=spine_port, z_module=self.storage_speed,
+                        a_device=leaf.name, a_port=lf_port, a_module=self.storage_speed,
+                        z_device=spine.name, z_port=f"端口{sp_port_num}", z_module=self.storage_speed,
                         cable_type=self.cable_types['storage']['leaf_spine'],
-                        description="存储网络上联"
+                        description="存储Leaf到Spine"
                     )
                     conn_spine_to_leaf = Connection(
-                        a_device=spine.name, a_port=spine_port, a_module=self.storage_speed,
-                        z_device=leaf.name, z_port=leaf_port, z_module=self.storage_speed,
+                        a_device=spine.name, a_port=f"端口{sp_port_num}", a_module=self.storage_speed,
+                        z_device=leaf.name, z_port=lf_port, z_module=self.storage_speed,
                         cable_type=self.cable_types['storage']['leaf_spine'],
-                        description="存储网络下联"
+                        description="存储Spine到Leaf"
                     )
-
                     leaf.add_connection(conn_leaf_to_spine)
                     spine.add_connection(conn_spine_to_leaf)
-
-                except ValueError as e:
-                    print(f"警告: {str(e)}")
-                    continue
 
     def validate_topology(self):
         """自检拓扑合法性：检查服务器覆盖率、端口溢出、连接完整性"""
@@ -457,13 +428,9 @@ class NetworkDesigner:
         errors = []
 
         param_nic_total = self.num_servers * self.param_ports_per_server
-        storage_nic_total = self.num_servers * self.storage_ports_per_server
-        oob_total = self.num_servers * (1 if self.oob_enabled else 0)
-        biz_total = self.num_servers * (2 if self.biz_enabled else 0)
+        storage_nic_total = self.total_servers * self.storage_ports_per_server
         param_conn_count = 0
         storage_conn_count = 0
-        oob_conn_count = 0
-        biz_conn_count = 0
         servers_with_param = set()
         servers_with_storage = set()
 
@@ -483,8 +450,8 @@ class NetworkDesigner:
             errors.append(f"存储网连接数不足: {storage_conn_count}/{storage_nic_total}")
         if len(servers_with_param) != self.num_servers:
             errors.append(f"参数网覆盖服务器数不足: {len(servers_with_param)}/{self.num_servers}")
-        if len(servers_with_storage) != self.num_servers:
-            errors.append(f"存储网覆盖服务器数不足: {len(servers_with_storage)}/{self.num_servers}")
+        if len(servers_with_storage) != self.total_servers:
+            errors.append(f"存储网覆盖服务器数不足: {len(servers_with_storage)}/{self.total_servers}")
 
         all_switches = (self.param_leaves + self.param_spines + self.param_cores +
                        self.storage_leaves + self.storage_spines + self.storage_cores +
@@ -521,7 +488,7 @@ class NetworkDesigner:
             network_name="OOB",
             redundancy=False
         )
-        self.oob_info = topo.calculate(self.num_servers)
+        self.oob_info = topo.calculate(self.total_servers)
         topo.create_and_connect(self.servers, self.oob_info['num_access'], self.oob_info['num_agg'])
         self.oob_access = topo.access_switches
         self.oob_agg = topo.agg_switches
@@ -544,17 +511,17 @@ class NetworkDesigner:
 
         # 汇聚层选型：>128用框式
         chassis_config = None
-        if self.num_servers > 128:
-            if self.num_servers <= 512:
+        if self.total_servers > 128:
+            if self.total_servers <= 512:
                 frames = 4
-            elif self.num_servers <= 1024:
+            elif self.total_servers <= 1024:
                 frames = 8
             else:
                 frames = 18
             chassis_config = {'enabled': True, 'frames': frames}
             topo.agg_down_ports = self.biz_agg_chassis_ports
 
-        self.biz_info = topo.calculate(self.num_servers, chassis_config)
+        self.biz_info = topo.calculate(self.total_servers, chassis_config)
         topo.create_and_connect(self.servers, self.biz_info['num_access'], self.biz_info['num_agg'])
         self.biz_access = topo.access_switches
         self.biz_agg = topo.agg_switches
@@ -567,7 +534,11 @@ class NetworkDesigner:
         print("网络设计摘要")
         print("=" * 60)
         print(f"GPU服务器数量: {self.num_servers}")
-        print(f"每台服务器参数网卡数: {self.param_ports_per_server}")
+        if self.additional_storage > 0 or self.additional_compute > 0:
+            print(f"  附加存储服务器: {self.additional_storage}")
+            print(f"  附加通算服务器: {self.additional_compute}")
+            print(f"  服务器总数: {self.total_servers}")
+        print(f"每台GPU服务器参数网卡数: {self.param_ports_per_server}")
         print(f"每台服务器存储网卡数: {self.storage_ports_per_server}\n")
 
         half_ports = self.param_switch_ports // 2
@@ -610,20 +581,14 @@ class NetworkDesigner:
         print(f"  端口使用率: {param_port_usage}")
         print(f"  网络速度: {self.param_speed}\n")
 
-        print("存储网络:")
+        print("存储网络 (固定8+4):")
         print(f"  Leaf交换机数量: {self.storage_leaf_count}")
         print(f"  Spine交换机数量: {self.storage_spine_count}")
-        if self.storage_3tier_needed:
-            print(f"  Core交换机数量: {self.storage_core_count}")
-            print(f"  网络层级: 3层(Leaf-Spine-Core)")
-            print(f"  POD数量: {self.storage_pods}, 每POD服务器数: {self.storage_servers_per_pod}")
-            print(f"  收敛比例: 1:1:1")
-        else:
-            print(f"  网络层级: 2层(Leaf-Spine)")
-            print(f"  组数量: {self.storage_groups}, 每组服务器数: {self.storage_servers_per_group}")
-            print(f"  收敛比例: 1:1")
+        down_per_leaf = math.ceil(self.total_servers / self.storage_leaf_count)
+        print(f"  网络层级: 2层(Leaf-Spine)")
+        print(f"  每Leaf下联: {down_per_leaf}/20台服务器")
+        print(f"  Leaf-Spine: 每Leaf连4台Spine, 5×200G/Spine (21-40全用)")
         print(f"  交换机端口数: {self.storage_switch_ports}")
-        print(f"  端口使用率: {storage_port_usage}")
         print(f"  网络速度: {self.storage_speed}")
 
         if self.oob_enabled and self.oob_info:

@@ -319,10 +319,10 @@ class AccessAggTopology:
         """计算需要的接入和汇聚交换机数量
         chassis_config: (enabled, frames) for chassis-style aggregation
         """
-        # 接入层
-        servers_per_access = self.access_down_ports
+        # 接入层: 每台接入交换机最多下联25台服务器 (端口26+禁止接服务器)
+        servers_per_access = min(self.access_down_ports, 25)
         if self.redundancy:
-            # MLAG对：两台交换机为一组，每组覆盖access_down_ports台服务器
+            # MLAG对：两台交换机为一组，每组覆盖servers_per_access台服务器
             num_access_groups = max(1, math.ceil(num_servers / servers_per_access))
             num_access = num_access_groups * 2
         else:
@@ -363,7 +363,7 @@ class AccessAggTopology:
                 max_ports=self.access_down_ports + self.access_up_ports
             )
             sw.downlink_counter = 1
-            sw.downlink_limit = self.access_down_ports
+            sw.downlink_limit = min(self.access_down_ports, 25)
             sw.uplink_counter = self.access_down_ports + 1
             sw.uplink_limit = self.access_down_ports + self.access_up_ports
             self.access_switches.append(sw)
@@ -395,9 +395,11 @@ class AccessAggTopology:
 
     def _connect_servers_single(self, servers):
         """单链路上联：每台服务器连1台接入交换机"""
-        for server in servers:
-            server_idx = int(server.name.split('_')[1])
-            access_idx = (server_idx - 1) // self.access_down_ports
+        servers_per_access = min(self.access_down_ports, 25)  # 端口26+禁止接服务器
+        for si, server in enumerate(servers):
+            access_idx = si // servers_per_access
+            if access_idx >= len(self.access_switches):
+                break
             sw = self.access_switches[access_idx]
 
             try:
@@ -424,13 +426,15 @@ class AccessAggTopology:
 
     def _connect_servers_redundant(self, servers):
         """冗余双上联：每台服务器连2台接入交换机(MLAG对)"""
-        servers_per_pair = self.access_down_ports
-        for server in servers:
-            server_idx = int(server.name.split('_')[1])
-            pair_idx = (server_idx - 1) // servers_per_pair
+        servers_per_pair = min(self.access_down_ports, 25)  # 端口26+禁止接服务器
+        for si, server in enumerate(servers):
+            pair_idx = si // servers_per_pair
             # MLAG对中的两台交换机
-            sw_a = self.access_switches[pair_idx * 2]
-            sw_b = self.access_switches[pair_idx * 2 + 1]
+            base = pair_idx * 2
+            if base + 1 >= len(self.access_switches):
+                break
+            sw_a = self.access_switches[base]
+            sw_b = self.access_switches[base + 1]
 
             for port_idx, sw in enumerate([sw_a, sw_b], 1):
                 try:
