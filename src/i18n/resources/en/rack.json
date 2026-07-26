@@ -1,0 +1,12 @@
+{
+  "title": "Rack Planning",
+  "cabinetLayout": "Cabinet Layout",
+  "devicePlacement": "Device Placement",
+  "uPosition": "U Position",
+  "cabinetNo": "Cabinet No.",
+  "startU": "Start U",
+  "endU": "End U",
+  "importExcel": "Import Excel",
+  "exportExcel": "Export Excel",
+  "noProject": "Please select a project first"
+}

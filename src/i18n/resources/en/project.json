@@ -1,0 +1,17 @@
+{
+  "title": "Project Explorer",
+  "projectList": "Projects",
+  "templateCenter": "Templates",
+  "createProject": "Create Project",
+  "deleteProject": "Delete Project",
+  "projectName": "Project Name",
+  "projectNamePlaceholder": "Enter project name",
+  "templateSelect": "Select Template",
+  "emptyProject": "Empty Project",
+  "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "noProjects": "No projects yet. Click + to create one.",
+  "favorites": "Favorites",
+  "recent": "Recent"
+}

@@ -1,0 +1,9 @@
+{
+  "title": "Topology Design",
+  "scenario": "Scenario Config",
+  "deviceConfig": "Device Config",
+  "networkParams": "Network Params",
+  "validate": "Validate",
+  "generate": "Generate",
+  "noProject": "Please select a project first"
+}

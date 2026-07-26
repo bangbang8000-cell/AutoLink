@@ -1,0 +1,11 @@
+{
+  "title": "Topology View",
+  "networkTopology": "Network Topology",
+  "deviceList": "Device List",
+  "connectionList": "Connection List",
+  "zoomIn": "Zoom In",
+  "zoomOut": "Zoom Out",
+  "fitView": "Fit View",
+  "exportImage": "Export Image",
+  "noProject": "Please select a project first"
+}

@@ -1,0 +1,12 @@
+{
+  "title": "机柜规划",
+  "cabinetLayout": "机柜布局",
+  "devicePlacement": "设备上架",
+  "uPosition": "U位位置",
+  "cabinetNo": "机柜号",
+  "startU": "起始U",
+  "endU": "结束U",
+  "importExcel": "导入 Excel",
+  "exportExcel": "导出 Excel",
+  "noProject": "请先选择一个项目"
+}

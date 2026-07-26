@@ -1,0 +1,9 @@
+{
+  "title": "拓扑设计",
+  "scenario": "方案配置",
+  "deviceConfig": "设备配置",
+  "networkParams": "网络参数",
+  "validate": "验证配置",
+  "generate": "生成拓扑",
+  "noProject": "请先选择一个项目，然后进行拓扑设计"
+}

@@ -1,0 +1,42 @@
+{
+  "app": {
+    "title": "AutoLink",
+    "subtitle": "AI Data Center Network Planning & Visualization"
+  },
+  "menu": {
+    "projectExplorer": "Project Explorer",
+    "workbench": "Workbench",
+    "design": "Topology Design",
+    "rack": "Rack Planning",
+    "topology": "Topology View",
+    "outputResults": "Output",
+    "settings": "Settings",
+    "hideSidebar": "Hide Sidebar",
+    "showSidebar": "Show Sidebar",
+    "newProject": "New Project",
+    "openProjectDir": "Open Project Folder",
+    "undo": "Undo",
+    "redo": "Redo",
+    "copy": "Copy",
+    "paste": "Paste",
+    "cheatsheet": "Keyboard Shortcuts"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "zh-CN": "简体中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "zh-TW": "繁體中文"
+  },
+  "status": {
+    "ready": "Ready",
+    "rendering": "Rendering...",
+    "projectCount": "{{count}} projects",
+    "noProject": "No project selected"
+  }
+}

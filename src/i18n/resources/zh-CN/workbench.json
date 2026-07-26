@@ -1,0 +1,18 @@
+{
+  "title": "工作台",
+  "overview": "项目概览",
+  "projectInfo": "项目信息",
+  "outputs": "输出文件",
+  "rackLayout": "机架布局",
+  "topologyMap": "拓扑图",
+  "connectionTable": "连接关系表",
+  "quickActions": "快捷操作",
+  "generateRack": "生成机架布局",
+  "generateTopology": "生成拓扑图",
+  "exportExcel": "导出 Excel",
+  "noProject": "请先在项目浏览器中选择一个项目",
+  "name": "名称",
+  "created": "创建时间",
+  "status": "状态",
+  "template": "模板"
+}

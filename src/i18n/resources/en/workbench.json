@@ -1,0 +1,18 @@
+{
+  "title": "Workbench",
+  "overview": "Project Overview",
+  "projectInfo": "Project Info",
+  "outputs": "Output Files",
+  "rackLayout": "Rack Layout",
+  "topologyMap": "Topology Map",
+  "connectionTable": "Connection Table",
+  "quickActions": "Quick Actions",
+  "generateRack": "Generate Rack Layout",
+  "generateTopology": "Generate Topology",
+  "exportExcel": "Export Excel",
+  "noProject": "Please select a project in the Project Explorer",
+  "name": "Name",
+  "created": "Created",
+  "status": "Status",
+  "template": "Template"
+}

@@ -1,0 +1,17 @@
+{
+  "title": "项目浏览器",
+  "projectList": "项目列表",
+  "templateCenter": "模板中心",
+  "createProject": "新建项目",
+  "deleteProject": "删除项目",
+  "projectName": "项目名称",
+  "projectNamePlaceholder": "请输入项目名称",
+  "templateSelect": "选择模板",
+  "emptyProject": "空项目",
+  "deleteConfirm": "确定要删除 \"{{name}}\" 吗？此操作不可撤销。",
+  "cancel": "取消",
+  "confirm": "确认",
+  "noProjects": "暂无项目，点击 + 创建",
+  "favorites": "收藏",
+  "recent": "最近"
+}

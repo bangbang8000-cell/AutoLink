@@ -1,0 +1,11 @@
+{
+  "title": "拓扑可视化",
+  "networkTopology": "网络拓扑",
+  "deviceList": "设备列表",
+  "connectionList": "连接列表",
+  "zoomIn": "放大",
+  "zoomOut": "缩小",
+  "fitView": "适应窗口",
+  "exportImage": "导出图片",
+  "noProject": "请先选择一个项目"
+}
