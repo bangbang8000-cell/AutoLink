@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { isDev, initializeAppDirs } from './config.js'
+import { isDev, initializeAppDirs, ensureDemoProjects } from './config.js'
 import { setupIpcHandlers } from './ipc/handlers.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -13,6 +13,7 @@ class AutoLinkApp {
   async initialize(): Promise<void> {
     await app.whenReady()
     initializeAppDirs()
+    ensureDemoProjects()
     this.createMainWindow()
     Menu.setApplicationMenu(null)
     setupIpcHandlers(this.mainWindow!)

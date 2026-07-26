@@ -112,15 +112,23 @@ export const useProjectStore = create<ProjectState>()(
 
       fetchTemplates: async () => {
         // Templates are loaded from template/ directory
-        // For now, use built-in templates
+        // For now, use built-in templates (ids must match directory names)
         set({
           templates: [
             {
-              id: 'h100-100',
+              id: 'H100-128台',
+              name: 'H100-128台方案',
+              description: '128台H100 GPU（4组×32台）+ 14台存储 + 20台管理服务器',
+              scenario: 'H100-128台',
+              tags: ['H100', '128台', '4组', '2层组网'],
+              updatedAt: '2026-07-26',
+            },
+            {
+              id: 'H100-100台',
               name: 'H100-100台方案',
-              description: '100台H100 GPU + 14台存储 + 20台管理服务器',
+              description: '100台H100 GPU（4组×25台）+ 14台存储 + 20台管理服务器',
               scenario: 'H100-100台',
-              tags: ['H100', '100台', '2层组网'],
+              tags: ['H100', '100台', '4组', '2层组网'],
               updatedAt: '2026-07-26',
             },
             {

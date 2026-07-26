@@ -7,6 +7,8 @@ interface Window {
       getStructure: (name: string) => Promise<unknown[]>
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
+      getFile: (name: string, filePath: string) => Promise<string | null>
+      listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
     }
     design: {
       generate: (projectName: string, configINI?: string) => Promise<unknown>

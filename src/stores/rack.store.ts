@@ -32,6 +32,7 @@ interface RackState {
   editingDevice: string | null
 
   initDefault: (serverCount: number) => void
+  loadRackLayout: (projectName: string) => Promise<void>
   addCabinet: () => void
   removeCabinet: (id: number) => void
   selectCabinet: (id: number | null) => void
@@ -76,6 +77,31 @@ export const useRackStore = create<RackState>()((set, get) => ({
     }
 
     set({ cabinets, unplacedDevices, selectedCabinetId: cabinets.length > 0 ? 1 : null })
+  },
+
+  loadRackLayout: async (projectName) => {
+    try {
+      if (window.electron?.project?.getFile) {
+        const jsonStr = await window.electron.project.getFile(projectName, 'rack_layout.json')
+        if (jsonStr) {
+          const data = JSON.parse(jsonStr)
+          if (data.cabinets && Array.isArray(data.cabinets)) {
+            set({
+              cabinets: data.cabinets as RackCabinet[],
+              unplacedDevices: [],
+              selectedCabinetId: data.cabinets.length > 0 ? data.cabinets[0].id : null,
+              addDeviceMode: false,
+            })
+            return
+          }
+        }
+      }
+      // Fallback: init default layout
+      get().initDefault(134)
+    } catch (err) {
+      console.error('loadRackLayout:', err)
+      get().initDefault(134)
+    }
   },
 
   addCabinet: () => {

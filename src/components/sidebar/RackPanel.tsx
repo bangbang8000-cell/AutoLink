@@ -255,7 +255,7 @@ export function RackPanel() {
 
   const {
     cabinets, unplacedDevices, selectedCabinetId, selectedDevice,
-    addDeviceMode, initDefault, addCabinet, removeCabinet, selectCabinet,
+    addDeviceMode, loadRackLayout, addCabinet, removeCabinet, selectCabinet,
     placeDevice, removeDevice, selectDevice,
   } = useRackStore()
 
@@ -269,14 +269,14 @@ export function RackPanel() {
     setInitError(null)
   }, [selectedProjectName])
 
-  // Initialize with default cabinets (deferred to avoid blocking render)
+  // Initialize with saved layout or default (deferred to avoid blocking render)
   useEffect(() => {
     if (!selectedProjectName || initialized) return
 
     setLoading(true)
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       try {
-        initDefault(134)
+        await loadRackLayout(selectedProjectName)
         setInitialized(true)
         setInitError(null)
       } catch (err) {
@@ -287,7 +287,7 @@ export function RackPanel() {
     }, 50)
 
     return () => clearTimeout(timer)
-  }, [selectedProjectName, initialized, initDefault])
+  }, [selectedProjectName, initialized, loadRackLayout])
 
   const selectedCab = useMemo(
     () => cabinets.find((c) => c.id === selectedCabinetId) ?? null,

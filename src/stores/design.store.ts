@@ -132,6 +132,7 @@ interface DesignState {
   updateConfig: (partial: Partial<DesignConfig>) => void
   resetConfig: () => void
   loadConfig: (projectName: string) => Promise<void>
+  loadSavedTopology: (projectName: string) => Promise<void>
   saveConfig: (projectName: string) => Promise<void>
   generate: (projectName: string) => Promise<void>
   validate: (projectName: string) => Promise<void>
@@ -168,6 +169,28 @@ export const useDesignStore = create<DesignState>()((set, get) => ({
       }
     } catch (err) {
       set({ error: `加载配置失败: ${(err as Error).message}` })
+    } finally {
+      set({ generating: false })
+    }
+  },
+
+  loadSavedTopology: async (projectName) => {
+    set({ generating: true, error: null })
+    try {
+      if (window.electron?.project?.getFile) {
+        const jsonStr = await window.electron.project.getFile(projectName, 'topology_result.json')
+        if (jsonStr) {
+          const data = JSON.parse(jsonStr)
+          set({
+            summary: data.summary ?? null,
+            topology: data.topology ?? null,
+            valid: data.valid ?? null,
+            projectName,
+          })
+        }
+      }
+    } catch (err) {
+      console.error('loadSavedTopology:', err)
     } finally {
       set({ generating: false })
     }

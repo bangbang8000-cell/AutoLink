@@ -10,6 +10,10 @@ const electronAPI = {
     getConfigFile: (name: string) => ipcRenderer.invoke('project:getConfigFile', name),
     saveConfigFile: (name: string, content: string) =>
       ipcRenderer.invoke('project:saveConfigFile', name, content),
+    getFile: (name: string, filePath: string) =>
+      ipcRenderer.invoke('project:getFile', name, filePath),
+    listOutputFiles: (name: string) =>
+      ipcRenderer.invoke('project:listOutputFiles', name),
   },
   design: {
     generate: (projectName: string, configINI?: string) =>

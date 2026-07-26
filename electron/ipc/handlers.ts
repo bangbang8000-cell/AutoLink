@@ -88,6 +88,21 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return fs.readFileSync(configPath, 'utf-8')
   })
 
+  ipcMain.handle('project:getFile', async (_event, name: string, filePath: string) => {
+    const fullPath = path.join(getWorkspacePath(), name, filePath)
+    if (!fs.existsSync(fullPath)) return null
+    return fs.readFileSync(fullPath, 'utf-8')
+  })
+
+  ipcMain.handle('project:listOutputFiles', async (_event, name: string) => {
+    const outputDir = path.join(getWorkspacePath(), name, 'output')
+    if (!fs.existsSync(outputDir)) return []
+    const files = fs.readdirSync(outputDir, { withFileTypes: true })
+    return files
+      .filter((f) => f.isFile())
+      .map((f) => ({ name: f.name, type: path.extname(f.name).toUpperCase().replace('.', '') || 'FILE' }))
+  })
+
   ipcMain.handle('project:saveConfigFile', async (_event, name: string, content: string) => {
     const projectDir = path.join(getWorkspacePath(), name)
     if (!fs.existsSync(projectDir)) {

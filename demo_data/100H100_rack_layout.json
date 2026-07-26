@@ -1,0 +1,1162 @@
+{
+  "cabinets": [
+    {
+      "id": 1,
+      "name": "机柜 A",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-1",
+          "name": "GPU服务器_1",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-2",
+          "name": "GPU服务器_2",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-3",
+          "name": "GPU服务器_3",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-4",
+          "name": "GPU服务器_4",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-5",
+          "name": "GPU服务器_5",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-6",
+          "name": "GPU服务器_6",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-7",
+          "name": "GPU服务器_7",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-8",
+          "name": "GPU服务器_8",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-9",
+          "name": "GPU服务器_9",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-10",
+          "name": "GPU服务器_10",
+          "type": "GPU Server",
+          "cabinetId": 1,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "机柜 B",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-11",
+          "name": "GPU服务器_11",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-12",
+          "name": "GPU服务器_12",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-13",
+          "name": "GPU服务器_13",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-14",
+          "name": "GPU服务器_14",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-15",
+          "name": "GPU服务器_15",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-16",
+          "name": "GPU服务器_16",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-17",
+          "name": "GPU服务器_17",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-18",
+          "name": "GPU服务器_18",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-19",
+          "name": "GPU服务器_19",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-20",
+          "name": "GPU服务器_20",
+          "type": "GPU Server",
+          "cabinetId": 2,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "机柜 C",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-21",
+          "name": "GPU服务器_21",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-22",
+          "name": "GPU服务器_22",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-23",
+          "name": "GPU服务器_23",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-24",
+          "name": "GPU服务器_24",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-25",
+          "name": "GPU服务器_25",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-26",
+          "name": "GPU服务器_26",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-27",
+          "name": "GPU服务器_27",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-28",
+          "name": "GPU服务器_28",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-29",
+          "name": "GPU服务器_29",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-30",
+          "name": "GPU服务器_30",
+          "type": "GPU Server",
+          "cabinetId": 3,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "机柜 D",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-31",
+          "name": "GPU服务器_31",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-32",
+          "name": "GPU服务器_32",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-33",
+          "name": "GPU服务器_33",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-34",
+          "name": "GPU服务器_34",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-35",
+          "name": "GPU服务器_35",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-36",
+          "name": "GPU服务器_36",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-37",
+          "name": "GPU服务器_37",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-38",
+          "name": "GPU服务器_38",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-39",
+          "name": "GPU服务器_39",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-40",
+          "name": "GPU服务器_40",
+          "type": "GPU Server",
+          "cabinetId": 4,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "机柜 E",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-41",
+          "name": "GPU服务器_41",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-42",
+          "name": "GPU服务器_42",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-43",
+          "name": "GPU服务器_43",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-44",
+          "name": "GPU服务器_44",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-45",
+          "name": "GPU服务器_45",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-46",
+          "name": "GPU服务器_46",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-47",
+          "name": "GPU服务器_47",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-48",
+          "name": "GPU服务器_48",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-49",
+          "name": "GPU服务器_49",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-50",
+          "name": "GPU服务器_50",
+          "type": "GPU Server",
+          "cabinetId": 5,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "机柜 F",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-51",
+          "name": "GPU服务器_51",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-52",
+          "name": "GPU服务器_52",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-53",
+          "name": "GPU服务器_53",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-54",
+          "name": "GPU服务器_54",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-55",
+          "name": "GPU服务器_55",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-56",
+          "name": "GPU服务器_56",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-57",
+          "name": "GPU服务器_57",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-58",
+          "name": "GPU服务器_58",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-59",
+          "name": "GPU服务器_59",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-60",
+          "name": "GPU服务器_60",
+          "type": "GPU Server",
+          "cabinetId": 6,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "机柜 G",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-61",
+          "name": "GPU服务器_61",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-62",
+          "name": "GPU服务器_62",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-63",
+          "name": "GPU服务器_63",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-64",
+          "name": "GPU服务器_64",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-65",
+          "name": "GPU服务器_65",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-66",
+          "name": "GPU服务器_66",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-67",
+          "name": "GPU服务器_67",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-68",
+          "name": "GPU服务器_68",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-69",
+          "name": "GPU服务器_69",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-70",
+          "name": "GPU服务器_70",
+          "type": "GPU Server",
+          "cabinetId": 7,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "机柜 H",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-71",
+          "name": "GPU服务器_71",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-72",
+          "name": "GPU服务器_72",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-73",
+          "name": "GPU服务器_73",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-74",
+          "name": "GPU服务器_74",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-75",
+          "name": "GPU服务器_75",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-76",
+          "name": "GPU服务器_76",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-77",
+          "name": "GPU服务器_77",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-78",
+          "name": "GPU服务器_78",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-79",
+          "name": "GPU服务器_79",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-80",
+          "name": "GPU服务器_80",
+          "type": "GPU Server",
+          "cabinetId": 8,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "机柜 I",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-81",
+          "name": "GPU服务器_81",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-82",
+          "name": "GPU服务器_82",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-83",
+          "name": "GPU服务器_83",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-84",
+          "name": "GPU服务器_84",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-85",
+          "name": "GPU服务器_85",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-86",
+          "name": "GPU服务器_86",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-87",
+          "name": "GPU服务器_87",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-88",
+          "name": "GPU服务器_88",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-89",
+          "name": "GPU服务器_89",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-90",
+          "name": "GPU服务器_90",
+          "type": "GPU Server",
+          "cabinetId": 9,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "机柜 J",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "gpu-91",
+          "name": "GPU服务器_91",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 1,
+          "endU": 4
+        },
+        {
+          "id": "gpu-92",
+          "name": "GPU服务器_92",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 5,
+          "endU": 8
+        },
+        {
+          "id": "gpu-93",
+          "name": "GPU服务器_93",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 9,
+          "endU": 12
+        },
+        {
+          "id": "gpu-94",
+          "name": "GPU服务器_94",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 13,
+          "endU": 16
+        },
+        {
+          "id": "gpu-95",
+          "name": "GPU服务器_95",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 17,
+          "endU": 20
+        },
+        {
+          "id": "gpu-96",
+          "name": "GPU服务器_96",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 21,
+          "endU": 24
+        },
+        {
+          "id": "gpu-97",
+          "name": "GPU服务器_97",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 25,
+          "endU": 28
+        },
+        {
+          "id": "gpu-98",
+          "name": "GPU服务器_98",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 29,
+          "endU": 32
+        },
+        {
+          "id": "gpu-99",
+          "name": "GPU服务器_99",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 33,
+          "endU": 36
+        },
+        {
+          "id": "gpu-100",
+          "name": "GPU服务器_100",
+          "type": "GPU Server",
+          "cabinetId": 10,
+          "startU": 37,
+          "endU": 40
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "机柜 K",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "storage-1",
+          "name": "存储服务器_1",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 1,
+          "endU": 2
+        },
+        {
+          "id": "storage-2",
+          "name": "存储服务器_2",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 3,
+          "endU": 4
+        },
+        {
+          "id": "storage-3",
+          "name": "存储服务器_3",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 5,
+          "endU": 6
+        },
+        {
+          "id": "storage-4",
+          "name": "存储服务器_4",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 7,
+          "endU": 8
+        },
+        {
+          "id": "storage-5",
+          "name": "存储服务器_5",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 9,
+          "endU": 10
+        },
+        {
+          "id": "storage-6",
+          "name": "存储服务器_6",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 11,
+          "endU": 12
+        },
+        {
+          "id": "storage-7",
+          "name": "存储服务器_7",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 13,
+          "endU": 14
+        },
+        {
+          "id": "storage-8",
+          "name": "存储服务器_8",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 15,
+          "endU": 16
+        },
+        {
+          "id": "storage-9",
+          "name": "存储服务器_9",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 17,
+          "endU": 18
+        },
+        {
+          "id": "storage-10",
+          "name": "存储服务器_10",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 19,
+          "endU": 20
+        },
+        {
+          "id": "storage-11",
+          "name": "存储服务器_11",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 21,
+          "endU": 22
+        },
+        {
+          "id": "storage-12",
+          "name": "存储服务器_12",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 23,
+          "endU": 24
+        },
+        {
+          "id": "storage-13",
+          "name": "存储服务器_13",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 25,
+          "endU": 26
+        },
+        {
+          "id": "storage-14",
+          "name": "存储服务器_14",
+          "type": "Storage Server",
+          "cabinetId": 11,
+          "startU": 27,
+          "endU": 28
+        },
+        {
+          "id": "compute-1",
+          "name": "通算服务器_1",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 29,
+          "endU": 30
+        },
+        {
+          "id": "compute-2",
+          "name": "通算服务器_2",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 31,
+          "endU": 32
+        },
+        {
+          "id": "compute-3",
+          "name": "通算服务器_3",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 33,
+          "endU": 34
+        },
+        {
+          "id": "compute-4",
+          "name": "通算服务器_4",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 35,
+          "endU": 36
+        },
+        {
+          "id": "compute-5",
+          "name": "通算服务器_5",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 37,
+          "endU": 38
+        },
+        {
+          "id": "compute-6",
+          "name": "通算服务器_6",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 39,
+          "endU": 40
+        },
+        {
+          "id": "compute-7",
+          "name": "通算服务器_7",
+          "type": "Compute Server",
+          "cabinetId": 11,
+          "startU": 41,
+          "endU": 42
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "机柜 L",
+      "totalU": 42,
+      "devices": [
+        {
+          "id": "compute-8",
+          "name": "通算服务器_8",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 1,
+          "endU": 2
+        },
+        {
+          "id": "compute-9",
+          "name": "通算服务器_9",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 3,
+          "endU": 4
+        },
+        {
+          "id": "compute-10",
+          "name": "通算服务器_10",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 5,
+          "endU": 6
+        },
+        {
+          "id": "compute-11",
+          "name": "通算服务器_11",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 7,
+          "endU": 8
+        },
+        {
+          "id": "compute-12",
+          "name": "通算服务器_12",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 9,
+          "endU": 10
+        },
+        {
+          "id": "compute-13",
+          "name": "通算服务器_13",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 11,
+          "endU": 12
+        },
+        {
+          "id": "compute-14",
+          "name": "通算服务器_14",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 13,
+          "endU": 14
+        },
+        {
+          "id": "compute-15",
+          "name": "通算服务器_15",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 15,
+          "endU": 16
+        },
+        {
+          "id": "compute-16",
+          "name": "通算服务器_16",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 17,
+          "endU": 18
+        },
+        {
+          "id": "compute-17",
+          "name": "通算服务器_17",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 19,
+          "endU": 20
+        },
+        {
+          "id": "compute-18",
+          "name": "通算服务器_18",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 21,
+          "endU": 22
+        },
+        {
+          "id": "compute-19",
+          "name": "通算服务器_19",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 23,
+          "endU": 24
+        },
+        {
+          "id": "compute-20",
+          "name": "通算服务器_20",
+          "type": "Compute Server",
+          "cabinetId": 12,
+          "startU": 25,
+          "endU": 26
+        }
+      ]
+    }
+  ],
+  "totalCabinets": 12,
+  "totalDevices": 134
+}

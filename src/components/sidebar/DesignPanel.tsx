@@ -166,13 +166,16 @@ export function DesignPanel() {
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const {
     config, summary, valid, generating, error,
-    updateConfig, resetConfig, generate, loadConfig, clearResults,
+    updateConfig, resetConfig, generate, loadConfig, loadSavedTopology, clearResults,
   } = useDesignStore()
 
   // Load config when project changes
   useEffect(() => {
     if (selectedProjectName) {
-      loadConfig(selectedProjectName)
+      loadConfig(selectedProjectName).then(() => {
+        // Try to load pre-saved topology results (e.g. from Demo projects)
+        loadSavedTopology(selectedProjectName)
+      })
     } else {
       clearResults()
     }
