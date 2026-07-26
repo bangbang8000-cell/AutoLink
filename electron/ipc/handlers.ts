@@ -82,13 +82,56 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return walkDir(projectDir)
   })
 
-  // ===== Design =====
-  ipcMain.handle('design:generate', async (_event, config: Record<string, unknown>) => {
-    return pythonService.call('design', { config })
+  ipcMain.handle('project:getConfigFile', async (_event, name: string) => {
+    const configPath = path.join(getWorkspacePath(), name, 'network_config.ini')
+    if (!fs.existsSync(configPath)) return null
+    return fs.readFileSync(configPath, 'utf-8')
   })
 
-  ipcMain.handle('design:validate', async (_event, config: Record<string, unknown>) => {
-    return pythonService.call('validate', { config })
+  ipcMain.handle('project:saveConfigFile', async (_event, name: string, content: string) => {
+    const projectDir = path.join(getWorkspacePath(), name)
+    if (!fs.existsSync(projectDir)) {
+      fs.mkdirSync(projectDir, { recursive: true })
+    }
+    fs.writeFileSync(path.join(projectDir, 'network_config.ini'), content, 'utf-8')
+  })
+
+  // ===== Design =====
+  ipcMain.handle('design:generate', async (_event, projectName: string, configINI?: string) => {
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+
+    // Save config to file if provided
+    if (configINI) {
+      if (!fs.existsSync(projectDir)) {
+        fs.mkdirSync(projectDir, { recursive: true })
+      }
+      fs.writeFileSync(configPath, configINI, 'utf-8')
+    }
+
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`配置文件不存在: ${configPath}`)
+    }
+
+    return pythonService.call('design', { configFile: configPath })
+  })
+
+  ipcMain.handle('design:validate', async (_event, projectName: string, configINI?: string) => {
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+
+    if (configINI) {
+      if (!fs.existsSync(projectDir)) {
+        fs.mkdirSync(projectDir, { recursive: true })
+      }
+      fs.writeFileSync(configPath, configINI, 'utf-8')
+    }
+
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`配置文件不存在: ${configPath}`)
+    }
+
+    return pythonService.call('validate', { configFile: configPath })
   })
 
   // ===== Render =====

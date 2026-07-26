@@ -7,12 +7,15 @@ const electronAPI = {
       ipcRenderer.invoke('project:create', name, options),
     delete: (ids: string[]) => ipcRenderer.invoke('project:delete', ids),
     getStructure: (name: string) => ipcRenderer.invoke('project:getStructure', name),
+    getConfigFile: (name: string) => ipcRenderer.invoke('project:getConfigFile', name),
+    saveConfigFile: (name: string, content: string) =>
+      ipcRenderer.invoke('project:saveConfigFile', name, content),
   },
   design: {
-    generate: (config: Record<string, unknown>) =>
-      ipcRenderer.invoke('design:generate', config),
-    validate: (config: Record<string, unknown>) =>
-      ipcRenderer.invoke('design:validate', config),
+    generate: (projectName: string, configINI?: string) =>
+      ipcRenderer.invoke('design:generate', projectName, configINI),
+    validate: (projectName: string, configINI?: string) =>
+      ipcRenderer.invoke('design:validate', projectName, configINI),
   },
   render: {
     exportConnections: (projectName: string, outputTypes: string[]) =>

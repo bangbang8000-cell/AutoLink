@@ -5,10 +5,12 @@ interface Window {
       create: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
       delete: (ids: string[]) => Promise<void>
       getStructure: (name: string) => Promise<unknown[]>
+      getConfigFile: (name: string) => Promise<string | null>
+      saveConfigFile: (name: string, content: string) => Promise<void>
     }
     design: {
-      generate: (config: Record<string, unknown>) => Promise<unknown>
-      validate: (config: Record<string, unknown>) => Promise<unknown>
+      generate: (projectName: string, configINI?: string) => Promise<unknown>
+      validate: (projectName: string, configINI?: string) => Promise<unknown>
     }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
