@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header'
 import { ActivityBar } from '@/components/layout/ActivityBar'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ResizableAppLayout } from '@/components/layout/ResizableAppLayout'
+import { ToastContainer } from '@/components/layout/ToastContainer'
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel'
 import { WorkbenchPanel } from '@/components/sidebar/WorkbenchPanel'
 import { DesignPanel } from '@/components/sidebar/DesignPanel'
@@ -19,10 +20,11 @@ export default function App() {
   const fetchProjects = useProjectStore((s) => s.fetchProjects)
   const fetchTemplates = useProjectStore((s) => s.fetchTemplates)
   const activeActivity = useUIStore((s) => s.activeActivity)
+  const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const panelVisible = useUIStore((s) => s.panelVisible)
   const isDark = useUIStore((s) => s.isDark)
-  const theme = useUIStore((s) => s.theme)
   const syncSystemTheme = useUIStore((s) => s.syncSystemTheme)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
 
@@ -50,24 +52,43 @@ export default function App() {
     fetchTemplates()
   }, [fetchProjects, fetchTemplates])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey
+      const shift = e.shiftKey
+
+      if (ctrl && shift) {
+        switch (e.key.toLowerCase()) {
+          case 'e': e.preventDefault(); setActiveActivity('explorer'); break
+          case 'w': e.preventDefault(); setActiveActivity('workbench'); break
+          case 'd': e.preventDefault(); setActiveActivity('design'); break
+          case 'r': e.preventDefault(); setActiveActivity('rack'); break
+          case 't': e.preventDefault(); setActiveActivity('topology'); break
+          case 'o': e.preventDefault(); setActiveActivity('output'); break
+        }
+      }
+      if (ctrl && e.key === ',') {
+        e.preventDefault(); setActiveActivity('settings')
+      }
+      if (ctrl && e.key.toLowerCase() === 'b') {
+        e.preventDefault(); toggleSidebar()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [setActiveActivity, toggleSidebar])
+
   const renderSidebarContent = useCallback(() => {
     switch (activeActivity) {
-      case 'explorer':
-        return <ExplorerPanel />
-      case 'workbench':
-        return <WorkbenchPanel />
-      case 'design':
-        return <DesignPanel />
-      case 'rack':
-        return <RackPanel />
-      case 'topology':
-        return <TopologyPanel />
-      case 'output':
-        return <OutputPanel />
-      case 'settings':
-        return <SettingsPanel />
-      default:
-        return <ExplorerPanel />
+      case 'explorer': return <ExplorerPanel />
+      case 'workbench': return <WorkbenchPanel />
+      case 'design': return <DesignPanel />
+      case 'rack': return <RackPanel />
+      case 'topology': return <TopologyPanel />
+      case 'output': return <OutputPanel />
+      case 'settings': return <SettingsPanel />
+      default: return <ExplorerPanel />
     }
   }, [activeActivity])
 
@@ -97,6 +118,7 @@ export default function App() {
         />
       </div>
       <StatusBar />
+      <ToastContainer />
     </div>
   )
 }

@@ -1,42 +1,31 @@
 {
-  "app": {
-    "title": "AutoLink",
-    "subtitle": "AI智算中心网络规划与可视化工具"
-  },
+  "app": { "title": "AutoLink", "subtitle": "AIデータセンターネットワーク計画・可視化ツール" },
   "menu": {
-    "projectExplorer": "项目浏览器",
-    "workbench": "工作台",
-    "design": "拓扑设计",
-    "rack": "机柜规划",
-    "topology": "拓扑可视化",
-    "outputResults": "输出结果",
-    "settings": "设置",
-    "hideSidebar": "隐藏侧边栏",
-    "showSidebar": "显示侧边栏",
-    "newProject": "新建项目",
-    "openProjectDir": "打开项目目录",
-    "undo": "撤销",
-    "redo": "重做",
-    "copy": "复制",
-    "paste": "粘贴",
-    "cheatsheet": "快捷键列表"
+    "projectExplorer": "プロジェクト",
+    "workbench": "ワークベンチ",
+    "design": "トポロジー設計",
+    "rack": "ラック計画",
+    "topology": "トポロジー表示",
+    "outputResults": "出力結果",
+    "settings": "設定",
+    "hideSidebar": "サイドバーを隠す",
+    "showSidebar": "サイドバーを表示",
+    "newProject": "新規プロジェクト",
+    "openProjectDir": "プロジェクトフォルダを開く",
+    "undo": "元に戻す",
+    "redo": "やり直す",
+    "copy": "コピー",
+    "paste": "貼り付け",
+    "cheatsheet": "ショートカット一覧"
   },
-  "theme": {
-    "light": "亮色",
-    "dark": "暗色",
-    "system": "跟随系统"
-  },
+  "theme": { "light": "ライト", "dark": "ダーク", "system": "システム" },
   "language": {
-    "zh-CN": "简体中文",
-    "en": "English",
-    "ja": "日本語",
-    "ko": "한국어",
-    "zh-TW": "繁體中文"
+    "zh-CN": "简体中文", "en": "English", "ja": "日本語", "ko": "한국어", "zh-TW": "繁體中文"
   },
   "status": {
-    "ready": "就绪",
-    "rendering": "渲染中...",
-    "projectCount": "{{count}} 个项目",
-    "noProject": "未选择项目"
+    "ready": "準備完了",
+    "rendering": "レンダリング中...",
+    "projectCount": "{{count}} プロジェクト",
+    "noProject": "プロジェクト未選択"
   }
 }
