@@ -14,7 +14,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: npm ci --ignore-scripts
+      - run: npm ci
       - run: pip install -r backend/requirements.txt
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run build:renderer
