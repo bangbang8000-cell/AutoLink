@@ -7,6 +7,7 @@ import { ActivityBar } from '@/components/layout/ActivityBar'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ResizableAppLayout } from '@/components/layout/ResizableAppLayout'
 import { ToastContainer } from '@/components/layout/ToastContainer'
+import { ErrorBoundary } from '@/components/layout/ErrorBoundary'
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel'
 import { WorkbenchPanel } from '@/components/sidebar/WorkbenchPanel'
 import { DesignPanel } from '@/components/sidebar/DesignPanel'
@@ -80,16 +81,19 @@ export default function App() {
   }, [setActiveActivity, toggleSidebar])
 
   const renderSidebarContent = useCallback(() => {
-    switch (activeActivity) {
-      case 'explorer': return <ExplorerPanel />
-      case 'workbench': return <WorkbenchPanel />
-      case 'design': return <DesignPanel />
-      case 'rack': return <RackPanel />
-      case 'topology': return <TopologyPanel />
-      case 'output': return <OutputPanel />
-      case 'settings': return <SettingsPanel />
-      default: return <ExplorerPanel />
-    }
+    const panel = (() => {
+      switch (activeActivity) {
+        case 'explorer': return <ExplorerPanel />
+        case 'workbench': return <WorkbenchPanel />
+        case 'design': return <DesignPanel />
+        case 'rack': return <RackPanel />
+        case 'topology': return <TopologyPanel />
+        case 'output': return <OutputPanel />
+        case 'settings': return <SettingsPanel />
+        default: return <ExplorerPanel />
+      }
+    })()
+    return <ErrorBoundary key={activeActivity}>{panel}</ErrorBoundary>
   }, [activeActivity])
 
   return (

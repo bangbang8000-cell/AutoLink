@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Server, HardDrive, Plus, Trash2, X, Check,
   ArrowUp, ArrowDown, GripVertical, AlertTriangle,
-  Layers, ChevronRight, ChevronDown,
+  Layers, ChevronRight, ChevronDown, Loader2,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRackStore, type UnplacedDevice, type RackDevice } from '@/stores/rack.store'
@@ -260,14 +260,34 @@ export function RackPanel() {
   } = useRackStore()
 
   const [initialized, setInitialized] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [initError, setInitError] = useState<string | null>(null)
 
-  // Initialize with default cabinets
+  // Reset init state when project changes
   useEffect(() => {
-    if (selectedProjectName && !initialized) {
-      initDefault(134)
-      setInitialized(true)
-    }
-  }, [selectedProjectName, initialized])
+    setInitialized(false)
+    setInitError(null)
+  }, [selectedProjectName])
+
+  // Initialize with default cabinets (deferred to avoid blocking render)
+  useEffect(() => {
+    if (!selectedProjectName || initialized) return
+
+    setLoading(true)
+    const timer = setTimeout(() => {
+      try {
+        initDefault(134)
+        setInitialized(true)
+        setInitError(null)
+      } catch (err) {
+        setInitError((err as Error).message)
+      } finally {
+        setLoading(false)
+      }
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [selectedProjectName, initialized, initDefault])
 
   const selectedCab = useMemo(
     () => cabinets.find((c) => c.id === selectedCabinetId) ?? null,
@@ -280,11 +300,19 @@ export function RackPanel() {
     return Math.round((used / selectedCab.totalU) * 100)
   }, [selectedCab])
 
-  const handlePlace = (device: UnplacedDevice, startU: number) => {
+  const handleCloseAddMode = useCallback(() => {
+    useRackStore.setState({ addDeviceMode: false })
+  }, [])
+
+  const handleOpenAddMode = useCallback(() => {
+    useRackStore.setState({ addDeviceMode: true, selectedDevice: null })
+  }, [])
+
+  const handlePlace = useCallback((device: UnplacedDevice, startU: number) => {
     if (!selectedCabinetId) return
     placeDevice(selectedCabinetId, device, startU)
-    set((s) => ({ addDeviceMode: false })) // close form
-  }
+    useRackStore.setState({ addDeviceMode: false })
+  }, [selectedCabinetId, placeDevice])
 
   if (!selectedProjectName) {
     return (
@@ -292,6 +320,31 @@ export function RackPanel() {
         <Server size={40} className="text-gray-300 dark:text-gray-600 mb-3" />
         <p className="text-sm text-gray-400 dark:text-gray-500 mb-1">{t('rack:title')}</p>
         <p className="text-xs text-gray-400 dark:text-gray-500">{t('rack:noProject')}</p>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 size={32} className="animate-spin text-primary-500 mb-3" />
+        <p className="text-xs text-gray-400 dark:text-gray-500">初始化机柜布局...</p>
+      </div>
+    )
+  }
+
+  if (initError) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <AlertTriangle size={32} className="text-red-400 mb-3" />
+        <p className="text-sm text-red-500 mb-1">初始化失败</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{initError}</p>
+        <button
+          onClick={() => { setInitialized(false); setInitError(null) }}
+          className="px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+        >
+          重试
+        </button>
       </div>
     )
   }
@@ -357,7 +410,7 @@ export function RackPanel() {
                 <span>{selectedCab.devices.length}台</span>
                 <span>使用率 {usagePercent}%</span>
                 <button
-                  onClick={() => useRackStore.setState({ addDeviceMode: true, selectedDevice: null })}
+                  onClick={handleOpenAddMode}
                   className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded bg-primary-500 text-white text-[10px] hover:bg-primary-600"
                 >
                   <Plus size={10} />放置设备
@@ -383,11 +436,7 @@ export function RackPanel() {
                     selectedDeviceId={selectedDevice?.id ?? null}
                     onSelectDevice={(id) => selectDevice(id)}
                     onRemoveDevice={(id) => removeDevice(selectedCab.id, id)}
-                    onSlotClick={(u) => {
-                      if (unplacedDevices.length > 0) {
-                        useRackStore.setState({ addDeviceMode: true, selectedDevice: null })
-                      }
-                    }}
+                    onSlotClick={() => { if (unplacedDevices.length > 0) handleOpenAddMode() }}
                   />
 
                   {/* Add device form */}
@@ -398,7 +447,7 @@ export function RackPanel() {
                       devices={selectedCab.devices}
                       unplacedDevices={unplacedDevices}
                       onPlace={handlePlace}
-                      onCancel={() => useRackStore.setState({ addDeviceMode: false })}
+                      onCancel={handleCloseAddMode}
                     />
                   )}
                 </div>

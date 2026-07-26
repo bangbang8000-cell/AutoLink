@@ -101,6 +101,7 @@ export function TopologyPanel() {
   const generating = useDesignStore((s) => s.generating)
 
   const [ECharts, setECharts] = useState<any>(null)
+  const [chartError, setChartError] = useState<string | null>(null)
   const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string | null>(null)
@@ -108,7 +109,10 @@ export function TopologyPanel() {
   const isDark = document.documentElement.classList.contains('dark')
 
   useEffect(() => {
-    loadECharts().then(setECharts)
+    loadECharts().then(setECharts).catch((err) => {
+      console.error('[TopologyPanel] ECharts import failed:', err)
+      setChartError('图表库加载失败')
+    })
   }, [])
 
   const { filteredNodes, filteredEdges } = useMemo(() => {
