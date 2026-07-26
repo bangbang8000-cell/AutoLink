@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "dev:electron": "electron .",
-    "dev:all": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:all": "tsc -p tsconfig.electron.json && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:all:clean": "npm run build:electron && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build:renderer": "vite build",
     "build:electron": "npx rimraf dist-electron && tsc -p tsconfig.electron.json",
     "build": "npm run build:renderer && npm run build:electron",
