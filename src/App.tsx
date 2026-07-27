@@ -49,8 +49,29 @@ export default function App() {
   useEffect(() => {
     if (initRef.current) return
     initRef.current = true
-    fetchProjects()
+
+    // Templates are hardcoded, always available
     fetchTemplates()
+
+    // Retry fetchProjects: Electron preload may need a tick to expose window.electron
+    let retries = 0
+    const maxRetries = 5
+    const tryFetch = async () => {
+      try {
+        await fetchProjects()
+        console.log('[App] Projects loaded successfully')
+      } catch {
+        retries++
+        if (retries < maxRetries) {
+          console.log(`[App] Retrying fetchProjects (${retries}/${maxRetries})...`)
+          setTimeout(tryFetch, 600)
+        } else {
+          console.warn('[App] Failed to fetch projects after', maxRetries, 'retries')
+        }
+      }
+    }
+    // Small delay to let preload bridge settle
+    setTimeout(tryFetch, 300)
   }, [fetchProjects, fetchTemplates])
 
   // Keyboard shortcuts

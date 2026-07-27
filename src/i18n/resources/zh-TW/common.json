@@ -27,5 +27,20 @@
     "rendering": "渲染中...",
     "projectCount": "{{count}} 個專案",
     "noProject": "未選擇專案"
+  },
+  "update": {
+    "title": "更新",
+    "upToDate": "已是最新版本",
+    "checkNow": "檢查更新",
+    "checking": "正在檢查更新...",
+    "checkFailed": "檢查更新失敗",
+    "newVersion": "發現新版本",
+    "download": "下載更新",
+    "downloading": "正在下載",
+    "downloadFailed": "下載失敗",
+    "downloaded": "下載完成",
+    "restartToInstall": "重啟安裝",
+    "error": "更新出錯",
+    "retry": "重試"
   }
 }

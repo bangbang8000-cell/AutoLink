@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Monitor, Moon, Sun, Globe, X, Minus, Square } from 'lucide-react'
 import type { ThemeMode } from '@/stores/ui.store'
+import { UpdatePopover } from '@/components/layout/UpdatePopover'
 
 const languages = [
   { code: 'zh-CN', label: '简体中文' },
@@ -89,6 +90,9 @@ export function Header() {
             </div>
           )}
         </div>
+
+        {/* Update */}
+        <UpdatePopover />
 
         {/* Window controls */}
         <div className="flex items-center ml-2">

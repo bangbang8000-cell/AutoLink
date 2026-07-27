@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import * as XLSX from 'xlsx'
 
 export interface RackDevice {
   id: string
@@ -41,6 +42,7 @@ interface RackState {
   moveDevice: (deviceId: string, fromCabinet: number, toCabinet: number, newStartU: number) => boolean
   selectedDeviceInfo: (id: string) => RackDevice | null
   selectDevice: (id: string | null) => void
+  exportToExcel: (projectName: string) => Promise<string>
 }
 
 export const useRackStore = create<RackState>()((set, get) => ({
@@ -116,10 +118,6 @@ export const useRackStore = create<RackState>()((set, get) => ({
 
   removeCabinet: (id) => {
     set((s) => {
-      const cabinet = s.cabinets.find((c) => c.id === id)
-      const movedDevices = cabinet
-        ? cabinet.devices.map((d) => ({ ...d, cabinetId: -1, startU: 0, endU: 0 }) as RackDevice)
-        : []
       return {
         cabinets: s.cabinets.filter((c) => c.id !== id),
         selectedCabinetId: s.selectedCabinetId === id ? null : s.selectedCabinetId,
@@ -233,5 +231,45 @@ export const useRackStore = create<RackState>()((set, get) => ({
     }
     const info = get().selectedDeviceInfo(id)
     set({ selectedDevice: info, addDeviceMode: false, editingDevice: null })
+  },
+
+  exportToExcel: async (projectName) => {
+    const { cabinets } = get()
+    const rows: Record<string, string | number>[] = []
+
+    for (const cab of cabinets) {
+      for (const device of cab.devices) {
+        rows.push({
+          '机柜号': cab.name,
+          '设备名称': device.name,
+          '设备类型': device.type,
+          '起始U位': device.startU,
+          '结束U位': device.endU,
+          '占用U数': device.endU - device.startU + 1,
+        })
+      }
+    }
+
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(rows)
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+    ]
+
+    XLSX.utils.book_append_sheet(wb, ws, '上机表')
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' })
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const fileName = `上机表_${timestamp}.xlsx`
+
+    const filePath = await window.electron?.export?.saveFile(projectName, fileName, wbout)
+    return filePath || ''
   },
 }))

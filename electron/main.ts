@@ -3,6 +3,7 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { isDev, initializeAppDirs, ensureDemoProjects } from './config.js'
 import { setupIpcHandlers } from './ipc/handlers.js'
+import { updateService } from './services/update.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -34,7 +35,7 @@ class AutoLinkApp {
       titleBarStyle: isMac ? 'hidden' : 'default',
       show: false,
       webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
@@ -90,6 +91,16 @@ class AutoLinkApp {
         this.createMainWindow()
       }
     })
+
+    // Delayed update check (3s after startup)
+    if (!isDev) {
+      setTimeout(() => {
+        updateService.setWindow(this.mainWindow!)
+        updateService.checkForUpdates().catch((err) => {
+          console.error('[AutoLink] Update check failed:', err)
+        })
+      }, 3000)
+    }
   }
 }
 

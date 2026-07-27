@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Server, HardDrive, Plus, Trash2, X, Check,
-  ArrowUp, ArrowDown, GripVertical, AlertTriangle,
-  Layers, ChevronRight, ChevronDown, Loader2,
+  Server, HardDrive, Plus, Trash2, X, AlertTriangle,
+  Layers, Loader2, Download,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRackStore, type UnplacedDevice, type RackDevice } from '@/stores/rack.store'
@@ -11,8 +10,7 @@ import { useRackStore, type UnplacedDevice, type RackDevice } from '@/stores/rac
 /* -------------------------------------------------- */
 /*  42U Rack View                                     */
 /* -------------------------------------------------- */
-function RackView({ cabinetId, devices, totalU, selectedDeviceId, onSelectDevice, onRemoveDevice, onSlotClick }: {
-  cabinetId: number
+function RackView({ devices, totalU, selectedDeviceId, onSelectDevice, onRemoveDevice, onSlotClick }: {
   devices: RackDevice[]
   totalU: number
   selectedDeviceId: string | null
@@ -27,6 +25,19 @@ function RackView({ cabinetId, devices, totalU, selectedDeviceId, onSelectDevice
     for (let u = d.startU; u <= d.endU; u++) {
       if (u <= totalU) slotMap[u] = d
     }
+  }
+
+  // Detect conflicts: slots occupied by more than one device
+  const conflictSlots = new Set<number>()
+  const slotDevices: Record<number, RackDevice[]> = {}
+  for (let u = 1; u <= totalU; u++) slotDevices[u] = []
+  for (const d of devices) {
+    for (let u = d.startU; u <= d.endU; u++) {
+      if (u <= totalU) slotDevices[u].push(d)
+    }
+  }
+  for (let u = 1; u <= totalU; u++) {
+    if (slotDevices[u].length > 1) conflictSlots.add(u)
   }
 
   // Compute merged device spans for rendering (merge consecutive slots of same device)
@@ -67,6 +78,7 @@ function RackView({ cabinetId, devices, totalU, selectedDeviceId, onSelectDevice
           const u = totalU - i // bottom to top
           const device = slotMap[u]
           const isFirst = device && (u === 1 || slotMap[u - 1]?.id !== device.id)
+          const isConflict = conflictSlots.has(u)
 
           return (
             <div
@@ -77,7 +89,10 @@ function RackView({ cabinetId, devices, totalU, selectedDeviceId, onSelectDevice
               }}
               className={`flex items-center h-6 border-b border-gray-100 dark:border-gray-700/50 cursor-pointer
                 ${device
-                  ? getColor(device.type) + ' bg-opacity-80 dark:bg-opacity-70 border-l-2 text-white'
+                  ? (isConflict
+                      ? 'bg-red-500 dark:bg-red-600 border-red-400 dark:border-red-500 bg-opacity-80 dark:bg-opacity-70 border-l-2 text-white'
+                      : getColor(device.type) + ' bg-opacity-80 dark:bg-opacity-70 border-l-2 text-white'
+                    )
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700/30 border-l-2 border-transparent'
                 }
                 ${selectedDeviceId === device?.id ? 'ring-1 ring-inset ring-white/50' : ''}
@@ -111,8 +126,7 @@ function RackView({ cabinetId, devices, totalU, selectedDeviceId, onSelectDevice
 /* -------------------------------------------------- */
 /*  Add Device Form                                   */
 /* -------------------------------------------------- */
-function AddDeviceForm({ cabinetId, totalU, devices, unplacedDevices, onPlace, onCancel }: {
-  cabinetId: number
+function AddDeviceForm({ totalU, devices, unplacedDevices, onPlace, onCancel }: {
   totalU: number
   devices: RackDevice[]
   unplacedDevices: UnplacedDevice[]
@@ -256,12 +270,13 @@ export function RackPanel() {
   const {
     cabinets, unplacedDevices, selectedCabinetId, selectedDevice,
     addDeviceMode, loadRackLayout, addCabinet, removeCabinet, selectCabinet,
-    placeDevice, removeDevice, selectDevice,
+    placeDevice, removeDevice, selectDevice, exportToExcel,
   } = useRackStore()
 
   const [initialized, setInitialized] = useState(false)
   const [loading, setLoading] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   // Reset init state when project changes
   useEffect(() => {
@@ -314,6 +329,21 @@ export function RackPanel() {
     useRackStore.setState({ addDeviceMode: false })
   }, [selectedCabinetId, placeDevice])
 
+  const handleExport = useCallback(async () => {
+    if (!selectedProjectName) return
+    setExporting(true)
+    try {
+      const filePath = await exportToExcel(selectedProjectName)
+      if (filePath) {
+        window.electron?.shell?.showItemInFolder(filePath)
+      }
+    } catch (err) {
+      console.error('Export failed:', err)
+    } finally {
+      setExporting(false)
+    }
+  }, [selectedProjectName, exportToExcel])
+
   if (!selectedProjectName) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
@@ -356,12 +386,22 @@ export function RackPanel() {
         <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('rack:title')}
         </span>
-        <button
-          onClick={addCabinet}
-          className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-        >
-          <Plus size={12} />添加机柜
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleExport}
+            disabled={exporting || cabinets.length === 0}
+            className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
+          >
+            <Download size={12} />
+            {exporting ? '导出中...' : '导出上机表'}
+          </button>
+          <button
+            onClick={addCabinet}
+            className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+          >
+            <Plus size={12} />添加机柜
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
@@ -430,7 +470,6 @@ export function RackPanel() {
                 <div className="flex-1 flex flex-col overflow-hidden">
                   {/* Rack view */}
                   <RackView
-                    cabinetId={selectedCab.id}
                     devices={selectedCab.devices}
                     totalU={selectedCab.totalU}
                     selectedDeviceId={selectedDevice?.id ?? null}
@@ -442,7 +481,6 @@ export function RackPanel() {
                   {/* Add device form */}
                   {addDeviceMode && (
                     <AddDeviceForm
-                      cabinetId={selectedCab.id}
                       totalU={selectedCab.totalU}
                       devices={selectedCab.devices}
                       unplacedDevices={unplacedDevices}

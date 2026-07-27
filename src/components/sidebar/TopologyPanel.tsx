@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  GitBranch, ZoomIn, ZoomOut, Maximize2, ChevronDown,
-  RefreshCw, Network, Server, Search, X, Filter, Layers,
+  GitBranch, ZoomIn, ZoomOut, Maximize2,
+  Network, Search, X, Filter, Download,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore, type TopologyNode, type TopologyEdge } from '@/stores/design.store'
@@ -101,17 +101,16 @@ export function TopologyPanel() {
   const generating = useDesignStore((s) => s.generating)
 
   const [ECharts, setECharts] = useState<any>(null)
-  const [chartError, setChartError] = useState<string | null>(null)
   const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const chartRef = useRef<any>(null)
   const isDark = document.documentElement.classList.contains('dark')
 
   useEffect(() => {
     loadECharts().then(setECharts).catch((err) => {
       console.error('[TopologyPanel] ECharts import failed:', err)
-      setChartError('图表库加载失败')
     })
   }, [])
 
@@ -187,7 +186,8 @@ export function TopologyPanel() {
         const col = i % cols
         const x = col * colWidth
         const y = layer * layerSpacing + row * spacing
-        const catIdx = categoryList.findIndex((c) => c.name === categories[type]?.name ?? type)
+        const catName = categories[type]?.name || type
+        const catIdx = categoryList.findIndex((c) => c.name === catName)
 
         graphNodes.push({
           id: node.id,
@@ -300,6 +300,28 @@ export function TopologyPanel() {
     }
   }
 
+  const handleExportPng = useCallback(async () => {
+    if (!chartRef.current || !selectedProjectName) return
+    setExporting(true)
+    try {
+      const inst = chartRef.current.getEchartsInstance?.() || chartRef.current
+      const dataUrl: string = inst?.getDataURL?.({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+      if (dataUrl) {
+        const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        const fileName = `组网拓扑图_${timestamp}.png`
+        const filePath = await window.electron?.export?.saveFile(selectedProjectName, fileName, base64)
+        if (filePath) {
+          window.electron?.shell?.showItemInFolder(filePath)
+        }
+      }
+    } catch (err) {
+      console.error('Export PNG failed:', err)
+    } finally {
+      setExporting(false)
+    }
+  }, [selectedProjectName])
+
   const filters = [
     { key: null, label: t('topology:networkTopology') },
     { key: 'param', label: '参数网络' },
@@ -326,6 +348,16 @@ export function TopologyPanel() {
           {t('topology:title')}
         </span>
         <div className="flex items-center gap-0.5">
+          {topology && (
+            <button
+              onClick={handleExportPng}
+              disabled={exporting}
+              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50"
+              title="导出拓扑图"
+            >
+              <Download size={13} />
+            </button>
+          )}
           <button onClick={handleZoomIn} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title={t('topology:zoomIn')}>
             <ZoomIn size={13} />
           </button>

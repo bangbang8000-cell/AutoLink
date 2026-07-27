@@ -38,5 +38,20 @@
     "rendering": "Rendering...",
     "projectCount": "{{count}} projects",
     "noProject": "No project selected"
+  },
+  "update": {
+    "title": "Update",
+    "upToDate": "Up to date",
+    "checkNow": "Check for updates",
+    "checking": "Checking for updates...",
+    "checkFailed": "Update check failed",
+    "newVersion": "New version available",
+    "download": "Download update",
+    "downloading": "Downloading",
+    "downloadFailed": "Download failed",
+    "downloaded": "Download complete",
+    "restartToInstall": "Restart to install",
+    "error": "Update error",
+    "retry": "Retry"
   }
 }

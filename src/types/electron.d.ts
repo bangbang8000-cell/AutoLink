@@ -21,9 +21,13 @@ interface Window {
     app: {
       getPath: (name: string) => Promise<string>
       getVersion: () => Promise<string>
-      checkUpdate: () => Promise<{ updateAvailable: boolean }>
-      downloadUpdate: () => Promise<{ success: boolean }>
+      checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string }>
+      downloadUpdate: () => Promise<void>
       quitAndInstall: () => void
+      onUpdateAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => () => void
+      onUpdateDownloadProgress: (callback: (data: { percent: number }) => void) => () => void
+      onUpdateDownloaded: (callback: () => void) => () => void
+      onUpdateError: (callback: (message: string) => void) => () => void
     }
     window: {
       minimize: () => void
@@ -34,6 +38,9 @@ interface Window {
     shell: {
       showItemInFolder: (path: string) => void
       openPath: (path: string) => Promise<string>
+    }
+    export: {
+      saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>
     }
     versions: {
       node: string

@@ -39,6 +39,39 @@ interface ProjectState {
   fetchTemplates: () => Promise<void>
 }
 
+const builtinTemplates: TemplateInfo[] = [
+  {
+    id: 'H100-128台',
+    name: 'H100-128台方案',
+    description: '128台H100 GPU（4组×32台）+ 14台存储 + 20台管理服务器',
+    scenario: 'H100-128台',
+    tags: ['H100', '128台', '4组', '2层组网'],
+    updatedAt: '2026-07-26',
+  },
+  {
+    id: 'H100-100台',
+    name: 'H100-100台方案',
+    description: '100台H100 GPU（4组×25台）+ 14台存储 + 20台管理服务器',
+    scenario: 'H100-100台',
+    tags: ['H100', '100台', '4组', '2层组网'],
+    updatedAt: '2026-07-26',
+  },
+  {
+    id: '空项目',
+    name: '空项目',
+    description: '空白项目模板，适合从头开始设计',
+    scenario: '自定义',
+    tags: ['空白', '自定义'],
+    updatedAt: '2026-07-26',
+  },
+]
+
+function ensureIPC() {
+  if (!window.electron?.project) {
+    throw new Error('IPC 桥接未就绪，请确认 Electron 预加载脚本正常加载')
+  }
+}
+
 export const useProjectStore = create<ProjectState>()(
   persist(
     (set, get) => ({
@@ -46,48 +79,48 @@ export const useProjectStore = create<ProjectState>()(
       selectedProject: null,
       selectedProjectName: null,
       projectStatuses: {},
-      templates: [],
+      templates: builtinTemplates,
       favoriteProjects: [],
       recentProjects: [],
 
       fetchProjects: async () => {
         try {
-          if (window.electron?.project?.list) {
-            const projects = await window.electron.project.list()
-            const validNames = new Set(projects.map((p: ProjectInfo) => p.name))
-            set((s) => ({
-              projects,
-              favoriteProjects: s.favoriteProjects.filter((n) => validNames.has(n)),
-              recentProjects: s.recentProjects.filter((n) => validNames.has(n)),
-            }))
-          }
+          ensureIPC()
+          const projects = await window.electron.project.list()
+          const validNames = new Set(projects.map((p: ProjectInfo) => p.name))
+          set((s) => ({
+            projects,
+            favoriteProjects: s.favoriteProjects.filter((n) => validNames.has(n)),
+            recentProjects: s.recentProjects.filter((n) => validNames.has(n)),
+          }))
         } catch (err) {
-          console.error('fetchProjects:', err)
+          console.error('[ProjectStore] fetchProjects failed:', err)
+          // Keep existing projects list on error, don't wipe it
         }
       },
 
       createProject: async (name, options) => {
-        if (window.electron?.project?.create) {
-          await window.electron.project.create(name, options)
-          await get().fetchProjects()
-        }
+        ensureIPC()
+        await window.electron.project.create(name, options)
+        await get().fetchProjects()
       },
 
       deleteProjects: async (ids) => {
-        if (window.electron?.project?.delete) {
-          await window.electron.project.delete(ids)
-          const { selectedProjectName } = get()
-          const projects = await window.electron.project.list()
-          const validNames = new Set(projects.map((p: ProjectInfo) => p.name))
-          const selected = selectedProjectName && validNames.has(selectedProjectName)
-            ? projects.find((p: ProjectInfo) => p.name === selectedProjectName) ?? null
-            : null
-          set({
-            projects,
-            selectedProject: selected,
-            selectedProjectName: selected?.name ?? null,
-          })
-        }
+        ensureIPC()
+        // Convert string ids to indices for IPC
+        const indices = ids.map((id) => parseInt(id))
+        await window.electron.project.delete(indices.map(String))
+        const projects = await window.electron.project.list()
+        const { selectedProjectName } = get()
+        const validNames = new Set(projects.map((p: ProjectInfo) => p.name))
+        const selected = selectedProjectName && validNames.has(selectedProjectName)
+          ? projects.find((p: ProjectInfo) => p.name === selectedProjectName) ?? null
+          : null
+        set({
+          projects,
+          selectedProject: selected,
+          selectedProjectName: selected?.name ?? null,
+        })
       },
 
       selectProject: (project) => {
@@ -111,36 +144,8 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       fetchTemplates: async () => {
-        // Templates are loaded from template/ directory
-        // For now, use built-in templates (ids must match directory names)
-        set({
-          templates: [
-            {
-              id: 'H100-128台',
-              name: 'H100-128台方案',
-              description: '128台H100 GPU（4组×32台）+ 14台存储 + 20台管理服务器',
-              scenario: 'H100-128台',
-              tags: ['H100', '128台', '4组', '2层组网'],
-              updatedAt: '2026-07-26',
-            },
-            {
-              id: 'H100-100台',
-              name: 'H100-100台方案',
-              description: '100台H100 GPU（4组×25台）+ 14台存储 + 20台管理服务器',
-              scenario: 'H100-100台',
-              tags: ['H100', '100台', '4组', '2层组网'],
-              updatedAt: '2026-07-26',
-            },
-            {
-              id: '空项目',
-              name: '空项目',
-              description: '空白项目模板，适合从头开始设计',
-              scenario: '自定义',
-              tags: ['空白', '自定义'],
-              updatedAt: '2026-07-26',
-            },
-          ],
-        })
+        // Templates are hardcoded; always available regardless of IPC
+        set({ templates: builtinTemplates })
       },
     }),
     {
@@ -149,6 +154,7 @@ export const useProjectStore = create<ProjectState>()(
         selectedProjectName: state.selectedProjectName,
         favoriteProjects: state.favoriteProjects,
         recentProjects: state.recentProjects,
+        templates: state.templates,
       }),
       onRehydrateStorage: () => {
         return (state) => {

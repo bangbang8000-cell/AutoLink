@@ -3,6 +3,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { getWorkspacePath, getTemplatePath, getBackendPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
+import { updateService } from '../services/update.service.js'
 
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== Project Management =====
@@ -186,6 +187,19 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
   })
 
+  // ===== Export =====
+  ipcMain.handle('export:saveFile', async (_event, projectName: string, fileName: string, base64Data: string) => {
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const outputDir = path.join(projectDir, 'output')
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
+    }
+    const filePath = path.join(outputDir, fileName)
+    const buffer = Buffer.from(base64Data, 'base64')
+    fs.writeFileSync(filePath, buffer)
+    return filePath
+  })
+
   // ===== App =====
   ipcMain.handle('app:getPath', (_event, name: string) => {
     if (name === 'workspace') return getWorkspacePath()
@@ -204,5 +218,20 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('shell:openPath', (_event, filePath: string) => {
     return shell.openPath(filePath)
+  })
+
+  // ===== Update =====
+  updateService.setWindow(mainWindow)
+
+  ipcMain.handle('app:check-update', async () => {
+    return updateService.checkForUpdates()
+  })
+
+  ipcMain.handle('app:download-update', async () => {
+    return updateService.downloadUpdate()
+  })
+
+  ipcMain.handle('app:quit-and-install', () => {
+    updateService.quitAndInstall()
   })
 }

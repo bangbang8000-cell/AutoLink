@@ -27,5 +27,20 @@
     "rendering": "レンダリング中...",
     "projectCount": "{{count}} プロジェクト",
     "noProject": "プロジェクト未選択"
+  },
+  "update": {
+    "title": "アップデート",
+    "upToDate": "最新バージョンです",
+    "checkNow": "更新を確認",
+    "checking": "更新を確認中...",
+    "checkFailed": "更新の確認に失敗しました",
+    "newVersion": "新しいバージョンがあります",
+    "download": "更新をダウンロード",
+    "downloading": "ダウンロード中",
+    "downloadFailed": "ダウンロードに失敗しました",
+    "downloaded": "ダウンロード完了",
+    "restartToInstall": "再起動してインストール",
+    "error": "更新エラー",
+    "retry": "再試行"
   }
 }

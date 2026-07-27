@@ -22,3 +22,7 @@ __pycache__/
 
 # Output
 output/
+
+# Workspace (runtime-generated project files)
+workspace/
+!workspace/.gitkeep

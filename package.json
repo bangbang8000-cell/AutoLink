@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "autolink",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -49,6 +49,7 @@
     "concurrently": "^10.0.4",
     "electron": "^28.3.3",
     "electron-builder": "^26.15.3",
+    "electron-updater": "^6.6.2",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",

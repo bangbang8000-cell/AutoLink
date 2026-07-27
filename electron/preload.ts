@@ -36,6 +36,26 @@ const electronAPI = {
     checkUpdate: () => ipcRenderer.invoke('app:check-update'),
     downloadUpdate: () => ipcRenderer.invoke('app:download-update'),
     quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install'),
+    onUpdateAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { version: string; releaseNotes?: string }) => callback(data)
+      ipcRenderer.on('update:available', handler)
+      return () => ipcRenderer.removeListener('update:available', handler)
+    },
+    onUpdateDownloadProgress: (callback: (data: { percent: number }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { percent: number }) => callback(data)
+      ipcRenderer.on('update:downloadProgress', handler)
+      return () => ipcRenderer.removeListener('update:downloadProgress', handler)
+    },
+    onUpdateDownloaded: (callback: () => void) => {
+      const handler = () => callback()
+      ipcRenderer.on('update:downloaded', handler)
+      return () => ipcRenderer.removeListener('update:downloaded', handler)
+    },
+    onUpdateError: (callback: (message: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, message: string) => callback(message)
+      ipcRenderer.on('update:error', handler)
+      return () => ipcRenderer.removeListener('update:error', handler)
+    },
   },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
@@ -46,6 +66,10 @@ const electronAPI = {
   shell: {
     showItemInFolder: (path: string) => ipcRenderer.invoke('shell:showItemInFolder', path),
     openPath: (path: string) => ipcRenderer.invoke('shell:openPath', path),
+  },
+  export: {
+    saveFile: (projectName: string, fileName: string, base64Data: string) =>
+      ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
   },
   versions: {
     node: process.versions.node,
