@@ -2,7 +2,7 @@
  * AutoLink V2.1 - 前端集成测试
  * 测试 store 之间的状态一致性、IPC mock、错误处理
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // ================================================================
 //  设计状态与机柜状态集成测试
@@ -142,9 +142,10 @@ describe('DeviceLibrary ↔ ProjectConfig 集成', () => {
   })
 
   it('无效的设备引用应返回null/undefined', () => {
-    const deviceRef = {
+    const hasRef = {
       library_id: 'nonexistent_device',
     }
+    void hasRef
 
     // 模拟查找失败
     const resolved = null
@@ -327,7 +328,6 @@ biz_enabled = True
   it('JSON配置应优先于INI配置', () => {
     // 当JSON和INI共存时，JSON优先
     const hasJson = true
-    const hasIni = true
 
     const useJson = hasJson  // 优先JSON
 
@@ -451,7 +451,8 @@ describe('设备库数据完整性', () => {
     expect(switch_.port_count).toBe(64)
     expect(switch_.port_speed).toBe('400G')
     expect(switch_.downlink_prefix).toBeTruthy()
-    expect(switch_.interface_models).toBeUndefined()  // 交换机无接口模型
+    // 交换机没有 interface_models 属性
+    expect(switch_).not.toHaveProperty('interface_models')
   })
 
   it('设备库分类应包含所有必要类型', () => {

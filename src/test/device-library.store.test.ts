@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
+import type { NetworkType, LibraryDevice } from '@/types/device-profile'
 
 const mockDevice = (overrides = {}) => ({
   id: 'dev1',
@@ -11,23 +12,22 @@ const mockDevice = (overrides = {}) => ({
   weight_kg: 30,
   u_height: 4,
   depth_mm: 800,
-  cooling: 'air',
+  cooling: 'air' as const,
   name_prefix: 'GPU',
   interface_models: [],
-  port_count: null,
-  port_speed: null,
-  port_type: null,
-  downlink_prefix: null,
-  uplink_prefix: null,
+  port_count: undefined,
+  port_speed: undefined,
+  port_type: undefined,
+  downlink_prefix: undefined,
+  uplink_prefix: undefined,
   tags: ['GPU', 'H100'],
-  applicable_networks: ['param'],
+  applicable_networks: ['param'] as NetworkType[],
   source: 'builtin' as const,
   verified: true,
-  datasheet_url: null,
   added_at: '2026-01-01',
   updated_at: '2026-01-01',
   ...overrides,
-})
+} as LibraryDevice)
 
 describe('DeviceLibraryStore', () => {
   beforeEach(() => {
@@ -40,6 +40,7 @@ describe('DeviceLibraryStore', () => {
       compareDevices: [],
       filter: {
         category: 'all',
+        subCategory: '',
         vendor: '',
         search: '',
         networkType: 'all',

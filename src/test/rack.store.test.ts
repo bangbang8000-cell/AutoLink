@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useRackStore, RackCabinet, RackDevice, CabinetType } from '../stores/rack.store'
+import { useRackStore } from '../stores/rack.store'
+import type { RackCabinet, RackDevice, CabinetType } from '../stores/rack.store'
 
 // Mock electron API
 const mockElectron = {

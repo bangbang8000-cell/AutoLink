@@ -48,7 +48,7 @@ describe('DesignStore', () => {
       window.electron.design.generate = vi.fn().mockResolvedValue({ summary: {}, topology: {}, valid: true })
       await useDesignStore.getState().generate('test')
 
-      const callArgs = window.electron.design.generate.mock.calls[0]
+      const callArgs = (window.electron.design.generate as ReturnType<typeof vi.fn>).mock.calls[0]
       expect(callArgs[0]).toBe('test')
       expect(callArgs[1]).toContain('[DEFAULT]')
       expect(callArgs[1]).toContain('downlink_mode = custom')
