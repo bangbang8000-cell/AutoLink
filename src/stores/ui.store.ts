@@ -8,6 +8,7 @@ export type ActivityType =
   | 'rack'
   | 'topology'
   | 'output'
+  | 'deviceLibrary'
   | 'settings'
 
 export type ThemeMode = 'light' | 'dark' | 'system'

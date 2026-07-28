@@ -1,0 +1,62 @@
+{
+  "id": "huawei_oceanstor_dorado_6000",
+  "vendor": "华为",
+  "model": "OceanStor Dorado 6000",
+  "category": "storage_servers_all_flash",
+  "description": "华为 OceanStor Dorado 6000 全闪存NVMe存储服务器，面向中大型企业高性能存储场景",
+  "power_watts": 1000,
+  "weight_kg": 38,
+  "u_height": 3,
+  "depth_mm": 850,
+  "cooling": "air",
+  "name_prefix": "Storage-Dorado6K",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 2,
+      "port_speed": "400G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["存储", "华为", "OceanStor", "Dorado", "全闪存", "NVMe"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

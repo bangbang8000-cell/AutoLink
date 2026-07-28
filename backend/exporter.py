@@ -1,6 +1,7 @@
 """
-AutoLink V2.0 - Excel导出与格式化
+AutoLink V2.1 - Excel导出与格式化
 提供服务器视角、交换机视角的连接表生成和Excel美化
+支持机柜编号和U位范围 (V2.1新增)
 """
 
 import re
@@ -63,9 +64,13 @@ def generate_server_view(designer):
                     'A端设备': conn.a_device,
                     'A端接口': conn.a_port,
                     'A端模块': conn.a_module,
+                    'A端机柜编号': conn.a_cabinet_name or '',
+                    'A端U位': f"{conn.a_start_u}-{conn.a_end_u}" if conn.a_start_u else '',
                     'Z端设备': conn.z_device,
                     'Z端接口': conn.z_port,
                     'Z端模块': conn.z_module,
+                    'Z端机柜编号': conn.z_cabinet_name or '',
+                    'Z端U位': f"{conn.z_start_u}-{conn.z_end_u}" if conn.z_start_u else '',
                     '线缆类型': conn.cable_type,
                     '描述': conn.description
                 })
@@ -101,9 +106,13 @@ def generate_switch_view(designer):
                     'A端设备': conn.a_device,
                     'A端接口': conn.a_port,
                     'A端模块': conn.a_module,
+                    'A端机柜编号': conn.a_cabinet_name or '',
+                    'A端U位': f"{conn.a_start_u}-{conn.a_end_u}" if conn.a_start_u else '',
                     'Z端设备': conn.z_device,
                     'Z端接口': conn.z_port,
                     'Z端模块': conn.z_module,
+                    'Z端机柜编号': conn.z_cabinet_name or '',
+                    'Z端U位': f"{conn.z_start_u}-{conn.z_end_u}" if conn.z_start_u else '',
                     '线缆类型': conn.cable_type,
                     '描述': conn.description
                 }
@@ -226,7 +235,9 @@ def apply_excel_formatting(filename):
     col_widths = {
         'podid': 15, '服务器分组': 15, '交换机分组': 15,
         'A端设备': 30, 'A端接口': 15, 'A端模块': 12,
+        'A端机柜编号': 15, 'A端U位': 12,
         'Z端设备': 30, 'Z端接口': 15, 'Z端模块': 12,
+        'Z端机柜编号': 15, 'Z端U位': 12,
         '线缆类型': 12, '描述': 35, '项目': 25, '值': 40
     }
 
@@ -437,9 +448,13 @@ def _generate_access_agg_view(designer, access_switches, agg_switches):
                     'A端设备': conn.a_device,
                     'A端接口': conn.a_port,
                     'A端模块': conn.a_module,
+                    'A端机柜编号': conn.a_cabinet_name or '',
+                    'A端U位': f"{conn.a_start_u}-{conn.a_end_u}" if conn.a_start_u else '',
                     'Z端设备': conn.z_device,
                     'Z端接口': conn.z_port,
                     'Z端模块': conn.z_module,
+                    'Z端机柜编号': conn.z_cabinet_name or '',
+                    'Z端U位': f"{conn.z_start_u}-{conn.z_end_u}" if conn.z_start_u else '',
                     '线缆类型': conn.cable_type,
                     '描述': conn.description
                 })
@@ -469,9 +484,13 @@ def _generate_agg_reverse_view(designer, access_switches, agg_switches, network_
                     'A端设备': conn.a_device,
                     'A端接口': conn.a_port,
                     'A端模块': conn.a_module,
+                    'A端机柜编号': conn.a_cabinet_name or '',
+                    'A端U位': f"{conn.a_start_u}-{conn.a_end_u}" if conn.a_start_u else '',
                     'Z端设备': conn.z_device,
                     'Z端接口': conn.z_port,
                     'Z端模块': conn.z_module,
+                    'Z端机柜编号': conn.z_cabinet_name or '',
+                    'Z端U位': f"{conn.z_start_u}-{conn.z_end_u}" if conn.z_start_u else '',
                     '线缆类型': conn.cable_type,
                     '描述': conn.description
                 })

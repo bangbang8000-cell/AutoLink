@@ -1,27 +1,41 @@
 """
-AutoLink V2.0 - 统一网络设计协调层
+AutoLink V2.1 - 统一网络设计协调层
 支持 full(满接) 和 custom(自定义下行口数) 两种模式
+支持 project_config.json (V2.1) 和 network_config.ini (V2.0) 两种配置格式
 """
-import math, os, configparser
+import math, os, json, configparser
 from models import NetworkObject, Connection
 from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier
+from device_library import get_device_library, LibraryDevice, InterfaceModel
 
 
 class NetworkDesignerV2:
-    """统一网络设计器 - 支持 full/custom 双模式"""
+    """统一网络设计器 - 支持 full/custom 双模式，兼容新旧配置格式"""
 
     def __init__(self, config_file="network_config.ini"):
         self.config = configparser.ConfigParser()
+        self._project_config = None  # V2.1 project_config.json
+        self._device_library = None  # V2.1 设备库
+        self._device_profiles = {}   # V2.1 设备档案缓存 (device_ref_id -> LibraryDevice)
+
         if os.path.exists(config_file):
-            with open(config_file, 'r', encoding='utf-8') as f:
-                self.config.read_file(f)
+            if config_file.endswith('.json'):
+                self._load_project_config(config_file)
+            else:
+                # 检查同目录下是否存在 project_config.json (优先使用JSON)
+                config_dir = os.path.dirname(config_file) or '.'
+                json_path = os.path.join(config_dir, 'project_config.json')
+                if os.path.exists(json_path):
+                    self._load_project_config(json_path)
+                else:
+                    self._load_ini_config(config_file)
 
-        # --- 下行端口模式 ---
-        self.downlink_mode = self.config.get('DEFAULT', 'downlink_mode', fallback='custom')
-        self._resolve_downlink_limits()
-
-        # --- 通用配置 ---
-        self._load_common_config()
+        if self._project_config is None:
+            # 旧格式: 从 INI 初始化
+            self._init_from_ini()
+        else:
+            # 新格式: 从 project_config.json 初始化
+            self._init_from_project_config()
 
         # --- 网络对象存储 ---
         self.servers = []
@@ -41,22 +55,242 @@ class NetworkDesignerV2:
             self._design_biz_network()
 
     # ================================================================
+    #  配置加载 (V2.1新增)
+    # ================================================================
+    def _load_project_config(self, config_file):
+        """加载 project_config.json 格式"""
+        with open(config_file, 'r', encoding='utf-8') as f:
+            self._project_config = json.load(f)
+
+        # 加载设备库
+        try:
+            self._device_library = get_device_library()
+        except Exception as e:
+            print(f"[Designer] 设备库加载失败: {e}")
+
+        # 解析 device_refs
+        if self._device_library:
+            for key, ref in self._project_config.get('device_refs', {}).items():
+                device = self._device_library.resolve_ref(ref)
+                if device:
+                    self._device_profiles[key] = device
+
+    def _load_ini_config(self, config_file):
+        """加载 network_config.ini 格式"""
+        with open(config_file, 'r', encoding='utf-8') as f:
+            self.config.read_file(f)
+
+    def _init_from_project_config(self):
+        """从 project_config.json 初始化配置"""
+        pc = self._project_config
+        topo = pc.get('topology', {})
+        networks = pc.get('networks', {})
+        rack = pc.get('rack_config', {})
+
+        # --- 下行端口模式 ---
+        self.downlink_mode = topo.get('downlink_mode', 'custom')
+
+        # --- 网络开关 (V2.1: 通过 networks 选择控制) ---
+        self.param_enabled = networks.get('param_network', True)
+        self.storage_enabled = networks.get('storage_network', True)
+        self.biz_enabled = networks.get('biz_network', True)
+        self.oob_enabled = networks.get('oob_network', True)
+
+        # --- 服务器配置 ---
+        self.num_servers = topo.get('num_gpu_servers', 0)
+        # Backward compat: support both old num_storage_servers and new split fields
+        if 'num_all_flash_storage' in topo or 'num_hybrid_flash_storage' in topo:
+            self.additional_storage = topo.get('num_all_flash_storage', 0) + topo.get('num_hybrid_flash_storage', 0)
+        else:
+            self.additional_storage = topo.get('num_storage_servers', 0)
+        self.additional_compute = topo.get('num_compute_servers', 0)
+        self.total_servers = self.num_servers + self.additional_storage + self.additional_compute
+
+        self.param_ports_per_server = topo.get('param_ports_per_server', 8)
+        self.storage_ports_per_server = topo.get('storage_ports_per_server', 1)
+        self.param_switch_ports = topo.get('param_switch_ports', 64)
+        self.storage_switch_ports = topo.get('storage_switch_ports', 40)
+        self.param_speed = topo.get('param_speed', '400G')
+        self.storage_speed = topo.get('storage_speed', '200G')
+
+        # --- 下行端口限制 ---
+        self._resolve_downlink_limits()
+
+        # --- 线缆类型 ---
+        self.cable_types = {
+            'param': {
+                'server_leaf': 'MPO',
+                'leaf_spine': 'MPO',
+                'spine_core': 'MPO'
+            },
+            'storage': {
+                'server_leaf': 'AOC',
+                'leaf_spine': 'AOC',
+                'spine_core': 'MPO'
+            }
+        }
+
+        # --- OOB 配置 ---
+        self.oob_access_ports = 48
+        self.oob_access_uplinks = 2
+        self.oob_agg_ports = 48
+        self.oob_speed = '1G'
+        self.oob_uplink_speed = '10G'
+        self.cable_oob_server_access = '网线'
+        self.cable_oob_access_agg = '光纤'
+        self.oob_dl = topo.get('oob_downlink_limit', 25)
+
+        # --- 业务网络配置 ---
+        self.biz_port_speed = '25G'
+        self.biz_access_ports = 48
+        self.biz_access_uplinks = 8
+        self.biz_uplink_speed = '100G'
+        self.biz_agg_box_ports = 32
+        self.biz_agg_chassis_ports = 32
+        self.cable_biz_server_access = '光纤'
+        self.cable_biz_access_agg = '光纤'
+        self.biz_dl = topo.get('biz_downlink_limit', 25)
+
+        # --- 机柜配置 (V2.1新增) ---
+        self.rack_type = rack.get('rack_type', 42)  # 42U or 49U
+        self.power_limit_per_rack = rack.get('power_limit_per_rack', 6000)
+        self.naming_prefix = rack.get('naming_prefix', '机柜')
+
+        # --- 从设备档案中提取端口命名前缀 (V2.1新增) ---
+        self._server_port_prefix = None
+        self._server_downlink_prefix = None
+        self._param_switch_downlink_prefix = None
+        self._param_switch_uplink_prefix = None
+        self._storage_switch_downlink_prefix = None
+        self._storage_switch_uplink_prefix = None
+        self._resolve_device_port_prefixes()
+
+    def _resolve_device_port_prefixes(self):
+        """从设备档案中解析端口命名前缀"""
+        for key, device in self._device_profiles.items():
+            if device.is_server() and device.interface_models:
+                for im in device.interface_models:
+                    if im.network_type == 'param':
+                        self._server_port_prefix = im.downlink_prefix or '参数网卡'
+                    elif im.network_type == 'storage':
+                        pass  # 存储网卡前缀
+                    elif im.network_type == 'oob':
+                        pass
+                    elif im.network_type == 'biz':
+                        pass
+            elif device.is_switch():
+                if device.downlink_prefix:
+                    if 'param_switch' in key or 'param' in key.lower():
+                        self._param_switch_downlink_prefix = device.downlink_prefix
+                        self._param_switch_uplink_prefix = device.uplink_prefix or device.downlink_prefix
+                    elif 'storage_switch' in key or 'storage' in key.lower():
+                        self._storage_switch_downlink_prefix = device.downlink_prefix
+                        self._storage_switch_uplink_prefix = device.uplink_prefix or device.downlink_prefix
+
+    def _init_from_ini(self):
+        """从 network_config.ini 初始化配置 (兼容旧版)"""
+        # --- 通用配置 (必须先加载，后续依赖 param_switch_ports 等) ---
+        self._load_common_ini_config()
+
+        # --- 下行端口模式 ---
+        self.downlink_mode = self.config.get('DEFAULT', 'downlink_mode', fallback='custom')
+        self._resolve_downlink_limits()
+
+        # --- 网络开关 ---
+        self.param_enabled = True
+        self.storage_enabled = True
+        self.biz_enabled = self.config.getboolean('DEFAULT', 'biz_enabled', fallback=True)
+        self.oob_enabled = self.config.getboolean('DEFAULT', 'oob_enabled', fallback=True)
+
+    def _load_common_ini_config(self):
+        """加载 INI 格式通用配置 (向后兼容)"""
+        self.num_servers = int(self.config.get('DEFAULT', 'num_servers', fallback=100))
+        self.additional_storage = int(self.config.get('DEFAULT', 'additional_storage_servers', fallback=0))
+        self.additional_compute = int(self.config.get('DEFAULT', 'additional_compute_servers', fallback=0))
+        self.total_servers = self.num_servers + self.additional_storage + self.additional_compute
+
+        self.param_ports_per_server = int(self.config.get('DEFAULT', 'param_ports_per_server', fallback=8))
+        self.storage_ports_per_server = int(self.config.get('DEFAULT', 'storage_ports_per_server', fallback=1))
+        self.param_switch_ports = int(self.config.get('DEFAULT', 'param_switch_ports', fallback=64))
+        self.storage_switch_ports = int(self.config.get('DEFAULT', 'storage_switch_ports', fallback=40))
+        self.param_speed = self.config.get('DEFAULT', 'param_speed', fallback="400G")
+        self.storage_speed = self.config.get('DEFAULT', 'storage_speed', fallback="200G")
+
+        self.cable_types = {
+            'param': {
+                'server_leaf': self.config.get('DEFAULT', 'cable_param_server_leaf', fallback='MPO'),
+                'leaf_spine': self.config.get('DEFAULT', 'cable_param_leaf_spine', fallback='MPO'),
+                'spine_core': self.config.get('DEFAULT', 'cable_param_spine_core', fallback='MPO')
+            },
+            'storage': {
+                'server_leaf': self.config.get('DEFAULT', 'cable_storage_server_leaf', fallback='AOC'),
+                'leaf_spine': self.config.get('DEFAULT', 'cable_storage_leaf_spine', fallback='AOC'),
+                'spine_core': self.config.get('DEFAULT', 'cable_storage_spine_core', fallback='MPO')
+            }
+        }
+
+        self.oob_access_ports = int(self.config.get('DEFAULT', 'oob_access_ports', fallback=48))
+        self.oob_access_uplinks = int(self.config.get('DEFAULT', 'oob_access_uplinks', fallback=2))
+        self.oob_agg_ports = int(self.config.get('DEFAULT', 'oob_agg_ports', fallback=48))
+        self.oob_speed = self.config.get('DEFAULT', 'oob_speed', fallback='1G')
+        self.oob_uplink_speed = self.config.get('DEFAULT', 'oob_uplink_speed', fallback='10G')
+        self.cable_oob_server_access = self.config.get('DEFAULT', 'cable_oob_server_access', fallback='网线')
+        self.cable_oob_access_agg = self.config.get('DEFAULT', 'cable_oob_access_agg', fallback='光纤')
+
+        self.biz_port_speed = self.config.get('DEFAULT', 'biz_port_speed', fallback='25G')
+        self.biz_access_ports = int(self.config.get('DEFAULT', 'biz_access_ports', fallback=48))
+        self.biz_access_uplinks = int(self.config.get('DEFAULT', 'biz_access_uplinks', fallback=8))
+        self.biz_uplink_speed = self.config.get('DEFAULT', 'biz_uplink_speed', fallback='100G')
+        self.biz_agg_box_ports = int(self.config.get('DEFAULT', 'biz_agg_box_ports', fallback=32))
+        self.biz_agg_chassis_ports = int(self.config.get('DEFAULT', 'biz_agg_chassis_ports', fallback=32))
+        self.cable_biz_server_access = self.config.get('DEFAULT', 'cable_biz_server_access', fallback='光纤')
+        self.cable_biz_access_agg = self.config.get('DEFAULT', 'cable_biz_access_agg', fallback='光纤')
+
+        # 机柜 (旧格式无此配置，使用默认值)
+        self.rack_type = 42
+        self.power_limit_per_rack = 6000
+        self.naming_prefix = '机柜'
+
+        # 端口前缀 (旧格式使用默认值)
+        self._server_port_prefix = None
+        self._server_downlink_prefix = None
+        self._param_switch_downlink_prefix = None
+        self._param_switch_uplink_prefix = None
+        self._storage_switch_downlink_prefix = None
+        self._storage_switch_uplink_prefix = None
+
+    # ================================================================
     #  下行端口解析
     # ================================================================
     def _resolve_downlink_limits(self):
         """根据 mode 解析各网络下行口数"""
+        if self._project_config is not None:
+            # V2.1: 使用 project_config 中的值
+            topo = self._project_config.get('topology', {})
+            if self.downlink_mode == 'full':
+                self.param_dl = self.param_switch_ports // 2
+                self.storage_dl = self.storage_switch_ports // 2
+                self.biz_dl = 45
+                self.oob_dl = 48
+            else:
+                self.param_dl = int(topo.get('param_downlink_limit', self.param_switch_ports // 2))
+                self.storage_dl = int(topo.get('storage_downlink_limit', self.storage_switch_ports // 2))
+                self.biz_dl = int(topo.get('biz_downlink_limit', 25))
+                self.oob_dl = int(topo.get('oob_downlink_limit', 25))
+            return
+
         if self.downlink_mode == 'full':
             # full模式: 满接 (参数/存储=一半口, 业务=45, OOB=48)
-            ps = int(self.config.get('DEFAULT', 'param_switch_ports', fallback=64))
-            ss = int(self.config.get('DEFAULT', 'storage_switch_ports', fallback=40))
+            ps = self.param_switch_ports
+            ss = self.storage_switch_ports
             self.param_dl = ps // 2
             self.storage_dl = ss // 2
             self.biz_dl = 45
             self.oob_dl = 48
         else:
             # custom模式: 读取配置
-            ps = int(self.config.get('DEFAULT', 'param_switch_ports', fallback=64))
-            ss = int(self.config.get('DEFAULT', 'storage_switch_ports', fallback=40))
+            ps = self.param_switch_ports
+            ss = self.storage_switch_ports
             self.param_dl = int(self.config.get('DEFAULT', 'param_downlink_limit',
                                                  fallback=ps // 2))
             self.storage_dl = int(self.config.get('DEFAULT', 'storage_downlink_limit',
@@ -134,6 +368,8 @@ class NetworkDesignerV2:
             self.param_servers_per_pod = min(max_2tier, self.num_servers)
         else:
             self.param_servers_per_group = min(self.param_dl, self.num_servers)
+            if self.param_servers_per_group <= 0:
+                self.param_servers_per_group = 1
             self.param_groups = math.ceil(self.num_servers / self.param_servers_per_group)
             self.param_leaf_per_group = self.param_ports_per_server
             self.param_leaf_count = self.param_groups * self.param_leaf_per_group
@@ -145,6 +381,8 @@ class NetworkDesignerV2:
         # --- 存储网络 (自动计算) ---
         self.storage_3tier_needed = False
         self.storage_servers_per_group = min(self.storage_dl, self.total_servers)
+        if self.storage_servers_per_group <= 0:
+            self.storage_servers_per_group = 1
         self.storage_groups = math.ceil(self.total_servers / self.storage_servers_per_group)
         self.storage_leaf_per_group = self.storage_ports_per_server
         self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
@@ -156,29 +394,58 @@ class NetworkDesignerV2:
     # ================================================================
     def create_network_objects(self):
         """创建服务器和交换机对象"""
+        # 从设备档案获取默认参数
+        gpu_profile = self._device_profiles.get('gpu_server')
+        storage_profile = self._device_profiles.get('storage_server')
+        compute_profile = self._device_profiles.get('compute_server')
+        param_switch_profile = self._device_profiles.get('param_switch')
+        storage_switch_profile = self._device_profiles.get('storage_switch')
+
+        def _make_server(name, group, podid, profile=None, default_power=500, default_u=2):
+            power = profile.power_watts if profile else default_power
+            u = profile.u_height if profile else default_u
+            prefix = profile.name_prefix if profile else ""
+            s = NetworkObject(name=name, obj_type='server',
+                              group=group, podid=podid,
+                              device_profile=profile,
+                              power_watts=power, u_height=u)
+            if profile and profile.interface_models:
+                # 从接口模型获取端口前缀
+                for im in profile.interface_models:
+                    if im.network_type == 'param':
+                        s.port_prefix = im.downlink_prefix or '参数网卡'
+            else:
+                s.port_prefix = self._server_port_prefix or '参数网卡'
+            return s
+
         # GPU服务器
+        # 3-tier 使用 pod 分组，2-tier 使用 group 分组
+        servers_per_group = self.param_servers_per_pod if self.param_3tier_needed else self.param_servers_per_group
+        if servers_per_group <= 0:
+            servers_per_group = 1
         for server_idx in range(1, self.num_servers + 1):
-            group_id = (server_idx - 1) // self.param_servers_per_group + 1
+            group_id = (server_idx - 1) // servers_per_group + 1
             group_name = f"GPU服务器组{group_id}"
             podid = f"pod-gpu-{group_id}"
-            s = NetworkObject(name=f"GPU服务器_{server_idx}", obj_type='server',
-                              group=group_name, podid=podid)
+            s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
+            # 分配机柜 (简单轮转: 每10台GPU服务器一个机柜)
+            self._assign_cabinet(s, server_idx)
             self.servers.append(s)
             self.server_groups[s.name] = group_name
             self.podid_map[s.name] = podid
 
         # 额外存储服务器
         for i in range(1, self.additional_storage + 1):
-            s = NetworkObject(name=f"存储服务器_{i}", obj_type='server',
-                              group="存储服务器组", podid="pod-storage")
+            s = _make_server(f"存储服务器_{i}", "存储服务器组", "pod-storage", storage_profile, default_power=300, default_u=2)
+            self._assign_cabinet(s, self.num_servers + i)
             self.servers.append(s)
             self.server_groups[s.name] = s.group
             self.podid_map[s.name] = s.podid
 
         # 额外通算服务器
         for i in range(1, self.additional_compute + 1):
-            s = NetworkObject(name=f"通算服务器_{i}", obj_type='server',
-                              group="通算服务器组", podid="pod-general")
+            s = _make_server(f"通算服务器_{i}", "通算服务器组", "pod-general", compute_profile, default_power=400, default_u=2)
+            self._assign_cabinet(s, self.num_servers + self.additional_storage + i)
             self.servers.append(s)
             self.server_groups[s.name] = s.group
             self.podid_map[s.name] = s.podid
@@ -193,46 +460,98 @@ class NetworkDesignerV2:
             self.param_cores = pt.cores
             self.switch_groups.update(pt.switch_groups)
             self.podid_map.update(pt.podid_map)
+            # 应用交换机端口前缀
+            self._apply_switch_port_prefixes(self.param_leaves + self.param_spines + self.param_cores,
+                                             param_switch_profile)
         else:
-            self._create_param_2tier_switches()
+            self._create_param_2tier_switches(param_switch_profile)
 
-        # 存储网络交换机 (自动计算)
-        self._create_storage_switches()
+        # 存储网络交换机 (仅在启用时创建)
+        if self.storage_enabled:
+            self._create_storage_switches(storage_switch_profile)
 
-    def _create_param_2tier_switches(self):
+    def _assign_cabinet(self, server, index):
+        """为服务器分配机柜和U位 (简单轮转)"""
+        servers_per_cabinet = max(1, self.rack_type // 2)  # 每U约2台服务器(按2U高)
+        cab_id = (index - 1) // servers_per_cabinet + 1
+        slot_in_cab = (index - 1) % servers_per_cabinet
+        server.cabinet_id = cab_id
+        server.cabinet_name = f"{self.naming_prefix}{cab_id}"
+        server.start_u = slot_in_cab * 2 + 1
+        server.end_u = server.start_u + server.u_height - 1
+
+    def _apply_switch_port_prefixes(self, switches, profile=None):
+        """为交换机设置端口命名前缀"""
+        for sw in switches:
+            if profile:
+                sw.downlink_prefix = profile.downlink_prefix or ""
+                sw.uplink_prefix = profile.uplink_prefix or ""
+                sw.port_prefix = profile.port_prefix or ""
+            else:
+                sw.downlink_prefix = self._param_switch_downlink_prefix or ""
+                sw.uplink_prefix = self._param_switch_uplink_prefix or ""
+                sw.port_prefix = ""
+
+    def _create_param_2tier_switches(self, profile=None):
         for group in range(1, self.param_groups + 1):
             for leaf_idx in range(1, self.param_leaf_per_group + 1):
                 sw = NetworkObject(name=f"参数Leaf_G{group}_{leaf_idx}",
                                    obj_type='param_leaf', group=f"参数Leaf组{group}",
-                                   max_ports=self.param_switch_ports, podid=f"pod-gpu-{group}")
+                                   max_ports=self.param_switch_ports, podid=f"pod-gpu-{group}",
+                                   device_profile=profile)
                 sw.downlink_limit = self.param_dl
+                if profile:
+                    sw.downlink_prefix = profile.downlink_prefix or ""
+                    sw.uplink_prefix = profile.uplink_prefix or ""
+                else:
+                    sw.downlink_prefix = self._param_switch_downlink_prefix or ""
+                    sw.uplink_prefix = self._param_switch_uplink_prefix or ""
                 self.param_leaves.append(sw)
                 self.switch_groups[sw.name] = sw.group
                 self.podid_map[sw.name] = sw.podid
         for i in range(1, self.param_spine_count + 1):
             sw = NetworkObject(name=f"参数Spine_{i}", obj_type='param_spine',
                                group="参数Spine组", max_ports=self.param_switch_ports,
-                               podid="superpod")
+                               podid="superpod", device_profile=profile)
+            if profile:
+                sw.downlink_prefix = profile.downlink_prefix or ""
+                sw.uplink_prefix = profile.uplink_prefix or ""
+            else:
+                sw.downlink_prefix = self._param_switch_downlink_prefix or ""
+                sw.uplink_prefix = self._param_switch_uplink_prefix or ""
             self.param_spines.append(sw)
             self.switch_groups[sw.name] = sw.group
             self.podid_map[sw.name] = sw.podid
 
-    def _create_storage_switches(self):
+    def _create_storage_switches(self, profile=None):
         for group in range(1, self.storage_groups + 1):
             for leaf_idx in range(1, self.storage_leaf_per_group + 1):
                 sw = NetworkObject(name=f"存储Leaf_{group}_{leaf_idx}",
                                    obj_type='storage_leaf', group=f"存储Leaf组{group}",
                                    max_ports=self.storage_switch_ports,
-                                   podid=f"pod-storage-{group}")
+                                   podid=f"pod-storage-{group}",
+                                   device_profile=profile)
                 sw.downlink_limit = self.storage_dl
                 sw.uplink_counter = self.storage_dl + 1
+                if profile:
+                    sw.downlink_prefix = profile.downlink_prefix or ""
+                    sw.uplink_prefix = profile.uplink_prefix or ""
+                else:
+                    sw.downlink_prefix = self._storage_switch_downlink_prefix or ""
+                    sw.uplink_prefix = self._storage_switch_uplink_prefix or ""
                 self.storage_leaves.append(sw)
                 self.switch_groups[sw.name] = sw.group
                 self.podid_map[sw.name] = sw.podid
         for i in range(1, self.storage_spine_count + 1):
             sw = NetworkObject(name=f"存储Spine_{i}", obj_type='storage_spine',
                                group="存储Spine组", max_ports=self.storage_switch_ports,
-                               podid="superpod")
+                               podid="superpod", device_profile=profile)
+            if profile:
+                sw.downlink_prefix = profile.downlink_prefix or ""
+                sw.uplink_prefix = profile.uplink_prefix or ""
+            else:
+                sw.downlink_prefix = self._storage_switch_downlink_prefix or ""
+                sw.uplink_prefix = self._storage_switch_uplink_prefix or ""
             self.storage_spines.append(sw)
             self.switch_groups[sw.name] = sw.group
             self.podid_map[sw.name] = sw.podid
@@ -252,7 +571,8 @@ class NetworkDesignerV2:
             pt.generate_connections(gpu_servers, self.param_pods, self.param_servers_per_pod)
         else:
             self._wire_param_2tier(gpu_servers)
-        self._wire_storage()
+        if self.storage_enabled:
+            self._wire_storage()
 
     def _wire_param_2tier(self, gpu_servers):
         """参数网络2tier: GPU→Leaf + Leaf→Spine (每Spine 2×400G)"""
@@ -266,7 +586,7 @@ class NetworkDesignerV2:
                 if not leaf:
                     continue
                 try:
-                    sp = f"参数网卡{pi}"
+                    sp = f"{server.port_prefix or '参数网卡'}{pi}"
                     lp = leaf.get_downlink_port()
                     self._add_conn(server, sp, self.param_speed, leaf, lp, self.param_speed,
                                    self.cable_types['param']['server_leaf'], "服务器到参数Leaf")
@@ -283,11 +603,11 @@ class NetworkDesignerV2:
             for si in range(self.param_spine_count):
                 for p in range(ports_per_spine):
                     spine = self.param_spines[si]
-                    lf = f"端口{po}"
+                    lf = f"{leaf.uplink_prefix or '端口'}{po}"
                     spn = ((po - self.param_dl - 1) % spine.downlink_limit) + 1
                     spine.downlink_counter = max(spine.downlink_counter, spn + 1)
                     po += 1
-                    self._add_conn(leaf, lf, self.param_speed, spine, f"端口{spn}",
+                    self._add_conn(leaf, lf, self.param_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
                                    self.param_speed,
                                    self.cable_types['param']['leaf_spine'],
                                    "参数Leaf到Spine")
@@ -320,18 +640,26 @@ class NetworkDesignerV2:
             for si in range(self.storage_spine_count):
                 for p in range(ports_per_spine):
                     spine = self.storage_spines[si]
-                    lf = f"端口{po}"
+                    lf = f"{leaf.uplink_prefix or '端口'}{po}"
                     spn = ((po - self.storage_dl - 1) % spine.downlink_limit) + 1
                     spine.downlink_counter = max(spine.downlink_counter, spn + 1)
                     po += 1
-                    self._add_conn(leaf, lf, self.storage_speed, spine, f"端口{spn}",
+                    self._add_conn(leaf, lf, self.storage_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
                                    self.storage_speed,
                                    self.cable_types['storage']['leaf_spine'],
                                    "存储Leaf到Spine")
 
     def _add_conn(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod, cable, desc):
-        c1 = Connection(a_dev.name, a_port, a_mod, z_dev.name, z_port, z_mod, cable, desc)
-        c2 = Connection(z_dev.name, z_port, z_mod, a_dev.name, a_port, a_mod, cable, desc)
+        c1 = Connection(a_dev.name, a_port, a_mod, z_dev.name, z_port, z_mod, cable, desc,
+                        a_cabinet_id=a_dev.cabinet_id, a_cabinet_name=a_dev.cabinet_name,
+                        a_start_u=a_dev.start_u, a_end_u=a_dev.end_u,
+                        z_cabinet_id=z_dev.cabinet_id, z_cabinet_name=z_dev.cabinet_name,
+                        z_start_u=z_dev.start_u, z_end_u=z_dev.end_u)
+        c2 = Connection(z_dev.name, z_port, z_mod, a_dev.name, a_port, a_mod, cable, desc,
+                        a_cabinet_id=z_dev.cabinet_id, a_cabinet_name=z_dev.cabinet_name,
+                        a_start_u=z_dev.start_u, a_end_u=z_dev.end_u,
+                        z_cabinet_id=a_dev.cabinet_id, z_cabinet_name=a_dev.cabinet_name,
+                        z_start_u=a_dev.start_u, z_end_u=a_dev.end_u)
         a_dev.add_connection(c1)
         z_dev.add_connection(c2)
 

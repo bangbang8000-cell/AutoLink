@@ -1,0 +1,52 @@
+{
+  "id": "h3c_unistor_x10000",
+  "vendor": "H3C",
+  "model": "UniStor X10000",
+  "category": "storage_servers_hybrid_flash",
+  "description": "H3C UniStor X10000 混闪存储服务器（SSD+HDD），适用于大规模分布式混合存储",
+  "power_watts": 900,
+  "weight_kg": 40,
+  "u_height": 4,
+  "depth_mm": 880,
+  "cooling": "air",
+  "name_prefix": "Storage-X10K",
+  "interface_models": [
+    {
+      "network_type": "storage",
+      "port_count": 4,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["存储", "H3C", "UniStor", "混闪", "SSD", "HDD"],
+  "applicable_networks": ["storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

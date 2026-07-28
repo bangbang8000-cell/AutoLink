@@ -3,11 +3,13 @@ interface Window {
     project: {
       list: () => Promise<{ id: number; name: string; index: number }[]>
       create: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
+      createWithConfig: (config: import('@/types/project-config').ProjectConfig) => Promise<void>
       delete: (ids: string[]) => Promise<void>
       getStructure: (name: string) => Promise<unknown[]>
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
       getFile: (name: string, filePath: string) => Promise<string | null>
+      getFileBinary: (name: string, filePath: string) => Promise<string | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
     }
     design: {
@@ -38,6 +40,14 @@ interface Window {
     shell: {
       showItemInFolder: (path: string) => void
       openPath: (path: string) => Promise<string>
+    }
+    deviceLibrary: {
+      list: () => Promise<{ categories: import('@/types/device-profile').DeviceCategory[] }>
+      get: (deviceId: string) => Promise<import('@/types/device-profile').LibraryDevice | null>
+      save: (device: import('@/types/device-profile').LibraryDevice) => Promise<void>
+      delete: (deviceId: string) => Promise<void>
+      import: (devices: import('@/types/device-profile').LibraryDevice[]) => Promise<void>
+      export: (deviceIds: string[], format: 'json' | 'excel' | 'zip') => Promise<void>
     }
     export: {
       saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>

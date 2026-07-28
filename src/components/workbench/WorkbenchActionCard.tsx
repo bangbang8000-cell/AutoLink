@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Play, Eye, Trash2, Loader2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
@@ -6,13 +6,14 @@ import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useToastStore } from '@/stores/toast.store'
+import { exportTopologyPng } from '@/utils/exportTopology'
 
 export function WorkbenchActionCard() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
-  const summary = useDesignStore((s) => s.summary)
   const topology = useDesignStore((s) => s.topology)
   const cabinets = useRackStore((s) => s.cabinets)
+  const exportToExcel = useRackStore((s) => s.exportToExcel)
   const {
     progress, selectedOutputTypes, batchMode, batchProjects,
     setProgress, addResult, clearResults, resetProgress,
@@ -20,6 +21,25 @@ export function WorkbenchActionCard() {
   const addToast = useToastStore((s) => s.addToast)
 
   const isRendering = progress.status === 'rendering'
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  // Subscribe to IPC render:progress events
+  useEffect(() => {
+    if (!window.electron?.render?.onProgress) return
+    const unsub = window.electron.render.onProgress((data: any) => {
+      if (data?.status === 'start') {
+        setProgress({ message: data.message || '开始渲染...' })
+      } else if (data?.status === 'complete') {
+        setProgress({ status: 'complete', message: data.message || '渲染完成', progress: 100 })
+      } else if (data?.status === 'error') {
+        setProgress({ status: 'error', message: data.message || '渲染失败', error: data.message })
+      }
+    })
+    cleanupRef.current = unsub
+    return () => {
+      if (cleanupRef.current) cleanupRef.current()
+    }
+  }, [setProgress])
 
   const handleRender = useCallback(async () => {
     if (!selectedProjectName && !batchMode) {
@@ -36,75 +56,137 @@ export function WorkbenchActionCard() {
     clearResults()
     setProgress({ status: 'rendering', message: '开始渲染...', progress: 0 })
 
-    try {
-      for (let i = 0; i < projects.length; i++) {
-        const projectName = projects[i]
-        const baseProgress = (i / projects.length) * 100
+    const totalSteps =
+      (selectedOutputTypes.includes('connections') ? projects.length : 0) +
+      (selectedOutputTypes.includes('rackTable') ? projects.length : 0) +
+      (selectedOutputTypes.includes('topology') ? projects.length : 0) +
+      (selectedOutputTypes.includes('deviceList') ? projects.length : 0)
+    let completedSteps = 0
 
-        setProgress({
-          message: `正在渲染 ${projectName}...`,
-          progress: Math.round(baseProgress),
-        })
+    const updateProgress = () => {
+      completedSteps++
+      setProgress({
+        progress: Math.round((completedSteps / Math.max(totalSteps, 1)) * 100),
+        message: `渲染中... (${completedSteps}/${totalSteps})`,
+      })
+    }
 
-        try {
-          // Export connections
-          if (selectedOutputTypes.includes('connections')) {
-            setProgress({ message: `[${projectName}] 生成连接关系表...`, progress: Math.round(baseProgress + 10) })
-            await window.electron.render.exportConnections(projectName, ['connections'])
+    for (let i = 0; i < projects.length; i++) {
+      const projectName = projects[i]
+
+      try {
+        // 1. Export connections table (via Python engine)
+        if (selectedOutputTypes.includes('connections')) {
+          setProgress({ message: `[${projectName}] 生成连接关系表...` })
+          try {
+            const result = await window.electron.render.exportConnections(projectName, ['connections'])
+            const data = result as any
+            const file = data?.data?.results?.[0]?.file || `${projectName}/output/连接关系表.xlsx`
+            addResult({
+              type: 'connections',
+              file: typeof file === 'string' ? file : `${projectName}/output/连接关系表.xlsx`,
+              status: 'success',
+              timestamp: new Date().toISOString(),
+            })
+          } catch (err) {
             addResult({
               type: 'connections',
               file: `${projectName}/output/连接关系表.xlsx`,
-              status: 'success',
+              status: 'error',
+              error: (err as Error).message,
               timestamp: new Date().toISOString(),
             })
           }
+          updateProgress()
+        }
 
-          // Export rack table
-          if (selectedOutputTypes.includes('rackTable') && cabinets.length > 0) {
-            setProgress({ message: `[${projectName}] 生成上机表...`, progress: Math.round(baseProgress + 15) })
-            await window.electron.render.exportConnections(projectName, ['rackTable'])
+        // 2. Export rack table (via rack.store frontend xlsx)
+        if (selectedOutputTypes.includes('rackTable') && cabinets.length > 0) {
+          setProgress({ message: `[${projectName}] 生成上机表...` })
+          try {
+            const filePath = await exportToExcel(projectName)
+            addResult({
+              type: 'rackTable',
+              file: filePath || `${projectName}/output/上机表.xlsx`,
+              status: filePath ? 'success' : 'error',
+              error: filePath ? undefined : '导出失败',
+              timestamp: new Date().toISOString(),
+            })
+          } catch (err) {
             addResult({
               type: 'rackTable',
               file: `${projectName}/output/上机表.xlsx`,
-              status: 'success',
+              status: 'error',
+              error: (err as Error).message,
               timestamp: new Date().toISOString(),
             })
           }
+          updateProgress()
+        }
 
-          // Export topology PNG
-          if (selectedOutputTypes.includes('topology') && topology) {
-            setProgress({ message: `[${projectName}] 生成拓扑图...`, progress: Math.round(baseProgress + 20) })
+        // 3. Export topology PNG (via ECharts utility)
+        if (selectedOutputTypes.includes('topology') && topology) {
+          setProgress({ message: `[${projectName}] 生成拓扑图...` })
+          try {
+            const base64 = await exportTopologyPng(topology.nodes, topology.edges)
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+            const fileName = `组网拓扑图_${timestamp}.png`
+            const filePath = await window.electron?.export?.saveFile(projectName, fileName, base64)
+            addResult({
+              type: 'topology',
+              file: filePath || `${projectName}/output/${fileName}`,
+              status: filePath ? 'success' : 'error',
+              error: filePath ? undefined : '保存失败',
+              timestamp: new Date().toISOString(),
+            })
+          } catch (err) {
             addResult({
               type: 'topology',
               file: `${projectName}/output/组网拓扑图.png`,
-              status: 'success',
+              status: 'error',
+              error: (err as Error).message,
               timestamp: new Date().toISOString(),
             })
           }
+          updateProgress()
+        }
 
-          // Export device list
-          if (selectedOutputTypes.includes('deviceList')) {
-            setProgress({ message: `[${projectName}] 生成设备清单...`, progress: Math.round(baseProgress + 25) })
-            await window.electron.render.exportConnections(projectName, ['deviceList'])
+        // 4. Export device list (via Python engine)
+        if (selectedOutputTypes.includes('deviceList')) {
+          setProgress({ message: `[${projectName}] 生成设备清单...` })
+          try {
+            const result = await window.electron.render.exportConnections(projectName, ['deviceList'])
+            const data = result as any
+            const file = data?.data?.results?.find((r: any) => r.type === 'deviceList')?.file
+            addResult({
+              type: 'deviceList',
+              file: file || `${projectName}/output/设备清单.xlsx`,
+              status: file ? 'success' : 'error',
+              timestamp: new Date().toISOString(),
+            })
+          } catch (err) {
             addResult({
               type: 'deviceList',
               file: `${projectName}/output/设备清单.xlsx`,
-              status: 'success',
+              status: 'error',
+              error: (err as Error).message,
               timestamp: new Date().toISOString(),
             })
           }
-        } catch (err) {
-          addToast('error', `${projectName} 渲染失败: ${(err as Error).message}`)
+          updateProgress()
         }
+      } catch (err) {
+        addToast('error', `${projectName} 渲染失败: ${(err as Error).message}`)
       }
-
-      setProgress({ status: 'complete', message: '渲染完成', progress: 100 })
-      addToast('success', '渲染完成')
-    } catch (err) {
-      setProgress({ status: 'error', message: (err as Error).message, progress: 0 })
-      addToast('error', `渲染失败: ${(err as Error).message}`)
     }
-  }, [selectedProjectName, batchMode, batchProjects, selectedOutputTypes, cabinets, topology, setProgress, addResult, clearResults, addToast])
+
+    setProgress({ status: 'complete', message: '渲染完成', progress: 100 })
+    addToast('success', '渲染完成')
+  }, [
+    selectedProjectName, batchMode, batchProjects, selectedOutputTypes,
+    cabinets, topology, exportToExcel,
+    setProgress, addResult, clearResults, addToast,
+  ])
 
   const handleClear = useCallback(() => {
     clearResults()

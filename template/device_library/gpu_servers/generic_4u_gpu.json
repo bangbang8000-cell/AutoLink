@@ -1,0 +1,62 @@
+{
+  "id": "generic_4u_gpu",
+  "vendor": "通用",
+  "model": "4U-GPU-Server",
+  "category": "gpu_servers",
+  "description": "通用 4U GPU服务器，适用于AI训练和推理",
+  "power_watts": 6000,
+  "weight_kg": 40,
+  "u_height": 4,
+  "depth_mm": 850,
+  "cooling": "air",
+  "name_prefix": "GPU-Generic",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 8,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 1,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 1,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["GPU", "通用", "AI训练", "深度学习"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

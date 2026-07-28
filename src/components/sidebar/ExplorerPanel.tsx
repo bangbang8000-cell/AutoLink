@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { useProjectStore, type ProjectInfo, type TemplateInfo } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
-import { CreateProjectModal } from './CreateProjectModal'
+import { CreateProjectWizardModal } from '../wizard/CreateProjectWizardModal'
 
 /* -------------------------------------------------- */
 /*  Collapsible Section                               */
@@ -352,10 +352,9 @@ export function ExplorerPanel() {
         />
       )}
 
-      {/* Create project modal */}
+      {/* Create project wizard */}
       {modalOpen && (
-        <CreateProjectModal
-          templates={templates}
+        <CreateProjectWizardModal
           onClose={() => setModalOpen(false)}
         />
       )}

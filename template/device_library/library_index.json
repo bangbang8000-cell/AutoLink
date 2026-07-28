@@ -1,0 +1,121 @@
+{
+  "version": "1.1.0",
+  "updated_at": "2026-07-28",
+  "categories": [
+    {
+      "id": "gpu_servers",
+      "name": "GPU服务器",
+      "description": "GPU训练/推理服务器",
+      "device_ids": [
+        "nvidia_dgx_h100",
+        "nvidia_dgx_b200",
+        "nvidia_dgx_gb300_nvl72",
+        "huawei_atlas_900",
+        "h3c_r5500_g7",
+        "inspur_nf5688m7",
+        "generic_4u_gpu"
+      ]
+    },
+    {
+      "id": "storage_servers_all_flash",
+      "name": "全闪存储服务器",
+      "description": "全闪存NVMe存储服务器",
+      "device_ids": [
+        "huawei_oceanstor_dorado_8000",
+        "huawei_oceanstor_dorado_6000",
+        "h3c_unistor_cf22000",
+        "inspur_as13000",
+        "generic_all_flash"
+      ]
+    },
+    {
+      "id": "storage_servers_hybrid_flash",
+      "name": "混闪存储服务器",
+      "description": "混合闪存(SSD+HDD)存储服务器",
+      "device_ids": [
+        "huawei_oceanstor_5310",
+        "huawei_oceanstor_5510",
+        "h3c_unistor_x10000",
+        "inspur_as5500",
+        "generic_hybrid_flash"
+      ]
+    },
+    {
+      "id": "compute_servers",
+      "name": "通算服务器",
+      "description": "通用计算/管理服务器",
+      "device_ids": [
+        "huawei_2288h_v7",
+        "h3c_r4900_g7",
+        "inspur_nf5280m7",
+        "ruijie_rg_s6250",
+        "generic_2u_compute"
+      ]
+    },
+    {
+      "id": "switches_param",
+      "name": "参数网络交换机",
+      "description": "RoCEv2/IB 高速参数面交换机（含Leaf/Spine/Core）",
+      "device_ids": [
+        "nvidia_mqm9700_64_400g_ib",
+        "nvidia_mqm9790_64_400g_ib",
+        "nvidia_mqm8700_40_200g_ib",
+        "nvidia_mqm8790_40_200g_ib",
+        "nvidia_q3200_72_800g_ib",
+        "nvidia_q3400_144_800g_ib",
+        "nvidia_sn5600_64_400g",
+        "nvidia_sn5400_64_200g",
+        "huawei_ce9860_4c_ei",
+        "huawei_ce8860_4c_ei",
+        "huawei_ce8850_64cq_ei",
+        "h3c_s9850_64h",
+        "h3c_s9820_64h",
+        "h3c_s9820_8c",
+        "ruijie_rg_s6990_64oc2xs",
+        "ruijie_rg_s9910_128oc2vs",
+        "ruijie_rg_s6980_64qc",
+        "generic_64p_400g"
+      ]
+    },
+    {
+      "id": "switches_storage",
+      "name": "存储网络交换机",
+      "description": "存储网络接入/汇聚交换机",
+      "device_ids": [
+        "h3c_s6850_56hf",
+        "huawei_ce6860_48s6cq",
+        "nvidia_sn4600c",
+        "ruijie_rg_s6510_48vs8cq",
+        "generic_48p_200g"
+      ]
+    },
+    {
+      "id": "switches_biz",
+      "name": "业务网络交换机",
+      "description": "业务/带内管理网络交换机（含接入和汇聚）",
+      "device_ids": [
+        "h3c_s5560x_54s_ei",
+        "h3c_s6520x_54qc_ei",
+        "huawei_s5735_l48p4x_a",
+        "huawei_s6730_h48x6c",
+        "ruijie_rg_s5310_48gt4xs",
+        "ruijie_rg_s6120_48xs8cq",
+        "generic_48p_25g"
+      ]
+    },
+    {
+      "id": "switches_oob",
+      "name": "带外管理交换机",
+      "description": "带外管理网络交换机（含接入和汇聚）",
+      "device_ids": [
+        "h3c_s5130s_52p_ei",
+        "h3c_s5120v3_52p_ei",
+        "huawei_s5735_l48t4x_a",
+        "huawei_s5732_h48s6q",
+        "ruijie_rg_s2928g",
+        "ruijie_rg_s5750c_48gt4xs_h",
+        "generic_48p_1g"
+      ]
+    }
+  ]
+}

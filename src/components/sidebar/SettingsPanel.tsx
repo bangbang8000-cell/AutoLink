@@ -122,7 +122,7 @@ export function SettingsPanel() {
             <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               <div className="flex justify-between">
                 <span>版本</span>
-                <span className="font-medium text-gray-700 dark:text-gray-300">2.0.0</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">2.0.1</span>
               </div>
               <div className="flex justify-between">
                 <span>许可证</span>

@@ -1,0 +1,42 @@
+{
+  "id": "ruijie_rg_s6250",
+  "vendor": "锐捷",
+  "model": "RG-S6250",
+  "category": "compute_servers",
+  "description": "锐捷 RG-S6250 通用计算服务器，适用于企业级通用计算场景",
+  "power_watts": 750,
+  "weight_kg": 20,
+  "u_height": 2,
+  "depth_mm": 800,
+  "cooling": "air",
+  "name_prefix": "Compute-RG6250",
+  "interface_models": [
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["计算", "锐捷", "通用计算"],
+  "applicable_networks": ["biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

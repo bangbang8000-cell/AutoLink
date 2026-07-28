@@ -29,7 +29,7 @@ export function AboutDialog({ onClose }: Props) {
           </p>
 
           <div className="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
-            <div><span className="text-gray-400">版本:</span> 2.0.0</div>
+            <div><span className="text-gray-400">版本:</span> 2.0.1</div>
             <div><span className="text-gray-400">Electron:</span> 28.x</div>
             <div><span className="text-gray-400">React:</span> 18.x</div>
           </div>

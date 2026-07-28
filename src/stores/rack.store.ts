@@ -8,12 +8,26 @@ export interface RackDevice {
   cabinetId: number
   startU: number
   endU: number
+  power_watts: number
+}
+
+export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom'
+
+export const CABINET_TYPE_LABELS: Record<CabinetType, string> = {
+  gpu: 'GPU柜',
+  storage: '存储柜',
+  network: '网络柜',
+  compute: '通算柜',
+  security: '安全柜',
+  custom: '自定义',
 }
 
 export interface RackCabinet {
   id: number
   name: string
   totalU: number
+  type: CabinetType
+  power_limit: number
   devices: RackDevice[]
 }
 
@@ -22,6 +36,7 @@ export interface UnplacedDevice {
   name: string
   type: string
   height: number
+  power_watts: number
 }
 
 interface RackState {
@@ -32,17 +47,23 @@ interface RackState {
   addDeviceMode: boolean
   editingDevice: string | null
 
-  initDefault: (serverCount: number) => void
+  initDefault: (serverCount: number, rackType?: number, powerLimit?: number) => void
+  initFromTopology: (topologyNodes: { id: string; type: string; group: string; podid: string }[], rackType?: number, powerLimit?: number) => void
   loadRackLayout: (projectName: string) => Promise<void>
-  addCabinet: () => void
+  saveRackLayout: (projectName: string) => Promise<void>
+  addCabinet: (totalU?: number, type?: CabinetType, powerLimit?: number) => void
   removeCabinet: (id: number) => void
   selectCabinet: (id: number | null) => void
+  updateCabinet: (id: number, updates: Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>) => void
   placeDevice: (cabinetId: number, device: UnplacedDevice, startU: number) => boolean
   removeDevice: (cabinetId: number, deviceId: string) => void
   moveDevice: (deviceId: string, fromCabinet: number, toCabinet: number, newStartU: number) => boolean
   selectedDeviceInfo: (id: string) => RackDevice | null
   selectDevice: (id: string | null) => void
   exportToExcel: (projectName: string) => Promise<string>
+  importCabinetList: (csvData: string) => void
+  getPowerUsage: (cabinetId: number) => { used: number; limit: number; percent: number; exceeded: boolean }
+  getPowerUsageAll: () => { total: number; limit: number; percent: number }
 }
 
 export const useRackStore = create<RackState>()((set, get) => ({
@@ -53,16 +74,18 @@ export const useRackStore = create<RackState>()((set, get) => ({
   addDeviceMode: false,
   editingDevice: null,
 
-  initDefault: (serverCount) => {
+  initDefault: (serverCount, rackType = 42, powerLimit = 6000) => {
     const baseServers = Math.min(serverCount, 134)
-    const cabsNeeded = Math.ceil(baseServers / 42)
+    const cabsNeeded = Math.ceil(baseServers / rackType)
 
     const cabinets: RackCabinet[] = []
     for (let i = 0; i < cabsNeeded; i++) {
       cabinets.push({
         id: i + 1,
         name: `机柜 ${String.fromCharCode(65 + i)}`,
-        totalU: 42,
+        totalU: rackType,
+        type: 'gpu',
+        power_limit: powerLimit,
         devices: [],
       })
     }
@@ -75,8 +98,43 @@ export const useRackStore = create<RackState>()((set, get) => ({
         name: `GPU服务器_${i}`,
         type: 'GPU Server',
         height: 4,
+        power_watts: 2000,
       })
     }
+
+    set({ cabinets, unplacedDevices, selectedCabinetId: cabinets.length > 0 ? 1 : null })
+  },
+
+  initFromTopology: (topologyNodes, rackType = 42, powerLimit = 6000) => {
+    // Extract server-type devices from topology data
+    const serverNodes = topologyNodes.filter((n) => n.type === 'server')
+    if (serverNodes.length === 0) {
+      get().initDefault(134, rackType, powerLimit)
+      return
+    }
+
+    const serverCount = serverNodes.length
+    const cabsNeeded = Math.ceil(serverCount / rackType)
+
+    const cabinets: RackCabinet[] = []
+    for (let i = 0; i < cabsNeeded; i++) {
+      cabinets.push({
+        id: i + 1,
+        name: `机柜 ${String.fromCharCode(65 + i)}`,
+        totalU: rackType,
+        type: 'gpu',
+        power_limit: powerLimit,
+        devices: [],
+      })
+    }
+
+    const unplacedDevices: UnplacedDevice[] = serverNodes.map((node, i) => ({
+      id: `server-${i + 1}`,
+      name: node.id,
+      type: 'GPU Server',
+      height: 4,
+      power_watts: 2000,
+    }))
 
     set({ cabinets, unplacedDevices, selectedCabinetId: cabinets.length > 0 ? 1 : null })
   },
@@ -88,10 +146,20 @@ export const useRackStore = create<RackState>()((set, get) => ({
         if (jsonStr) {
           const data = JSON.parse(jsonStr)
           if (data.cabinets && Array.isArray(data.cabinets)) {
+            // Ensure new fields have defaults
+            const cabinets = (data.cabinets as RackCabinet[]).map((c) => ({
+              ...c,
+              type: c.type || 'gpu',
+              power_limit: c.power_limit || 6000,
+              devices: (c.devices || []).map((d) => ({
+                ...d,
+                power_watts: d.power_watts || 0,
+              })),
+            }))
             set({
-              cabinets: data.cabinets as RackCabinet[],
+              cabinets,
               unplacedDevices: [],
-              selectedCabinetId: data.cabinets.length > 0 ? data.cabinets[0].id : null,
+              selectedCabinetId: cabinets.length > 0 ? cabinets[0].id : null,
               addDeviceMode: false,
             })
             return
@@ -106,12 +174,30 @@ export const useRackStore = create<RackState>()((set, get) => ({
     }
   },
 
-  addCabinet: () => {
+  saveRackLayout: async (projectName) => {
+    try {
+      if (window.electron?.project?.saveConfigFile) {
+        const { cabinets } = get()
+        const data = { cabinets, updated_at: new Date().toISOString() }
+        // Use saveConfigFile to save rack_layout.json via the existing save mechanism
+        // Actually, we need a generic file save. Let's use the export:saveFile mechanism
+        const jsonStr = JSON.stringify(data, null, 2)
+        const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
+        if (window.electron?.export?.saveFile) {
+          await window.electron.export.saveFile(projectName, 'rack_layout.json', base64)
+        }
+      }
+    } catch (err) {
+      console.error('saveRackLayout:', err)
+    }
+  },
+
+  addCabinet: (totalU = 42, type = 'gpu', powerLimit = 6000) => {
     set((s) => {
       const newId = s.cabinets.length > 0 ? Math.max(...s.cabinets.map((c) => c.id)) + 1 : 1
       const label = String.fromCharCode(64 + newId)
       return {
-        cabinets: [...s.cabinets, { id: newId, name: `机柜 ${label}`, totalU: 42, devices: [] }],
+        cabinets: [...s.cabinets, { id: newId, name: `机柜 ${label}`, totalU, type, power_limit: powerLimit, devices: [] }],
       }
     })
   },
@@ -127,6 +213,12 @@ export const useRackStore = create<RackState>()((set, get) => ({
 
   selectCabinet: (id) => set({ selectedCabinetId: id, addDeviceMode: false, editingDevice: null }),
 
+  updateCabinet: (id, updates) => {
+    set((s) => ({
+      cabinets: s.cabinets.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    }))
+  },
+
   placeDevice: (cabinetId, device, startU) => {
     const { cabinets } = get()
     const cabinet = cabinets.find((c) => c.id === cabinetId)
@@ -134,6 +226,10 @@ export const useRackStore = create<RackState>()((set, get) => ({
 
     const endU = startU + device.height - 1
     if (endU > cabinet.totalU) return false
+
+    // Check power limit
+    const currentPower = cabinet.devices.reduce((sum, d) => sum + d.power_watts, 0)
+    if (currentPower + device.power_watts > cabinet.power_limit) return false
 
     // Check conflict
     const hasConflict = cabinet.devices.some(
@@ -148,6 +244,7 @@ export const useRackStore = create<RackState>()((set, get) => ({
       cabinetId,
       startU,
       endU,
+      power_watts: device.power_watts,
     }
 
     set((s) => ({
@@ -170,6 +267,7 @@ export const useRackStore = create<RackState>()((set, get) => ({
         name: device.name,
         type: device.type,
         height: device.endU - device.startU + 1,
+        power_watts: device.power_watts,
       }
 
       return {
@@ -241,23 +339,43 @@ export const useRackStore = create<RackState>()((set, get) => ({
       for (const device of cab.devices) {
         rows.push({
           '机柜号': cab.name,
+          '机柜类型': CABINET_TYPE_LABELS[cab.type] || cab.type,
+          '机柜功率上限(W)': cab.power_limit,
           '设备名称': device.name,
           '设备类型': device.type,
           '起始U位': device.startU,
           '结束U位': device.endU,
           '占用U数': device.endU - device.startU + 1,
+          '功率(W)': device.power_watts,
         })
       }
+    }
+
+    // Add power summary rows
+    rows.push({})
+    rows.push({ '机柜号': '--- 功率汇总 ---' })
+    for (const cab of cabinets) {
+      const used = cab.devices.reduce((sum, d) => sum + d.power_watts, 0)
+      const pct = Math.round((used / cab.power_limit) * 100)
+      rows.push({
+        '机柜号': cab.name,
+        '机柜功率上限(W)': cab.power_limit,
+        '实际功率(W)': used,
+        '使用率': `${pct}%`,
+        '状态': used > cab.power_limit ? '超限' : '正常',
+      })
     }
 
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.json_to_sheet(rows)
 
-    // Set column widths
     ws['!cols'] = [
       { wch: 10 },
+      { wch: 12 },
+      { wch: 14 },
       { wch: 20 },
       { wch: 15 },
+      { wch: 10 },
       { wch: 10 },
       { wch: 10 },
       { wch: 10 },
@@ -271,5 +389,51 @@ export const useRackStore = create<RackState>()((set, get) => ({
 
     const filePath = await window.electron?.export?.saveFile(projectName, fileName, wbout)
     return filePath || ''
+  },
+
+  importCabinetList: (csvData) => {
+    const lines = csvData.trim().split(/\r?\n/)
+    const cabinets: RackCabinet[] = []
+
+    for (const line of lines) {
+      const cols = line.split(',').map((s) => s.trim())
+      if (cols.length < 2) continue
+      const name = cols[0]
+      const totalU = parseInt(cols[1]) || 42
+      const type = (cols[2] || 'gpu') as CabinetType
+      const powerLimit = parseInt(cols[3]) || 6000
+
+      if (name && !isNaN(totalU)) {
+        cabinets.push({
+          id: cabinets.length + 1,
+          name,
+          totalU,
+          type,
+          power_limit: powerLimit,
+          devices: [],
+        })
+      }
+    }
+
+    if (cabinets.length > 0) {
+      set({ cabinets, selectedCabinetId: cabinets[0].id })
+    }
+  },
+
+  getPowerUsage: (cabinetId) => {
+    const { cabinets } = get()
+    const cabinet = cabinets.find((c) => c.id === cabinetId)
+    if (!cabinet) return { used: 0, limit: 0, percent: 0, exceeded: false }
+    const used = cabinet.devices.reduce((sum, d) => sum + d.power_watts, 0)
+    const percent = cabinet.power_limit > 0 ? Math.round((used / cabinet.power_limit) * 100) : 0
+    return { used, limit: cabinet.power_limit, percent, exceeded: used > cabinet.power_limit }
+  },
+
+  getPowerUsageAll: () => {
+    const { cabinets } = get()
+    const total = cabinets.reduce((sum, c) => sum + c.devices.reduce((s, d) => s + d.power_watts, 0), 0)
+    const limit = cabinets.reduce((sum, c) => sum + c.power_limit, 0)
+    const percent = limit > 0 ? Math.round((total / limit) * 100) : 0
+    return { total, limit, percent }
   },
 }))

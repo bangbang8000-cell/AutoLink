@@ -10,6 +10,7 @@
     "rack": "机柜规划",
     "topology": "拓扑可视化",
     "outputResults": "输出结果",
+    "deviceLibrary": "设备库",
     "settings": "设置",
     "hideSidebar": "隐藏侧边栏",
     "showSidebar": "显示侧边栏",

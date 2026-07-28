@@ -1,0 +1,62 @@
+{
+  "id": "nvidia_dgx_gb300_nvl72",
+  "vendor": "NVIDIA",
+  "model": "DGX-GB300 NVL72",
+  "category": "gpu_servers",
+  "description": "NVIDIA DGX-GB300 NVL72 GPU服务器，搭载72块GB300 GPU，液冷散热，面向超大规模AI集群",
+  "power_watts": 16000,
+  "weight_kg": 80,
+  "u_height": 12,
+  "depth_mm": 900,
+  "cooling": "liquid",
+  "name_prefix": "GPU-GB300",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 8,
+      "port_speed": "800G",
+      "port_type": "QSFP-DD",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 4,
+      "port_speed": "800G",
+      "port_type": "QSFP-DD",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 1,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["GPU", "NVIDIA", "GB300", "NVL72", "AI训练", "深度学习", "液冷"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

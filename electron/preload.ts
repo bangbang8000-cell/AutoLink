@@ -5,6 +5,8 @@ const electronAPI = {
     list: () => ipcRenderer.invoke('project:list'),
     create: (name: string, options?: { template?: string; empty?: boolean }) =>
       ipcRenderer.invoke('project:create', name, options),
+    createWithConfig: (config: unknown) =>
+      ipcRenderer.invoke('project:createWithConfig', config),
     delete: (ids: string[]) => ipcRenderer.invoke('project:delete', ids),
     getStructure: (name: string) => ipcRenderer.invoke('project:getStructure', name),
     getConfigFile: (name: string) => ipcRenderer.invoke('project:getConfigFile', name),
@@ -12,6 +14,8 @@ const electronAPI = {
       ipcRenderer.invoke('project:saveConfigFile', name, content),
     getFile: (name: string, filePath: string) =>
       ipcRenderer.invoke('project:getFile', name, filePath),
+    getFileBinary: (name: string, filePath: string) =>
+      ipcRenderer.invoke('project:getFileBinary', name, filePath),
     listOutputFiles: (name: string) =>
       ipcRenderer.invoke('project:listOutputFiles', name),
   },
@@ -70,6 +74,14 @@ const electronAPI = {
   export: {
     saveFile: (projectName: string, fileName: string, base64Data: string) =>
       ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
+  },
+  deviceLibrary: {
+    list: () => ipcRenderer.invoke('device-library:list'),
+    get: (deviceId: string) => ipcRenderer.invoke('device-library:get', deviceId),
+    save: (device: unknown) => ipcRenderer.invoke('device-library:save', device),
+    delete: (deviceId: string) => ipcRenderer.invoke('device-library:delete', deviceId),
+    import: (devices: unknown[]) => ipcRenderer.invoke('device-library:import', devices),
+    export: (deviceIds: string[], format: string) => ipcRenderer.invoke('device-library:export', deviceIds, format),
   },
   versions: {
     node: process.versions.node,

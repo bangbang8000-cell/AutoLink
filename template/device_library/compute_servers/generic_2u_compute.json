@@ -1,0 +1,42 @@
+{
+  "id": "generic_2u_compute",
+  "vendor": "通用",
+  "model": "2U-Compute",
+  "category": "compute_servers",
+  "description": "通用 2U 计算服务器，适用于通用企业级计算场景",
+  "power_watts": 800,
+  "weight_kg": 20,
+  "u_height": 2,
+  "depth_mm": 800,
+  "cooling": "air",
+  "name_prefix": "Compute-Generic",
+  "interface_models": [
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["计算", "通用", "通用计算"],
+  "applicable_networks": ["biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

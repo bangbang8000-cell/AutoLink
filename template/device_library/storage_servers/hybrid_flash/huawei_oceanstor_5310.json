@@ -1,0 +1,52 @@
+{
+  "id": "huawei_oceanstor_5310",
+  "vendor": "华为",
+  "model": "OceanStor 5310",
+  "category": "storage_servers_hybrid_flash",
+  "description": "华为 OceanStor 5310 混闪存储服务器（SSD+HDD），适用于企业级混合存储场景",
+  "power_watts": 800,
+  "weight_kg": 38,
+  "u_height": 3,
+  "depth_mm": 850,
+  "cooling": "air",
+  "name_prefix": "Storage-5310",
+  "interface_models": [
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["存储", "华为", "OceanStor", "混闪", "SSD", "HDD"],
+  "applicable_networks": ["storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-07-28"
+}

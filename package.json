@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "autolink",
   "version": "2.0.1",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
@@ -9,10 +9,10 @@
   "scripts": {
     "dev": "vite",
     "dev:electron": "electron .",
-    "dev:all": "tsc -p tsconfig.electron.json && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:all": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\" && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:all:clean": "npm run build:electron && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build:renderer": "vite build",
-    "build:electron": "npx rimraf dist-electron && tsc -p tsconfig.electron.json",
+    "build:electron": "npx rimraf dist-electron && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\"",
     "build": "npm run build:renderer && npm run build:electron",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
@@ -23,7 +23,13 @@
     "lint": "eslint src/ electron/ --ext .ts,.tsx",
     "lint:fix": "eslint src/ electron/ --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"electron/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"electron/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"electron/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:backend": "python -m pytest tests/backend/ -v",
+    "test:backend:coverage": "python -m pytest tests/backend/ -v --cov=backend --cov-report=html",
+    "test:all": "npm run test && npm run test:backend"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -39,6 +45,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -54,11 +62,13 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.23",
     "prettier": "^3.9.6",
     "tailwindcss": "^3.4.1",
     "typescript": "^6.0.3",
     "vite": "^8.1.5",
+    "vitest": "^4.1.10",
     "wait-on": "^9.1.0"
   },
   "build": {
@@ -92,7 +102,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/icons/icon.ico",
@@ -110,7 +122,10 @@
       "target": [
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "public/icons/icon.icns",
@@ -118,8 +133,18 @@
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "public/icons/icon.png",
       "category": "Network"

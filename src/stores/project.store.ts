@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { ProjectConfig } from '@/types/project-config'
 
 export interface ProjectInfo {
   id: number
@@ -32,6 +33,7 @@ interface ProjectState {
 
   fetchProjects: () => Promise<void>
   createProject: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
+  createProjectWithConfig: (config: ProjectConfig) => Promise<void>
   deleteProjects: (ids: string[]) => Promise<void>
   selectProject: (project: ProjectInfo | null) => void
   toggleFavorite: (name: string) => void
@@ -102,6 +104,12 @@ export const useProjectStore = create<ProjectState>()(
       createProject: async (name, options) => {
         ensureIPC()
         await window.electron.project.create(name, options)
+        await get().fetchProjects()
+      },
+
+      createProjectWithConfig: async (config) => {
+        ensureIPC()
+        await window.electron.project.createWithConfig(config)
         await get().fetchProjects()
       },
 

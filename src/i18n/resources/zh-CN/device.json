@@ -1,0 +1,93 @@
+{
+  "title": "设备库",
+  "search": "搜索设备...",
+  "filter": {
+    "category": "分类",
+    "vendor": "厂商",
+    "networkType": "网络类型",
+    "powerRange": "功率范围",
+    "portRange": "端口范围",
+    "all": "全部",
+    "apply": "应用筛选",
+    "reset": "重置"
+  },
+  "category": {
+    "all": "全部设备",
+    "gpu_servers": "GPU服务器",
+    "storage_servers": "存储服务器",
+    "compute_servers": "通算服务器",
+    "switches": "交换机",
+    "custom": "自定义"
+  },
+  "device": {
+    "vendor": "厂商",
+    "model": "型号",
+    "power": "功率",
+    "uHeight": "U高",
+    "cooling": "散热",
+    "depth": "深度",
+    "weight": "重量",
+    "namePrefix": "名称前缀",
+    "ports": "端口数",
+    "portSpeed": "端口速率",
+    "portType": "端口类型",
+    "downlinkPrefix": "下行前缀",
+    "uplinkPrefix": "上行前缀",
+    "interfaceModels": "接口模型",
+    "networkType": "网络类型",
+    "portCount": "端口数",
+    "cableType": "线缆类型",
+    "builtin": "内置",
+    "custom": "自定义",
+    "verified": "已校验",
+    "unverified": "未校验",
+    "datasheet": "规格书",
+    "noSelection": "请选择设备查看详情",
+    "noDevices": "暂无设备",
+    "deviceCount": "{{count}} 款设备"
+  },
+  "compare": {
+    "title": "设备对比",
+    "add": "加入对比",
+    "remove": "移除对比",
+    "clear": "清空对比",
+    "maxReached": "最多对比3款设备"
+  },
+  "actions": {
+    "addServer": "添加服务器",
+    "addSwitch": "添加交换机",
+    "edit": "编辑",
+    "delete": "删除",
+    "copyToCustom": "复制到自定义",
+    "import": "导入",
+    "export": "导出",
+    "deleteConfirm": "确定要删除设备 \"{{name}}\" 吗？",
+    "deleteNote": "内置设备不可删除，可复制到自定义后编辑"
+  },
+  "import": {
+    "title": "批量导入设备",
+    "serverTab": "服务器模板",
+    "switchTab": "交换机模板",
+    "uploadHint": "选择 CSV 或 Excel 文件上传",
+    "downloadTemplate": "下载模板",
+    "preview": "预览",
+    "confirm": "确认导入",
+    "cancel": "取消",
+    "total": "共 {{count}} 条",
+    "valid": "有效 {{count}} 条",
+    "invalid": "无效 {{count}} 条",
+    "errors": "导入错误"
+  },
+  "export": {
+    "title": "导出设备",
+    "selectDevices": "选择要导出的设备",
+    "format": "导出格式",
+    "json": "JSON (单文件)",
+    "excel": "Excel",
+    "zip": "ZIP (全库)",
+    "allDevices": "全库设备",
+    "selectedDevices": "已选设备 ({{count}})",
+    "confirm": "导出",
+    "cancel": "取消"
+  }
+}

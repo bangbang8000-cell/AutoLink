@@ -210,6 +210,9 @@ export const useDesignStore = create<DesignState>()((set, get) => ({
       const { config } = get()
       const ini = configToINI(config)
 
+      if (!window.electron?.design?.generate) {
+        throw new Error('IPC 桥接未就绪')
+      }
       const result = (await window.electron.design.generate(projectName, ini)) as {
         summary: DesignSummary
         topology: { nodes: TopologyNode[]; edges: TopologyEdge[] }
@@ -217,9 +220,9 @@ export const useDesignStore = create<DesignState>()((set, get) => ({
       }
 
       set({
-        summary: result.summary,
-        topology: result.topology,
-        valid: result.valid,
+        summary: result.summary ?? null,
+        topology: result.topology ?? null,
+        valid: result.valid ?? null,
         projectName,
       })
     } catch (err) {
@@ -235,11 +238,14 @@ export const useDesignStore = create<DesignState>()((set, get) => ({
       const { config } = get()
       const ini = configToINI(config)
 
+      if (!window.electron?.design?.validate) {
+        throw new Error('IPC 桥接未就绪')
+      }
       const result = (await window.electron.design.validate(projectName, ini)) as {
         valid: boolean
       }
 
-      set({ valid: result.valid, projectName })
+      set({ valid: result.valid ?? null, projectName })
     } catch (err) {
       set({ error: (err as Error).message })
     } finally {

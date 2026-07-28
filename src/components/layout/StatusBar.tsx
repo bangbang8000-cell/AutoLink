@@ -17,7 +17,7 @@ export function StatusBar() {
       </div>
       <div className="flex items-center gap-3">
         <span>{t('common:status.projectCount', { count: projects.length })}</span>
-        <span>v2.0.0</span>
+        <span>v2.0.1</span>
       </div>
     </div>
   )
