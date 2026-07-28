@@ -132,7 +132,7 @@ function DesignSummaryView({ summary, valid }: { summary: DesignSummary; valid: 
 
         {/* Validation */}
         {valid !== null && (
-          <div className={`flex items-center gap-1.5 text-xs px-2 py-1.5 rounded ${valid ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+          <div className={`flex items-center gap-1.5 text-xs px-2 py-1.5 rounded ${valid ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
             {valid ? <CheckCircle size={13} /> : <XCircle size={13} />}
             {valid ? t('design:validationPassed') : t('design:validationFailed')}
           </div>
@@ -331,7 +331,7 @@ export function DesignPanel() {
 
         {/* Error */}
         {error && (
-          <div className="flex items-start gap-1.5 p-2 rounded text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+          <div className="flex items-start gap-1.5 p-2 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
             <AlertTriangle size={13} className="shrink-0 mt-0.5" />
             <span className="flex-1">{error}</span>
           </div>

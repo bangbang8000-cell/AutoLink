@@ -105,6 +105,9 @@ export default function App() {
     setActiveActivity(activity)
     const config = WORKSPACE_TAB_CONFIG[activity]
     if (config) {
+      // design / device_library: don't auto-open — user clicks sidebar to open specific tabs
+      if (activity === 'design' || activity === 'device_library') return
+
       // Resolve dynamic title
       let title = config.title
       if (activity === 'visualization' && selectedProjectName) {
@@ -131,6 +134,9 @@ export default function App() {
       }
       if (ctrl && e.key === ',') {
         e.preventDefault(); setActiveActivity('settings')
+      }
+      if (ctrl && e.key.toLowerCase() === 's') {
+        e.preventDefault(); handleActivityClick('design')
       }
       if (ctrl && e.key.toLowerCase() === 'b') {
         e.preventDefault(); toggleSidebar()

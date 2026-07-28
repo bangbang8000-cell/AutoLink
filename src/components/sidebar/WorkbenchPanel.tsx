@@ -35,7 +35,7 @@ export function WorkbenchPanel() {
         {/* Project info */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1.5">
           <div className="flex items-center gap-2 text-xs">
-            <FolderOpen size={13} className="text-amber-500" />
+            <FolderOpen size={13} className="text-gray-400" />
             <span className="text-gray-500 dark:text-gray-400">{t('workbench:name')}:</span>
             <span className="font-medium text-gray-700 dark:text-gray-200">{selectedProjectName}</span>
           </div>

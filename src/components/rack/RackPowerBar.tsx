@@ -51,7 +51,7 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
         <span className={clsx('text-xs font-medium shrink-0', textColor)}>
           {percent}%
         </span>
-        {exceeded && <AlertTriangle size={12} className="text-red-500 shrink-0" />}
+        {exceeded && <AlertTriangle size={12} className="text-gray-400 shrink-0" />}
       </div>
     )
   }

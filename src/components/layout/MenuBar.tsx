@@ -204,9 +204,6 @@ export function MenuBar() {
       { label: '退出', action: handleExit },
     ],
     '编辑': [
-      { label: '撤销', shortcut: 'Ctrl+Z' },
-      { label: '重做', shortcut: 'Ctrl+Y' },
-      { separator: true },
       { label: '首选项', shortcut: 'Ctrl+,', action: handlePreferences },
     ],
     '视图': [

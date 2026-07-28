@@ -54,5 +54,27 @@
     "restartToInstall": "Restart to install",
     "error": "Update error",
     "retry": "Retry"
+  },
+  "about": {
+    "title": "About AutoLink",
+    "version": "Version",
+    "electron": "Electron",
+    "react": "React",
+    "repository": "GitHub Repository",
+    "copyright": "© 2026 AutoLink Team. MIT License.",
+    "close": "Close",
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "project": "Project Explorer",
+      "design": "Topology Design",
+      "workbench": "Workbench",
+      "visualization": "Visualization",
+      "deviceLibrary": "Device Library",
+      "settings": "Settings",
+      "toggleSidebar": "Toggle Sidebar",
+      "togglePanel": "Toggle Panel",
+      "closeTab": "Close Current Tab",
+      "restoreTab": "Restore Closed Tab"
+    }
   }
 }

@@ -84,7 +84,7 @@ export function RackPanel() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-primary-500" />
+        <Loader2 size={24} className="animate-spin text-gray-400" />
       </div>
     )
   }
@@ -92,7 +92,7 @@ export function RackPanel() {
   if (initError) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
-        <AlertTriangle size={24} className="text-red-400 mb-2" />
+        <AlertTriangle size={24} className="text-gray-400 mb-2" />
         <p className="text-xs text-red-500 mb-1">初始化失败</p>
         <button onClick={() => { setInitialized(false); setInitError(null) }}
           className="px-2 py-1 text-xs rounded bg-primary-500 text-white">

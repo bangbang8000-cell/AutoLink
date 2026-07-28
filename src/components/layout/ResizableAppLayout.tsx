@@ -58,7 +58,7 @@ export function ResizableAppLayout({ isDark, sidebarVisible, panelVisible, sideb
           </div>
           <div
             onMouseDown={startResizeSidebar}
-            className="w-1 shrink-0 cursor-col-resize hover:bg-primary-400 transition-colors bg-transparent"
+            className="w-1 shrink-0 cursor-col-resize bg-gray-200 dark:bg-gray-700 hover:bg-primary-400 transition-colors"
           />
         </>
       )}
@@ -68,7 +68,7 @@ export function ResizableAppLayout({ isDark, sidebarVisible, panelVisible, sideb
           <>
             <div
               onMouseDown={startResizePanel}
-              className="h-1 shrink-0 cursor-row-resize hover:bg-primary-400 transition-colors bg-transparent"
+              className="h-1 shrink-0 cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-primary-400 transition-colors"
             />
             <div style={{ height: panelHeight }} className="shrink-0 overflow-auto border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
               {bottomPanel}

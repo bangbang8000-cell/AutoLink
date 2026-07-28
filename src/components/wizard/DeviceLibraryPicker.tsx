@@ -100,9 +100,9 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, networkType, devi
   }
 
   const getCategoryIcon = (cat: string) => {
-    if (cat.startsWith('gpu_servers')) return <Zap size={14} className="text-purple-500" />
-    if (cat.startsWith('storage_servers')) return <HardDrive size={14} className="text-green-500" />
-    if (cat.startsWith('compute_servers')) return <Server size={14} className="text-blue-500" />
+    if (cat.startsWith('gpu_servers')) return <Zap size={14} className="text-gray-400" />
+    if (cat.startsWith('storage_servers')) return <HardDrive size={14} className="text-gray-400" />
+    if (cat.startsWith('compute_servers')) return <Server size={14} className="text-gray-400" />
     return <Package size={14} className="text-gray-500" />
   }
 

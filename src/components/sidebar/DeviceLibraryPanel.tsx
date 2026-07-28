@@ -75,7 +75,7 @@ export function DeviceLibraryPanel() {
       <div className="px-3 pt-2 pb-3 mt-auto border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={handleOpenWorkspace}
-          className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           <Maximize2 size={13} />
           在工作区打开完整设备库

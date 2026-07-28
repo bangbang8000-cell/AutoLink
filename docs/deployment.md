@@ -1,4 +1,4 @@
-# AutoLink V2.0 部署指南
+# AutoLink V2.3 部署指南
 
 ## 环境准备
 
@@ -69,19 +69,19 @@ npm run dev
 ### Windows (NSIS 安装包)
 ```bash
 npm run dist:win
-# 输出: release/AutoLink-Setup-2.0.0.exe
+# 输出: release/AutoLink-Setup-2.3.0.exe
 ```
 
 ### macOS
 ```bash
 npm run dist:mac
-# 输出: release/AutoLink-2.0.0-mac.zip / .dmg
+# 输出: release/AutoLink-2.3.0-mac.zip
 ```
 
 ### Linux
 ```bash
 npm run dist:linux
-# 输出: release/AutoLink-2.0.0.AppImage / .deb
+# 输出: release/AutoLink-2.3.0.AppImage / .deb
 ```
 
 ## 生产部署

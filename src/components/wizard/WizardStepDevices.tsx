@@ -6,7 +6,7 @@ import { DEVICE_REF_KEYS } from '@/types/project-config'
 import type { ProjectNetworks, ParamProtocol } from '@/types/project-config'
 import type { LibraryDevice, DeviceRef } from '@/types/device-profile'
 import { DeviceLibraryPicker } from './DeviceLibraryPicker'
-import { Plus, X, Activity, HardDrive, Globe, Wifi, Zap } from 'lucide-react'
+import { Plus, X, Zap, HardDrive, Network, Monitor } from 'lucide-react'
 
 /* ---------- IB/RoCE default switch IDs ---------- */
 
@@ -79,8 +79,8 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     networkKey: 'param_network',
     label: '参数网络',
     description: '高速参数面网络',
-    icon: <Activity size={16} />,
-    accentColor: 'text-purple-500',
+    icon: <Zap size={16} />,
+    accentColor: 'text-gray-500',
     refKeys: ['param_leaf_switch', 'param_spine_switch', 'param_core_switch'],
             serverRefKeys: [
               { refKey: 'gpu_server', countKey: 'num_gpu_servers', label: 'GPU服务器', category: 'gpu_servers' },
@@ -91,7 +91,7 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     label: '存储网络',
     description: '全闪存储(2U) + 混闪存储(4U)',
     icon: <HardDrive size={16} />,
-    accentColor: 'text-green-500',
+    accentColor: 'text-gray-500',
     refKeys: ['storage_leaf_switch', 'storage_spine_switch'],
     serverRefKeys: [
       { refKey: 'all_flash_storage_server', countKey: 'num_all_flash_storage', label: '全闪存储(2U)', category: 'storage_servers' },
@@ -102,8 +102,8 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     networkKey: 'biz_network',
     label: '业务/带内管理',
     description: '业务网接入与汇聚 + 通算服务器',
-    icon: <Globe size={16} />,
-    accentColor: 'text-blue-500',
+    icon: <Network size={16} />,
+    accentColor: 'text-gray-500',
     refKeys: ['biz_access_switch', 'biz_agg_switch'],
     serverRefKeys: [
       { refKey: 'compute_server', countKey: 'num_compute_servers', label: '通算服务器', category: 'compute_servers' },
@@ -113,7 +113,7 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     networkKey: 'oob_network',
     label: '带外管理',
     description: '带外管理网络接入与汇聚',
-    icon: <Wifi size={16} />,
+    icon: <Monitor size={16} />,
     accentColor: 'text-gray-500',
     refKeys: ['oob_access_switch', 'oob_agg_switch'],
     serverRefKeys: [],

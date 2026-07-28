@@ -1,0 +1,93 @@
+{
+  "title": "Device Library",
+  "search": "Search devices...",
+  "filter": {
+    "category": "Category",
+    "vendor": "Vendor",
+    "networkType": "Network Type",
+    "powerRange": "Power Range",
+    "portRange": "Port Range",
+    "all": "All",
+    "apply": "Apply",
+    "reset": "Reset"
+  },
+  "category": {
+    "all": "All Devices",
+    "gpu_servers": "GPU Servers",
+    "storage_servers": "Storage Servers",
+    "compute_servers": "Compute Servers",
+    "switches": "Switches",
+    "custom": "Custom"
+  },
+  "device": {
+    "vendor": "Vendor",
+    "model": "Model",
+    "power": "Power",
+    "uHeight": "U Height",
+    "cooling": "Cooling",
+    "depth": "Depth",
+    "weight": "Weight",
+    "namePrefix": "Name Prefix",
+    "ports": "Ports",
+    "portSpeed": "Port Speed",
+    "portType": "Port Type",
+    "downlinkPrefix": "Downlink Prefix",
+    "uplinkPrefix": "Uplink Prefix",
+    "interfaceModels": "Interface Models",
+    "networkType": "Network Type",
+    "portCount": "Port Count",
+    "cableType": "Cable Type",
+    "builtin": "Built-in",
+    "custom": "Custom",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "datasheet": "Datasheet",
+    "noSelection": "Select a device to view details",
+    "noDevices": "No devices found",
+    "deviceCount": "{{count}} devices"
+  },
+  "compare": {
+    "title": "Compare",
+    "add": "Add to compare",
+    "remove": "Remove",
+    "clear": "Clear all",
+    "maxReached": "Max 3 devices for comparison"
+  },
+  "actions": {
+    "addServer": "Add Server",
+    "addSwitch": "Add Switch",
+    "edit": "Edit",
+    "delete": "Delete",
+    "copyToCustom": "Copy to Custom",
+    "import": "Import",
+    "export": "Export",
+    "deleteConfirm": "Delete device \"{{name}}\"?",
+    "deleteNote": "Built-in devices cannot be deleted. Copy to custom first."
+  },
+  "import": {
+    "title": "Import Devices",
+    "serverTab": "Server Template",
+    "switchTab": "Switch Template",
+    "uploadHint": "Select CSV or Excel file",
+    "downloadTemplate": "Download Template",
+    "preview": "Preview",
+    "confirm": "Import",
+    "cancel": "Cancel",
+    "total": "{{count}} total",
+    "valid": "{{count}} valid",
+    "invalid": "{{count}} invalid",
+    "errors": "Import Errors"
+  },
+  "export": {
+    "title": "Export Devices",
+    "selectDevices": "Select devices to export",
+    "format": "Format",
+    "json": "JSON (Single File)",
+    "excel": "Excel",
+    "zip": "ZIP (Full Library)",
+    "allDevices": "All devices",
+    "selectedDevices": "Selected ({{count}})",
+    "confirm": "Export",
+    "cancel": "Cancel"
+  }
+}

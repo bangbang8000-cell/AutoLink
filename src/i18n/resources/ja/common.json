@@ -42,5 +42,27 @@
     "restartToInstall": "再起動してインストール",
     "error": "更新エラー",
     "retry": "再試行"
+  },
+  "about": {
+    "title": "AutoLink について",
+    "version": "バージョン",
+    "electron": "Electron",
+    "react": "React",
+    "repository": "GitHub リポジトリ",
+    "copyright": "© 2026 AutoLink Team. MIT License.",
+    "close": "閉じる",
+    "shortcuts": {
+      "title": "キーボードショートカット",
+      "project": "プロジェクトエクスプローラー",
+      "design": "トポロジー設計",
+      "workbench": "ワークベンチ",
+      "visualization": "可視化",
+      "deviceLibrary": "デバイスライブラリ",
+      "settings": "設定",
+      "toggleSidebar": "サイドバー切替",
+      "togglePanel": "パネル切替",
+      "closeTab": "現在のタブを閉じる",
+      "restoreTab": "閉じたタブを復元"
+    }
   }
 }

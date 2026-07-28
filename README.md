@@ -2,12 +2,12 @@
 
 **AI 智算中心网络规划与可视化工具 | AI Data Center Network Planning & Visualization**
 
-[![Version](https://img.shields.io/badge/version-2.0.1-blue)](#)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue)](#)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
 
-> 你还在用 Excel 手工规划智算中心的网络拓扑和机柜布局吗？
+> 专为 AI 数据中心设计的网络拓扑规划、设备选型与机柜上架一体化工具。
 
 ## 三步完成智算中心网络规划
 
@@ -20,194 +20,146 @@
 ## 核心功能
 
 ### 智能拓扑设计
-- full / custom 双模式，自动计算参数网络（Fat-Tree）Leaf / Spine / Core 数量
-- 支持参数网、存储网、OOB、业务网络的独立设计
-- 设计摘要面板实时预览端口使用率、收敛比
-- 拓扑验证：自动检测配置合理性
+- Fat-Tree 胖树拓扑自动计算（二层/三层自适应）
+- 支持参数网、存储网、OOB、业务网独立设计
+- full / custom 双下行端口模式
+- 设计摘要实时预览（节点数、端口使用率、收敛比）
 
 ### 机柜 U 位规划
-- 42U 标准机柜可视化，设备按色块区分类型（GPU 蓝色、存储绿色、其他紫色）
-- 待分配设备池 — 从拓扑设计结果自动提取设备列表
-- U 位冲突自动检测 — 重叠位置红色高亮
-- 设备详情面板：类型、U 位范围、端口数
-- **上机表 Excel 一键导出**
+- 42U/49U 机柜可视化，设备按类型色块区分
+- 待分配设备池 → 点击 U 位放置，冲突自动检测
+- 功率负载实时监控，超限红色告警
+- 支持多机柜切换、设备跨柜移动
 
-### 网络拓扑可视化
-- ECharts 分层布局渲染：Server 层 → Leaf 层 → Spine 层 → Core 层
-- 按网络类型筛选（参数网络 / 存储网络 / OOB / 业务网络）
-- 点击设备查看连接列表和端口使用率
-- 设备 hover 时高亮相关连接线
-- **拓扑图 PNG 一键导出**
+### 拓扑可视化
+- ECharts 网络拓扑图，矩形节点 + 分层布局
+- 服务器按参数 Leaf 自动分组，组间清晰间隔
+- 支持缩放、拖拽、布局保存、PNG 导出
+- 按网络类型（参数/存储/OOB/业务）过滤视图
+- 节点详情面板：类型、组、Pod、机柜、连接数
 
-### 项目与模板
-- 项目创建 / 删除 / 收藏 / 最近使用
-- 模板中心：内置 H100-128台 / H100-100台 / 空项目 模板
-- 从模板一键创建项目，自动填充配置
-- Demo 项目开箱即用
+### 设备库（50+ 款认证设备）
+- **GPU 服务器**：NVIDIA DGX H100/B200/B300/GB300 等
+- **存储服务器**：全闪 / 混闪存储节点
+- **通算服务器**：通用计算节点
+- **交换机**：参数面 / 存储 / 业务 / 带外（华为/H3C/锐捷等）
+- 分层分类浏览，设备详情：物理参数、端口配置、接口模型
+- 页签复用模式（设置中可切换），支持搜索和厂商筛选
 
 ### 工作台
-- 项目范围选择（当前项目 / 批量多项目）
-- 就绪检查（拓扑设计状态、机柜布局状态）
-- 输出类型勾选（连接关系表 / 上机表 / 拓扑图 / 设备清单）
-- 一键渲染 + 实时进度条
+- 项目就绪状态检查（拓扑验证 + 机柜规划）
+- 输出类型选择（连接表 / 上机表 / 拓扑图 / 设备清单）
+- 一键渲染导出
 
-### 输出与预览
-- 输出文件树：按项目分组，文件类型图标区分
-- **Excel 内建预览**：支持多 Sheet 切换、排序、筛选
-- **图片内建预览**：拓扑图缩放查看
-- 打开文件所在文件夹 / 外部程序打开
-
-### 5 语言 · 亮暗双主题
-- 简体中文 / English / 日本語 / 한국어 / 繁體中文
-- 亮色 / 暗色 / 跟随系统 三种模式
-- ECharts 拓扑图、机柜图同步适配主题
-
-### 自动更新
-- 基于 electron-updater + GitHub Releases
-- 启动静默检查 → Header 更新图标提示
-- 下载进度条 → 就绪后重启安装
-
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 桌面框架 | Electron 28 |
-| 前端 | React 18 + TypeScript + Vite + TailwindCSS 3 |
-| 状态管理 | Zustand (persist 持久化) |
-| 图表可视化 | ECharts 6 + echarts-for-react |
-| 布局 | react-resizable-panels |
-| 图标 | lucide-react |
-| 国际化 | i18next + react-i18next (5 语言) |
-| Excel 处理 | xlsx (读写 + 内建预览) |
-| 计算引擎 | Python 3 (子进程 JSON stdin/stdout 通信) |
-| 打包 | electron-builder + NSIS |
-| 自动更新 | electron-updater + GitHub Releases |
-| CI/CD | GitHub Actions |
-
-## 项目结构
-
-```
-AutoLink/
-├── src/                        # 前端 (React + TypeScript)
-│   ├── components/
-│   │   ├── layout/             # Header, ActivityBar, StatusBar, ResizableAppLayout, Toast
-│   │   ├── sidebar/            # ExplorerPanel, WorkbenchPanel, DesignPanel, RackPanel,
-│   │   │                       # TopologyPanel, OutputPanel, SettingsPanel
-│   │   ├── workbench/          # 工作台子组件 (ScopeCard, ReadinessCard, OutputCard,
-│   │   │                       # ActionCard, ResultCard)
-│   │   ├── output/             # ExcelPreview, ImagePreview
-│   │   └── common/             # 通用组件
-│   ├── stores/                 # Zustand stores (ui, project, design, rack, render, toast)
-│   ├── i18n/                   # 5 语言翻译资源
-│   ├── types/                  # TypeScript 类型定义
-│   ├── hooks/                  # 自定义 Hooks
-│   └── utils/                  # 工具函数
-├── electron/                   # Electron 主进程
-│   ├── main.ts                 # 应用入口 + 窗口管理
-│   ├── preload.ts              # 预加载脚本 (contextBridge) — 类型参考
-│   ├── config.ts               # 路径配置 + Demo 项目初始化
-│   ├── ipc/handlers.ts         # IPC 通道处理器 (project/design/render/export/update)
-│   └── services/
-│       ├── python.service.ts   # Python 子进程调用服务
-│       └── update.service.ts   # 自动更新服务
-├── backend/                    # Python 计算引擎
-│   ├── engine.py               # 统一 JSON stdin/stdout 接口
-│   ├── designer.py             # 网络设计协调层
-│   ├── topology.py             # 拓扑算法 (FatTree / AccessAgg)
-│   ├── models.py               # 数据模型
-│   ├── exporter.py             # Excel 导出
-│   └── network_config.ini      # 默认配置
-├── template/                   # 内置模板
-│   ├── H100-128台/             # 128台H100 GPU 方案
-│   ├── H100-100台/             # 100台H100 GPU 方案
-│   └── 空项目/                 # 空白模板
-├── workspace/                  # 工作区 (运行时生成，Git 忽略)
-├── .github/workflows/          # CI/CD
-│   ├── ci.yml                  # PR 检查 (typecheck + lint)
-│   └── build.yml               # Release 构建 (tag 触发)
-└── docs/                       # 文档
-    ├── PRD_V2.0.md
-    └── 开发计划_V2.0.md
-```
+### 国际化
+- 5 种语言：简体中文 / English / 日本語 / 한국어 / 繁體中文
+- 关于对话框含快捷键速查表
+- 设置面板支持外观 / 语言 / 项目默认值 / 输出 / 快捷键 / 设备库 / 网络 / 数据管理
 
 ## 快速开始
 
 ### 环境要求
 
-- **Node.js** >= 22
-- **Python** >= 3.10（需 `pip install -r backend/requirements.txt` 安装 openpyxl、pandas）
-- Windows 10/11（优先支持）/ macOS / Linux
+- **Node.js** ≥ 18
+- **Python** ≥ 3.8（需安装 `pandas` 和 `openpyxl`）
+- **Git**（可选，用于克隆仓库）
 
 ### 安装
 
 ```bash
+git clone https://github.com/bangbang8000-cell/AutoLink.git
+cd AutoLink
 npm install
 pip install -r backend/requirements.txt
 ```
 
-### 开发
+### 开发运行
 
 ```bash
-# 一键启动（编译 Electron + Vite + Electron 窗口）
 npm run dev:all
-
-# 仅前端
-npm run dev
-
-# 仅 Electron（需先 npm run dev 启动 Vite）
-npm run dev:electron
 ```
 
-### 构建与打包
+### 打包构建
 
 ```bash
-# 构建
-npm run build
-
-# Windows NSIS 安装包
-npm run dist:win
-
-# macOS
-npm run dist:mac
-
-# Linux AppImage / deb
-npm run dist:linux
+npm run dist:win    # Windows
+npm run dist:mac    # macOS
+npm run dist:linux  # Linux
 ```
 
-### 代码检查
+### 运行测试
 
 ```bash
-npm run typecheck    # TypeScript 类型检查
-npm run lint         # ESLint
-npm run format       # Prettier 格式化
+npm test              # 前端测试
+npm run test:backend  # 后端测试
+npm run test:all      # 全量测试
 ```
 
-## 快捷键
+## 项目结构
 
-| 快捷键 | 功能 | 快捷键 | 功能 |
-|--------|------|--------|------|
-| `Ctrl+Shift+E` | 项目浏览器 | `Ctrl+Shift+R` | 机柜规划 |
-| `Ctrl+Shift+W` | 工作台 | `Ctrl+Shift+T` | 拓扑可视化 |
-| `Ctrl+Shift+D` | 拓扑设计 | `Ctrl+Shift+O` | 输出结果 |
-| `Ctrl+,` | 设置 | `Ctrl+B` | 切换侧边栏 |
-
-## CI/CD
-
-- **CI** ([ci.yml](.github/workflows/ci.yml)): push / PR 到 `main` 自动运行 typecheck + lint
-- **Release** ([build.yml](.github/workflows/build.yml)): 推送 `v*` tag 自动构建三平台安装包并发布到 GitHub Releases
-
-```bash
-git tag v2.0.1
-git push origin v2.0.1
+```
+AutoLink/
+├── backend/              # Python 计算引擎
+│   ├── engine.py         #   入口（stdin/stdout JSON-RPC）
+│   ├── designer.py       #   网络设计协调层
+│   ├── topology.py       #   FatTree 拓扑计算
+│   ├── models.py         #   数据模型
+│   └── exporter.py       #   Excel 导出
+├── electron/             # Electron 主进程
+│   ├── main.ts           #   应用入口
+│   ├── preload.ts        #   安全桥接
+│   └── ipc/handlers.ts   #   IPC 处理器
+├── src/                  # React 前端
+│   ├── components/       #   UI 组件（layout/workspace/device/wizard/sidebar）
+│   ├── stores/           #   Zustand 状态管理
+│   ├── constants/        #   共享常量（标签映射等）
+│   ├── i18n/             #   国际化（zh-CN/en/ja/ko/zh-TW）
+│   ├── hooks/            #   自定义 Hooks
+│   └── types/            #   TypeScript 类型定义
+├── template/             # 设备库 + 项目模板
+│   ├── device_library/   #   50+ 设备 JSON 配置
+│   ├── H100-128台/       #   128 台 H100 GPU 模板
+│   └── H100-100台/       #   100 台 H100 GPU 模板
+├── docs/                 # 产品文档 + 部署指南
+└── tests/backend/        # Python 后端测试（pytest）
 ```
 
-## 版本历史
+## 键盘快捷键
 
-| 版本 | 日期 | 主要变更 |
-|------|------|---------|
-| v2.0.1 | 2026-07 | 自动更新机制（UpdatePopover + electron-updater）、上机表 Excel 导出、拓扑图 PNG 导出、U 位冲突可视化高亮、预加载脚本 CJS 修复、IPC 错误处理强化 |
-| v2.0.0 | 2026-07 | Electron 桌面应用初始版本：拓扑设计 / 机柜规划 / 拓扑可视化 / 项目管理 / 工作台 / 5 语言 / 亮暗主题 / CI/CD |
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+Shift+E` | 项目浏览器 |
+| `Ctrl+Shift+D` | 拓扑设计 |
+| `Ctrl+Shift+W` | 工作台 |
+| `Ctrl+Shift+V` | 可视化 |
+| `Ctrl+Shift+L` | 设备库 |
+| `Ctrl+,` | 设置 |
+| `Ctrl+B` | 显示/隐藏侧栏 |
+| `Ctrl+J` | 显示/隐藏面板 |
+| `Ctrl+W` | 关闭当前标签 |
+| `Ctrl+Shift+T` | 恢复关闭标签 |
 
-## 许可证
+## 开发命令
 
-MIT License
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 仅启动 Vite 开发服务器 |
+| `npm run dev:all` | 编译 Electron + 启动 Vite + 启动 Electron |
+| `npm run build` | 编译前后端 |
+| `npm run typecheck` | TypeScript 类型检查 |
+| `npm run lint` | ESLint 代码检查 |
+| `npm test` | 前端 Vitest 测试 |
+| `npm run test:backend` | 后端 pytest |
+| `npm run test:all` | 全量测试 |
+
+## 技术栈
+
+- **前端**: React 18 + TypeScript + Zustand + Tailwind CSS + ECharts
+- **桌面**: Electron 28 + contextBridge
+- **后端**: Python (pandas + openpyxl)
+- **测试**: Vitest + pytest
+- **i18n**: react-i18next（5 种语言）
+
+## License
+
+MIT

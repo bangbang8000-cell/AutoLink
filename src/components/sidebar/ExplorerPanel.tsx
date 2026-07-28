@@ -80,7 +80,7 @@ const ProjectItem = memo(function ProjectItem({
           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
         }`}
     >
-      <FolderOpen size={13} className="shrink-0 text-amber-500" />
+      <FolderOpen size={13} className="shrink-0 text-gray-400" />
       <span className="flex-1 truncate">{project.name}</span>
       <div className="hidden group-hover:flex items-center gap-0.5">
         <button
@@ -156,7 +156,7 @@ const TemplateItem = memo(function TemplateItem({
       onClick={onCreateProject}
       className="group flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs hover:bg-gray-100 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300"
     >
-      <Package size={13} className="shrink-0 text-blue-500" />
+      <Package size={13} className="shrink-0 text-gray-400" />
       <div className="flex-1 min-w-0">
         <div className="truncate font-medium">{template.name}</div>
         <div className="truncate text-[10px] text-gray-400 dark:text-gray-500">
@@ -273,7 +273,7 @@ export function ExplorerPanel() {
 
         {/* Favorites */}
         {favProjects.length > 0 && (
-          <Section title={t('project:favorites')} icon={<Star size={11} className="text-amber-400" />}>
+          <Section title={t('project:favorites')} icon={<Star size={11} className="text-gray-400" />}>
             {favProjects.map((p) => (
               <ProjectItem
                 key={p.name}
@@ -309,7 +309,7 @@ export function ExplorerPanel() {
         {filteredProjects.length > 0 && (
           <Section
             title={t('project:projectList')}
-            icon={<FolderOpen size={11} className="text-amber-500" />}
+            icon={<FolderOpen size={11} className="text-gray-400" />}
             onRefresh={() => fetchProjects()}
           >
             {filteredProjects.map((p) => (
@@ -328,7 +328,7 @@ export function ExplorerPanel() {
 
         {/* Templates */}
         {templates.length > 0 && (
-          <Section title={t('project:templateCenter')} icon={<Package size={11} className="text-blue-500" />}>
+          <Section title={t('project:templateCenter')} icon={<Package size={11} className="text-gray-400" />}>
             {templates.map((tmpl) => (
               <TemplateItem
                 key={tmpl.id}

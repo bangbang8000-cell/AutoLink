@@ -5,6 +5,7 @@ import { ProjectWizard } from './ProjectWizard'
 import { useWizardStore } from '@/stores/wizard.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
+import { useToastStore } from '@/stores/toast.store'
 
 interface Props {
   templateName?: string | null
@@ -16,6 +17,7 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
   const { openWizard, closeWizard, config } = useWizardStore()
   const { createProjectWithConfig } = useProjectStore()
   const { loadLibrary } = useDeviceLibraryStore()
+  const addToast = useToastStore((s) => s.addToast)
 
   useEffect(() => {
     openWizard(templateName)
@@ -27,7 +29,9 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
       await createProjectWithConfig(config)
       closeWizard()
       onClose()
-    } catch (err) {
+      addToast('success', '项目创建成功')
+    } catch (err: any) {
+      addToast('error', `创建项目失败: ${err?.message || err}`)
       console.error('[Wizard] create project failed:', err)
     }
   }

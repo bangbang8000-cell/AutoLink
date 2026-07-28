@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
-import { Activity, HardDrive, Globe, Wifi } from 'lucide-react'
+import { Zap, HardDrive, Network, Monitor } from 'lucide-react'
 import clsx from 'clsx'
 import type { ProjectNetworks, ParamProtocol } from '@/types/project-config'
 
@@ -20,37 +20,37 @@ const NETWORK_CARDS: NetworkCard[] = [
     key: 'param_network',
     label: '参数网络',
     description: '高速参数面网络，GPU训练通信',
-    icon: <Activity size={18} />,
-    accentColor: 'text-purple-500',
-    accentBorder: 'border-purple-400 dark:border-purple-500',
-    accentBg: 'bg-purple-50 dark:bg-purple-900/20',
+    icon: <Zap size={18} />,
+    accentColor: 'text-gray-500 dark:text-gray-300',
+    accentBorder: 'border-gray-300 dark:border-gray-600',
+    accentBg: 'bg-gray-200 dark:bg-gray-600',
   },
   {
     key: 'storage_network',
     label: '存储网络',
     description: '存储网络，连接全闪/混闪存储服务器',
     icon: <HardDrive size={18} />,
-    accentColor: 'text-green-500',
-    accentBorder: 'border-green-400 dark:border-green-500',
-    accentBg: 'bg-green-50 dark:bg-green-900/20',
+    accentColor: 'text-gray-500 dark:text-gray-300',
+    accentBorder: 'border-gray-300 dark:border-gray-600',
+    accentBg: 'bg-gray-200 dark:bg-gray-600',
   },
   {
     key: 'biz_network',
     label: '业务/带内管理',
     description: '业务网络与带内管理',
-    icon: <Globe size={18} />,
-    accentColor: 'text-blue-500',
-    accentBorder: 'border-blue-400 dark:border-blue-500',
-    accentBg: 'bg-blue-50 dark:bg-blue-900/20',
+    icon: <Network size={18} />,
+    accentColor: 'text-gray-500 dark:text-gray-300',
+    accentBorder: 'border-gray-300 dark:border-gray-600',
+    accentBg: 'bg-gray-200 dark:bg-gray-600',
   },
   {
     key: 'oob_network',
     label: '带外管理',
     description: '带外管理网络，IPMI/BMC',
-    icon: <Wifi size={18} />,
-    accentColor: 'text-gray-500',
-    accentBorder: 'border-gray-400 dark:border-gray-500',
-    accentBg: 'bg-gray-50 dark:bg-gray-900/20',
+    icon: <Monitor size={18} />,
+    accentColor: 'text-gray-500 dark:text-gray-300',
+    accentBorder: 'border-gray-300 dark:border-gray-600',
+    accentBg: 'bg-gray-200 dark:bg-gray-600',
   },
 ]
 

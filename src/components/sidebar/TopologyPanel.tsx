@@ -4,6 +4,7 @@ import { GitBranch, Network, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function TopologyPanel() {
   const { t } = useTranslation()
@@ -59,7 +60,7 @@ export function TopologyPanel() {
           <div className="px-3 py-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-gray-50 dark:bg-gray-800 rounded p-2 text-center">
-                <div className="text-lg font-bold text-primary-600 dark:text-primary-400">{stats.nodes}</div>
+                <div className="text-lg font-bold text-gray-700 dark:text-gray-200">{stats.nodes}</div>
                 <div className="text-[10px] text-gray-400">{t('topology:deviceList')}</div>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 rounded p-2 text-center">
@@ -72,7 +73,7 @@ export function TopologyPanel() {
             <div className="flex flex-wrap gap-1">
               {Array.from(stats.types).slice(0, 8).map((type) => (
                 <span key={type} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  {type}
+                  {NODE_TYPE_LABELS[type] || type}
                 </span>
               ))}
             </div>
@@ -82,7 +83,7 @@ export function TopologyPanel() {
           <div className="px-3 pb-3 mt-auto">
             <button
               onClick={handleOpenWorkspace}
-              className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Maximize2 size={13} />
               在工作区查看完整拓扑

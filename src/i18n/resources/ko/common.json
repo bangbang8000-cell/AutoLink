@@ -42,5 +42,27 @@
     "restartToInstall": "재시작하여 설치",
     "error": "업데이트 오류",
     "retry": "재시도"
+  },
+  "about": {
+    "title": "AutoLink 정보",
+    "version": "버전",
+    "electron": "Electron",
+    "react": "React",
+    "repository": "GitHub 저장소",
+    "copyright": "© 2026 AutoLink Team. MIT License.",
+    "close": "닫기",
+    "shortcuts": {
+      "title": "키보드 단축키",
+      "project": "프로젝트 탐색기",
+      "design": "토폴로지 설계",
+      "workbench": "작업대",
+      "visualization": "시각화",
+      "deviceLibrary": "장치 라이브러리",
+      "settings": "설정",
+      "toggleSidebar": "사이드바 전환",
+      "togglePanel": "패널 전환",
+      "closeTab": "현재 탭 닫기",
+      "restoreTab": "닫힌 탭 복원"
+    }
   }
 }

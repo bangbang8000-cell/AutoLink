@@ -6,25 +6,25 @@ import { useRenderStore, type OutputType } from '@/stores/render.store'
 const outputDefs: { type: OutputType; icon: React.ReactNode; labelKey: string; descKey: string }[] = [
   {
     type: 'connections',
-    icon: <FileSpreadsheet size={14} className="text-green-500" />,
+    icon: <FileSpreadsheet size={14} className="text-gray-400" />,
     labelKey: 'workbench:connectionsTable',
     descKey: 'workbench:connectionsTableDesc',
   },
   {
     type: 'rackTable',
-    icon: <Table2 size={14} className="text-blue-500" />,
+    icon: <Table2 size={14} className="text-gray-400" />,
     labelKey: 'workbench:rackTable',
     descKey: 'workbench:rackTableDesc',
   },
   {
     type: 'topology',
-    icon: <GitBranch size={14} className="text-purple-500" />,
+    icon: <GitBranch size={14} className="text-gray-400" />,
     labelKey: 'workbench:topologyImg',
     descKey: 'workbench:topologyImgDesc',
   },
   {
     type: 'deviceList',
-    icon: <List size={14} className="text-amber-500" />,
+    icon: <List size={14} className="text-gray-400" />,
     labelKey: 'workbench:deviceList',
     descKey: 'workbench:deviceListDesc',
   },

@@ -17,12 +17,17 @@ interface ToastState {
 
 let counter = 0
 
-export const useToastStore = create<ToastState>()((set) => ({
+const MAX_TOASTS = 5
+
+export const useToastStore = create<ToastState>()((set, get) => ({
   toasts: [],
 
   addToast: (type, message, duration = 4000) => {
     const id = `toast-${++counter}-${Date.now()}`
-    set((s) => ({ toasts: [...s.toasts, { id, type, message, duration }] }))
+    const toasts = get().toasts
+    // Remove oldest if exceeding max
+    const trimmed = toasts.length >= MAX_TOASTS ? toasts.slice(toasts.length - MAX_TOASTS + 1) : toasts
+    set({ toasts: [...trimmed, { id, type, message, duration }] })
     if (duration > 0) {
       setTimeout(() => {
         set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))

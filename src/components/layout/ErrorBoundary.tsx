@@ -2,7 +2,11 @@ import React from 'react'
 
 interface Props {
   children: React.ReactNode
-  fallback?: React.ReactNode
+  /** Custom fallback title */
+  title?: string
+  /** Key to force remount on retry */
+  retryKey?: number
+  onRetry?: () => void
 }
 
 interface State {
@@ -18,20 +22,26 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Panel crashed:', error.message, info.componentStack)
+    console.error(`[ErrorBoundary] ${this.props.title || 'Component'} crashed:`, error.message, info.componentStack)
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null })
+    this.props.onRetry?.()
   }
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback
       return (
         <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-          <p className="text-sm text-red-500 dark:text-red-400 mb-1">面板加载失败</p>
+          <p className="text-sm text-red-500 dark:text-red-400 mb-1">
+            {this.props.title || '页面'}加载失败
+          </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 max-w-xs break-all">
-            {this.state.error?.message}
+            {this.state.error?.message || '未知错误'}
           </p>
           <button
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={this.handleRetry}
             className="px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
           >
             重试

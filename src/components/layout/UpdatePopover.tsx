@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, CheckCircle, AlertCircle, Loader2, ArrowUpCircle } from 'lucide-react'
+import { Download, CheckCircle, AlertTriangle, Loader2, ArrowUpCircle } from 'lucide-react'
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
 
@@ -79,11 +79,11 @@ export function UpdatePopover() {
         title={t('common:update.title')}
       >
         {status === 'downloaded' ? (
-          <CheckCircle size={15} className="text-green-500" />
+          <CheckCircle size={15} className="text-gray-400" />
         ) : status === 'error' ? (
-          <AlertCircle size={15} className="text-red-500" />
+          <AlertTriangle size={15} className="text-gray-400" />
         ) : status === 'downloading' ? (
-          <Loader2 size={15} className="animate-spin text-blue-500" />
+          <Loader2 size={15} className="animate-spin text-gray-400" />
         ) : (
           <ArrowUpCircle size={15} />
         )}
@@ -169,7 +169,7 @@ export function UpdatePopover() {
               {status === 'error' && (
                 <div className="space-y-2">
                   <p className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle size={13} />
+                    <AlertTriangle size={13} />
                     {errorMessage || t('common:update.error')}
                   </p>
                   <button

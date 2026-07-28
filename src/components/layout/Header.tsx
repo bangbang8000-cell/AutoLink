@@ -78,7 +78,7 @@ export function Header() {
                 >
                   {t.icon}
                   {t.label}
-                  {theme === t.mode && <span className="ml-auto text-primary-500">✓</span>}
+                  {theme === t.mode && <span className="ml-auto text-gray-500">✓</span>}
                 </button>
               ))}
             </div>
@@ -102,7 +102,7 @@ export function Header() {
                   className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
                   {l.label}
-                  {language === l.code && <span className="ml-auto text-primary-500">✓</span>}
+                  {language === l.code && <span className="ml-auto text-gray-500">✓</span>}
                 </button>
               ))}
             </div>

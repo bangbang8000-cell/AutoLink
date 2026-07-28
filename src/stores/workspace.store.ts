@@ -26,6 +26,8 @@ interface WorkspaceState {
   reopenLastClosed: () => void
   /** Find an existing tab by type and optional state predicate */
   findTab: (type: TabType, stateMatch?: Record<string, unknown>) => WorkspaceTab | undefined
+  /** Update an existing tab's title / state in-place (without creating a new tab) */
+  updateTab: (id: string, updates: Partial<Pick<WorkspaceTab, 'title' | 'state'>>) => void
 }
 
 let _idCounter = 0
@@ -160,9 +162,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           closedTabHistory: history,
         }))
       },
+
+      updateTab: (id, updates) => {
+        set((s) => ({
+          tabs: s.tabs.map((t) =>
+            t.id === id ? { ...t, ...updates } : t,
+          ),
+        }))
+      },
     }),
     {
       name: 'autolink-workspace',
+      version: 1,
+      migrate: (persistedState) => {
+        const state = persistedState as { tabs?: WorkspaceTab[]; activeTabId?: string | null }
+        if (state.tabs) {
+          state.tabs = state.tabs.map((t) => {
+            // Fix: design and deviceLibrary tabs should always be closable
+            if (t.type === 'design' || t.type === 'deviceLibrary') {
+              return { ...t, closable: true }
+            }
+            return t
+          })
+        }
+        return state as WorkspaceState
+      },
       partialize: (state) => ({
         tabs: state.tabs,
         activeTabId: state.activeTabId,

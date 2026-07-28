@@ -4,7 +4,7 @@ import { useWizardStore } from '@/stores/wizard.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import { DEVICE_REF_KEYS } from '@/types/project-config'
 import type { ProjectNetworks } from '@/types/project-config'
-import { Activity, HardDrive, Globe, Wifi, Check } from 'lucide-react'
+import { Zap, HardDrive, Network, Monitor, Check } from 'lucide-react'
 import clsx from 'clsx'
 
 /* ---------- network badge config ---------- */
@@ -17,10 +17,10 @@ interface NetworkBadge {
 }
 
 const NETWORK_BADGES: NetworkBadge[] = [
-  { key: 'param_network', label: '参数网络', icon: <Activity size={10} />, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' },
-  { key: 'storage_network', label: '存储网络', icon: <HardDrive size={10} />, color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
-  { key: 'biz_network', label: '业务/带内管理', icon: <Globe size={10} />, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-  { key: 'oob_network', label: '带外管理', icon: <Wifi size={10} />, color: 'bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400' },
+  { key: 'param_network', label: '参数网络', icon: <Zap size={10} />, color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
+  { key: 'storage_network', label: '存储网络', icon: <HardDrive size={10} />, color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
+  { key: 'biz_network', label: '业务/带内管理', icon: <Network size={10} />, color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
+  { key: 'oob_network', label: '带外管理', icon: <Monitor size={10} />, color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
 ]
 
 /* ---------- device ref groups per network ---------- */

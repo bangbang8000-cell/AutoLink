@@ -4,10 +4,10 @@ import { CheckCircle, XCircle, FolderOpen, FileSpreadsheet, GitBranch, Table2, L
 import { useRenderStore, type RenderResult } from '@/stores/render.store'
 
 const resultIcons: Record<string, React.ReactNode> = {
-  connections: <FileSpreadsheet size={13} className="text-green-500" />,
-  rackTable: <Table2 size={13} className="text-blue-500" />,
-  topology: <GitBranch size={13} className="text-purple-500" />,
-  deviceList: <List size={13} className="text-amber-500" />,
+  connections: <FileSpreadsheet size={13} className="text-gray-400" />,
+  rackTable: <Table2 size={13} className="text-gray-400" />,
+  topology: <GitBranch size={13} className="text-gray-400" />,
+  deviceList: <List size={13} className="text-gray-400" />,
 }
 
 const resultLabels: Record<string, string> = {
@@ -48,9 +48,9 @@ export function WorkbenchResultCard() {
         {results.map((result, i) => (
           <div key={i} className="px-3 py-2 flex items-center gap-2">
             {result.status === 'success' ? (
-              <CheckCircle size={12} className="text-green-500 shrink-0" />
+              <CheckCircle size={12} className="text-gray-400 shrink-0" />
             ) : (
-              <XCircle size={12} className="text-red-500 shrink-0" />
+              <XCircle size={12} className="text-gray-400 shrink-0" />
             )}
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               {resultIcons[result.type]}

@@ -106,7 +106,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
                   <div className="text-xs text-gray-400">{t('project:emptyProject')}</div>
                 </div>
                 {selectedTemplate === 'empty' && (
-                  <Check size={16} className="text-primary-500 shrink-0" />
+                  <Check size={16} className="text-gray-400 shrink-0" />
                 )}
               </button>
 
@@ -122,7 +122,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
                     }`}
                 >
                   <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Package size={16} className="text-blue-500" />
+                    <Package size={16} className="text-gray-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -141,7 +141,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
                     ))}
                   </div>
                   {selectedTemplate === tmpl.id && (
-                    <Check size={16} className="text-primary-500 shrink-0" />
+                    <Check size={16} className="text-gray-400 shrink-0" />
                   )}
                 </button>
               ))}

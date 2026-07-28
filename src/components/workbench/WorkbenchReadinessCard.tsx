@@ -60,11 +60,11 @@ export function WorkbenchReadinessCard() {
         {/* Topology design status */}
         <div className="flex items-center gap-2 text-xs">
           {valid === true ? (
-            <CheckCircle size={12} className="text-green-500 shrink-0" />
+            <CheckCircle size={12} className="text-gray-400 shrink-0" />
           ) : valid === false ? (
-            <XCircle size={12} className="text-red-500 shrink-0" />
+            <XCircle size={12} className="text-gray-400 shrink-0" />
           ) : (
-            <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+            <AlertTriangle size={12} className="text-gray-400 shrink-0" />
           )}
           <span className="text-gray-500 dark:text-gray-400">
             {t('workbench:topologyStatus')}:
@@ -92,9 +92,9 @@ export function WorkbenchReadinessCard() {
         {/* Rack layout status */}
         <div className="flex items-center gap-2 text-xs">
           {rackReady ? (
-            <CheckCircle size={12} className="text-green-500 shrink-0" />
+            <CheckCircle size={12} className="text-gray-400 shrink-0" />
           ) : totalDevices > 0 ? (
-            <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+            <AlertTriangle size={12} className="text-gray-400 shrink-0" />
           ) : (
             <AlertTriangle size={12} className="text-gray-400 shrink-0" />
           )}

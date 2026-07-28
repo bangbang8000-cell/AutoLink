@@ -286,11 +286,11 @@ export function DeviceImportModal() {
             <div>
               <div className="flex items-center gap-3 mb-2 text-xs">
                 <span>{t('import.total', { count: parsedRows.length })}</span>
-                <span className="text-green-600 flex items-center gap-0.5">
+                <span className="text-gray-500 flex items-center gap-0.5">
                   <CheckCircle size={12} /> {t('import.valid', { count: validCount })}
                 </span>
                 {invalidCount > 0 && (
-                  <span className="text-red-500 flex items-center gap-0.5">
+                  <span className="text-gray-500 flex items-center gap-0.5">
                     <AlertTriangle size={12} /> {t('import.invalid', { count: invalidCount })}
                   </span>
                 )}
@@ -313,12 +313,12 @@ export function DeviceImportModal() {
                         <td className="px-2 py-1">{row.raw['型号'] || '-'}</td>
                         <td className="px-2 py-1">
                           {row.valid ? (
-                            <span className="text-green-600">✓</span>
+                            <span className="text-gray-500">✓</span>
                           ) : (
-                            <span className="text-red-500">✗</span>
+                            <span className="text-gray-400">✗</span>
                           )}
                         </td>
-                        <td className="px-2 py-1 text-red-500">{row.errors.join(', ')}</td>
+                        <td className="px-2 py-1 text-gray-500">{row.errors.join(', ')}</td>
                       </tr>
                     ))}
                   </tbody>

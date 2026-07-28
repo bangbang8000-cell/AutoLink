@@ -3,6 +3,19 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { getWorkspacePath, getTemplatePath, getBackendPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
+
+// Shared category-to-directory mapping for device library
+const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
+  gpu_servers: 'gpu_servers',
+  compute_servers: 'compute_servers',
+  storage_servers_all_flash: 'storage_servers/all_flash',
+  storage_servers_hybrid_flash: 'storage_servers/hybrid_flash',
+  switches_param: 'switches/param',
+  switches_storage: 'switches/storage',
+  switches_biz: 'switches/biz',
+  switches_oob: 'switches/oob',
+  custom: 'custom',
+}
 import { updateService } from '../services/update.service.js'
 
 // ===== Security Helpers =====
@@ -65,22 +78,10 @@ function loadDeviceLibrary(): { categories: DeviceCategory[] } {
   }
 
   // Map flat category IDs to nested directory paths
-  const categoryPathMap: Record<string, string> = {
-    gpu_servers: 'gpu_servers',
-    compute_servers: 'compute_servers',
-    storage_servers_all_flash: 'storage_servers/all_flash',
-    storage_servers_hybrid_flash: 'storage_servers/hybrid_flash',
-    switches_param: 'switches/param',
-    switches_storage: 'switches/storage',
-    switches_biz: 'switches/biz',
-    switches_oob: 'switches/oob',
-    custom: 'custom',
-  }
 
   const categories: DeviceCategory[] = []
-
   for (const cat of index.categories || []) {
-    const catDir = categoryPathMap[cat.id] || path.basename(cat.id)
+    const catDir = DEVICE_CATEGORY_PATH_MAP[cat.id] || path.basename(cat.id)
     const devices: { id: string }[] = []
     for (const deviceId of cat.device_ids || []) {
       const safeDeviceId = path.basename(deviceId)
@@ -110,18 +111,7 @@ function saveDeviceToFile(device: { id: string; category: string }): void {
   const safeCategory = path.basename(device.category)
   const safeId = path.basename(device.id)
 
-  const categoryPathMap: Record<string, string> = {
-    gpu_servers: 'gpu_servers',
-    compute_servers: 'compute_servers',
-    storage_servers_all_flash: 'storage_servers/all_flash',
-    storage_servers_hybrid_flash: 'storage_servers/hybrid_flash',
-    switches_param: 'switches/param',
-    switches_storage: 'switches/storage',
-    switches_biz: 'switches/biz',
-    switches_oob: 'switches/oob',
-    custom: 'custom',
-  }
-  const catDir = categoryPathMap[device.category] || 'custom'
+  const catDir = DEVICE_CATEGORY_PATH_MAP[device.category] || 'custom'
 
   const deviceFile = path.join(libPath, catDir, `${safeId}.json`)
   const catDirFull = path.dirname(deviceFile)
@@ -468,7 +458,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   })
 
   ipcMain.handle('app:getVersion', () => {
-    return '2.0.1'
+    // Read version dynamically from package.json
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'))
+      return pkg.version || 'unknown'
+    } catch {
+      return 'unknown'
+    }
   })
 
   // ===== Shell =====
@@ -514,20 +510,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       return null
     }
 
-    const categoryPathMap: Record<string, string> = {
-      gpu_servers: 'gpu_servers',
-      compute_servers: 'compute_servers',
-      storage_servers_all_flash: 'storage_servers/all_flash',
-      storage_servers_hybrid_flash: 'storage_servers/hybrid_flash',
-      switches_param: 'switches/param',
-      switches_storage: 'switches/storage',
-      switches_biz: 'switches/biz',
-      switches_oob: 'switches/oob',
-      custom: 'custom',
-    }
-
     for (const cat of index.categories || []) {
-      const catDir = categoryPathMap[cat.id] || path.basename(cat.id)
+      const catDir = DEVICE_CATEGORY_PATH_MAP[cat.id] || path.basename(cat.id)
       const safeDeviceId = path.basename(deviceId)
       const deviceFile = path.join(libPath, catDir, `${safeDeviceId}.json`)
       if (fs.existsSync(deviceFile)) {

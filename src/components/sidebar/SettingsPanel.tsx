@@ -87,7 +87,7 @@ export function SettingsPanel() {
                   }`}
               >
                 {lang.label}
-                {language === lang.code && <span className="text-primary-500">✓</span>}
+                {language === lang.code && <span className="text-gray-500">✓</span>}
               </button>
             ))}
           </div>

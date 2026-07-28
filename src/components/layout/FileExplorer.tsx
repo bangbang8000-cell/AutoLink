@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType, type ThemeMode } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -6,18 +6,20 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
+import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import {
-  FolderOpen, Folder, Search, Star, ChevronRight, ChevronDown,
+  FolderOpen, Folder, Search, ChevronRight, ChevronDown,
   Sun, Moon, Monitor, Globe, Keyboard, Info, Palette, FileOutput,
-  Cpu, Wifi, Database, AlertTriangle, Shield, Download,
+  Cpu, Wifi, Network, Database, AlertTriangle, Shield, Download,
   Upload, RotateCcw, Trash2, ExternalLink, Check,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
-  Table2, List, FileSpreadsheet, GitBranch,
+  Table2, List, FileSpreadsheet, GitBranch, Package,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AboutDialog } from '@/components/layout/AboutDialog'
 import { useToastStore } from '@/stores/toast.store'
+import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function FileExplorer() {
   const { t } = useTranslation()
@@ -489,7 +491,7 @@ function DesignExplorer() {
         {summary && (
           <div className="border border-gray-200 dark:border-gray-700 rounded p-2.5 space-y-1.5">
             <div className="flex items-center gap-1.5">
-              {valid ? <CheckCircle size={12} className="text-green-500" /> : <XCircle size={12} className="text-red-500" />}
+              {valid ? <CheckCircle size={12} className="text-gray-400" /> : <XCircle size={12} className="text-gray-400" />}
               <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">
                 {valid ? '验证通过' : '验证失败'}
               </span>
@@ -546,7 +548,7 @@ function WorkbenchExplorer() {
         {/* Project info */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs">
-            <FolderOpen size={12} className="text-amber-500" />
+            <FolderOpen size={12} className="text-gray-400" />
             <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{selectedProjectName}</span>
           </div>
         </div>
@@ -554,17 +556,17 @@ function WorkbenchExplorer() {
         {/* Readiness */}
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-2">
           <div className="flex items-center gap-1.5">
-            {valid === true ? <CheckCircle size={11} className="text-green-500" />
-              : valid === false ? <XCircle size={11} className="text-red-500" />
-              : <AlertTriangle size={11} className="text-amber-500" />}
+            {valid === true ? <CheckCircle size={11} className="text-gray-400" />
+              : valid === false ? <XCircle size={11} className="text-gray-400" />
+              : <AlertTriangle size={11} className="text-gray-400" />}
             <span className="text-[10px] text-gray-500">
               拓扑: {valid === true ? '通过' : valid === false ? '失败' : '待生成'}
             </span>
             {summary && <span className="text-[10px] text-gray-400">({summary.totalServers}台)</span>}
           </div>
           <div className="flex items-center gap-1.5">
-            {rackReady ? <CheckCircle size={11} className="text-green-500" />
-              : totalDevices > 0 ? <AlertTriangle size={11} className="text-amber-500" />
+            {rackReady ? <CheckCircle size={11} className="text-gray-400" />
+              : totalDevices > 0 ? <AlertTriangle size={11} className="text-gray-400" />
               : <AlertTriangle size={11} className="text-gray-400" />}
             <span className="text-[10px] text-gray-500">
               机柜: {totalDevices === 0 ? '待规划' : rackReady ? `就绪 (${placedDevices}台)` : `${placedDevices}/${totalDevices}台`}
@@ -577,10 +579,10 @@ function WorkbenchExplorer() {
           <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800/50 text-[10px] font-medium text-gray-500 dark:text-gray-400">输出类型</div>
           <div className="p-2 space-y-1">
             {([
-              { type: 'connections' as const, icon: <FileSpreadsheet size={12} className="text-green-500" />, label: '连接关系表' },
-              { type: 'rackTable' as const, icon: <Table2 size={12} className="text-blue-500" />, label: '上机表' },
-              { type: 'topology' as const, icon: <GitBranch size={12} className="text-purple-500" />, label: '拓扑图' },
-              { type: 'deviceList' as const, icon: <List size={12} className="text-amber-500" />, label: '设备清单' },
+              { type: 'connections' as const, icon: <FileSpreadsheet size={12} className="text-gray-400" />, label: '连接关系表' },
+              { type: 'rackTable' as const, icon: <Table2 size={12} className="text-gray-400" />, label: '上机表' },
+              { type: 'topology' as const, icon: <GitBranch size={12} className="text-gray-400" />, label: '拓扑图' },
+              { type: 'deviceList' as const, icon: <List size={12} className="text-gray-400" />, label: '设备清单' },
             ]).map(def => (
               <label key={def.type} className="flex items-center gap-2 cursor-pointer py-0.5">
                 <input type="checkbox" checked={selectedOutputTypes.includes(def.type)}
@@ -662,7 +664,7 @@ function VisualizationExplorer() {
               <div className="mt-1.5 space-y-1">
                 {Object.entries(nodeStats).map(([type, count]) => (
                   <div key={type} className="flex justify-between items-center">
-                    <span className="text-[10px] text-gray-500">{type}</span>
+                    <span className="text-[10px] text-gray-500">{NODE_TYPE_LABELS[type] || type}</span>
                     <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
                   </div>
                 ))}
@@ -694,51 +696,177 @@ function VisualizationExplorer() {
 }
 
 /* ================================================== */
-/*  DeviceLibExplorer — device library categories     */
+/*  DeviceLibExplorer — hierarchical category tree    */
 /* ================================================== */
-const DEVICE_CATEGORY_LIST = [
-  { key: 'gpu_servers', label: 'GPU服务器', icon: Cpu, description: 'AI训练GPU服务器' },
-  { key: 'storage_servers', label: '存储服务器', icon: Database, description: '分布式存储节点' },
-  { key: 'compute_servers', label: '通算服务器', icon: Cpu, description: '通用计算节点' },
-  { key: 'switches_param', label: '参数面交换机', icon: Wifi, description: 'RoCEv2参数网络' },
-  { key: 'switches_storage', label: '存储交换机', icon: Wifi, description: '存储网络接入/汇聚' },
-  { key: 'switches_biz', label: '业务交换机', icon: Wifi, description: '业务/管理网络' },
-  { key: 'switches_oob', label: '带外交换机', icon: Wifi, description: '带外管理网络' },
-] as const
+
+interface CategoryTreeNode {
+  key: string
+  label: string
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  children?: { key: string; label: string }[]
+}
+
+const DEVICE_CATEGORY_TREE: CategoryTreeNode[] = [
+  { key: 'gpu_servers', label: 'GPU服务器', icon: Cpu },
+  { key: 'storage_servers', label: '存储服务器', icon: Database, children: [
+    { key: 'storage_servers_all_flash', label: '全闪' },
+    { key: 'storage_servers_hybrid_flash', label: '混闪' },
+  ]},
+  { key: 'compute_servers', label: '通算服务器', icon: Cpu },
+  { key: 'switches', label: '交换机', icon: Network, children: [
+    { key: 'switches_param', label: '参数面交换机' },
+    { key: 'switches_storage', label: '存储交换机' },
+    { key: 'switches_biz', label: '业务交换机' },
+    { key: 'switches_oob', label: '带外交换机' },
+  ]},
+  { key: 'custom', label: '自定义', icon: Wrench },
+]
 
 function DeviceLibExplorer() {
   const openTab = useWorkspaceStore((s) => s.openTab)
+  const updateTab = useWorkspaceStore((s) => s.updateTab)
+  const tabs = useWorkspaceStore((s) => s.tabs)
+  const activeTabId = useWorkspaceStore((s) => s.activeTabId)
+  const setActiveTab = useWorkspaceStore((s) => s.setActiveTab)
+  const { allDevices, loadLibrary } = useDeviceLibraryStore()
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [reuseTab] = useLocalStorage('autolink-device-tab-reuse', true)
 
-  const handleOpenCategory = useCallback((categoryKey: string) => {
-    openTab({
-      type: 'deviceLibrary',
-      title: '设备库',
-      closable: true,
-      state: { category: categoryKey },
+  useEffect(() => { loadLibrary() }, [])
+
+  // Compute counts per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const d of allDevices) {
+      counts[d.category] = (counts[d.category] || 0) + 1
+    }
+    return counts
+  }, [allDevices])
+
+  const getNodeCount = (node: CategoryTreeNode): number => {
+    if (node.children) {
+      return node.children.reduce((sum, c) => sum + (categoryCounts[c.key] || 0), 0)
+    }
+    return categoryCounts[node.key] || 0
+  }
+
+  // Find the category of the currently active deviceLibrary tab
+  const activeCategory = useMemo(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId)
+    if (activeTab?.type === 'deviceLibrary') {
+      return activeTab.state?.category as string | undefined
+    }
+    return undefined
+  }, [tabs, activeTabId])
+
+  const toggleExpand = useCallback((key: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
     })
-  }, [openTab])
+  }, [])
+
+  /** Open or reuse a deviceLibrary tab */
+  const openOrReuseDeviceTab = useCallback((label: string, categoryKey: string) => {
+    const activeTab = tabs.find((t) => t.id === activeTabId)
+
+    if (reuseTab && activeTab?.type === 'deviceLibrary') {
+      // Reuse: update the existing tab in-place
+      updateTab(activeTab.id, {
+        title: `设备库-${label}`,
+        state: { category: categoryKey },
+      })
+      setActiveTab(activeTab.id)
+    } else {
+      openTab({
+        type: 'deviceLibrary',
+        title: `设备库-${label}`,
+        closable: true,
+        state: { category: categoryKey },
+      })
+    }
+  }, [reuseTab, tabs, activeTabId, updateTab, setActiveTab, openTab])
+
+  const handleOpenCategory = useCallback((label: string, categoryKey: string) => {
+    openOrReuseDeviceTab(label, categoryKey)
+  }, [openOrReuseDeviceTab])
 
   return (
     <div className="h-full flex flex-col">
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">设备库</p>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">按分类浏览和管理网络设备</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{allDevices.length} 台设备</p>
       </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-        {DEVICE_CATEGORY_LIST.map((cat) => {
-          const Icon = cat.icon
+      <div className="flex-1 overflow-y-auto py-1">
+        {/* "全部设备" */}
+        <button
+          onClick={() => openOrReuseDeviceTab('全部', '')}
+          className={clsx(
+            'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
+            !activeCategory
+              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+          )}
+        >
+          <Package size={13} />
+          <span>全部设备</span>
+          <span className="ml-auto text-[10px] text-gray-400">{allDevices.length}</span>
+        </button>
+
+        {DEVICE_CATEGORY_TREE.map((node) => {
+          const hasChildren = !!node.children
+          const isExpanded = expanded.has(node.key)
+          const isActive = activeCategory === node.key
+          const hasActiveChild = hasChildren && node.children!.some((c) => c.key === activeCategory)
+          const Icon = node.icon
+          const count = getNodeCount(node)
+
           return (
-            <button
-              key={cat.key}
-              onClick={() => handleOpenCategory(cat.key)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
-            >
-              <Icon size={16} className="text-gray-400 dark:text-gray-500 group-hover:text-primary-500 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{cat.label}</div>
-                <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{cat.description}</div>
-              </div>
-            </button>
+            <div key={node.key}>
+              <button
+                onClick={() => {
+                  if (hasChildren) toggleExpand(node.key)
+                  handleOpenCategory(node.label, node.key)
+                }}
+                className={clsx(
+                  'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
+                  (isActive || hasActiveChild)
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+                )}
+              >
+                {hasChildren ? (
+                  isExpanded ? <ChevronDown size={11} className="text-gray-400 shrink-0" /> : <ChevronRight size={11} className="text-gray-400 shrink-0" />
+                ) : (
+                  <span className="w-[11px] shrink-0" />
+                )}
+                <Icon size={13} className="shrink-0" />
+                <span className="truncate">{node.label}</span>
+                <span className="ml-auto text-[10px] text-gray-400 shrink-0">{count}</span>
+              </button>
+
+              {hasChildren && isExpanded && node.children!.map((child) => {
+                const childActive = activeCategory === child.key
+                const childCount = categoryCounts[child.key] || 0
+                return (
+                  <button
+                    key={child.key}
+                    onClick={() => handleOpenCategory(child.label, child.key)}
+                    className={clsx(
+                      'w-full flex items-center gap-2 pl-8 pr-3 py-1.5 text-[11px] transition-colors',
+                      childActive
+                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+                    )}
+                  >
+                    <span className="truncate">{child.label}</span>
+                    <span className="ml-auto text-[10px] text-gray-400 shrink-0">{childCount}</span>
+                  </button>
+                )
+              })}
+            </div>
           )
         })}
       </div>
@@ -906,7 +1034,7 @@ function LanguageSettings() {
               : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'}`}
         >
           {lang.label}
-          {language === lang.code && <Check size={13} className="text-primary-500" />}
+          {language === lang.code && <Check size={13} className="text-gray-400" />}
         </button>
       ))}
     </SettingsSection>
@@ -1018,6 +1146,7 @@ function KeyboardSettings() {
 function DeviceLibrarySettings() {
   const [dataDir, setDataDir] = useLocalStorage('autolink-device-data-dir', '')
   const [autoUpdate, setAutoUpdate] = useLocalStorage('autolink-device-auto-update', true)
+  const [reuseTab, setReuseTab] = useLocalStorage('autolink-device-tab-reuse', true)
 
   return (
     <SettingsSection title="设备库设置">
@@ -1036,6 +1165,9 @@ function DeviceLibrarySettings() {
       </SettingsRow>
       <SettingsRow label="自动更新设备库">
         <Toggle checked={autoUpdate} onChange={setAutoUpdate} />
+      </SettingsRow>
+      <SettingsRow label="复用设备库页签">
+        <Toggle checked={reuseTab} onChange={setReuseTab} />
       </SettingsRow>
     </SettingsSection>
   )

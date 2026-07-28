@@ -10,9 +10,9 @@ interface OutputFile {
 
 function getFileIcon(type: string) {
   const t = type.toUpperCase()
-  if (t.includes('XLSX') || t.includes('XLS')) return <FileSpreadsheet size={14} className="text-green-500" />
+  if (t.includes('XLSX') || t.includes('XLS')) return <FileSpreadsheet size={14} className="text-gray-400" />
   if (t.includes('PNG') || t.includes('JPG') || t.includes('SVG') || t.includes('GIF'))
-    return <Image size={14} className="text-blue-500" />
+    return <Image size={14} className="text-gray-400" />
   if (t.includes('TXT') || t.includes('LOG') || t.includes('JSON') || t.includes('INI'))
     return <FileText size={14} className="text-gray-400" />
   return <File size={14} className="text-gray-400" />
@@ -92,7 +92,7 @@ export function OutputPanel() {
       <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 size={16} className="animate-spin text-primary-500" />
+            <Loader2 size={16} className="animate-spin text-gray-400" />
           </div>
         ) : files.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center px-3">
