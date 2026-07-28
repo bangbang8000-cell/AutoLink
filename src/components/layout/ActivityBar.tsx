@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Wrench, Server, GitBranch, FileCheck, Settings, PanelLeftClose, PanelLeft, Database,
+  FolderOpen, Zap, Wrench, GitBranch, Settings, PanelLeftClose, PanelLeft, Cpu,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -13,18 +13,13 @@ interface ActivityItem {
 }
 
 const activities: ActivityItem[] = [
-  { id: 'explorer', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
-  { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
+  { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
   { id: 'design', icon: <Wrench size={20} />, labelKey: 'menu.design', shortcut: 'Ctrl+Shift+D' },
-  { id: 'rack', icon: <Server size={20} />, labelKey: 'menu.rack', shortcut: 'Ctrl+Shift+R' },
-  { id: 'topology', icon: <GitBranch size={20} />, labelKey: 'menu.topology', shortcut: 'Ctrl+Shift+T' },
-  { id: 'output', icon: <FileCheck size={20} />, labelKey: 'menu.outputResults', shortcut: 'Ctrl+Shift+O' },
-  { id: 'deviceLibrary', icon: <Database size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
+  { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
+  { id: 'visualization', icon: <GitBranch size={20} />, labelKey: 'menu.visualization', shortcut: 'Ctrl+Shift+V' },
+  { id: 'device_library', icon: <Cpu size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
-
-/** Activities that open as workspace tabs instead of sidebar panels */
-const WORKSPACE_ACTIVITIES: ActivityType[] = ['workbench', 'rack', 'topology', 'output', 'deviceLibrary']
 
 interface Props {
   onActivityClick?: (activity: ActivityType) => void
@@ -33,32 +28,20 @@ interface Props {
 export function ActivityBar({ onActivityClick }: Props) {
   const { t } = useTranslation()
   const activeActivity = useUIStore((s) => s.activeActivity)
-  const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
 
   const handleClick = (item: ActivityItem) => {
-    if (WORKSPACE_ACTIVITIES.includes(item.id) && onActivityClick) {
+    if (onActivityClick) {
       onActivityClick(item.id)
-    } else {
-      setActiveActivity(item.id)
     }
-  }
-
-  // Determine which activity is highlighted: either sidebar active or workspace active
-  const isActive = (item: ActivityItem) => {
-    if (WORKSPACE_ACTIVITIES.includes(item.id)) {
-      // Content-type: highlight based on whether there's a tab of this type active
-      return false // Let parent control highlighting for workspace tabs
-    }
-    return activeActivity === item.id
   }
 
   return (
     <div className="w-12 flex flex-col items-center py-2 gap-0.5 shrink-0 bg-gray-100 dark:bg-gray-900 border-e border-gray-200 dark:border-gray-700">
       <div className="flex-1 flex flex-col items-center gap-0.5 w-full">
         {activities.map((item) => {
-          const active = isActive(item)
+          const active = activeActivity === item.id
           return (
             <button
               key={item.id}

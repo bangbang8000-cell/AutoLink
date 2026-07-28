@@ -2,13 +2,11 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type ActivityType =
-  | 'explorer'
-  | 'workbench'
+  | 'project'
   | 'design'
-  | 'rack'
-  | 'topology'
-  | 'output'
-  | 'deviceLibrary'
+  | 'workbench'
+  | 'visualization'
+  | 'device_library'
   | 'settings'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -21,6 +19,8 @@ interface UIState {
   isDark: boolean
   language: string
   explorerProjectListHeight: number
+  showCreateProjectWizard: boolean
+  showAboutDialog: boolean
 
   setActiveActivity: (activity: ActivityType) => void
   toggleSidebar: () => void
@@ -30,18 +30,22 @@ interface UIState {
   syncSystemTheme: () => void
   setLanguage: (lang: string) => void
   setExplorerProjectListHeight: (height: number) => void
+  setShowCreateProjectWizard: (show: boolean) => void
+  setShowAboutDialog: (show: boolean) => void
 }
 
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      activeActivity: 'explorer',
+      activeActivity: 'project',
       sidebarVisible: true,
       panelVisible: false,
       theme: 'system',
       isDark: false,
       language: 'zh-CN',
       explorerProjectListHeight: 300,
+      showCreateProjectWizard: false,
+      showAboutDialog: false,
 
       setActiveActivity: (activity) => set({ activeActivity: activity }),
 
@@ -72,6 +76,10 @@ export const useUIStore = create<UIState>()(
       setLanguage: (lang) => set({ language: lang }),
 
       setExplorerProjectListHeight: (height) => set({ explorerProjectListHeight: height }),
+
+      setShowCreateProjectWizard: (show) => set({ showCreateProjectWizard: show }),
+
+      setShowAboutDialog: (show) => set({ showAboutDialog: show }),
     }),
     {
       name: 'autolink-ui-state',

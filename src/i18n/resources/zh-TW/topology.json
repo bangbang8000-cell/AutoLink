@@ -1,1 +1,11 @@
-{ "title": "" }
+{
+  "title": "拓撲視覺化",
+  "networkTopology": "網路拓撲",
+  "deviceList": "設備列表",
+  "connectionList": "連接列表",
+  "zoomIn": "放大",
+  "zoomOut": "縮小",
+  "fitView": "適應視窗",
+  "exportImage": "匯出圖片",
+  "noProject": "請先選擇一個專案"
+}

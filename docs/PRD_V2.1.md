@@ -1,1331 +1,686 @@
-# AutoLink V2.1 PRD — 精细化建模与参数定制
+# AutoLink V2.1 PRD — 架构重构与用户体验全面优化
 
-## 一、版本定位
-
-V2.0 实现了基础的项目管理、拓扑设计、机柜规划、可视化渲染全链路闭环。V2.1 的目标是 **从"能用"升级为"好用"**——对智算中心网络规划的所有对象进行精细化参数建模，使每个设备、每条连接、每个机柜的参数都可以按项目定制，渲染输出全面对接工程实施。
-
----
-
-## 二、现有架构分析与不足
-
-### 2.1 当前数据模型 (V2.0)
-
-```
-NetworkObject(name, obj_type, group, max_ports, podid)
-  ├── connections: Connection[]
-  ├── downlink_counter / uplink_counter / core_counter / port_counter
-  ├── downlink_limit / uplink_limit / core_limit / port_limit
-  └── 端口命名: 硬编码 "端口N" / "参数网卡N" / "存储网卡1" / "OOB口1" / "业务口1"
-
-RackCabinet(id, name, totalU=42, devices: RackDevice[])
-  └── RackDevice(id, name, type, cabinetId, startU, endU)
-
-network_config.ini
-  └── 全局参数: num_servers, switch_ports, speed, cable_type, etc.
-```
-
-### 2.2 核心不足
-
-| 维度 | V2.0 现状 | V2.1 需求 |
-|------|----------|----------|
-| 设备建模 | 只有 name/type/ports，无厂商/型号/功率 | 完整的设备参数卡片 |
-| 端口命名 | 硬编码 `端口1`/`参数网卡1`/`OOB口1` | 按项目可定制的接口编号前缀 |
-| 机柜模型 | 固定 42U，无功率概念 | 42U/49U 可选，功率定额与评估 |
-| 网络类型 | boolean 开关 (oob_enabled, biz_enabled) | 参数/存储/业务/OOB 四网独立开关 |
-| 服务器 | GPU/存储/通算 共用同一 NetworkObject | 各有独立接口模型（不同网卡数/类型/速率） |
-| 连接表输出 | A/Z端设备名+端口，无机柜位置 | 含机柜号+U位编号或范围，可指导布线 |
-| 拓扑图 | 只读可视化，不可编辑 | 可拖拽调整布局、调整接线、保存 |
-| 上架图 | 基础 42U 色块，手动分配 | 功率评估、导入机柜矩阵、AI辅助布局 |
-| UI布局 | 所有功能挤在侧边栏（280px），主工作区空置 | 内容型功能（机柜/拓扑/输出/设备库）在全尺寸工作区页签中展示 |
-| 设备筛选 | 仅搜索框，无分类/厂商筛选 | 按分类/厂商/设备类型多维度组合筛选 |
+> 版本定位：V2.1 对界面布局、操作流程、组件架构进行彻底重构，解决"侧边栏承载一切"的核心矛盾，实现 IDE 级工作流体验。
+> V3.x 规划：引入 AI HUB（大模型驱动的智能网络设计助手）。
 
 ---
 
-## 三、V2.1 核心架构：项目级设备参数系统
+## 一、当前架构诊断（V2.0）
 
-### 3.1 设计理念
+### 1.1 核心矛盾
 
-每个项目是一个完整的智算中心方案，包含：
-- **网络拓扑参数**：选择包含哪些网络、每类网络选择什么设备
-- **设备参数卡片**：每类设备独立配置厂商/型号/功率/接口模型
-- **机房环境参数**：机柜类型(42U/49U)、单柜功率上限、可用机柜列表
-
-### 3.2 项目配置文件 (project_config.json) — 引用设备库
-
-项目通过 `device_refs` 引用设备库中的设备，而非内嵌完整设备参数。引用支持本地覆盖（override），实现"库中取基准，项目调差异"。
+V2.0 采用 IDE 式布局（ActivityBar 8项 + Sidebar 280px + Center Workspace + StatusBar），但存在根本性矛盾：
 
 ```
-project_config.json
-├── meta                          # 项目元数据
-│   ├── name, description, version
-│   └── created_at, updated_at
-├── networks                      # 网络包含选择
-│   ├── param_network: bool
-│   ├── storage_network: bool
-│   ├── biz_network: bool
-│   └── oob_network: bool
-├── topology                      # 拓扑计算参数
-│   ├── downlink_mode: full|custom
-│   ├── num_gpu_servers: int
-│   ├── num_storage_servers: int
-│   ├── num_compute_servers: int
-│   └── ... (各网络下行口数、速率等)
-├── device_refs                   # 设备库引用 + 按项目微调
-│   ├── gpu_server: {
-│   │     library_id: "nvidia_dgx_h100",
-│   │     overrides: { power_watts: 10200, ... }   # 可选：覆盖库中参数
-│   │   }
-│   ├── storage_server:           # 存储服务器引用
-│   ├── compute_server:           # 通算服务器引用
-│   ├── param_leaf_switch:        # 参数网 Leaf 引用
-│   ├── param_spine_switch:       # 参数网 Spine 引用
-│   ├── param_core_switch:        # 参数网 Core 引用
-│   ├── storage_leaf_switch:      # 存储网 Leaf 引用
-│   ├── storage_spine_switch:     # 存储网 Spine 引用
-│   ├── oob_access_switch:        # OOB 接入引用
-│   ├── oob_agg_switch:           # OOB 汇聚引用
-│   ├── biz_access_switch:        # 业务网 接入引用
-│   └── biz_agg_switch:           # 业务网 汇聚引用
-├── rack_config                   # 机柜配置
-├── rack_layout                   # 机柜布局数据
-└── topology_visual               # 拓扑可视化数据
+┌────────────────────────────────────────────────────┐
+│ ActivityBar │  Sidebar (280px)   │  Center (flex-1) │
+│   8个图标    │  渲染全部面板的       │  几乎空置          │
+│             │  功能内容            │                  │
+└────────────────────────────────────────────────────┘
 ```
 
-### 3.3 设备参数卡片 (DeviceProfile) 数据结构
+- **所有业务功能挤在 280px 侧边栏**，内容密集型面板（拓扑图、机柜视图、设备库）被压缩到不可用
+- **主工作区几乎空置**，仅展示占位文本或简易列表
+- **ActivityBar 8 个项过多**，功能分散，用户需要在多个入口间频繁跳转
 
-```typescript
-interface DeviceProfile {
-  // --- 基础信息 ---
-  vendor: string                    // 厂商: "NVIDIA" | "H3C" | "Huawei" | "Arista" | ...
-  model: string                     // 型号: "DGX-H100" | "5500-48Y8C" | "CE9860-4C-EI" | ...
-  description: string               // 描述
+### 1.2 数据流问题
 
-  // --- 物理参数 ---
-  power_watts: number               // 额定功率(W)  例如 GPU服务器: 10000, 交换机: 600
-  weight_kg: number                 // 重量(kg)
-  u_height: number                  // U位高度       例如 GPU服务器8U, 交换机1U/2U
-  depth_mm: number                  // 深度(mm)     用于机柜匹配
-  cooling: 'air' | 'liquid'        // 散热方式
+| 问题 | 影响 |
+|------|------|
+| 9个 Zustand Store 数据孤岛 | projectName 在 project/design/rack 三处独立持有，切换项目不同步 |
+| DesignConfig 与 ProjectTopology 双轨制 | 向导写入 `num_gpu_servers`，设计面板读取 `num_servers`，字段重叠不同名 |
+| IPC 无统一管理层 | 一半异步操作无 loading 状态，错误处理策略不一致 |
+| rack.store 无持久化 | 机柜布局关闭即丢失 |
 
-  // --- 命名规则 ---
-  name_prefix: string               // 设备名前缀   例如 "GPU-Server", "Param-Spine"
+### 1.3 流程断裂
 
-  // --- 接口模型 (仅服务器) ---
-  interface_models?: InterfaceModel[]
-
-  // --- 端口配置 (仅交换机) ---
-  port_count: number                // 总端口数
-  port_speed: string                // 端口速率     "400G" | "200G" | "100G" | "25G" | "10G" | "1G"
-  port_type: string                 // 端口类型     "QSFP-DD" | "QSFP56" | "QSFP28" | "SFP28" | "SFP+" | "RJ45"
-  downlink_prefix: string           // 下行端口前缀 例如 "Eth1/0/"
-  uplink_prefix: string             // 上行端口前缀 例如 "Eth1/0/"
-}
 ```
-
-### 3.4 接口模型 (InterfaceModel) 数据结构
-
-```typescript
-interface InterfaceModel {
-  network_type: 'param' | 'storage' | 'biz' | 'oob'   // 归属网络
-  port_count: number                // 接口数量       例如 GPU: 8×参数网卡
-  port_speed: string                // 接口速率       "400G" | "200G" | "100G" | "25G" | "10G" | "1G"
-  port_type: string                 // 接口类型       "QSFP56" | "SFP28" | "RJ45"
-  cable_type: string                // 连接线缆       "MPO-16" | "AOC" | "Cat6A" | "单模光纤" | "DAC"
-  downlink_prefix: string           // 下行端口编号前缀  "Eth"
-  uplink_prefix: string             // 上行端口编号前缀  "Eth"
-  port_numbering: 'sequential' | 'grouped'   // 编号方式
-}
+创建项目 → 向导 → 拓扑设计 → 机柜规划 → 渲染输出
+   ✅              ❌           ❌         ❌
+               切换activity   数据不跟随   需手动在各面板
+               数据不跟随                 间跳转
 ```
-
-### 3.5 完整设备参数卡片示例
-
-**GPU服务器 (NVIDIA DGX-H100):**
-```json
-{
-  "vendor": "NVIDIA",
-  "model": "DGX-H100",
-  "power_watts": 10200,
-  "u_height": 8,
-  "depth_mm": 900,
-  "cooling": "air",
-  "name_prefix": "GPU-DGXH100",
-  "interface_models": [
-    {
-      "network_type": "param",
-      "port_count": 8,
-      "port_speed": "400G",
-      "port_type": "QSFP56",
-      "cable_type": "MPO-16",
-      "downlink_prefix": "NIC",
-      "uplink_prefix": "NIC",
-      "port_numbering": "sequential"
-    },
-    {
-      "network_type": "storage",
-      "port_count": 2,
-      "port_speed": "200G",
-      "port_type": "QSFP56",
-      "cable_type": "AOC",
-      "downlink_prefix": "NIC",
-      "uplink_prefix": "NIC",
-      "port_numbering": "sequential"
-    },
-    {
-      "network_type": "biz",
-      "port_count": 1,
-      "port_speed": "25G",
-      "port_type": "SFP28",
-      "cable_type": "光纤",
-      "downlink_prefix": "NIC",
-      "uplink_prefix": "NIC",
-      "port_numbering": "sequential"
-    },
-    {
-      "network_type": "oob",
-      "port_count": 1,
-      "port_speed": "1G",
-      "port_type": "RJ45",
-      "cable_type": "Cat6A网线",
-      "downlink_prefix": "NIC",
-      "uplink_prefix": "NIC",
-      "port_numbering": "sequential"
-    }
-  ]
-}
-```
-
-**参数网 Leaf 交换机 (H3C 5500-48Y8C):**
-```json
-{
-  "vendor": "H3C",
-  "model": "LS-5850-54QS",
-  "power_watts": 350,
-  "u_height": 1,
-  "depth_mm": 460,
-  "cooling": "air",
-  "name_prefix": "Param-Leaf",
-  "port_count": 64,
-  "port_speed": "400G",
-  "port_type": "QSFP56",
-  "downlink_prefix": "Eth1/0/",
-  "uplink_prefix": "Eth1/0/"
-}
-```
-
-### 3.6 设备获取来源
-
-项目的设备参数通过 `device_refs` 引用设备库，而非在项目内重复存储完整参数。设备库的定义详见下一章。
 
 ---
 
-## 四、设备类型库 (Device Library)
+## 二、V2.1 核心变化
 
-### 4.1 设计理念
+### 2.1 ActivityBar 合并：8 → 5
 
-设备类型库是一个**全局共享、独立于项目和模板**的设备参数数据库。它预置了主流厂商经过调研的真实设备参数，项目通过引用（`library_id`）+ 可选覆盖（`overrides`）的方式使用设备。
+| 旧（8项） | 新（5项） | 合并逻辑 |
+|-----------|----------|---------|
+| 项目浏览器 + 输出结果 | **项目** `Ctrl+Shift+E` | 输出文件是项目产物，按项目浏览自然合理 |
+| 拓扑设计 + 设备库 | **设计** `Ctrl+Shift+D` | 设备选型是拓扑设计的子步骤 |
+| 工作台 | **工作台** `Ctrl+Shift+W` | 保留：渲染操作中心 |
+| 机柜规划 + 拓扑视图 | **可视化** `Ctrl+Shift+V` | 两者都是设计结果的可视化呈现 |
+| 设置 | **设置** `Ctrl+,` | 保留 |
 
-**核心原则：**
-- **库中取基准，项目调差异** — 设备基准参数存在库中，项目只存覆盖值
-- **一次调研，全局复用** — 华为 S9850 的参数只需调研录入一次，所有项目均可引用
-- **覆盖不污染库** — 项目中的参数覆盖不影响设备库，也不影响其他项目
-- **库可迭代升级** — 设备库更新后，项目可选择同步或保持当前版本
-
-### 4.2 设备库数据模型
-
-```typescript
-// 设备库索引
-interface DeviceLibrary {
-  version: string                          // 库版本号
-  updated_at: string
-  categories: DeviceCategory[]
-}
-
-interface DeviceCategory {
-  id: string                               // "gpu_servers" | "storage_servers_all_flash" | ...
-  name: string                             // "GPU服务器" | "全闪存储服务器" | ...
-  description: string
-  devices: LibraryDevice[]                 // 该分类下的所有设备
-}
-
-// 库中的设备条目
-interface LibraryDevice {
-  id: string                               // 唯一标识：厂商_型号 如 "nvidia_dgx_h100"
-  vendor: string                           // 厂商
-  model: string                            // 型号
-  category: string                         // 分类ID
-  description: string                      // 描述
-
-  // 物理参数
-  power_watts: number                      // 额定功率(W)
-  weight_kg: number                        // 重量(kg)
-  u_height: number                         // U位高度
-  depth_mm: number                         // 深度(mm)
-  cooling: 'air' | 'liquid'               // 散热方式
-
-  // 命名规则
-  name_prefix: string                      // 设备名前缀
-
-  // 接口模型 (服务器) 或 端口配置 (交换机)
-  interface_models?: InterfaceModel[]      // 仅服务器
-  port_count?: number                      // 仅交换机：总端口数
-  port_speed?: string                      // 仅交换机：端口速率
-  port_type?: string                       // 仅交换机：端口类型
-  downlink_prefix?: string                 // 仅交换机：下行端口前缀
-  uplink_prefix?: string                   // 仅交换机：上行端口前缀
-
-  // 适用场景标签
-  tags: string[]                           // 如 ["400G", "RoCEv2", "DCB"]
-  applicable_networks: NetworkType[]       // 适用的网络类型
-
-  // 元数据
-  source: 'builtin' | 'custom'            // 来源：内置 / 用户自定义
-  verified: boolean                        // 参数是否经过验证
-  datasheet_url?: string                   // 规格书链接
-  added_at: string
-  updated_at: string
-}
-
-// 项目对库设备的引用
-interface DeviceRef {
-  library_id: string                       // 指向 LibraryDevice.id
-  overrides?: Partial<LibraryDevice>       // 项目中覆盖的字段（仅存差异）
-  locked_version?: string                  // 锁定库版本（可选）
-}
-```
-
-### 4.3 设备库分类体系
+**合并后的 5 项**：
 
 ```
-device_library/
-├── library_index.json                     # 库索引
-├── gpu_servers/                           # GPU服务器
-│   ├── nvidia_dgx_h100.json              # NVIDIA DGX-H100
-│   ├── nvidia_dgx_b200.json              # NVIDIA DGX-B200
-│   ├── nvidia_dgx_gb300_nvl72.json       # NVIDIA DGX-GB300 (NVL72)
-│   ├── huawei_atlas_900.json             # 华为 Atlas 900 PoD
-│   ├── h3c_r5500_g7.json                 # H3C UniServer R5500 G7
-│   ├── inspur_nf5688m7.json              # 浪潮 NF5688M7
-│   └── generic_4u_gpu.json               # 通用GPU服务器
-├── storage_servers/                       # 存储服务器
-│   ├── all_flash/                         # 全闪存储
-│   │   ├── huawei_oceanstor_dorado_8000.json
-│   │   ├── huawei_oceanstor_dorado_6000.json
-│   │   ├── h3c_unistor_cf22000.json
-│   │   ├── inspur_as13000.json
-│   │   └── generic_all_flash.json
-│   └── hybrid_flash/                      # 混闪存储
-│       ├── huawei_oceanstor_5310.json
-│       ├── huawei_oceanstor_5510.json
-│       ├── h3c_unistor_x10000.json
-│       ├── inspur_as5500.json
-│       └── generic_hybrid_flash.json
-├── compute_servers/                       # 通算服务器
-│   ├── huawei_2288h_v7.json
-│   ├── h3c_r4900_g7.json
-│   ├── inspur_nf5280m7.json
-│   ├── ruijie_rg_s6250.json
-│   └── generic_2u_compute.json
-├── switches/
-│   ├── param/                             # 参数网络交换机
-│   │   ├── nvidia_sn5600_64_400g.json    # NVIDIA Spectrum-4 SN5600
-│   │   ├── nvidia_sn5400_64_200g.json    # NVIDIA Spectrum-X SN5400
-│   │   ├── huawei_ce9860_4c_ei.json      # 华为 CE9860-4C-EI
-│   │   ├── huawei_ce8850_64cq_ei.json    # 华为 CE8850-64CQ-EI
-│   │   ├── h3c_s9850_64h.json            # H3C S9850-64H
-│   │   ├── h3c_s9820_8c.json             # H3C S9820-8C (Spine)
-│   │   ├── ruijie_rg_s6980_64qc.json     # 锐捷 RG-S6980-64QC
-│   │   └── generic_64p_400g.json         # 通用参数交换机
-│   ├── storage/                           # 存储网络交换机
-│   │   ├── h3c_s6850_56hf.json           # H3C S6850-56HF
-│   │   ├── huawei_ce6860_48s6cq.json     # 华为 CE6860-48S6CQ-EI
-│   │   ├── nvidia_sn4600c.json           # NVIDIA SN4600C
-│   │   ├── ruijie_rg_s6510_48vs8cq.json  # 锐捷 RG-S6510
-│   │   └── generic_48p_200g.json         # 通用存储交换机
-│   ├── biz/                               # 业务/带内管理 交换机
-│   │   ├── h3c_s5560x_54s_ei.json        # H3C S5560X-54S-EI
-│   │   ├── huawei_s5735_l48p4x_a.json    # 华为 S5735-L48P4X-A
-│   │   ├── ruijie_rg_s5310_48gt4xs.json  # 锐捷 RG-S5310-48GT4XS
-│   │   └── generic_48p_25g.json          # 通用业务交换机
-│   └── oob/                               # 带外管理 交换机
-│       ├── h3c_s5130s_52p_ei.json        # H3C S5130S-52P-EI
-│       ├── huawei_s5735_l48t4x_a.json    # 华为 S5735-L48T4X-A
-│       ├── ruijie_rg_s2928g.json         # 锐捷 RG-S2928G
-│       └── generic_48p_1g.json           # 通用OOB交换机
-└── custom/                                # 用户自定义设备
+┌─────────┐
+│  项目    │  项目浏览 · 模板中心 · 输出文件夹树 · 项目概览
+│  📁     │
+├─────────┤
+│  设计    │  拓扑参数设计 · 设备选型与设备库
+│  ⚙️     │
+├─────────┤
+│  工作台   │  渲染操作 · 成果预览
+│  🚀     │
+├─────────┤
+│  可视化   │  网络拓扑图 · 机柜U位布局
+│  📊     │
+├─────────┤
+│  设置    │  外观 · 语言 · 项目默认值 · 快捷键
+│  🔧     │
+└─────────┘
+```
+
+### 2.2 界面布局重构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 自定义标题栏（AutoLink + 文件 · 编辑 · 视图 · 项目 · 帮助）       │
+├────────┬───────────────────┬────────────────────────────────────┤
+│Activity│  文件浏览器        │  工作区（Tabbed Views）              │
+│  Bar   │  ┌──────────────┐ │  ┌────────────────────────────────┐ │
+│  56px  │  │ 按活动切换:    │ │  │ [项目概览] [拓扑] [机柜#A] ...  │ │
+│        │  │              │ │  │────────────────────────────────│ │
+│  项目   │  │ 项目→项目树   │ │  │                                │ │
+│  📁    │  │  +模板+输出   │ │  │  当前标签页的完整内容            │ │
+│        │  │              │ │  │  - 项目概览: 设备清单/状态卡片    │ │
+│  设计   │  │ 设计→参数表单  │ │  │  - 拓扑: ECharts 网络图         │ │
+│  ⚙️    │  │  +设备库入口  │ │  │  - 机柜: 42U 网格视图          │ │
+│        │  │              │ │  │  - 输出: Excel/图片预览         │ │
+│  工作台  │  │ 工作台→概览   │ │  │  - 模板: 文本/配置查看           │ │
+│  🚀    │  │              │ │  │  - 工作台: 渲染操作卡片         │ │
+│        │  │ 可视化→筛选   │ │  │  - 设计: 拓扑参数表单             │ │
+│  可视化  │  │  +节点统计   │ │  │  - 设备库: 三栏设备浏览           │ │
+│  📊    │  │              │ │  │                                │ │
+│        │  │ 设置→分类导航  │ │  ├────────────────────────────────┤ │
+│  设置   │  │              │ │  │ 日志面板（可折叠 Ctrl+J）         │ │
+│  🔧    │  └──────────────┘ │  └────────────────────────────────┘ │
+├────────┴───────────────────┴────────────────────────────────────┤
+│ 状态栏: 当前项目 · 设计状态 · 设备数 · 主题 · 版本号              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**三栏职责**：
+
+| 区域 | 宽度 | 职责 |
+|------|------|------|
+| ActivityBar | 56px | 5个导航图标，点击切换文件浏览器 + 打开对应工作区标签 |
+| 文件浏览器 | 280px（可调200~500）| 按活动显示不同内容（项目树/设计表单/概览/筛选/设置导航） |
+| 工作区 | flex-1 | 标签页系统，每个功能全尺寸完整实现 |
+
+### 2.3 文件浏览器内容（按活动切换）
+
+| 活动 | 文件浏览器内容 |
+|------|---------------|
+| **项目** | 项目搜索 + 收藏/最近/全部项目列表 + 模板中心 + **输出文件夹树**（按项目-批次） |
+| **设计** | 拓扑参数表单 + **设备库快速入口**（点击跳转至设备库标签页） |
+| **工作台** | 项目信息概览卡片 + 输出类型勾选 |
+| **可视化** | 网络筛选 + 节点统计 + 机柜列表导航 |
+| **设置** | 分类导航（9个分类） |
+
+---
+
+## 三、各功能区详细规格
+
+### 3.1 项目（合并：项目浏览器 + 输出结果）
+
+#### 3.1.1 文件浏览器
+
+```
+🔍 搜索项目...                                          [📂]  ← 在资源管理器中打开项目根目录
+
+⭐ 收藏
+├── Demo-128台H100          [右键: 取消收藏 | 在资源管理器中打开]
+└── 空项目
+
+📁 全部项目
+├── Demo-128台H100          [右键: 设为当前项目 | 收藏 | 在资源管理器中打开 | 删除]
+├── Demo-100台H100
+└── 我的项目
+
+📋 模板中心
+├── H100-128台              [右键: 基于此模板新建 | 在资源管理器中打开]
+├── H100-100台
+└── 空项目
+
+📤 输出文件
+├── Demo-128台H100
+│   ├── 📁 20260728_1430_full  [右键: 在资源管理器中打开]
+│   │   ├── 📄 连接关系表.xlsx
+│   │   ├── 📄 设备清单.xlsx
+│   │   ├── 📄 上机表.xlsx
+│   │   └── 🖼 拓扑图.png
+│   └── 📁 20260728_1500_custom
+│       └── ...
+└── Demo-100台H100
     └── ...
 ```
 
-### 4.4 内置设备库清单（按厂商调研）
+**交互**：
+- 双击项目 → 设为当前项目，在工作区打开 **ProjectOverviewTab**
+- 单击模板 → 预览模板详情（在工作区打开 FileViewerTab）
+- 单击输出文件 → 在工作区打开 OutputTab 预览
+- 右键菜单 → **"在文件管理器中打开"**（Windows 资源管理器 / macOS Finder / Linux 文件管理器）
+- 文件浏览器工具栏 `[📂]` 按钮 → 打开当前选中项目的根目录
 
-#### 4.4.1 GPU 服务器 (7款)
+#### 3.1.2 "在资源管理器中打开" 功能
 
-| 条目ID | 厂商 | 型号 | 功率(W) | U高 | 参数网卡 | 存储网卡 | 散热 |
-|--------|------|------|---------|-----|---------|---------|------|
-| `nvidia_dgx_h100` | NVIDIA | DGX-H100 | 10,200 | 8U | 8×400G QSFP56 | 2×200G QSFP56 | 风冷 |
-| `nvidia_dgx_b200` | NVIDIA | DGX-B200 | 14,400 | 10U | 8×800G QSFP-DD | 2×400G QSFP-DD | 液冷 |
-| `nvidia_dgx_gb300_nvl72` | NVIDIA | DGX-GB300 NVL72 | 16,000 | 12U | 8×800G QSFP-DD | 4×800G QSFP-DD | 液冷 |
-| `huawei_atlas_900` | 华为 | Atlas 900 PoD | 8,000 | 8U | 8×400G QSFP56 | 2×200G QSFP56 | 风冷/液冷 |
-| `h3c_r5500_g7` | H3C | UniServer R5500 G7 | 9,500 | 6U | 8×400G QSFP56 | 2×200G QSFP56 | 风冷 |
-| `inspur_nf5688m7` | 浪潮 | NF5688M7 | 9,600 | 8U | 8×400G QSFP56 | 2×200G QSFP56 | 液冷 |
-| `generic_4u_gpu` | 通用 | 4U-GPU-Server | 6,000 | 4U | 8×200G QSFP56 | 1×200G QSFP56 | 风冷 |
+**平台适配**（Electron `shell` API 自动处理）：
 
-#### 4.4.2 存储服务器 — 全闪 (5款)
+| 平台 | 行为 | 实现 |
+|------|------|------|
+| Windows | `explorer.exe /select,<path>` | `shell.showItemInFolder(path)`（已实现） |
+| macOS | `open -R <path>` 定位到 Finder | `shell.showItemInFolder(path)`（已实现） |
+| Linux | `xdg-open <dir>` 打开默认文件管理器 | `shell.showItemInFolder(path)`（已实现） |
 
-| 条目ID | 厂商 | 型号 | 功率(W) | U高 | 类型 |
-|--------|------|------|---------|-----|------|
-| `huawei_oceanstor_dorado_8000` | 华为 | OceanStor Dorado 8000 V6 | 2,400 | 4U | 全闪 NVMe |
-| `huawei_oceanstor_dorado_6000` | 华为 | OceanStor Dorado 6000 V6 | 1,800 | 4U | 全闪 NVMe |
-| `h3c_unistor_cf22000` | H3C | UniStor CF22000 | 2,200 | 4U | 全闪 NVMe |
-| `inspur_as13000` | 浪潮 | AS13000G5 | 1,500 | 4U | 全闪 |
-| `generic_all_flash` | 通用 | 4U-AllFlash | 1,800 | 4U | 全闪 |
+**触发点**：
 
-#### 4.4.3 存储服务器 — 混闪 (4款)
+| 位置 | 触发方式 | 打开目标 |
+|------|---------|---------|
+| 文件浏览器工具栏 | 点击 `[📂]` 按钮 | 当前选中项目的根目录 |
+| 项目右键菜单 | "在文件管理器中打开" | 该项目目录 |
+| 模板右键菜单 | "在文件管理器中打开" | 该模板目录 |
+| 输出文件夹右键菜单 | "在文件管理器中打开" | 该批次输出目录 |
+| 输出文件右键菜单 | "在文件管理器中打开" | 定位到该文件 |
+| 菜单栏 → 文件 | "在文件管理器中打开项目" | 当前项目根目录 |
 
-| 条目ID | 厂商 | 型号 | 功率(W) | U高 | 类型 |
-|--------|------|------|---------|-----|------|
-| `huawei_oceanstor_5310` | 华为 | OceanStor 5310 V6 | 1,200 | 2U | 混闪 |
-| `huawei_oceanstor_5510` | 华为 | OceanStor 5510 V6 | 1,600 | 4U | 混闪 |
-| `h3c_unistor_x10000` | H3C | UniStor X10000 G5 | 1,000 | 2U | 混闪 |
-| `inspur_as5500` | 浪潮 | AS5500G5 | 1,100 | 2U | 混闪 |
+**已有 IPC 基础**：`window.electron.shell.showItemInFolder(path)` 和 `window.electron.shell.openPath(path)` 已实现，无需新增。
 
-#### 4.4.4 通算服务器 (4款)
+### 3.2 项目概览面板（ProjectOverviewTab）
 
-| 条目ID | 厂商 | 型号 | 功率(W) | U高 |
-|--------|------|------|---------|-----|
-| `huawei_2288h_v7` | 华为 | FusionServer 2288H V7 | 800 | 2U |
-| `h3c_r4900_g7` | H3C | UniServer R4900 G7 | 900 | 2U |
-| `inspur_nf5280m7` | 浪潮 | NF5280M7 | 800 | 2U |
-| `ruijie_rg_s6250` | 锐捷 | RG-S6250 | 750 | 2U |
+当用户在文件浏览器中双击项目或点击"设为当前项目"时，工作区自动打开 **ProjectOverviewTab**，集中展示项目的关键信息。
 
-#### 4.4.5 参数网络交换机 (8款)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) | U高 |
-|--------|------|------|------|------|---------|-----|
-| `nvidia_sn5600_64_400g` | NVIDIA | Spectrum-4 SN5600 | 64 | 400G QSFP56 | 600 | 1U |
-| `nvidia_sn5400_64_200g` | NVIDIA | Spectrum-X SN5400 | 64 | 200G QSFP56 | 450 | 1U |
-| `huawei_ce9860_4c_ei` | 华为 | CE9860-4C-EI | 4+32 | 400G QSFP56 | 1,200 | 4U |
-| `huawei_ce8850_64cq_ei` | 华为 | CE8850-64CQ-EI | 64 | 400G QSFP56 | 800 | 2U |
-| `h3c_s9850_64h` | H3C | S9850-64H | 64 | 400G QSFP56 | 550 | 1U |
-| `h3c_s9820_8c` | H3C | S9820-8C | 8 | 400G QSFP56 | 300 | 2U |
-| `ruijie_rg_s6980_64qc` | 锐捷 | RG-S6980-64QC | 64 | 400G QSFP56 | 500 | 1U |
-| `generic_64p_400g` | 通用 | 64P-400G-Switch | 64 | 400G QSFP56 | 550 | 1U |
-
-#### 4.4.6 存储网络交换机 (4款)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) |
-|--------|------|------|------|------|---------|
-| `h3c_s6850_56hf` | H3C | S6850-56HF | 48×25G + 8×100G | 25G/100G | 350 |
-| `huawei_ce6860_48s6cq` | 华为 | CE6860-48S6CQ-EI | 48×25G + 6×100G | 25G/100G | 400 |
-| `nvidia_sn4600c` | NVIDIA | SN4600C | 64 | 100G QSFP28 | 350 |
-| `ruijie_rg_s6510_48vs8cq` | 锐捷 | RG-S6510-48VS8CQ | 48×25G + 8×100G | 25G/100G | 350 |
-
-#### 4.4.7 业务/带内管理交换机 (4款)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) |
-|--------|------|------|------|------|---------|
-| `h3c_s5560x_54s_ei` | H3C | S5560X-54S-EI | 48×1G/10G + 4×25G + 2×40G | 1G/10G/25G/40G | 150 |
-| `huawei_s5735_l48p4x_a` | 华为 | S5735-L48P4X-A | 48×1G + 4×10G SFP+ | 1G/10G | 120 |
-| `ruijie_rg_s5310_48gt4xs` | 锐捷 | RG-S5310-48GT4XS | 48×1G + 4×10G SFP+ | 1G/10G | 100 |
-| `generic_48p_25g` | 通用 | 48P-25G-Switch | 48×25G + 8×100G | 25G/100G | 250 |
-
-#### 4.4.8 带外管理交换机 (4款)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) |
-|--------|------|------|------|------|---------|
-| `h3c_s5130s_52p_ei` | H3C | S5130S-52P-EI | 48×1G + 4×10G SFP+ | 1G/10G | 60 |
-| `huawei_s5735_l48t4x_a` | 华为 | S5735-L48T4X-A | 48×1G + 4×10G SFP+ | 1G/10G | 55 |
-| `ruijie_rg_s2928g` | 锐捷 | RG-S2928G-E | 24×1G + 4×10G SFP+ | 1G/10G | 45 |
-| `generic_48p_1g` | 通用 | 48P-1G-Switch | 48×1G + 4×10G | 1G/10G | 60 |
-
-**内置设备总计：40款**
-
-#### 4.4.9 NVIDIA InfiniBand 专用交换机 (6款) — V1.1 新增
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) | U高 | 管理口 |
-|--------|------|------|------|------|---------|-----|--------|
-| `nvidia_mqm9700_64_400g_ib` | NVIDIA | MQM9700-NS2F (Quantum-2) | 64 | NDR 400G QSFP56 | 750 | 1U | 有 |
-| `nvidia_mqm9790_64_400g_ib` | NVIDIA | MQM9790-NS2F (Quantum-2) | 64 | NDR 400G QSFP56 | 700 | 1U | 无 |
-| `nvidia_mqm8700_40_200g_ib` | NVIDIA | MQM8700 (Quantum HDR) | 40 | HDR 200G QSFP56 | 550 | 1U | 有 |
-| `nvidia_mqm8790_40_200g_ib` | NVIDIA | MQM8790 (Quantum HDR) | 40 | HDR 200G QSFP56 | 500 | 1U | 无 |
-| `nvidia_q3200_72_800g_ib` | NVIDIA | Q3200 (Quantum-3) | 72 | NDR 800G OSFP | 1200 | 1U | 有 |
-| `nvidia_q3400_144_800g_ib` | NVIDIA | Q3400 (Quantum-3) | 144 | NDR 800G OSFP | 2200 | 2U | 有 |
-
-#### 4.4.10 参数网络 RoCE 交换机 (V1.1 新增型号)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) | U高 | 适用层级 |
-|--------|------|------|------|------|---------|-----|---------|
-| `h3c_s9820_64h` | H3C | S9820-64H | 64 | 400G QSFP56 | 600 | 2U | Spine/Core |
-| `huawei_ce8860_4c_ei` | 华为 | CE8860-4C-EI | 128(满配) | 400G QSFP56 | 1500 | 4U | Spine/Core |
-| `ruijie_rg_s6990_64oc2xs` | 锐捷 | RG-S6990-64OC2XS | 64 | 800G OSFP | 950 | 2U | Leaf |
-| `ruijie_rg_s9910_128oc2vs` | 锐捷 | RG-S9910-128OC2VS | 128 | 800G OSFP | 1600 | 3U | Spine |
-
-#### 4.4.11 业务/带内管理网络交换机 (V1.1 新增型号)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) | 适用层级 |
-|--------|------|------|------|------|---------|---------|
-| `h3c_s6520x_54qc_ei` | H3C | S6520X-54QC-EI | 48×25G + 6×100G | 25G/100G | 200 | 汇聚 |
-| `huawei_s6730_h48x6c` | 华为 | S6730-H48X6C | 48×10G + 6×100G | 10G/100G | 180 | 汇聚 |
-| `ruijie_rg_s6120_48xs8cq` | 锐捷 | RG-S6120-48XS8CQ | 48×25G + 8×100G | 25G/100G | 160 | 汇聚 |
-
-#### 4.4.12 带外管理网络交换机 (V1.1 新增型号)
-
-| 条目ID | 厂商 | 型号 | 端口 | 速率 | 功率(W) | 适用层级 |
-|--------|------|------|------|------|---------|---------|
-| `h3c_s5120v3_52p_ei` | H3C | S5120V3-52P-EI | 48×1G + 4×10G | 1G/10G | 70 | 汇聚 |
-| `huawei_s5732_h48s6q` | 华为 | S5732-H48S6Q | 48×1G + 6×40G | 1G/40G | 80 | 汇聚 |
-| `ruijie_rg_s5750c_48gt4xs_h` | 锐捷 | RG-S5750C-48GT4XS-H | 48×1G + 4×10G | 1G/10G | 60 | 汇聚 |
-
-**V1.1 设备库总计：56款**（原40款 + 新增16款交换机）
-
-### 4.5 设备库 UI 功能
-
-| 功能 | 说明 | 优先级 |
-|------|------|--------|
-| 设备库浏览面板 | ActivityBar 新增「设备库」入口，分类浏览所有设备 | P0 |
-| 搜索与筛选 | 按厂商、类型、速率、端口数、功率范围筛选 | P1 |
-| 设备详情查看 | 点击查看完整参数卡片（只读），含规格书链接 | P0 |
-| 设备对比 | 选择 2-3 款设备并排对比参数 | P1 |
-| **手工添加服务器** | 表单填写 GPU/存储/通算 服务器的完整参数（厂商/型号/功率/U高/接口模型） | P0 |
-| **手工添加交换机** | 表单填写参数网/存储/业务/OOB 交换机的完整参数（厂商/型号/端口数/速率/端口前缀） | P0 |
-| **编辑设备参数** | 修改自定义设备的任意参数；内置设备可通过"复制到自定义"后编辑 | P0 |
-| 删除自定义设备 | 删除用户自定义设备（内置设备不可删除） | P1 |
-| 复制到自定义 | 以内置设备为基础创建自定义变体 | P2 |
-| **批量导入设备** | 从 CSV/Excel 批量导入服务器或交换机参数，自动校验格式并分类入库 | P0 |
-| **导出设备库** | 将设备库中选定设备导出为 CSV/Excel/JSON，便于分享和备份 | P1 |
-| 库版本检查 | 应用启动时检查设备库是否有更新 | P2 |
-
-### 4.5.1 手工添加/编辑设备流程
+#### 3.2.1 布局
 
 ```
-设备库面板 → [添加设备] 按钮
-  ├── 选择设备类型：GPU服务器 / 全闪存储 / 混闪存储 / 通算服务器 / 参数网交换机 / 存储网交换机 / 业务网交换机 / OOB交换机
-  ├── 显示对应类型的参数表单
-  │   ├── 服务器类型表单：厂商/型号/功率/U高/深度/散热/名称前缀 + 接口模型表格
-  │   │   └── 接口模型表格：按网络类型逐行配置端口数/速率/类型/线缆/编号前缀
-  │   └── 交换机类型表单：厂商/型号/功率/U高/深度/端口数/端口速率/端口类型/下行前缀/上行前缀
-  ├── 填写完成 → 校验 → 保存到 `custom/` 目录
-  └── 自动生成 library_id（厂商_型号 格式，自动去重）
-
-编辑设备 → 点击设备 → [编辑] 按钮
-  ├── 自定义设备：直接在原表单上修改 → 保存
-  └── 内置设备：自动触发"复制到自定义" → 在新副本上修改
+┌──────────────────────────────────────────────────────────────────┐
+│ 项目：Demo-128台H100                     [编辑配置] [在管理器中打开] │
+├────────────────────────────┬─────────────────────────────────────┤
+│  设备清单                   │  设计状态                            │
+│  ┌───────────────────────┐ │  拓扑模式: full                      │
+│  │ 设备类型  │ 数量 │ 功耗  │ │  GPU服务器: 128台 (8×400G)           │
+│  │ GPU服务器 │ 128  │ 10kW │ │  Leaf: 8台 · Spine: 4台             │
+│  │ Leaf交换  │   8  │ 750W │ │  端口使用率: 100%                   │
+│  │ Spine交换 │   4  │ 750W │ │  验证状态: ✅ 通过                   │
+│  │ ...       │ ...  │ ...  │ │                                    │
+│  │ 合计      │ 140  │ 1.3MW│ │  [打开设计面板]                     │
+│  └───────────────────────┘ │                                     │
+│                            │                                     │
+│  机柜布局                   │  输出文件                            │
+│  ┌───────────────────────┐ │  ┌────────────────────────────────┐  │
+│  │ 机柜A  ████████░░ 75% │ │  │ 📄 连接关系表.xlsx    2026-07-28│  │
+│  │ 机柜B  ██████░░░░ 58% │ │  │ 📄 设备清单.xlsx      2026-07-28│  │
+│  │ 机柜C  ████████░░ 80% │ │  │ 📄 上机表.xlsx        2026-07-28│  │
+│  │ 机柜D  ████░░░░░░ 35% │ │  │ 🖼 拓扑图.png         2026-07-28│  │
+│  └───────────────────────┘ │  └────────────────────────────────┘  │
+│  [打开机柜规划]             │  [打开输出文件夹]                      │
+│                            │                                     │
+│  快速操作                                                          │
+│  [一键渲染] [导出设备清单] [导出上机表] [导出拓扑图]                      │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.5.2 批量导入/导出格式
+#### 3.2.2 数据来源
 
-**导入 CSV/Excel 格式（服务器）：**
+| 信息块 | 数据来源 | 触发条件 |
+|--------|---------|---------|
+| 设备清单 | `designer.topology` 节点统计 + `device_refs` 设备库引用 | 拓扑已生成后显示 |
+| 设计状态 | `design.summary` | 拓扑已生成后显示 |
+| 机柜布局 | `rack.cabinets` 使用率统计 | 机柜已初始化后显示 |
+| 输出文件 | `project.listOutputFiles` 列出 `output/` 目录 | 始终显示 |
+
+#### 3.2.3 空状态处理
+
+| 场景 | ProjectOverviewTab 显示 |
+|------|-------------------------|
+| 项目刚创建，无拓扑 | 提示"请先进入设计面板生成拓扑"，[打开设计面板] 按钮 |
+| 拓扑已生成，无输出 | 设备清单和设计状态正常显示，输出文件区显示"暂无输出" |
+| 无机柜数据 | 机柜区显示"暂无数据"，[从拓扑初始化] 按钮 |
+| 项目选择后加载中 | Skeleton Loading 骨架屏 |
+
+### 3.3 设计（合并：拓扑设计 + 设备库）
+
+**文件浏览器**显示：
+- 拓扑参数表单（原 DesignPanel，按场景/自定义模式切换）
+- 设备库快速入口按钮 → 在工作区打开 DeviceLibraryTab
+
+**工作区标签页**：
+
+| 标签页 | 内容 | 触发 |
+|--------|------|------|
+| **DesignTab** | 全尺寸拓扑设计表单 + 摘要 | 活动栏"设计" |
+| **DeviceLibraryTab** | 三栏：分类树 + 设备列表 + 详情 | 文件浏览器"打开设备库"按钮 |
+
+**DeviceLibraryTab 三栏布局**：
 ```
-设备类型,厂商,型号,功率(W),U高,深度(mm),散热,名称前缀,参数网卡数,参数网卡速率,参数网卡类型,参数网卡线缆,存储网卡数,存储网卡速率,存储网卡类型,存储网卡线缆,业务网卡数,业务网卡速率,业务网卡类型,业务网卡线缆,OOB网卡数,OOB网卡速率,OOB网卡类型,OOB网卡线缆
-GPU服务器,NVIDIA,DGX-H100,10200,8,900,风冷,GPU-DGXH100,8,400G,QSFP56,MPO-16,2,200G,QSFP56,AOC,1,25G,SFP28,光纤,1,1G,RJ45,Cat6A
+┌──────────┬────────────────┬──────────────────────┐
+│ 分类树    │  设备列表        │  设备详情              │
+│          │  [搜索] [厂商▾]  │  ┌────────────────┐  │
+│ GPU服务器  │                │  │ 厂商: NVIDIA    │  │
+│ 存储服务器  │  NVIDIA DGX H100│  │ 型号: DGX-H100  │  │
+│ 通算服务器  │  NVIDIA DGX B200│  │ 功耗: 10200W   │  │
+│ 交换机     │  H3C R5500 G7   │  │ U位: 8U        │  │
+│  ├ 参数网   │  ...            │  │ 接口: 8×400G    │  │
+│  ├ 存储网   │                │  │ ...            │  │
+│  ├ OOB     │                │  └────────────────┘  │
+│  └ 业务网   │                │                      │
+└──────────┴────────────────┴──────────────────────┘
 ```
 
-**导入 CSV/Excel 格式（交换机）：**
-```
-设备类型,厂商,型号,功率(W),U高,深度(mm),散热,名称前缀,端口数,端口速率,端口类型,下行前缀,上行前缀,适用网络
-参数网交换机,NVIDIA,SN5600,600,1,500,风冷,Param-Leaf,64,400G,QSFP56,Eth1/0/,Eth1/0/,param
-存储网交换机,H3C,S6850-56HF,350,1,460,风冷,Stor-Leaf,56,25G/100G,SFP28/QSFP28,Eth1/0/,Eth1/0/,storage
-```
+### 3.4 工作台
 
-**导出格式：**
-- 支持选中单条/多条设备导出为 JSON（完整 DeviceProfile）
-- 支持按分类批量导出为 Excel（带格式化表头）
-- 支持全库导出为 ZIP 包（含目录结构和所有 JSON）
+**文件浏览器**显示项目概览 + 输出类型勾选。
 
-### 4.6 项目中对设备库的使用流程
+**工作区 WorkbenchTab**（全尺寸）：
+- 项目信息卡片
+- 就绪检查（拓扑状态 + 机柜状态）
+- 输出类型勾选（连接关系表 / 上机表 / 拓扑图 / 设备清单）
+- 渲染按钮 + 实时进度条
+- 渲染结果列表
 
-```
-新建项目向导 Step3 → 打开设备选择器
-  ├── 浏览设备库分类
-  ├── 搜索/筛选目标设备
-  ├── 选中设备 → 预览参数卡片
-  ├── 确认选择 → 记录 library_id
-  └── [可选] 修改参数 → 存入 device_refs.overrides
+### 3.5 可视化（合并：拓扑视图 + 机柜规划）
 
-设计面板 → 查看/调整设备选型
-  ├── 点击设备名称 → 打开选型对话框
-  ├── 重新从设备库选择
-  └── overrides 临时调整参数 → 实时更新
+**文件浏览器**显示：
+- 网络筛选（全部/参数/存储/OOB/业务）
+- 节点统计
+- 机柜列表导航
 
-Python 引擎 →
-  1. 读取 project_config.json
-  2. 根据 device_refs 从设备库加载完整 DeviceProfile
-  3. 应用 overrides 覆盖
-  4. 用最终参数生成拓扑
-```
+**工作区标签页**：
 
-### 4.7 设备库数据流
+| 标签页 | 内容 |
+|--------|------|
+| **TopologyTab** | ECharts 网络拓扑图（分层布局、节点着色、交互缩放、导出PNG） |
+| **RackTab** | 42U 机柜U位网格视图（增强版：设备着色 + 功率条） |
 
-```
-template/device_library/  (内置设备 JSON)
-         │
-         ▼
-   DeviceLibraryStore (Zustand + IPC)
-         │
-         ├── 设备库浏览面板 (DeviceLibraryPanel)
-         │     └── 搜索、筛选、对比、添加自定义
-         │
-         ├── 新建项目向导 Step3 (DevicePicker)
-         │     └── 选择设备 → device_refs
-         │
-         ├── 设计面板 (DesignPanel)
-         │     └── 查看/更换选型 → 更新 device_refs
-         │
-         └── Python 引擎
-               └── 加载 DeviceProfile + overrides → 生成拓扑
-```
+**TopologyTab 规格**：
+- ECharts Graph 图表（已有 `echarts@6.1.0`）
+- 分层布局：Server → Leaf → Spine → Core
+- 节点着色：GPU蓝/存储绿/Leaf橙/Spine紫/Core红
+- 边着色：参数网实线/存储网虚线/OOB点线
+- 点击节点显示详情面板
+- 缩放、拖拽、PNG导出
+- 与文件浏览器筛选联动
+
+### 3.6 设置
+
+**设置面板 9 个分类**：
+
+| 分类 | 设置项 |
+|------|--------|
+| **外观** | 主题（亮/暗/系统）、字体大小（小/中/大）、紧凑模式、动画开关 |
+| **语言** | 5种语言选择 |
+| **项目默认值** | 默认机柜类型(42U/49U)、默认功率限制(W)、默认端口速率 |
+| **输出** | 默认输出格式、输出目录、自动保存间隔(分钟) |
+| **快捷键** | 可自定义的快捷键绑定表 |
+| **设备库** | 设备库数据目录、自动更新设备库开关 |
+| **网络** | 更新检查开关、代理设置 |
+| **数据** | 导出全部配置、导入配置、重置为默认值 |
+| **关于** | 版本号、许可证、第三方库、检查更新 |
 
 ---
 
-## 五、机柜系统增强
+## 四、frameless 窗口 + 自定义标题栏
 
-### 5.1 机柜类型
+`main.ts` 改造：
+- `frame: false` + `titleBarStyle: 'hidden'`（全平台）
+- `preload.ts` 补充 `onMaximizeChange` 监听器
+- Header 增加 `-webkit-app-region: drag` 可拖拽区域
 
+**标题栏布局**：
 ```
-RackType:
-├── 42U: 标准机柜，高度 2000mm，深度 1000/1100/1200mm
-└── 49U: 高柜，高度 2200mm，深度 1100/1200mm
-```
-
-### 4.2 机柜参数
-
-```typescript
-interface RackConfig {
-  rack_type: '42U' | '49U'
-  rack_power_limit_w: number      // 单柜功率上限，默认 42U: 8000W, 49U: 12000W
-  rack_depth_mm: number           // 机柜深度
-  rack_name_prefix: string        // 机柜命名前缀，默认 "A"
-  rack_start_number: number       // 起始编号，默认 1
-}
+[AutoLink] [文件▾] [编辑▾] [视图▾] [项目▾] [帮助▾]      [主题] [语言] [更新] [─][□][✕]
 ```
 
-### 4.3 功率评估公式
+**菜单栏**：
 
-```
-单柜已用功率 = Σ(柜内设备功率)
-单柜功率使用率 = 已用功率 / 功率上限 × 100%
-
-自动评估:
-  - 按功率上限推荐每柜最大设备数
-  - 按U位上限推荐每柜最大设备数
-  - 取 min(功率上限设备数, U位上限设备数) 作为实际推荐
-  - 功率超标标红警告
-```
-
-### 4.4 导入可用机柜
-
-用户可以导入一个 Excel/CSV 文件描述机房已有机柜列表：
-
-```csv
-机柜编号, 机柜名称, 类型, U数, 功率上限(W), 已用U, 可用U, 位置, 备注
-A01, A01, GPU柜, 49U, 12000, 0, 49, 1F-A区-1排-1号,
-A02, A02, GPU柜, 49U, 12000, 0, 49, 1F-A区-1排-2号,
-B01, B01, 存储柜, 42U, 8000, 0, 42, 1F-B区-1排-1号,
-C01, C01, 网络柜, 42U, 6000, 0, 42, 1F-C区-1排-1号, 放置Leaf/Spine
-D01, D01, 通算柜, 42U, 8000, 0, 42, 1F-D区-1排-1号,
-E01, E01, 安全柜, 42U, 6000, 0, 42, 1F-E区-1排-1号, 防火墙等
-```
-
-导入后，系统可以：
-- 在机柜列表中使用该编号和位置
-- 按设备类型自动推荐分配到对应类型机柜
-- 可视化总览机柜矩阵
-
-### 5.5 机柜类型分类（用于导入/自动分配）
-
-```
-机柜类型 enum:
-  - gpu_rack       GPU服务器柜
-  - storage_rack   存储服务器柜
-  - network_rack   网络设备柜（交换机）
-  - compute_rack   通算服务器柜
-  - security_rack  安全设备柜（防火墙/IPS等）
-  - mixed_rack     混合柜
-```
-
----
-
-## 六、新建项目向导
-
-### 6.1 向导流程
-
-```
-步骤1: 基本信息
-  ├── 项目名称
-  ├── 项目描述
-  └── 项目位置
-
-步骤2: 网络选择
-  ├── ☑ 参数网络 (算力互联)      [默认开启]
-  ├── ☑ 存储网络                [默认开启]
-  ├── ☐ 业务/带内管理 网络       [默认关闭]
-  └── ☐ 带外管理 OOB 网络        [默认开启]
-
-步骤3: 设备选择与参数确认
-  对每个选中的网络类型:
-  ├── 服务器
-  │   ├── GPU服务器: [从模板库选择] → 查看/修改参数卡片
-  │   ├── 存储服务器: [从模板库选择] → 查看/修改参数卡片
-  │   └── 通算服务器: [从模板库选择] → 查看/修改参数卡片
-  ├── 数量配置
-  │   ├── GPU服务器数量: [100]
-  │   ├── 存储服务器数量: [14]
-  │   └── 通算服务器数量: [20]
-  └── 交换机
-      ├── 参数网Leaf: [从模板库选择]
-      ├── 参数网Spine: [从模板库选择]
-      ├── OOB接入: [从模板库选择]
-      └── ...
-
-步骤4: 机柜环境
-  ├── 机柜类型: [42U] [49U]
-  ├── 单柜功率上限: [8000W / 12000W]
-  ├── □ 导入可用机柜列表 (可选)
-  └── 机柜命名规则: [A] [01] 从 [1] 开始
-
-步骤5: 汇总确认
-  ├── 网络拓扑参数预览
-  ├── 预计设备总数
-  ├── 预计机柜数量
-  └── [确认创建] [返回修改]
-```
-
-### 5.2 从模板创建
-
-选择内置模板后同样进入向导，但参数已预填充：
-- H100-100台模板 → 自动选择 DGX-H100 设备卡 + 默认交换机
-- 空项目模板 → 从步骤1开始全部手动配置
-
-### 6.3 IB/RoCE 协议选择（V1.1 新增）
-
-向导步骤2中，参数网络增加了 **IB / RoCEv2** 协议选择：
-
-```
-┌─ 参数网络 ───────────────────────────────────────────── ☑ ─┐
-│ 协议类型:  [ InfiniBand (IB) ]  [ RoCEv2 ]                 │
-│ IB 优先推荐 NVIDIA 交换机                                    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**智能默认选型规则：**
-| 协议 | Leaf 交换机 | Spine 交换机 | Core 交换机 |
-|------|-----------|------------|------------|
-| IB | NVIDIA MQM9700 (64×400G) | NVIDIA Q3200 (72×800G) | NVIDIA Q3400 (144×800G) |
-| RoCE | H3C S9850-64H (64×400G) | H3C S9820-64H (64×400G) | H3C S9820-8C (8×400G) |
-
-**行为**：切换 IB/RoCE 协议时，如果当前选中的是默认交换机，自动切换到新协议的默认交换机；如果用户已手动更换过设备，保留用户选择。
-
-### 6.4 存储服务器数量拆分（V1.1 新增）
-
-将原来单一的"存储服务器数量"拆分为两类独立定制：
-
-| 存储类型 | U位 | 默认数量 | 说明 |
-|---------|------|---------|------|
-| 全闪存储 (2U) | 2U | 8 台 | NVMe 全闪存，高性能低延迟 |
-| 混闪存储 (4U) | 4U | 6 台 | SSD + HDD 混闪，大容量 |
-
-对应的 `device_refs` key 也拆分为：
-- `all_flash_storage_server` — 全闪存储服务器
-- `hybrid_flash_storage_server` — 混闪存储服务器
-
-**向后兼容**：配置文件中的 `num_storage_servers` 旧字段仍被 Python 引擎和 IPC 层识别，当 `num_all_flash_storage` 和 `num_hybrid_flash_storage` 存在时优先使用新字段。
-
----
-
-## 六、拓扑图动态编辑
-
-### 6.1 功能描述
-
-在当前只读拓扑图基础上增加交互编辑能力：
-
-| 功能 | 说明 |
+| 菜单 | 子项 |
 |------|------|
-| 拖拽节点 | 拖动任意设备节点到新位置 |
-| 批量选中 | Ctrl+点击多选，框选 |
-| 对齐 | 选中多个节点 → 水平/垂直对齐 |
-| 连线调整 | 调整边的弯曲度(curveness)和路径 |
-| 撤销/重做 | Ctrl+Z / Ctrl+Shift+Z |
-| 保存布局 | 节点位置和连线调整保存到 `topology_visual.json` |
-| 加载布局 | 打开项目时恢复上次保存的拓扑图布局 |
-| 导出PNG | 导出当前调整后的拓扑图 |
+| **文件** | 新建项目(Ctrl+N)、打开项目目录、**在文件管理器中打开项目**、保存配置、导出为、退出 |
+| **编辑** | 撤销(Ctrl+Z)、重做(Ctrl+Y)、首选项(Ctrl+,) |
+| **视图** | 文件浏览器(Ctrl+B)、日志面板(Ctrl+J)、缩放、全屏(F11) |
+| **项目** | 项目设置、验证拓扑、渲染输出、导出上机表、导出设备清单 |
+| **帮助** | 用户指南、快捷键参考(Ctrl+K)、检查更新、关于 |
 
-### 7.2 数据模型
+---
 
+## 五、新增工作区标签页汇总
+
+| 标签页 | 内容 | 触发方式 |
+|--------|------|---------|
+| **ProjectOverviewTab** | **项目概览**：设备清单 + 设计状态 + 机柜概览 + 输出文件 + 快捷操作 | 文件浏览器中双击/选择项目 |
+| **DesignTab** | 全尺寸拓扑设计表单 + 摘要 | 活动栏"设计" |
+| **WorkbenchTab** | 全尺寸工作台卡片布局 | 活动栏"工作台" |
+| **TopologyTab** | ECharts 网络拓扑图 | 活动栏"可视化" |
+| **RackTab** | 42U机柜U位网格视图 | 文件浏览器中点击机柜 |
+| **DeviceLibraryTab** | 三栏设备库：分类树+列表+详情 | 文件浏览器"设计"→"打开设备库" |
+| **OutputTab** | Excel表格/图片预览 | 文件浏览器中点击输出文件 |
+| **FileViewerTab** | 文本/JSON/INI/模板查看器 | 文件浏览器中点击模板/配置文件 |
+
+---
+
+## 六、IPC 基础设施增强
+
+| 通道 | 方向 | 用途 |
+|------|------|------|
+| `window:onMaximizeChange` | main→renderer | 最大化状态变化（**修复缺失**） |
+| `project:listOutputBatches` | renderer→main | 列出输出批次文件夹结构 |
+| `project:rename` | renderer→main | 项目重命名 |
+| `project:clone` | renderer→main | 项目克隆 |
+| `project:getOverview` | renderer→main | 获取项目概览数据（设备/状态/输出摘要） |
+| `log:output` | main→renderer | 后端日志实时推送 |
+
+**已有 IPC（无需改动）**：
+- `shell:showItemInFolder` - "在文件管理器中打开"
+- `shell:openPath` - 用系统默认程序打开文件
+- `project:getFile` / `getFileBinary` - 读取项目文件
+- `project:listOutputFiles` - 列出输出目录
+
+**main.ts 窗口改造**：
 ```typescript
-interface TopologyVisualData {
-  node_positions: Record<string, { x: number; y: number }>  // 设备ID → 坐标
-  edge_adjustments: Record<string, { curveness: number }>   // 边ID → 弯曲度
-  viewport: { zoom: number; centerX: number; centerY: number }
-}
+frame: false, titleBarStyle: 'hidden',  // 全平台frameless
+minWidth: 1200, minHeight: 800,         // 提高最小尺寸
 ```
 
 ---
 
-## 七、连接关系表增强
+## 七、组件映射：V2.0 → V2.1
 
-### 7.1 输出列增强
-
-V2.0 连接表输出列：
-```
-podid | 服务器分组 | A端设备 | A端接口 | A端模块 | Z端设备 | Z端接口 | Z端模块 | 线缆 | 描述
-```
-
-V2.1 连接表输出列（增加布线信息）：
-```
-podid | A端分组 | A端设备 | A端机柜 | A端U位 | A端接口 | A端模块 |
-Z端设备 | Z端机柜 | Z端U位 | Z端接口 | Z端模块 | 线缆类型 | 线缆长度(预估) | 描述
-```
-
-### 8.2 接口命名改造
-
-V2.0 硬编码命名：
-- 服务器端：`参数网卡1` / `存储网卡1` / `OOB口1` / `业务口1`
-- 交换机端：`端口1` / `端口33`
-
-V2.1 可配置命名（基于 DeviceProfile.interface_models）：
-- 服务器端：`{downlink_prefix}1/{0}/1` → 如 `Eth1/0/1` 或 `NIC1`
-- 交换机端下联：`{downlink_prefix}{port_num}` → 如 `Eth1/0/1`
-- 交换机端上联：`{uplink_prefix}{port_num}` → 如 `Eth1/0/33`
-
-### 7.3 布线表附加输出
-
-新增独立的**布线指导表（Cabling Guide）**输出：
-```
-源机柜 | 源设备 | 源端口 | 目标机柜 | 目标设备 | 目标端口 | 线缆类型 | 线缆编号 | 预估长度 | 备注
-```
+| V2.0 组件 | V2.1 位置 | 变化 |
+|-----------|----------|------|
+| `ExplorerPanel.tsx` | 文件浏览器（项目模式） | 增强：集成输出文件夹树 + 模板浏览 + 右键菜单 |
+| `OutputPanel.tsx` | 文件浏览器（项目模式） | 重构为文件夹树，合并到项目浏览 |
+| `DesignPanel.tsx` | 工作区 DesignTab | 从sidebar移到workspace全尺寸 |
+| `WorkbenchPanel.tsx` | 工作区 WorkbenchTab | 从sidebar移到workspace全尺寸 |
+| `RackPanel.tsx` | 文件浏览器（可视化模式） | 精简为机柜导航列表 |
+| `TopologyPanel.tsx` | 文件浏览器（可视化模式） | 精简为筛选+统计 |
+| `DeviceLibraryPanel.tsx` | 工作区 DeviceLibraryTab | 从sidebar移到workspace全尺寸 |
+| `SettingsPanel.tsx` | 文件浏览器（设置模式） | 重构为9分类导航 |
+| `RackTab.tsx` | 工作区 | 增强U位可视化 |
+| `OutputTab.tsx` | 工作区 | 增强分页/搜索 |
+| `WorkspaceView.tsx` | 工作区 | 扩展标签类型 |
+| `Header.tsx` | 标题栏 | 重构为菜单栏+标题栏 |
+| `ActivityBar.tsx` | ActivityBar | 8项→5项 |
+| **新建** `ProjectOverviewTab.tsx` | 工作区 | 项目概览：设备清单/状态/机柜/输出/快捷操作 |
+| **新建** `TopologyTab.tsx` | 工作区 | ECharts拓扑图 |
+| **新建** `FileViewerTab.tsx` | 工作区 | 文本/配置文件查看 |
+| **新建** `LogPanel.tsx` | 底部面板 | 真实日志输出 |
+| **新建** `FileExplorer.tsx` | 文件浏览器 | 自适应4种模式 + 右键菜单 + 工具栏 |
+| **新建** `MenuBar.tsx` | 标题栏 | 菜单栏组件 |
+| **新建** `ContextMenu.tsx` | 文件浏览器/通用 | 右键菜单组件（已在ui/中存在，扩展） |
 
 ---
 
-## 九、上架图增强
+## 八、开发计划（详细版）
 
-### 9.1 视图增强
+### 阶段一：基础架构（P0，5天）
 
-- 每个设备格显示：设备名、型号简称、功率(W)
-- 底部汇总条：已用U数/U总数，已用功率/功率上限
-- 功率超标格子标红
-- 支持在 RackPanel 中直接拖拽设备调整U位
-- 修改后实时保存到 `rack_layout.json`
+#### A1 · ActivityBar 重构（1天）
 
-### 8.2 上架图导出
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| A1.1 | 修改 `ActivityBar.tsx`：8项→5项，更新图标和标签 | 点击5个图标正确切换文件浏览器模式 |
+| A1.2 | 更新 `App.tsx` 中 `ActivityType` 类型定义 | TypeScript 编译通过，无类型错误 |
+| A1.3 | 更新键盘快捷键（Ctrl+Shift+V → 可视化） | 快捷键正确触发对应活动 |
+| A1.4 | 更新 i18n 中 activity 相关 key（5种语言） | 5种语言 ActivityBar 提示文本正确 |
 
-导出为标准 Excel 上机表（增强版）：
-```
-机柜编号 | 机柜位置 | U位(起) | U位(止) | 设备名称 | 设备型号 | 设备类型 | 功率(W) | 厂商 | 备注
-```
+#### A2 · Frameless窗口 + 自定义标题栏（1.5天）
 
----
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| A2.1 | `main.ts`：设置 `frame: false`, `titleBarStyle: 'hidden'` | 窗口无原生标题栏，各平台圆角正确 |
+| A2.2 | `preload.ts`：补充 `onMaximizeChange` 监听器 | 监听器正确接收最大化/还原事件 |
+| A2.3 | `Header.tsx`：增加可拖拽区域 CSS `-webkit-app-region: drag` | 拖拽标题栏可移动窗口 |
+| A2.4 | Header 增加窗口控制按钮（最小化/最大化/关闭）已存在，确认正常工作 | frameless 模式下按钮功能正常 |
+| A2.5 | macOS 适配：左侧预留 70px 给红绿灯按钮 | macOS 下不会遮挡红绿灯 |
+| A2.6 | 窗口最小尺寸提升至 1200×800 | 小于此尺寸时窗口无法缩小 |
 
-## 十、PRD 功能需求清单
+#### A3 · 菜单栏实现（1天）
 
-| # | 需求 | 优先级 |
-|---|------|--------|
-| 1 | **DeviceProfile 系统**：每类设备独立参数卡片（厂商/型号/功率/U高/接口模型/名称前缀） | P0 |
-| 2 | **InterfaceModel 系统**：服务器可按网络类型配置接口个数/类型/速率/编号前缀 | P0 |
-| 3 | **网络包含选择**：参数/存储/业务/OOB 四网独立开关 | P0 |
-| 4 | **设备类型库（全局）**：独立于项目/模板的共享设备参数库，40款内置设备 | P0 |
-| 5 | **设备库引用机制**：项目通过 library_id + overrides 引用设备库 | P0 |
-| 6 | **设备库浏览面板**：ActivityBar 新增入口，分类浏览/搜索/筛选/查看设备详情 | P0 |
-| 7 | **新建项目向导**：5步向导式参数配置，Step3 从设备库选择设备 | P0 |
-| 8 | **project_config.json** 替代 network_config.ini，device_refs 引用机制 | P0 |
-| 9 | **DesignPanel 改造**：所有参数表单适配 DeviceProfile + 设备库选型 | P0 |
-| 10 | **Python 引擎改造**：适配 project_config.json，从设备库加载 DeviceProfile | P0 |
-| 11 | **机柜类型扩展**：42U/49U可选，功率上限可配 | P1 |
-| 12 | **功率评估**：单柜功率使用率计算与超标告警 | P1 |
-| 13 | **连接表增强**：含机柜号、U位编号、可配置端口前缀 | P1 |
-| 14 | **布线指导表**：独立的 cabling guide Excel 输出 | P1 |
-| 15 | **拓扑图动态编辑**：节点拖拽、连线调整、保存/加载布局 | P1 |
-| 16 | **上架图拖拽调整**：RackPanel 中拖拽调整U位并实时保存 | P1 |
-| 17 | **上机表增强导出**：含型号/功率/厂商/位置 | P1 |
-| 18 | **设备库搜索筛选**：按厂商/类型/速率/端口数/功率范围筛选 | P1 |
-| 19 | **设备库对比**：选择2-3款设备并排对比参数 | P1 |
-| 20 | **自定义设备管理**：用户在设备库中添加/编辑/删除自定义设备 | P1 |
-| 21 | **Workbench 就绪检查增强**：校验设备参数完整性 + 设备库引用有效性 | P1 |
-| 22 | **i18n 翻译补全**：新UI的5语言翻译 | P1 |
-| 23 | **导入机柜列表**：CSV/Excel 导入可用机柜 | P2 |
-| 24 | **AI/人工机柜布局优化**：按设备类型自动建议机柜分配 | P2 |
-| 25 | **机柜矩阵总览视图**：机房级别的机柜排列可视化 | P2 |
-| 26 | **设备库导入/导出**：CSV/JSON 导入导出设备参数 | P2 |
-| 27 | **设备库版本检查**：启动时检查设备库更新 | P2 |
-| 28 | **复制到自定义**：以内置设备为基础创建自定义变体 | P2 |
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| A3.1 | 新建 `MenuBar.tsx`：5个菜单项（文件/编辑/视图/项目/帮助） | 每个菜单可展开，子项可点击 |
+| A3.2 | 实现菜单选中态、hover态、分隔线 | UI风格与暗色/亮色一致 |
+| A3.3 | 绑定快捷键（Ctrl+N 新建、Ctrl+B 侧栏等） | 快捷键触发对应功能 |
+| A3.4 | "在文件管理器中打开项目"菜单项 | 调用 `shell.showItemInFolder` 打开正确目录 |
+| A3.5 | 5种语言菜单翻译 | 切换语言菜单文字正确 |
 
----
+#### A4 · 文件浏览器组件（1天）
 
-## 十、非功能性需求
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| A4.1 | 新建 `FileExplorer.tsx`：按 `activeActivity` 切换4种模式 | 切换活动时 FileExplorer 内容正确变化 |
+| A4.2 | 实现项目模式：项目树 + 模板树 + 输出文件夹树 | 三棵树正确渲染，展开/折叠正常 |
+| A4.3 | 工具栏：`[📂]` 按钮和搜索框 | 点击按钮打开当前项目根目录 |
+| A4.4 | 右键菜单：新建 `ContextMenu` 通用组件扩展 | 右键菜单正确弹出、点击执行、外部点击关闭 |
+| A4.5 | 实现其他3种模式（设计/可视化/设置）的文件浏览器壳 | 结构正确，内容在后续阶段填充 |
 
-- **向后兼容**：V2.0 的 network_config.ini 项目可自动迁移到 project_config.json
-- **性能**：拓扑生成（1000台设备规模）< 10s
-- **状态持久化**：Zustand persist 保存用户编辑的拓扑布局和机柜调整
-- **深色主题适配**：新UI组件全面支持 dark mode
-- **设备模板可扩展**：支持用户新增/保存自定义设备模板
+#### A5 · ProjectContext 全局项目上下文（0.5天）
+
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| A5.1 | 新建 `ProjectContext`：React Context + Provider | 子组件可正确读取 currentProject |
+| A5.2 | `project.store` 切换项目时更新 Context | 切换项目后所有订阅组件重渲染 |
+| A5.3 | `design.store` 和 `rack.store` 订阅 `ProjectContext` | 切换项目后 design/rack 数据自动重载 |
+
+#### A6 · LogPanel 日志面板（0.5天）
+
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| A6.1 | 新建 `LogPanel.tsx`：显示 Python 后端输出日志 | 生成拓扑时面板显示后端输出 |
+| A6.2 | IPC 通道 `log:output` 实时推送 | 日志实时追加，自动滚动到底部 |
+| A6.3 | 清除按钮 + Ctrl+J 折叠/展开 | 折叠展开正常，清除后清空 |
 
 ---
 
-## 十一、测试与验证需求
+### 阶段二：功能迁移到工作区（P0，5天）
 
-### 11.1 测试策略总览
+#### B1 · ProjectOverviewTab 项目概览（1.5天）
 
-| 层级 | 框架 | 覆盖目标 | 当前状态 |
-|------|------|---------|---------|
-| 前端单元测试 | Vitest | Store 状态管理、组件逻辑、工具函数 | 84 个用例，5 个测试文件 |
-| 后端单元测试 | pytest | 数据模型、拓扑算法、设计器、导出器、引擎 | 166 个用例，9 个测试文件 |
-| 集成测试 | Vitest + pytest | IPC 通信、前后端联调、配置迁移 | 纳入 unit test |
-| E2E 测试 | (待定) | 完整用户流程 | 未开始 |
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| B1.1 | 新建 `ProjectOverviewTab.tsx`：整体布局框架 | 布局比例正确（左设备清单+设计状态，右机柜+输出） |
+| B1.2 | 设备清单区块：从 topology 节点 + device_refs 统计 | 设备类型/数量/功耗正确显示 |
+| B1.3 | 设计状态区块：从 design.summary 渲染 | 拓扑模式、Leaf/Spine数量、端口使用率正确 |
+| B1.4 | 机柜概览区块：从 rack.cabinets 显示使用率进度条 | 每个机柜名称+百分比条正确 |
+| B1.5 | 输出文件区块：从 project.listOutputFiles 列出 | 文件名+日期正确，点击打开 OutputTab |
+| B1.6 | 快捷操作按钮行：一键渲染/导出设备清单/导出上机表 | 按钮功能正确 |
+| B1.7 | 空状态处理（无拓扑/无输出/无机柜 + Loading骨架屏） | 各空状态下提示和引导按钮正确 |
+| B1.8 | 文件浏览器双击项目 → 打开 ProjectOverviewTab | 切换项目后标签页内容更新 |
+| B1.9 | "在文件管理器中打开"按钮 | 点击打开项目根目录 |
 
-### 11.2 单元测试覆盖率要求
+#### B2 · DesignTab 全尺寸拓扑设计（1天）
 
-| 模块 | 最低覆盖率 | 说明 |
-|------|----------|------|
-| `src/stores/` | ≥ 80% | 所有 Zustand store 的状态变更、异步操作、错误处理 |
-| `src/utils/` | ≥ 80% | 工具函数全覆盖 |
-| `src/components/` | ≥ 60% | 核心组件渲染和交互逻辑 |
-| `backend/models.py` | ≥ 90% | NetworkObject, Connection 所有方法和边界条件 |
-| `backend/topology.py` | ≥ 85% | FatTree, AccessAgg 拓扑算法 |
-| `backend/designer.py` | ≥ 80% | NetworkDesignerV2 配置加载、对象创建、连接生成 |
-| `backend/engine.py` | ≥ 75% | 设计/验证/导出/功率评估全流程 |
-| `backend/device_library.py` | ≥ 80% | 设备库加载、解析、引用解析 |
-| `backend/exporter.py` | ≥ 80% | Excel 导出、视图生成 |
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| B2.1 | 将 `DesignPanel` 核心内容提取到 `DesignTab.tsx` | 拓扑设计表单在 workspace 中全尺寸显示 |
+| B2.2 | 模式选择（full/custom）+ 服务器配置 + 交换机配置 + 开关 | 所有表单控件交互正确 |
+| B2.3 | 生成拓扑 → 设计摘要显示 → 自动打开 TopologyTab | 流程自动化正确 |
+| B2.4 | 侧边栏 DesignPanel 精简为快速入口按钮 | 文件浏览器中"设计"模式显示入口 |
 
-### 11.3 关键测试场景清单
+#### B3 · WorkbenchTab 全尺寸工作台（0.5天）
 
-#### 11.3.1 前端 Store 测试
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| B3.1 | 将 `WorkbenchPanel` 核心内容提取到 `WorkbenchTab.tsx` | 工作台卡片在 workspace 全尺寸显示 |
+| B3.2 | 卡片布局优化（从垂直堆叠改为左右分栏或网格） | 空间利用率提升 |
+| B3.3 | 渲染按钮 + 进度条 + 结果列表 | 功能保持不变 |
 
-| 场景 | 优先级 | 状态 |
-|------|--------|------|
-| DesignStore: 配置更新/重置/INI转换/生成/验证/清除 | P0 | 已完成 |
-| ProjectStore: 项目列表/收藏/最近/删除/IPC异常处理 | P0 | 已完成 |
-| RackStore: 初始化/42U+49U/设备放置/功率计算/导入导出 | P0 | 已完成 |
-| DeviceLibraryStore: 加载/筛选/对比/保存/错误处理 | P0 | 已完成 |
-| WizardStore: 步骤导航/数据持久化/回退/确认 | P1 | 待补充 |
-| UIStore: 主题切换/侧边栏/面板状态 | P2 | 待补充 |
-| ToastStore: 消息队列/自动消失/类型 | P2 | 待补充 |
+#### B4 · TopologyTab ECharts 拓扑图（1.5天）
 
-#### 11.3.2 后端模型与算法测试
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| B4.1 | 新建 `TopologyTab.tsx`：ECharts Graph 图表 | 图表正确渲染 |
+| B4.2 | 节点分层布局：Server → Leaf → Spine → Core | 节点位置正确分层 |
+| B4.3 | 节点按类型着色 + 边按网络类型着色 | 颜色方案正确 |
+| B4.4 | 节点点击弹出详情面板（设备名/类型/端口/连接数） | 详情面板内容正确 |
+| B4.5 | 缩放、拖拽、PNG 导出按钮 | 交互和导出功能正常 |
+| B4.6 | 文件浏览器筛选联动（按网络类型过滤节点和边） | 筛选后图表更新正确 |
 
-| 场景 | 优先级 | 状态 |
-|------|--------|------|
-| NetworkObject: 端口分配/上联/下联/Core/耗尽/异常 | P0 | 已完成 |
-| Connection: 创建/默认值/机柜字段/部分机柜/U位范围 | P0 | 已完成 |
-| FatTree: 层次计算/对象创建/连接生成/3-tier边界 | P0 | 已完成 |
-| AccessAgg: 单机/冗余/零服务器/奇数/容量超限 | P0 | 已完成 |
-| 拓扑边界条件: 负数/零值/超大值/无效名称/空列表 | P0 | 已完成 |
-| 端口计数边界: 奇数口/小端口数/单端口 | P1 | 已完成 |
+#### B5 · DeviceLibraryTab 三栏设备库（0.5天）
 
-#### 11.3.3 后端集成测试
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| B5.1 | 新建 `DeviceLibraryTab.tsx`：分类树+设备列表+详情三栏 | 三栏布局正确 |
+| B5.2 | 分类树点击 → 设备列表筛选 | 联动正确 |
+| B5.3 | 设备列表点击 → 详情面板显示 | 设备参数卡片正确显示 |
+| B5.4 | 搜索 + 厂商/类型筛选 | 组合筛选正确 |
 
-| 场景 | 优先级 | 状态 |
-|------|--------|------|
-| INI配置: 最小/满接/自定义下行/附加服务器/3层 | P0 | 已完成 |
-| project_config: 基础/49U/网络开关/满接/缺失文件 | P0 | 已完成 |
-| 设计验证: 小规模/大规模 | P0 | 已完成 |
-| OOB设计: 启用/禁用 | P0 | 已完成 |
-| 业务网设计: 启用 | P0 | 已完成 |
-| 设备库: 加载/获取/分类/匹配/解析引用/覆盖 | P0 | 已完成 |
-| 配置迁移: INI↔JSON共存/仅INI/默认值/网络开关 | P0 | 已完成 |
-| 引擎: 配置获取/设计/验证/导出/功率汇总 | P0 | 已完成 |
-| 导出器: 数字提取/排序/视图生成/Excel导出 | P0 | 已完成 |
+---
 
-#### 11.3.4 前端集成测试
+### 阶段三：文件浏览器增强（P0，2.5天）
 
-| 场景 | 优先级 | 状态 |
-|------|--------|------|
-| DesignStore ↔ RackStore: 设计生成后初始化机柜/功率计算 | P0 | 已完成 |
-| DeviceLibrary ↔ ProjectConfig: 引用解析/覆盖/无效引用/批量 | P0 | 已完成 |
-| IPC 通信模拟: 设计生成/导出/项目创建/错误处理 | P0 | 已完成 |
-| 错误状态处理: 缺参数/文件不存在/JSON错误/超时/路径遍历 | P0 | 已完成 |
-| 配置格式兼容: INI解析/JSON解析/JSON优先 | P0 | 已完成 |
-| 拓扑数据验证: 节点完整性/边完整性/功率数据 | P0 | 已完成 |
-| 设备库数据完整性: GPU服务器接口/交换机端口/分类 | P0 | 已完成 |
+#### C1 · 输出文件夹树（0.5天）
 
-### 11.4 测试环境配置
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| C1.1 | IPC：`project:listOutputBatches` 实现 | 返回项目-批次文件夹结构 |
+| C1.2 | 文件浏览器中渲染文件夹树，按项目-批次组织 | 层次正确，展开/折叠正常 |
+| C1.3 | 点击文件 → OutputTab 预览 | xlsx 渲染表格、png 渲染图片 |
+| C1.4 | 右键"在资源管理器中打开" | 定位到该文件/文件夹 |
 
-```json
-// vitest.config.ts (已集成到 vite.config.ts)
-{
-  "environment": "jsdom",
-  "globals": true,
-  "setupFiles": ["src/test/setup.ts"]
-}
-```
+#### C2 · 模板文件浏览（0.5天）
 
-```ini
-# pytest 配置 (pytest.ini / pyproject.toml)
-[pytest]
-testpaths = tests/backend
-python_files = test_*.py
-python_classes = Test*
-python_functions = test_*
-```
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| C2.1 | 文件浏览器模板树下展示子文件（template.json, network_config.ini, device_library/） | 文件树正确 |
+| C2.2 | 点击模板文件 → FileViewerTab 预览 | JSON/INI 文件正确渲染 |
+| C2.3 | 右键"基于此模板新建项目" → 打开向导 | 向导正确加载模板参数 |
 
-### 11.5 自动化测试执行流程
+#### C3 · RackTab 增强（1天）
 
-```
-开发迭代流程:
-  1. 编写/修改代码
-  2. 运行 npm run test (前端 84 用例)
-  3. 运行 npm run test:backend (后端 166 用例)
-  4. 运行 npm run test:all (全量 250 用例)
-  5. 全部通过 → 提交代码
-  6. CI/CD (GitHub Actions) 自动运行全量测试
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| C3.1 | U位网格视图：每行1U，设备色块填充对应区间 | 机柜42U完整显示 |
+| C3.2 | U位数字标尺 + 设备名标签 + 功率标签 | 标签显示正确 |
+| C3.3 | 功耗进度条（机柜顶部） | 总功耗/限额/百分比正确 |
+| C3.4 | 设备冲突检测（U位重叠红色高亮） | 重叠区域红色标记 |
 
-CI 流水线:
-  - ci.yml: 前端 lint + typecheck + vitest
-  - build.yml: 构建 + 打包 + 后端 pytest
-```
+#### C4 · FileViewerTab 文件查看器（0.5天）
 
-### 11.6 测试用例编写规范
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| C4.1 | 新建 `FileViewerTab.tsx`：支持 .json / .ini / .txt | 语法高亮正确（JSON格式化） |
+| C4.2 | 模板详情查看：template.json 格式化展示 | 设备参数可读性良好 |
+| C4.3 | 只读模式 + 复制按钮 | 复制功能正常 |
 
-1. **命名规范**：`test_<模块>_<场景>.py` / `test_<场景>.ts`
-2. **测试结构**：Arrange (准备) → Act (执行) → Assert (验证)
-3. **边界条件**：每个函数至少覆盖正常值、零值、负值、极大值
-4. **错误处理**：每个 IPC 操作至少覆盖成功和失败两种路径
-5. **Mock 策略**：前端测试 mock IPC 调用，后端测试使用真实文件系统（tempfile）
-6. **隔离性**：每个测试用例独立，不依赖其他用例的执行顺序
+---
 
-### 11.8 前后端一致性检查清单
+### 阶段四：设置 + 流程 + 持久化（P1，2天）
 
-核心原则：设备库 `categoryPathMap`、IPC 数据格式、拓扑数据结构必须在 Python 和 TypeScript 双端保持一致，否则会导致设备库加载失败、拓扑渲染异常等问题。
+#### D1 · 设置面板重构（1天）
 
-#### 11.8.1 设备库路径映射一致性
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| D1.1 | `SettingsPanel.tsx` → 9分类导航（左侧分类列表 + 右侧内容区） | 点击分类切换内容区 |
+| D1.2 | 外观设置：主题/字体/紧凑/动画 | 设置即时生效 |
+| D1.3 | 项目默认值：默认机柜/功率/端口 | 新建项目时使用默认值 |
+| D1.4 | 快捷键：可编辑的快捷键表（默认值 + 自定义） | 自定义快捷键保存并生效 |
+| D1.5 | 数据管理：导出配置/导入配置/重置默认 | 导入/导出功能正常 |
+| D1.6 | 设置持久化：所有设置项存入 localStorage | 重启后设置恢复 |
 
-`library_index.json` 使用扁平分类 ID（如 `storage_servers_all_flash`），但实际目录结构是嵌套的（如 `storage_servers/all_flash/`）。Electron 和 Python 两端都必须使用相同的 `categoryPathMap` 进行映射：
+#### D2 · 流程自动化（0.5天）
 
-```
-categoryPathMap:
-  gpu_servers          → gpu_servers
-  compute_servers      → compute_servers
-  storage_servers_all_flash   → storage_servers/all_flash
-  storage_servers_hybrid_flash → storage_servers/hybrid_flash
-  switches_param       → switches/param
-  switches_storage     → switches/storage
-  switches_biz         → switches/biz
-  switches_oob         → switches/oob
-  custom               → custom
-```
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| D2.1 | 生成拓扑 → 自动打开 TopologyTab | 生成完成后拓扑图自动出现 |
+| D2.2 | 生成拓扑 → 自动初始化机柜数据 | 机柜列表自动填充 |
+| D2.3 | 渲染完成 → 文件浏览器自动刷新输出树 | 新输出批次自动出现 |
+| D2.4 | 切换项目 → ProjectOverviewTab 自动更新 | 双击其他项目后概览内容切换 |
 
-**已修复**：Python `device_library.py` 的 `DeviceLibrary.load()` 方法已添加 `category_path_map`，与 Electron `handlers.ts` 的 `loadDeviceLibrary()` 保持一致。
+#### D3 · 数据持久化（0.5天）
 
-#### 11.8.2 拓扑数据格式一致性
+| 子任务 | 内容 | 测试验证 |
+|--------|------|---------|
+| D3.1 | `rack.store` 增加 localStorage persist | 关闭重开机柜布局保留 |
+| D3.2 | `design.store` 增加 persist | 设计参数保留 |
+| D3.3 | 记住上次打开的项目 + 工作区标签布局 | 启动后自动恢复工作状态 |
 
-Python `engine.py` 返回的拓扑数据必须包含所有 `TopologyPanel.tsx` 需要的字段：
+---
 
-| 字段 | 节点类型 | 要求 |
-|------|---------|------|
-| `id` | 所有 | 必填 |
-| `type` | 所有 | 必填（server/param_leaf/param_spine/storage_leaf/storage_spine等） |
-| `group` | 所有 | 必填 |
-| `podid` | 所有 | 必填（交换机节点之前缺失，已修复） |
-| `cabinetId` | 服务器 | 可选 |
-| `cabinetName` | 服务器 | 可选 |
-| `startU` / `endU` | 服务器 | 可选 |
-| `powerWatts` | 服务器 | 可选 |
-| `uHeight` | 服务器 | 可选 |
+### 阶段五：集成测试与收尾（P0，2天）
 
-**已修复**：`engine.py` 中交换机节点（param_leaves/spines/storage_leaves/spines）已添加 `podid` 字段。
+#### E1 · 全链路回归测试（1天）
 
-#### 11.8.3 输出文件加载一致性
+| 子任务 | 内容 |
+|--------|------|
+| E1.1 | 完整流程 A：创建空项目 → 向导5步 → 生成拓扑 → 查看拓扑图 → 机柜上架 → 工作台渲染 → 输出预览 |
+| E1.2 | 完整流程 B：Demo-128台H100 → 直接进入设计 → 渲染 → 切换可视化查看 |
+| E1.3 | 完整流程 C：文件浏览器右键菜单 → 在文件管理器中打开 → 所有层级测试 |
+| E1.4 | 错误路径：无拓扑时工作台渲染 → 预期提示 → 无拓扑时机柜规划 → 预期空状态 |
+| E1.5 | ProjectContext 同步：切换项目后所有面板内容自动更新 |
+| E1.6 | ActivityBar 5项：点击正确切换文件浏览器 + 打开对应 workspace 标签 |
 
-Excel 输出文件（XLSX）是二进制格式，不能通过 UTF-8 文本读取。Electron 端必须使用 `getFileBinary`（base64 编码）传输，前端 `ExcelPreview.tsx` 解码为 `ArrayBuffer` 后交给 `XLSX.read()`。
+#### E2 · 跨平台验证（0.5天）
 
-**已修复**：
-- `handlers.ts` 添加 `project:getFileBinary` IPC 处理器
-- `preload.ts` 暴露 `getFileBinary` 方法
-- `ExcelPreview.tsx` 使用 `getFileBinary` + `atob` 解码
+| 子任务 | 内容 |
+|--------|------|
+| E2.1 | Windows：frameless 窗口 + 圆角 + 窗口按钮 + 资源管理器打开 |
+| E2.2 | macOS：frameless 窗口 + 红绿灯 + 按钮位置 + Finder 打开 |
+| E2.3 | Linux：frameless 窗口 + 文件管理器打开 |
+| E2.4 | 各平台最小尺寸 1200×800 约束 |
 
-#### 11.8.4 Excel 多Sheet切换一致性
+#### E3 · 多语言 + 主题（0.5天）
 
-`ExcelPreview.tsx` 切换Sheet时需从缓存的 `WorkBook` 对象中重新提取数据，不能仅切换状态。
+| 子任务 | 内容 |
+|--------|------|
+| E3.1 | 5种语言 UI 遍历：新增组件无中文残留、无 key 展示 |
+| E3.2 | 亮色/暗色/系统三种主题切换：全部新组件正确跟随 |
+| E3.3 | 菜单栏5种语言翻译验证 |
+| E3.4 | ContextMenu 右键菜单5种语言验证 |
 
-**已修复**：`ExcelPreview.tsx` 将 `XLSX.WorkBook` 存入 `workbook` state，`switchSheet` 函数从 `workbook.Sheets[name]` 重新提取数据。
+---
 
-#### 11.8.5 一致性验证方法
+## 九、测试计划完整清单
 
-```bash
-# 验证 Python 设备库加载
-python -c "from backend.device_library import get_device_library; lib = get_device_library(); print(f'Loaded {len(lib.devices)} devices')"
+### 9.1 功能测试矩阵
 
-# 验证 TypeScript 类型检查
-npx tsc --noEmit
-
-# 验证全量测试
-npm run test:all
-```
-
-### 11.9 测试用例统计
-
-| 测试文件 | 用例数 | 覆盖模块 |
+| 功能模块 | 测试点 | 预期结果 |
 |---------|--------|---------|
-| `src/test/design.store.test.ts` | 11 | DesignStore |
-| `src/test/device-library.store.test.ts` | 10 | DeviceLibraryStore |
-| `src/test/project.store.test.ts` | 11 | ProjectStore |
-| `src/test/rack.store.test.ts` | 27 | RackStore |
-| `src/test/integration.test.ts` | 25 | 集成测试 |
-| `tests/backend/test_designer_integration.py` | 16 | NetworkDesignerV2 |
-| `tests/backend/test_device_library.py` | 15 | DeviceLibrary (含嵌套路径映射) |
-| `tests/backend/test_engine.py` | 29 | Engine (含拓扑格式一致性) |
-| `tests/backend/test_exporter.py` | 29 | Exporter (含二进制XLSX验证) |
-| `tests/backend/test_migration.py` | 5 | 配置迁移 |
-| `tests/backend/test_models.py` | 16 | NetworkObject, Connection |
-| `tests/backend/test_models_comprehensive.py` | 22 | NetworkObject 边界 |
-| `tests/backend/test_topology.py` | 12 | FatTree, AccessAgg |
-| `tests/backend/test_topology_comprehensive.py` | 24 | 拓扑边界条件 |
-| **总计** | **250** | |
+| ActivityBar 5项 | 点击切换 | 文件浏览器 + workspace 标签正确 |
+| 文件浏览器 | 项目树/模板树/输出树 | 层次正确，展开折叠正常 |
+| 右键菜单 | 所有项目/模板/文件/文件夹 | 菜单项正确，外部点击关闭 |
+| 在文件管理器中打开 | 所有层级点击 | 各平台正确打开文件管理器 |
+| ProjectOverviewTab | 设备清单/设计状态/机柜/输出 | 数据正确，空状态提示正确 |
+| DesignTab | 参数表单 + 生成拓扑 | 表单有效，生成结果正确 |
+| TopologyTab | ECharts渲染/着色/交互/导出 | 图表正确，PNG导出有内容 |
+| RackTab | 42U网格/设备色块/功率条 | 显示正确，冲突检测 |
+| DeviceLibraryTab | 三栏联动/筛选 | 分类-列表-详情联动 |
+| OutputTab | Excel表格/图片预览 | 多Sheet/缩放正常 |
+| FileViewerTab | JSON/INI/文本 | 格式化显示 |
+| WorkbenchTab | 渲染/进度/结果 | 一键渲染全流程 |
+| SettingsPanel | 9分类/设置生效/持久化 | 重启后保留 |
+| MenuBar | 5菜单/快捷键/子项 | 所有菜单项可触发 |
+| LogPanel | 实时输出/清除/折叠 | 日志实时追加 |
+| Frameless窗口 | 拖拽移动/按钮/圆角 | 各平台正常 |
+
+### 9.2 回归测试
+
+| 场景 | 步骤 |
+|------|------|
+| Demo完整流程 | Demo-128台H100 → 设计 → 生成拓扑 → 查看拓扑图 → 机柜 → 工作台渲染 → 输出预览 |
+| 新建空项目 | 向导创建 → 设计拓扑 → 渲染输出 |
+| 5语言切换 | zh-CN/en/ja/ko/zh-TW 全界面无中文残留 |
+| 3主题切换 | 亮色/暗色/系统 全部新组件正确 |
 
 ---
 
-## 十二、工作区页签系统 (Workspace Tab System)
+## 十、V3.x 展望：AI HUB
 
-### 12.1 问题背景
+V2.1 完成架构重构后，V3.x 将引入 AI HUB 功能模块：
 
-V2.0 架构中，所有功能面板（机柜规划、拓扑视图、输出结果、设备库）都在侧边栏（默认 280px，最大 500px）内渲染，而主编辑区完全空置。这导致：
-
-- 42U/49U 机柜视图在 320px 宽度内无法清晰展示
-- ECharts 拓扑图在大规模场景（500+节点）下完全不可用
-- Excel/图片预览在狭窄侧边栏内体验极差
-- 设备库列表+详情 50/50 分栏在 280px 内严重拥挤
-
-### 12.2 设计理念
-
-引入 VS Code 风格的**工作区页签系统**，将 ActivityBar 面板分为两类：
-
-| 面板类型 | 面板 | 打开方式 | 说明 |
-|---------|------|---------|------|
-| **导航/配置型** | Explorer, Design, Settings | 侧边栏 | 文件树导航、表单配置，侧边栏宽度足够 |
-| **内容/查看型** | Workbench, Rack, Topology, Output, DeviceLibrary | 工作区页签 | 需要全尺寸渲染的内容，在工作区以页签形式打开 |
-
-### 12.3 页签系统数据结构
-
-```typescript
-interface WorkspaceTab {
-  id: string                           // 唯一标识 (UUID)
-  type: 'workbench' | 'rack' | 'topology' | 'output' | 'deviceLibrary'
-  title: string                        // 页签标题
-  icon?: string                        // 页签图标
-  closable: boolean                    // 是否可关闭（设备库/工作台不可关闭，输出/机柜/拓扑可关闭）
-  state?: Record<string, any>          // 页签特定状态
-  // 示例: RackTab state = { cabinetId: "cab-1" }
-  // 示例: OutputTab state = { fileName: "connections.xlsx", fileType: "xlsx" }
-}
-
-interface WorkspaceState {
-  tabs: WorkspaceTab[]
-  activeTabId: string | null
-  openTab: (tab: Omit<WorkspaceTab, 'id'>) => string  // 返回 tabId
-  closeTab: (id: string) => void
-  setActiveTab: (id: string) => void
-  closeAllTabs: () => void
-  closeOtherTabs: (id: string) => void
-}
-```
-
-### 12.4 各类型页签行为
-
-#### 12.4.1 工作台页签 (WorkbenchTab)
-- **触发方式**：ActivityBar 点击 Workbench 图标
-- **标题**：`工作台`
-- **关闭**：不可关闭 (closable: false)
-- **去重**：单例，重复点击切换到已有页签
-- **内容**：项目范围概览 + 就绪检查 + 操作卡片 + 输出预览
-
-#### 12.4.2 机柜规划页签 (RackTab)
-- **触发方式**：ActivityBar 点击 Rack 图标，或侧边栏机柜列表点击特定机柜
-- **标题**：`机柜规划` (列表视图) / `机柜 - ${cabinetName}` (单机柜视图)
-- **关闭**：可关闭 (closable: true)
-- **去重**：通用机柜规划页签去重；特定机柜页签按 cabinetId 去重
-- **内容**：全尺寸 42U/49U 机柜视图、设备详情面板、放置表单、功率进度条
-
-#### 12.4.3 拓扑视图页签 (TopologyTab)
-- **触发方式**：ActivityBar 点击 Topology 图标
-- **标题**：`拓扑视图 - ${projectName}`
-- **关闭**：可关闭 (closable: true)
-- **去重**：单例，重复点击切换到已有页签
-- **内容**：全尺寸 ECharts 拓扑图、网络筛选、节点搜索、缩放控制、导出按钮
-
-#### 12.4.4 输出结果页签 (OutputTab)
-- **触发方式**：ActivityBar 点击 Output 图标，或侧边栏文件列表点击文件
-- **标题**：`输出结果` (文件列表) / `${fileName}` (文件预览)
-- **关闭**：可关闭 (closable: true)
-- **去重**：文件列表页签去重；文件预览按 fileName 去重
-- **多实例**：支持同时打开多个文件页签（多表格对比查看）
-- **内容**：全尺寸 Excel 预览（多 Sheet 切换）/ 全尺寸图片预览
-
-#### 12.4.5 设备库页签 (DeviceLibraryTab)
-- **触发方式**：ActivityBar 点击 DeviceLib 图标
-- **标题**：`设备库`
-- **关闭**：不可关闭 (closable: false)
-- **去重**：单例，重复点击切换到已有页签
-- **内容**：全尺寸设备浏览（分类树 + 设备列表 + 详情三栏布局）、设备对比、搜索筛选
-
-### 12.5 页签栏 UI 交互
-
-- **位置**：工作区顶部，横向页签栏
-- **滚动**：页签过多时支持水平滚动（鼠标滚轮）
-- **切换**：点击切换活跃页签
-- **关闭**：每个可关闭页签右侧显示 × 按钮
-- **右键菜单**：关闭 / 关闭其他 / 关闭全部 / 关闭右侧
-- **空状态**：所有页签关闭后显示 WorkspaceWelcome 欢迎页
-- **快捷键**：
-  - `Ctrl+W`：关闭当前活跃页签
-  - `Ctrl+Shift+T`：重新打开最后关闭的页签
-
-### 12.6 侧边栏与工作区的关系
-
-内容型面板在侧边栏中保留**精简导航版**：
-
-| 面板 | 侧边栏精简版内容 |
-|------|----------------|
-| RackPanel | 机柜列表 + 使用率统计，点击机柜 → 打开 RackTab |
-| TopologyPanel | 网络筛选按钮 + 节点统计，提示"在工作区查看完整拓扑" |
-| OutputPanel | 文件列表 + 文件图标，点击文件 → 打开 OutputTab |
-| DeviceLibraryPanel | 分类标签 + 快速搜索，点击"打开设备库" → 打开 DeviceLibraryTab |
-
-### 12.7 新增文件清单
-
-```
-src/
-├── components/
-│   └── workspace/                    # 新增：工作区页签系统
-│       ├── WorkspaceTabBar.tsx       # 页签栏组件
-│       ├── WorkspaceView.tsx         # 工作区视图容器
-│       ├── WorkspaceWelcome.tsx      # 空状态欢迎页
-│       └── tabs/
-│           ├── WorkbenchTab.tsx      # 工作台页签
-│           ├── RackTab.tsx           # 机柜规划页签
-│           ├── TopologyTab.tsx       # 拓扑视图页签
-│           ├── OutputTab.tsx         # 输出结果页签
-│           └── DeviceLibraryTab.tsx  # 设备库页签
-└── stores/
-    └── workspace.store.ts            # 新增：工作区状态管理
-```
+| 功能 | 描述 |
+|------|------|
+| **AI 网络设计助手** | 自然语言描述需求 → AI 生成拓扑方案和设备选型建议 |
+| **智能机柜布局** | 基于功耗、散热、连接关系的AI自动上架推荐 |
+| **模板推荐** | 根据项目规模和历史数据推荐最佳模板 |
+| **故障预测** | 分析网络配置潜在问题（端口溢出、收敛比不合理等） |
+| **配置问答** | 基于文档和设备规格书的 RAG 问答 |
 
 ---
 
-## 十三、向导设备选择器筛选增强
-
-### 13.1 问题背景
-
-当前 `DeviceLibraryPicker.tsx` 仅提供搜索框，在 40 款内置设备中查找目标设备效率极低。用户需要：
-- 按设备分类快速定位（GPU服务器、交换机等）
-- 按厂商筛选（NVIDIA、华为、H3C 等）
-- 按设备类型筛选（服务器 vs 交换机）
-
-### 13.2 新增筛选控件
-
-```
-DeviceLibraryPicker 筛选栏：
-┌──────────────────────────────────────────────────────────┐
-│ [全部] [GPU服务器] [存储服务器] [通算服务器] [交换机]      │  ← 分类标签
-│ [厂商: 全部 ▾]  [类型: 全部 ▾]  [🔍 搜索设备...        ] │  ← 厂商/类型下拉 + 搜索
-├──────────────────────────────────────────────────────────┤
-│ 设备列表 ...                                              │
-└──────────────────────────────────────────────────────────┘
-```
-
-### 13.3 筛选条件
-
-| 筛选项 | 类型 | 选项 | 说明 |
-|--------|------|------|------|
-| 分类标签 | Tabs | 全部, GPU服务器, 存储服务器, 通算服务器, 交换机 | 单选，AND 组合 |
-| 厂商 | Dropdown | 全部, NVIDIA, 华为, H3C, 浪潮, 锐捷, 通甇 | 单选，AND 组合 |
-| 设备类型 | Dropdown | 全部, 服务器, 交换机 | 单选，AND 组合 |
-| 搜索 | Input | 自由文本 | 匹配厂商/型号/描述，AND 组合 |
-
-**组合逻辑**：所有筛选条件为 AND 关系。例如：分类=GPU服务器 + 厂商=NVIDIA → 只显示 NVIDIA 的 GPU 服务器。
-
-### 13.4 实现变更
-
-- `DeviceLibraryPicker.tsx`：添加分类标签栏、厂商下拉、设备类型下拉
-- `device-library.store.ts`：filter 增加 `vendor` 和 `deviceType` 字段（已部分支持）
-- 筛选逻辑在 store 的 `applyFilter` 中计算 `filteredDevices`
-
----
-
-## 十四、功能需求清单更新
-
-在原有 28 项基础上新增：
-
-| # | 需求 | 优先级 |
-|---|------|--------|
-| 29 | **工作区页签系统**：多页签管理框架，支持打开/关闭/切换/右键菜单 | P0 |
-| 30 | **机柜规划页签**：全尺寸 42U/49U 机柜视图在工作区渲染 | P0 |
-| 31 | **拓扑视图页签**：全尺寸 ECharts 拓扑图在工作区渲染 | P0 |
-| 32 | **输出结果页签**：全尺寸 Excel/图片预览在工作区渲染，支持多文件同时打开 | P0 |
-| 33 | **设备库页签**：全尺寸设备浏览（三栏布局：分类+列表+详情）在工作区渲染 | P0 |
-| 34 | **向导设备筛选增强**：DeviceLibraryPicker 增加分类标签/厂商/设备类型筛选 | P0 |
-| 35 | **侧边栏精简视图**：内容型面板保留精简导航版，提供"打开到工作区"入口 | P1 |
-
----
-
-## 十五、目录结构变更
-
-```
-AutoLink/
-├── src/
-│   ├── components/
-│   │   ├── sidebar/
-│   │   │   ├── DesignPanel.tsx          # 改造：适配 DeviceProfile + 设备库引用
-│   │   │   ├── RackPanel.tsx            # 改造：精简导航版（机柜列表 + 点击打开页签）
-│   │   │   ├── TopologyPanel.tsx        # 改造：精简导航版（筛选 + 统计 + 打开页签）
-│   │   │   ├── OutputPanel.tsx          # 改造：精简导航版（文件列表 + 点击打开页签）
-│   │   │   ├── DeviceLibraryPanel.tsx   # 改造：精简导航版（分类 + 搜索 + 打开页签）
-│   │   │   └── ...
-│   │   ├── workspace/                   # 新增：工作区页签系统
-│   │   │   ├── WorkspaceTabBar.tsx      # 页签栏
-│   │   │   ├── WorkspaceView.tsx        # 工作区视图容器
-│   │   │   ├── WorkspaceWelcome.tsx     # 空状态欢迎页
-│   │   │   └── tabs/
-│   │   │       ├── WorkbenchTab.tsx     # 工作台页签
-│   │   │       ├── RackTab.tsx          # 机柜规划页签
-│   │   │       ├── TopologyTab.tsx      # 拓扑视图页签
-│   │   │       ├── OutputTab.tsx        # 输出结果页签
-│   │   │       └── DeviceLibraryTab.tsx # 设备库页签
-│   │   ├── wizard/                      # 新建项目向导
-│   │   │   ├── ProjectWizard.tsx
-│   │   │   ├── WizardStepBasic.tsx
-│   │   │   ├── WizardStepNetworks.tsx
-│   │   │   ├── WizardStepDevices.tsx
-│   │   │   ├── WizardStepRack.tsx
-│   │   │   └── WizardStepConfirm.tsx
-│   │   ├── device/                      # 设备参数组件
-│   │   │   ├── DeviceProfileCard.tsx
-│   │   │   ├── DeviceProfileEditor.tsx
-│   │   │   ├── InterfaceModelEditor.tsx
-│   │   │   ├── DeviceLibraryPicker.tsx  # 改造：增加分类/厂商/类型筛选
-│   │   │   ├── DeviceCompare.tsx
-│   │   │   └── DeviceSearchFilter.tsx
-│   │   ├── rack/
-│   │   │   ├── RackPowerBar.tsx
-│   │   │   └── ImportCabinetsModal.tsx
-│   │   └── layout/
-│   │       └── CabinetMatrixView.tsx
-│   ├── stores/
-│   │   ├── design.store.ts
-│   │   ├── rack.store.ts
-│   │   ├── topology-edit.store.ts
-│   │   ├── device-library.store.ts
-│   │   ├── workspace.store.ts           # 新增：工作区状态管理
-│   │   └── device-template.store.ts     # 弃用/合并到 device-library.store
-│   ├── types/
-│   │   ├── device-profile.ts
-│   │   └── project-config.ts
-│   └── utils/
-│       └── cabinet-import.ts
-├── backend/
-│   ├── engine.py
-│   ├── designer.py
-│   ├── models.py
-│   ├── device_library.py
-│   └── device_templates.py             # 弃用/合并到 device_library.py
-└── template/
-    └── device_library/
-        ├── library_index.json
-        ├── gpu_servers/
-        ├── storage_servers/
-        │   ├── all_flash/
-        │   └── hybrid_flash/
-        ├── compute_servers/
-        ├── switches/
-        │   ├── param/
-        │   ├── storage/
-        │   ├── biz/
-        │   └── oob/
-        └── custom/
-```
+> **评审确认后进入开发阶段。**

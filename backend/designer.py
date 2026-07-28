@@ -589,7 +589,8 @@ class NetworkDesignerV2:
                     sp = f"{server.port_prefix or '参数网卡'}{pi}"
                     lp = leaf.get_downlink_port()
                     self._add_conn(server, sp, self.param_speed, leaf, lp, self.param_speed,
-                                   self.cable_types['param']['server_leaf'], "服务器到参数Leaf")
+                                   self.cable_types['param']['server_leaf'], "服务器到参数Leaf",
+                                   network_type='param')
                 except ValueError:
                     continue
 
@@ -610,7 +611,8 @@ class NetworkDesignerV2:
                     self._add_conn(leaf, lf, self.param_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
                                    self.param_speed,
                                    self.cable_types['param']['leaf_spine'],
-                                   "参数Leaf到Spine")
+                                   "参数Leaf到Spine",
+                                   network_type='param')
 
     def _wire_storage(self):
         """存储网络: 所有服务器→Leaf + Leaf→Spine (每Spine ports_per_spine×200G)"""
@@ -626,7 +628,8 @@ class NetworkDesignerV2:
                 self._add_conn(server, "存储网卡1", self.storage_speed,
                                leaf, lp, self.storage_speed,
                                self.cable_types['storage']['server_leaf'],
-                               "服务器到存储Leaf")
+                               "服务器到存储Leaf",
+                               network_type='storage')
             except ValueError:
                 continue
 
@@ -647,19 +650,22 @@ class NetworkDesignerV2:
                     self._add_conn(leaf, lf, self.storage_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
                                    self.storage_speed,
                                    self.cable_types['storage']['leaf_spine'],
-                                   "存储Leaf到Spine")
+                                   "存储Leaf到Spine",
+                                   network_type='storage')
 
-    def _add_conn(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod, cable, desc):
+    def _add_conn(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod, cable, desc, network_type=""):
         c1 = Connection(a_dev.name, a_port, a_mod, z_dev.name, z_port, z_mod, cable, desc,
                         a_cabinet_id=a_dev.cabinet_id, a_cabinet_name=a_dev.cabinet_name,
                         a_start_u=a_dev.start_u, a_end_u=a_dev.end_u,
                         z_cabinet_id=z_dev.cabinet_id, z_cabinet_name=z_dev.cabinet_name,
-                        z_start_u=z_dev.start_u, z_end_u=z_dev.end_u)
+                        z_start_u=z_dev.start_u, z_end_u=z_dev.end_u,
+                        network_type=network_type)
         c2 = Connection(z_dev.name, z_port, z_mod, a_dev.name, a_port, a_mod, cable, desc,
                         a_cabinet_id=z_dev.cabinet_id, a_cabinet_name=z_dev.cabinet_name,
                         a_start_u=z_dev.start_u, a_end_u=z_dev.end_u,
                         z_cabinet_id=a_dev.cabinet_id, z_cabinet_name=a_dev.cabinet_name,
-                        z_start_u=a_dev.start_u, z_end_u=a_dev.end_u)
+                        z_start_u=a_dev.start_u, z_end_u=a_dev.end_u,
+                        network_type=network_type)
         a_dev.add_connection(c1)
         z_dev.add_connection(c2)
 
@@ -728,9 +734,9 @@ class NetworkDesignerV2:
         for server in self.servers:
             for conn in server.connections:
                 if conn.a_device == server.name:
-                    if "参数" in conn.a_port:
+                    if conn.network_type == "param":
                         pc += 1; sp.add(server.name)
-                    elif "存储" in conn.a_port:
+                    elif conn.network_type == "storage":
                         sc += 1; ss.add(server.name)
         if pc != param_nic_total:
             errors.append(f"参数网连接: {pc}/{param_nic_total}")
@@ -754,7 +760,7 @@ class NetworkDesignerV2:
                 print(f"  [错误] {e}")
         else:
             print("拓扑自检通过 - 无端口溢出，服务器全覆盖")
-        return len(errors) == 0
+        return {"valid": len(errors) == 0, "errors": errors}
 
     # ================================================================
     #  摘要

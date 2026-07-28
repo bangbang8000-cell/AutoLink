@@ -120,7 +120,8 @@ class Connection:
 
     def __init__(self, a_device, a_port, a_module, z_device, z_port, z_module, cable_type, description,
                  a_cabinet_id=None, a_cabinet_name="", a_start_u=None, a_end_u=None,
-                 z_cabinet_id=None, z_cabinet_name="", z_start_u=None, z_end_u=None):
+                 z_cabinet_id=None, z_cabinet_name="", z_start_u=None, z_end_u=None,
+                 network_type=""):
         self.a_device = a_device
         self.a_port = a_port
         self.a_module = a_module
@@ -129,6 +130,7 @@ class Connection:
         self.z_module = z_module
         self.cable_type = cable_type
         self.description = description
+        self.network_type = network_type  # 'param', 'storage', 'oob', 'biz'
         # 机柜信息 (V2.1新增)
         self.a_cabinet_id = a_cabinet_id
         self.a_cabinet_name = a_cabinet_name

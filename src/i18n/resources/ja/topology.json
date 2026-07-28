@@ -1,1 +1,11 @@
-{ "title": "" }
+{
+  "title": "トポロジー可視化",
+  "networkTopology": "ネットワークトポロジー",
+  "deviceList": "デバイス一覧",
+  "connectionList": "接続一覧",
+  "zoomIn": "拡大",
+  "zoomOut": "縮小",
+  "fitView": "ウィンドウに合わせる",
+  "exportImage": "画像エクスポート",
+  "noProject": "先にプロジェクトを選択してください"
+}

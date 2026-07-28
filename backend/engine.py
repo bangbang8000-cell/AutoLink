@@ -14,7 +14,7 @@ import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from designer import NetworkDesignerV2
-from exporter import export_all_connections, generate_summary_data
+from exporter import export_all_connections, generate_summary_data, generate_device_list
 import pandas as pd
 
 
@@ -118,7 +118,7 @@ def handle_design(params):
     return {
         "summary": summary,
         "topology": {"nodes": nodes, "edges": edges},
-        "valid": validate_result,
+        "valid": validate_result["valid"],
         "powerData": power_data,
     }
 
@@ -172,8 +172,8 @@ def handle_validate(params):
         return {"error": error}
 
     designer = NetworkDesignerV2(config_file)
-    valid = designer.validate_topology()
-    return {"valid": valid}
+    result = designer.validate_topology()
+    return {"valid": result["valid"]}
 
 
 def handle_export(params):
@@ -200,9 +200,9 @@ def handle_export(params):
     if 'deviceList' in output_types:
         fn = os.path.join(output_dir, f"设备清单_{mode}模式_{ts}.xlsx")
         try:
-            summary_df = generate_summary_data(designer)
+            device_df = generate_device_list(designer)
             with pd.ExcelWriter(fn, engine='openpyxl') as writer:
-                summary_df.to_excel(writer, sheet_name='设备清单', index=False)
+                device_df.to_excel(writer, sheet_name='设备清单', index=False)
             results.append({"type": "deviceList", "file": fn, "status": "success"})
         except Exception as e:
             results.append({"type": "deviceList", "file": fn, "status": "error", "error": str(e)})

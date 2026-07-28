@@ -10,11 +10,26 @@ import { Plus, X, Activity, HardDrive, Globe, Wifi, Zap } from 'lucide-react'
 
 /* ---------- IB/RoCE default switch IDs ---------- */
 
-/** IB protocol default: NVIDIA IB switches */
-const IB_DEFAULTS: Record<string, string> = {
-  param_leaf_switch: 'nvidia_mqm9700_64_400g_ib',
-  param_spine_switch: 'nvidia_q3200_72_800g_ib',
-  param_core_switch: 'nvidia_q3400_144_800g_ib',
+/** IB protocol defaults by GPU generation */
+const IB_DEFAULTS_BY_GPU: Record<string, Record<string, string>> = {
+  // H100 and below (400G NDR era): three-tier all MQM9700
+  h100_and_below: {
+    param_leaf_switch: 'nvidia_mqm9700_64_400g_ib',
+    param_spine_switch: 'nvidia_mqm9700_64_400g_ib',
+    param_core_switch: 'nvidia_mqm9700_64_400g_ib',
+  },
+  // B200/B300 (800G NDR era): Q3200 Leaf, Q3400 Spine/Core
+  b300: {
+    param_leaf_switch: 'nvidia_q3200_72_800g_ib',
+    param_spine_switch: 'nvidia_q3400_144_800g_ib',
+    param_core_switch: 'nvidia_q3400_144_800g_ib',
+  },
+  // GB300 NVL72 (800G NDR, large scale): all Q3400
+  gb300: {
+    param_leaf_switch: 'nvidia_q3400_144_800g_ib',
+    param_spine_switch: 'nvidia_q3400_144_800g_ib',
+    param_core_switch: 'nvidia_q3400_144_800g_ib',
+  },
 }
 
 /** RoCE protocol default: H3C switches */
@@ -22,6 +37,13 @@ const ROCE_DEFAULTS: Record<string, string> = {
   param_leaf_switch: 'h3c_s9850_64h',
   param_spine_switch: 'h3c_s9820_64h',
   param_core_switch: 'h3c_s9820_8c',
+}
+
+/** Fallback IB defaults (used when GPU type is unknown) */
+const IB_DEFAULTS_FALLBACK: Record<string, string> = {
+  param_leaf_switch: 'nvidia_mqm9700_64_400g_ib',
+  param_spine_switch: 'nvidia_mqm9700_64_400g_ib',
+  param_core_switch: 'nvidia_mqm9700_64_400g_ib',
 }
 
 /** Defaults for storage and other networks */
@@ -49,7 +71,7 @@ interface DeviceGroup {
   icon: React.ReactNode
   accentColor: string
   refKeys: string[]
-  serverRefKeys: { refKey: string; countKey: string; label: string }[]
+  serverRefKeys: { refKey: string; countKey: string; label: string; category: string }[]
 }
 
 const DEVICE_GROUPS: DeviceGroup[] = [
@@ -60,9 +82,9 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     icon: <Activity size={16} />,
     accentColor: 'text-purple-500',
     refKeys: ['param_leaf_switch', 'param_spine_switch', 'param_core_switch'],
-    serverRefKeys: [
-      { refKey: 'gpu_server', countKey: 'num_gpu_servers', label: 'GPU服务器' },
-    ],
+            serverRefKeys: [
+              { refKey: 'gpu_server', countKey: 'num_gpu_servers', label: 'GPU服务器', category: 'gpu_servers' },
+            ],
   },
   {
     networkKey: 'storage_network',
@@ -72,8 +94,8 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     accentColor: 'text-green-500',
     refKeys: ['storage_leaf_switch', 'storage_spine_switch'],
     serverRefKeys: [
-      { refKey: 'all_flash_storage_server', countKey: 'num_all_flash_storage', label: '全闪存储(2U)' },
-      { refKey: 'hybrid_flash_storage_server', countKey: 'num_hybrid_flash_storage', label: '混闪存储(4U)' },
+      { refKey: 'all_flash_storage_server', countKey: 'num_all_flash_storage', label: '全闪存储(2U)', category: 'storage_servers' },
+      { refKey: 'hybrid_flash_storage_server', countKey: 'num_hybrid_flash_storage', label: '混闪存储(4U)', category: 'storage_servers' },
     ],
   },
   {
@@ -84,7 +106,7 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     accentColor: 'text-blue-500',
     refKeys: ['biz_access_switch', 'biz_agg_switch'],
     serverRefKeys: [
-      { refKey: 'compute_server', countKey: 'num_compute_servers', label: '通算服务器' },
+      { refKey: 'compute_server', countKey: 'num_compute_servers', label: '通算服务器', category: 'compute_servers' },
     ],
   },
   {
@@ -98,13 +120,23 @@ const DEVICE_GROUPS: DeviceGroup[] = [
   },
 ]
 
+/* ---------- helper: resolve IB defaults for GPU ---------- */
+
+function resolveIBDefaults(gpuLibraryId: string | undefined): Record<string, string> {
+  if (!gpuLibraryId) return IB_DEFAULTS_FALLBACK
+  const id = gpuLibraryId.toLowerCase()
+  if (id.includes('gb300') || id.includes('nvl72')) return IB_DEFAULTS_BY_GPU.gb300
+  if (id.includes('b200') || id.includes('b300')) return IB_DEFAULTS_BY_GPU.b300
+  return IB_DEFAULTS_BY_GPU.h100_and_below
+}
+
 /* ---------- helper: get default device refs ---------- */
 
-function getDefaultRefs(protocol: ParamProtocol): Record<string, DeviceRef> {
+function getDefaultRefs(protocol: ParamProtocol, gpuLibraryId?: string): Record<string, DeviceRef> {
   const refs: Record<string, DeviceRef> = {}
 
-  // Param switches based on protocol
-  const paramDefaults = protocol === 'IB' ? IB_DEFAULTS : ROCE_DEFAULTS
+  // Param switches based on protocol and GPU type
+  const paramDefaults = protocol === 'IB' ? resolveIBDefaults(gpuLibraryId) : ROCE_DEFAULTS
   for (const [key, deviceId] of Object.entries(paramDefaults)) {
     refs[key] = { library_id: deviceId }
   }
@@ -131,12 +163,13 @@ function getDefaultRefs(protocol: ParamProtocol): Record<string, DeviceRef> {
 
 export function WizardStepDevices() {
   const { t } = useTranslation('device')
-  const { config, updateDeviceRefs, updateTopology } = useWizardStore()
+  const { config, updateDeviceRefs, updateTopology, removeDeviceRef } = useWizardStore()
   const { allDevices } = useDeviceLibraryStore()
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerTarget, setPickerTarget] = useState<string | null>(null)
   const [pickerLabel, setPickerLabel] = useState('')
+  const [pickerCategory, setPickerCategory] = useState<string>('all')
   const [defaultsApplied, setDefaultsApplied] = useState(false)
 
   // Apply smart defaults on first render
@@ -148,8 +181,9 @@ export function WizardStepDevices() {
       return
     }
 
-    // Apply defaults based on protocol
-    const defaults = getDefaultRefs(config.topology.param_protocol)
+    // Apply defaults based on protocol and GPU type
+    const gpuId = config.device_refs.gpu_server?.library_id
+    const defaults = getDefaultRefs(config.topology.param_protocol, gpuId)
     updateDeviceRefs(defaults)
     setDefaultsApplied(true)
   }, [])
@@ -157,24 +191,29 @@ export function WizardStepDevices() {
   // Re-apply defaults if protocol changes (and user hasn't manually picked devices)
   useEffect(() => {
     const protocol = config.topology.param_protocol
-    const expectedLeaf = protocol === 'IB' ? IB_DEFAULTS.param_leaf_switch : ROCE_DEFAULTS.param_leaf_switch
+    const gpuId = config.device_refs.gpu_server?.library_id
+    const expectedDefaults = resolveIBDefaults(gpuId)
+    const expectedLeaf = protocol === 'IB' ? expectedDefaults.param_leaf_switch : ROCE_DEFAULTS.param_leaf_switch
     const currentLeaf = config.device_refs.param_leaf_switch?.library_id
 
-    // Only auto-switch if the current leaf is one of the defaults (user hasn't overridden)
-    const isIBDefault = Object.values(IB_DEFAULTS).includes(currentLeaf || '')
+    // Only auto-switch if the current leaf matches one of the known defaults (user hasn't overridden)
+    const isIBDefault = Object.values(IB_DEFAULTS_BY_GPU.h100_and_below).includes(currentLeaf || '')
+      || Object.values(IB_DEFAULTS_BY_GPU.b300).includes(currentLeaf || '')
+      || Object.values(IB_DEFAULTS_BY_GPU.gb300).includes(currentLeaf || '')
     const isRoCEDefault = Object.values(ROCE_DEFAULTS).includes(currentLeaf || '')
 
     if ((isIBDefault || isRoCEDefault) && currentLeaf !== expectedLeaf) {
-      const defaults = getDefaultRefs(protocol)
+      const defaults = getDefaultRefs(protocol, gpuId)
       updateDeviceRefs(defaults)
     }
   }, [config.topology.param_protocol])
 
   /* ---------- picker callbacks ---------- */
 
-  const openPicker = useCallback((refKey: string, label: string) => {
+  const openPicker = useCallback((refKey: string, label: string, category?: string) => {
     setPickerTarget(refKey)
     setPickerLabel(label)
+    setPickerCategory(category || 'all')
     setPickerOpen(true)
   }, [])
 
@@ -189,11 +228,9 @@ export function WizardStepDevices() {
 
   const handleClear = useCallback(
     (refKey: string) => {
-      const newRefs = { ...config.device_refs }
-      delete newRefs[refKey]
-      updateDeviceRefs(newRefs)
+      removeDeviceRef(refKey)
     },
-    [config.device_refs, updateDeviceRefs],
+    [removeDeviceRef],
   )
 
   /* ---------- find device in library ---------- */
@@ -314,7 +351,7 @@ export function WizardStepDevices() {
                           </>
                         ) : (
                           <button
-                            onClick={() => openPicker(server.refKey, label)}
+                            onClick={() => openPicker(server.refKey, label, server.category)}
                             className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 text-gray-400 hover:text-primary-500 text-xs transition-colors"
                           >
                             <Plus size={14} />
@@ -353,6 +390,7 @@ export function WizardStepDevices() {
         onClose={() => setPickerOpen(false)}
         onSelect={handleDeviceSelect}
         deviceLabel={pickerLabel}
+        initialCategory={pickerCategory}
       />
     </div>
   )

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import * as XLSX from 'xlsx'
 
 export interface RackDevice {
@@ -66,7 +67,9 @@ interface RackState {
   getPowerUsageAll: () => { total: number; limit: number; percent: number }
 }
 
-export const useRackStore = create<RackState>()((set, get) => ({
+export const useRackStore = create<RackState>()(
+  persist(
+    (set, get) => ({
   cabinets: [],
   unplacedDevices: [],
   selectedCabinetId: null,
@@ -106,37 +109,69 @@ export const useRackStore = create<RackState>()((set, get) => ({
   },
 
   initFromTopology: (topologyNodes, rackType = 42, powerLimit = 6000) => {
-    // Extract server-type devices from topology data
-    const serverNodes = topologyNodes.filter((n) => n.type === 'server')
+    // Extract server-type devices from topology data, using real cabinet assignments
+    const serverNodes = topologyNodes.filter((n: any) => n.type === 'server')
     if (serverNodes.length === 0) {
       get().initDefault(134, rackType, powerLimit)
       return
     }
 
-    const serverCount = serverNodes.length
-    const cabsNeeded = Math.ceil(serverCount / rackType)
+    // Group servers by cabinetId to respect topology's cabinet assignments
+    const cabinetMap = new Map<number, { id: number; name: string; devices: any[] }>()
+    const unplacedDevices: UnplacedDevice[] = []
 
-    const cabinets: RackCabinet[] = []
-    for (let i = 0; i < cabsNeeded; i++) {
-      cabinets.push({
-        id: i + 1,
-        name: `机柜 ${String.fromCharCode(65 + i)}`,
-        totalU: rackType,
-        type: 'gpu',
-        power_limit: powerLimit,
-        devices: [],
+    for (let i = 0; i < serverNodes.length; i++) {
+      const node: any = serverNodes[i]
+      const cabinetId: number = node.cabinetId ?? (i % Math.ceil(serverNodes.length / Math.ceil(serverNodes.length / rackType)) + 1)
+      const cabinetName: string = node.cabinetName || `机柜 ${String.fromCharCode(64 + cabinetId)}`
+
+      if (!cabinetMap.has(cabinetId)) {
+        cabinetMap.set(cabinetId, {
+          id: cabinetId,
+          name: cabinetName,
+          devices: [],
+        })
+      }
+
+      const cab = cabinetMap.get(cabinetId)!
+      const uHeight: number = node.uHeight || 4
+      const powerWatts: number = node.powerWatts || 2000
+      const startU: number = node.startU ?? (cab.devices.length * uHeight + 1)
+
+      cab.devices.push({
+        id: node.id,
+        name: node.id,
+        type: node.group || 'GPU Server',
+        cabinetId,
+        startU,
+        endU: startU + uHeight - 1,
+        power_watts: powerWatts,
+      })
+
+      // Also add to unplaced for manual placement flexibility
+      unplacedDevices.push({
+        id: node.id,
+        name: node.id,
+        type: node.group || 'GPU Server',
+        height: uHeight,
+        power_watts: powerWatts,
       })
     }
 
-    const unplacedDevices: UnplacedDevice[] = serverNodes.map((node, i) => ({
-      id: `server-${i + 1}`,
-      name: node.id,
-      type: 'GPU Server',
-      height: 4,
-      power_watts: 2000,
+    const cabinets: RackCabinet[] = Array.from(cabinetMap.values()).map((c) => ({
+      id: c.id,
+      name: c.name,
+      totalU: rackType,
+      type: 'gpu' as CabinetType,
+      power_limit: powerLimit,
+      devices: c.devices,
     }))
 
-    set({ cabinets, unplacedDevices, selectedCabinetId: cabinets.length > 0 ? 1 : null })
+    set({
+      cabinets,
+      unplacedDevices,
+      selectedCabinetId: cabinets.length > 0 ? cabinets[0].id : null,
+    })
   },
 
   loadRackLayout: async (projectName) => {
@@ -436,4 +471,14 @@ export const useRackStore = create<RackState>()((set, get) => ({
     const percent = limit > 0 ? Math.round((total / limit) * 100) : 0
     return { total, limit, percent }
   },
-}))
+  }),
+  {
+    name: 'autolink-rack-state',
+    partialize: (state) => ({
+      cabinets: state.cabinets,
+      unplacedDevices: state.unplacedDevices,
+      selectedCabinetId: state.selectedCabinetId,
+    }),
+  },
+),
+)

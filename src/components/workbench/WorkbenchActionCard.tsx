@@ -22,6 +22,16 @@ export function WorkbenchActionCard() {
 
   const isRendering = progress.status === 'rendering'
   const cleanupRef = useRef<(() => void) | null>(null)
+  const prevStatusRef = useRef(progress.status)
+
+  // When rendering completes, refresh project list and toast
+  useEffect(() => {
+    if (prevStatusRef.current === 'rendering' && progress.status === 'complete') {
+      // Refresh output files list in FileExplorer
+      useProjectStore.getState().fetchProjects()
+    }
+    prevStatusRef.current = progress.status
+  }, [progress.status])
 
   // Subscribe to IPC render:progress events
   useEffect(() => {

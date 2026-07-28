@@ -22,17 +22,16 @@ class AutoLinkApp {
   }
 
   private createMainWindow(): void {
-    const isMac = process.platform === 'darwin'
-
     this.mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
-      minWidth: 1100,
-      minHeight: 700,
+      minWidth: 1200,
+      minHeight: 800,
+      frame: false,
       title: 'AutoLink',
       icon: path.join(__dirname, '..', 'public', 'icons', 'icon.ico'),
       backgroundColor: '#f9fafb',
-      titleBarStyle: isMac ? 'hidden' : 'default',
+      titleBarStyle: 'hidden',
       show: false,
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),

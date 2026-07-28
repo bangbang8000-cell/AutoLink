@@ -11,6 +11,7 @@ interface Props {
   onSelect: (device: LibraryDevice) => void
   networkType?: string
   deviceLabel?: string
+  initialCategory?: string
 }
 
 const CATEGORY_TABS = [
@@ -29,7 +30,7 @@ const DEVICE_TYPES = [
   { id: 'switch', label: '交换机' },
 ] as const
 
-export function DeviceLibraryPicker({ open, onClose, onSelect, networkType, deviceLabel }: Props) {
+export function DeviceLibraryPicker({ open, onClose, onSelect, networkType, deviceLabel, initialCategory }: Props) {
   const { t } = useTranslation('device')
   const {
     loading, allDevices, loadLibrary,
@@ -43,12 +44,12 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, networkType, devi
   useEffect(() => {
     if (open) {
       loadLibrary()
-      setCategory('all')
+      setCategory(initialCategory || 'all')
       setVendor('全部')
       setDeviceType('all')
       setSearch('')
     }
-  }, [open])
+  }, [open, initialCategory])
 
   const filteredDevices = useMemo(() => {
     let devices = allDevices
@@ -108,7 +109,7 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, networkType, devi
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">

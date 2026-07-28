@@ -18,6 +18,14 @@ const electronAPI = {
       ipcRenderer.invoke('project:getFileBinary', name, filePath),
     listOutputFiles: (name: string) =>
       ipcRenderer.invoke('project:listOutputFiles', name),
+    listOutputBatches: (projectName: string) =>
+      ipcRenderer.invoke('project:listOutputBatches', projectName),
+  },
+  template: {
+    getStructure: (templateName: string) =>
+      ipcRenderer.invoke('template:getStructure', templateName),
+    getFile: (templateName: string, filePath: string) =>
+      ipcRenderer.invoke('template:getFile', templateName, filePath),
   },
   design: {
     generate: (projectName: string, configINI?: string) =>
@@ -66,6 +74,11 @@ const electronAPI = {
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+    onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
+      const handler = (_event: any, isMaximized: boolean) => callback(isMaximized)
+      ipcRenderer.on('window:maximizeChange', handler)
+      return () => ipcRenderer.removeListener('window:maximizeChange', handler)
+    },
   },
   shell: {
     showItemInFolder: (path: string) => ipcRenderer.invoke('shell:showItemInFolder', path),
@@ -74,6 +87,11 @@ const electronAPI = {
   export: {
     saveFile: (projectName: string, fileName: string, base64Data: string) =>
       ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
+  },
+  onLogOutput: (callback: (data: { message: string; level?: string }) => void) => {
+    const handler = (_event: any, data: { message: string; level?: string }) => callback(data)
+    ipcRenderer.on('log:output', handler)
+    return () => ipcRenderer.removeListener('log:output', handler)
   },
   deviceLibrary: {
     list: () => ipcRenderer.invoke('device-library:list'),

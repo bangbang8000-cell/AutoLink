@@ -21,6 +21,7 @@ interface WizardState {
   updateNetworks: (networks: Partial<ProjectNetworks>) => void
   updateTopology: (topology: Partial<ProjectTopology>) => void
   updateDeviceRefs: (refs: Record<string, DeviceRef>) => void
+  removeDeviceRef: (refKey: string) => void
   updateRackConfig: (rack: Partial<ProjectRackConfig>) => void
 
   setTemplateName: (name: string | null) => void
@@ -66,6 +67,13 @@ export const useWizardStore = create<WizardState>()((set, get) => ({
 
   updateDeviceRefs: (refs) =>
     set((s) => ({ config: { ...s.config, device_refs: { ...s.config.device_refs, ...refs } } })),
+
+  removeDeviceRef: (refKey: string) =>
+    set((s) => {
+      const refs = { ...s.config.device_refs }
+      delete refs[refKey]
+      return { config: { ...s.config, device_refs: refs } }
+    }),
 
   updateRackConfig: (rack) =>
     set((s) => ({ config: { ...s.config, rack_config: { ...s.config.rack_config, ...rack } } })),

@@ -1,1 +1,12 @@
-{ "title": "" }
+{
+  "title": "랙 계획",
+  "cabinetLayout": "랙 레이아웃",
+  "devicePlacement": "장치 배치",
+  "uPosition": "U 위치",
+  "cabinetNo": "랙 번호",
+  "startU": "시작 U",
+  "endU": "종료 U",
+  "importExcel": "Excel 가져오기",
+  "exportExcel": "Excel 내보내기",
+  "noProject": "먼저 프로젝트를 선택하세요"
+}

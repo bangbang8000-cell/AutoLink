@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 /* ---------- types ---------- */
 
@@ -41,6 +42,12 @@ export interface TopologyNode {
   type: string
   group: string
   podid: string
+  cabinetId?: number
+  cabinetName?: string
+  startU?: number
+  endU?: number
+  powerWatts?: number
+  uHeight?: number
 }
 
 export interface TopologyEdge {
@@ -139,7 +146,9 @@ interface DesignState {
   clearResults: () => void
 }
 
-export const useDesignStore = create<DesignState>()((set, get) => ({
+export const useDesignStore = create<DesignState>()(
+  persist(
+    (set, get) => ({
   config: { ...defaultDesignConfig },
   summary: null,
   valid: null,
@@ -254,7 +263,16 @@ export const useDesignStore = create<DesignState>()((set, get) => ({
   },
 
   clearResults: () => set({ summary: null, topology: null, valid: null, error: null }),
-}))
+  }),
+  {
+    name: 'autolink-design-state',
+    partialize: (state) => ({
+      config: state.config,
+      projectName: state.projectName,
+    }),
+  },
+),
+)
 
 /* ---------- INI parser ---------- */
 

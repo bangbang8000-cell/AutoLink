@@ -1,1 +1,11 @@
-{ "title": "" }
+{
+  "title": "토폴로지 시각화",
+  "networkTopology": "네트워크 토폴로지",
+  "deviceList": "장치 목록",
+  "connectionList": "연결 목록",
+  "zoomIn": "확대",
+  "zoomOut": "축소",
+  "fitView": "창에 맞추기",
+  "exportImage": "이미지 내보내기",
+  "noProject": "먼저 프로젝트를 선택하세요"
+}

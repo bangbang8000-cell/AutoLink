@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore, type DesignConfig, type DesignSummary } from '@/stores/design.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useRackStore } from '@/stores/rack.store'
 
 /* -------------------------------------------------- */
 /*  Sections                                          */
@@ -168,6 +170,8 @@ export function DesignPanel() {
     config, summary, valid, generating, error,
     updateConfig, resetConfig, generate, loadConfig, loadSavedTopology, clearResults,
   } = useDesignStore()
+  const openTab = useWorkspaceStore((s) => s.openTab)
+  const initFromTopology = useRackStore((s) => s.initFromTopology)
 
   // Load config when project changes
   useEffect(() => {
@@ -184,7 +188,13 @@ export function DesignPanel() {
   const handleGenerate = useCallback(async () => {
     if (!selectedProjectName) return
     await generate(selectedProjectName)
-  }, [selectedProjectName, generate])
+    // Auto-open topology tab and init rack on success
+    const state = useDesignStore.getState()
+    if (state.topology && state.topology.nodes.length > 0) {
+      openTab({ type: 'visualization', title: `拓扑视图 - ${selectedProjectName}`, closable: true })
+      initFromTopology(state.topology.nodes)
+    }
+  }, [selectedProjectName, generate, openTab, initFromTopology])
 
   const speedOptions = [
     { value: '100G', label: '100G' },

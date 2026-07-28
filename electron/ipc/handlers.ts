@@ -154,6 +154,11 @@ function deleteDeviceFile(deviceId: string): void {
   searchDirs(libPath)
 }
 
+// Log forwarding
+export function sendLog(mainWindow: BrowserWindow | null, message: string, level: string = 'info') {
+  mainWindow?.webContents.send('log:output', { message, level })
+}
+
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== Project Management =====
   ipcMain.handle('project:list', wrapHandler(async () => {
@@ -327,6 +332,22 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return files
       .filter((f) => f.isFile())
       .map((f) => ({ name: f.name, type: path.extname(f.name).toUpperCase().replace('.', '') || 'FILE' }))
+  }))
+
+  ipcMain.handle('project:listOutputBatches', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const outputDir = path.join(getWorkspacePath(), projectName, 'output')
+    if (!fs.existsSync(outputDir)) return []
+
+    const entries = fs.readdirSync(outputDir, { withFileTypes: true })
+    return entries
+      .filter((d) => d.isDirectory())
+      .map((d) => {
+        const batchFiles = fs.readdirSync(path.join(outputDir, d.name))
+          .filter((f) => !f.startsWith('.'))
+          .map((f) => ({ name: f, path: `${projectName}/output/${d.name}/${f}` }))
+        return { name: d.name, files: batchFiles }
+      })
   }))
 
   ipcMain.handle('project:saveConfigFile', wrapHandler(async (_event, name: string, content: string) => {
@@ -544,5 +565,36 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
 
     return { devices: selectedDevices, format }
+  }))
+
+  // ===== Template =====
+  ipcMain.handle('template:getStructure', wrapHandler(async (_event, templateName: string) => {
+    sanitizeName(templateName)
+    const tplDir = path.join(getTemplatePath(), templateName)
+    if (!fs.existsSync(tplDir)) return []
+
+    function walkDir(dir: string): { name: string; type: string; children?: unknown[] }[] {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      return entries
+        .filter((e) => !e.name.startsWith('.'))
+        .map((e) => {
+          if (e.isDirectory()) {
+            return { name: e.name, type: 'directory', children: walkDir(path.join(dir, e.name)) }
+          }
+          return { name: e.name, type: 'file' }
+        })
+    }
+    return walkDir(tplDir)
+  }))
+
+  ipcMain.handle('template:getFile', wrapHandler(async (_event, templateName: string, filePath: string) => {
+    sanitizeName(templateName)
+    const tplDir = getTemplatePath()
+    const fullPath = path.resolve(tplDir, templateName, filePath)
+    if (!fullPath.startsWith(tplDir + path.sep) && fullPath !== tplDir) {
+      throw new Error('路径遍历攻击被阻止')
+    }
+    if (!fs.existsSync(fullPath)) return null
+    return fs.readFileSync(fullPath, 'utf-8')
   }))
 }

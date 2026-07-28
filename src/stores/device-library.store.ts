@@ -15,8 +15,12 @@ export type DeviceCategoryFilter =
   | 'switches'
   | 'custom'
 
+/** Sub-category for fine-grained filtering: switches_param, switches_storage, switches_biz, switches_oob */
+export type DeviceSubCategory = string
+
 export interface DeviceLibraryFilter {
   category: DeviceCategoryFilter
+  subCategory: string
   vendor: string
   search: string
   networkType: NetworkType | 'all'
@@ -30,6 +34,7 @@ export interface DeviceLibraryFilter {
 
 const defaultFilter: DeviceLibraryFilter = {
   category: 'all',
+  subCategory: '',
   vendor: '',
   search: '',
   networkType: 'all',
@@ -154,6 +159,11 @@ export const useDeviceLibraryStore = create<DeviceLibraryState>()((set, get) => 
       } else {
         result = result.filter((d) => d.category === filter.category)
       }
+    }
+
+    // Sub-category filter (finer-grained: switches_param, switches_storage, etc.)
+    if (filter.subCategory) {
+      result = result.filter((d) => d.category === filter.subCategory)
     }
 
     // Vendor filter

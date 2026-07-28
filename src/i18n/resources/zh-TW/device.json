@@ -1,0 +1,93 @@
+{
+  "title": "裝置庫",
+  "search": "搜尋裝置...",
+  "filter": {
+    "category": "分類",
+    "vendor": "廠商",
+    "networkType": "網路類型",
+    "powerRange": "功率範圍",
+    "portRange": "埠範圍",
+    "all": "全部",
+    "apply": "套用篩選",
+    "reset": "重設"
+  },
+  "category": {
+    "all": "全部裝置",
+    "gpu_servers": "GPU伺服器",
+    "storage_servers": "儲存伺服器",
+    "compute_servers": "通算伺服器",
+    "switches": "交換機",
+    "custom": "自訂"
+  },
+  "device": {
+    "vendor": "廠商",
+    "model": "型號",
+    "power": "功率",
+    "uHeight": "U高",
+    "cooling": "散熱",
+    "depth": "深度",
+    "weight": "重量",
+    "namePrefix": "名稱前綴",
+    "ports": "埠數",
+    "portSpeed": "埠速率",
+    "portType": "埠類型",
+    "downlinkPrefix": "下行前綴",
+    "uplinkPrefix": "上行前綴",
+    "interfaceModels": "介面模型",
+    "networkType": "網路類型",
+    "portCount": "埠數",
+    "cableType": "線纜類型",
+    "builtin": "內建",
+    "custom": "自訂",
+    "verified": "已校驗",
+    "unverified": "未校驗",
+    "datasheet": "規格書",
+    "noSelection": "請選擇裝置檢視詳情",
+    "noDevices": "暫無裝置",
+    "deviceCount": "{{count}} 款裝置"
+  },
+  "compare": {
+    "title": "裝置對比",
+    "add": "加入對比",
+    "remove": "移除對比",
+    "clear": "清空對比",
+    "maxReached": "最多對比3款裝置"
+  },
+  "actions": {
+    "addServer": "新增伺服器",
+    "addSwitch": "新增交換機",
+    "edit": "編輯",
+    "delete": "刪除",
+    "copyToCustom": "複製到自訂",
+    "import": "匯入",
+    "export": "匯出",
+    "deleteConfirm": "確定要刪除裝置 \"{{name}}\" 嗎？",
+    "deleteNote": "內建裝置不可刪除，可複製到自訂後編輯"
+  },
+  "import": {
+    "title": "批量匯入裝置",
+    "serverTab": "伺服器範本",
+    "switchTab": "交換機範本",
+    "uploadHint": "選擇 CSV 或 Excel 檔案上傳",
+    "downloadTemplate": "下載範本",
+    "preview": "預覽",
+    "confirm": "確認匯入",
+    "cancel": "取消",
+    "total": "共 {{count}} 筆",
+    "valid": "有效 {{count}} 筆",
+    "invalid": "無效 {{count}} 筆",
+    "errors": "匯入錯誤"
+  },
+  "export": {
+    "title": "匯出裝置",
+    "selectDevices": "選擇要匯出的裝置",
+    "format": "匯出格式",
+    "json": "JSON (單一檔案)",
+    "excel": "Excel",
+    "zip": "ZIP (全庫)",
+    "allDevices": "全庫裝置",
+    "selectedDevices": "已選裝置 ({{count}})",
+    "confirm": "匯出",
+    "cancel": "取消"
+  }
+}

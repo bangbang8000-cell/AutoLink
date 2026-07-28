@@ -33,21 +33,35 @@ export function RackPanel() {
     const timer = setTimeout(async () => {
       try {
         await loadRackLayout(selectedProjectName)
-        setInitialized(true)
       } catch (err) {
-        setInitError((err as Error).message)
-      } finally {
-        setLoading(false)
+        console.error('loadRackLayout failed:', err)
       }
+
+      // If loadRackLayout produced no cabinets (no existing layout file),
+      // try to initialize from topology data first, then fallback to default
+      const currentCabinets = useRackStore.getState().cabinets
+      if (currentCabinets.length === 0) {
+        if (topology && topology.nodes.length > 0) {
+          initFromTopology(topology.nodes)
+        } else {
+          useRackStore.getState().initDefault(134)
+        }
+      }
+
+      setInitialized(true)
+      setLoading(false)
     }, 50)
     return () => clearTimeout(timer)
   }, [selectedProjectName, initialized, loadRackLayout])
 
+  // Sync topology data when it becomes available after init
   useEffect(() => {
-    if (initialized && topology && topology.nodes.length > 0 && cabinets.length === 0) {
+    if (!initialized) return
+    const currentCabinets = useRackStore.getState().cabinets
+    if (topology && topology.nodes.length > 0 && currentCabinets.length === 0) {
       initFromTopology(topology.nodes)
     }
-  }, [initialized, topology, cabinets.length, initFromTopology])
+  }, [initialized, topology, initFromTopology])
 
   const handleOpenWorkspace = useCallback((cabinetId?: number) => {
     openTab({

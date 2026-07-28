@@ -97,7 +97,7 @@ export function ProjectWizard({ onComplete, onCancel }: Props) {
       </div>
 
       {/* Step content */}
-      <div className="flex-1 overflow-auto px-6 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
         {stepContent()}
       </div>
 

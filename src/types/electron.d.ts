@@ -11,6 +11,11 @@ interface Window {
       getFile: (name: string, filePath: string) => Promise<string | null>
       getFileBinary: (name: string, filePath: string) => Promise<string | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
+      listOutputBatches: (projectName: string) => Promise<Array<{ name: string; files: Array<{ name: string; path: string }> }>>
+    }
+    template: {
+      getStructure: (templateName: string) => Promise<Array<{ name: string; type: string; children?: Array<{ name: string; type: string; children?: unknown[] }> }>>
+      getFile: (templateName: string, filePath: string) => Promise<string | null>
     }
     design: {
       generate: (projectName: string, configINI?: string) => Promise<unknown>
@@ -36,6 +41,7 @@ interface Window {
       maximize: () => void
       close: () => void
       isMaximized: () => Promise<boolean>
+      onMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void
     }
     shell: {
       showItemInFolder: (path: string) => void
@@ -52,6 +58,7 @@ interface Window {
     export: {
       saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>
     }
+    onLogOutput: (callback: (data: { message: string; level?: string }) => void) => () => void
     versions: {
       node: string
       electron: string

@@ -215,6 +215,79 @@ def generate_summary_data(designer):
     return pd.DataFrame(summary, columns=["项目", "值"])
 
 
+def generate_device_list(designer):
+    """Generate device inventory from topology and device profiles"""
+    items = []
+
+    # Collect all device types and their counts from the designer
+    # Servers: from designer.servers, group by group (e.g., "GPU服务器", "存储服务器")
+    server_groups = {}
+    for server in designer.servers:
+        group = server.group or "GPU服务器"
+        if group not in server_groups:
+            server_groups[group] = {"count": 0, "u_height": server.u_height or 4, "power": server.power_watts or 2000}
+        server_groups[group]["count"] += 1
+
+    for group, info in server_groups.items():
+        items.append({
+            "设备类型": group,
+            "厂商": "",
+            "型号": "",
+            "数量": info["count"],
+            "单机功耗(W)": info["power"],
+            "U位高度": info["u_height"],
+            "总功耗(W)": info["count"] * info["power"],
+            "总U位": info["count"] * info["u_height"],
+        })
+
+    # Switches: count by type prefix
+    switch_types = {}
+    all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
+                    designer.storage_leaves + designer.storage_spines + designer.storage_cores +
+                    designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg)
+
+    for sw in all_switches:
+        stype = sw.obj_type.replace('param_', '').replace('storage_', '')
+        stype_map = {
+            'leaf': 'Leaf交换机', 'spine': 'Spine交换机', 'core': 'Core交换机',
+            'access': '接入交换机', 'agg': '汇聚交换机',
+        }
+        label = stype_map.get(stype, stype)
+        if label not in switch_types:
+            switch_types[label] = {"count": 0, "power": sw.power_watts or 0, "u_height": sw.u_height or 1}
+        switch_types[label]["count"] += 1
+
+    for stype, info in switch_types.items():
+        items.append({
+            "设备类型": stype,
+            "厂商": "",
+            "型号": "",
+            "数量": info["count"],
+            "单机功耗(W)": info["power"],
+            "U位高度": info["u_height"],
+            "总功耗(W)": info["count"] * info["power"],
+            "总U位": info["count"] * info["u_height"],
+        })
+
+    # Add totals row
+    if len(items) > 0:
+        total_power = sum(i["总功耗(W)"] for i in items)
+        total_u = sum(i["总U位"] for i in items)
+        items.append({
+            "设备类型": "合计",
+            "厂商": "",
+            "型号": "",
+            "数量": sum(i["数量"] for i in items),
+            "单机功耗(W)": "",
+            "U位高度": "",
+            "总功耗(W)": total_power,
+            "总U位": total_u,
+        })
+
+    columns = ["设备类型", "厂商", "型号", "数量", "单机功耗(W)", "U位高度", "总功耗(W)", "总U位"]
+    return pd.DataFrame(items, columns=columns)
+
+
 def apply_excel_formatting(filename):
     """应用Excel格式美化：合并同设备行、组分隔线、边框、交替行色"""
     from openpyxl.styles import Border, Side, PatternFill, Font, Alignment

@@ -1,6 +1,7 @@
-import React, { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import clsx from 'clsx'
 import { useProjectStore } from '@/stores/project.store'
+import { ProjectProvider } from '@/stores/ProjectContext'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { Header } from '@/components/layout/Header'
@@ -9,29 +10,22 @@ import { StatusBar } from '@/components/layout/StatusBar'
 import { ResizableAppLayout } from '@/components/layout/ResizableAppLayout'
 import { ToastContainer } from '@/components/layout/ToastContainer'
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary'
+import { LogPanel } from '@/components/layout/LogPanel'
+import { FileExplorer } from '@/components/layout/FileExplorer'
 import { WorkspaceView } from '@/components/workspace/WorkspaceView'
 import { WorkspaceErrorBoundary } from '@/components/workspace/WorkspaceErrorBoundary'
-import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel'
-import { WorkbenchPanel } from '@/components/sidebar/WorkbenchPanel'
-import { DesignPanel } from '@/components/sidebar/DesignPanel'
-import { RackPanel } from '@/components/sidebar/RackPanel'
-import { TopologyPanel } from '@/components/sidebar/TopologyPanel'
-import { OutputPanel } from '@/components/sidebar/OutputPanel'
-import { DeviceLibraryPanel } from '@/components/sidebar/DeviceLibraryPanel'
 import { ServerProfileForm } from '@/components/device/ServerProfileForm'
 import { SwitchProfileForm } from '@/components/device/SwitchProfileForm'
 import { DeviceImportModal } from '@/components/device/DeviceImportModal'
 import { DeviceExportModal } from '@/components/device/DeviceExportModal'
-import { SettingsPanel } from '@/components/sidebar/SettingsPanel'
 import '@/i18n'
 
 /** Map activity types to workspace tab config */
-const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'rack' | 'topology' | 'output' | 'deviceLibrary'; title: string; closable: boolean }> = {
+const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary'; title: string; closable: boolean }> = {
   workbench: { type: 'workbench', title: '工作台', closable: false },
-  rack: { type: 'rack', title: '机柜规划', closable: true },
-  topology: { type: 'topology', title: '拓扑视图', closable: true },
-  output: { type: 'output', title: '输出结果', closable: true },
-  deviceLibrary: { type: 'deviceLibrary', title: '设备库', closable: false },
+  design: { type: 'design', title: '设计', closable: true },
+  visualization: { type: 'visualization', title: '可视化', closable: true },
+  device_library: { type: 'deviceLibrary', title: '设备库', closable: true },
 }
 
 export default function App() {
@@ -41,6 +35,7 @@ export default function App() {
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
+  const togglePanel = useUIStore((s) => s.togglePanel)
   const panelVisible = useUIStore((s) => s.panelVisible)
   const isDark = useUIStore((s) => s.isDark)
   const syncSystemTheme = useUIStore((s) => s.syncSystemTheme)
@@ -81,6 +76,16 @@ export default function App() {
       try {
         await fetchProjects()
         console.log('[App] Projects loaded successfully')
+
+        // Session restore: auto-select previously selected project
+        const state = useProjectStore.getState()
+        if (state.selectedProjectName) {
+          const project = state.projects.find((p) => p.name === state.selectedProjectName)
+          if (project) {
+            state.selectProject(project)
+            console.log('[App] Session restored: auto-selected project', state.selectedProjectName)
+          }
+        }
       } catch {
         retries++
         if (retries < maxRetries) {
@@ -95,19 +100,17 @@ export default function App() {
     setTimeout(tryFetch, 300)
   }, [fetchProjects, fetchTemplates])
 
-  /** Handle ActivityBar clicks: content type → workspace tab, config type → sidebar panel */
+  /** Handle ActivityBar clicks: always highlight, content type → workspace tab, config type → sidebar panel */
   const handleActivityClick = useCallback((activity: ActivityType) => {
+    setActiveActivity(activity)
     const config = WORKSPACE_TAB_CONFIG[activity]
     if (config) {
       // Resolve dynamic title
       let title = config.title
-      if (activity === 'topology' && selectedProjectName) {
-        title = `拓扑视图 - ${selectedProjectName}`
+      if (activity === 'visualization' && selectedProjectName) {
+        title = `可视化 - ${selectedProjectName}`
       }
       openTab({ type: config.type, title, closable: config.closable })
-    } else {
-      // Config types: Explorer, Design, Settings → sidebar panel
-      setActiveActivity(activity)
     }
   }, [openTab, setActiveActivity, selectedProjectName])
 
@@ -119,13 +122,11 @@ export default function App() {
 
       if (ctrl && shift) {
         switch (e.key.toLowerCase()) {
-          case 'e': e.preventDefault(); setActiveActivity('explorer'); break
+          case 'e': e.preventDefault(); setActiveActivity('project'); break
+          case 'd': e.preventDefault(); handleActivityClick('design'); break
           case 'w': e.preventDefault(); handleActivityClick('workbench'); break
-          case 'd': e.preventDefault(); setActiveActivity('design'); break
-          case 'r': e.preventDefault(); handleActivityClick('rack'); break
-          case 't': e.preventDefault(); handleActivityClick('topology'); break
-          case 'o': e.preventDefault(); handleActivityClick('output'); break
-          case 'l': e.preventDefault(); handleActivityClick('deviceLibrary'); break
+          case 'v': e.preventDefault(); handleActivityClick('visualization'); break
+          case 'l': e.preventDefault(); handleActivityClick('device_library'); break
         }
       }
       if (ctrl && e.key === ',') {
@@ -133,6 +134,9 @@ export default function App() {
       }
       if (ctrl && e.key.toLowerCase() === 'b') {
         e.preventDefault(); toggleSidebar()
+      }
+      if (ctrl && e.key.toLowerCase() === 'j') {
+        e.preventDefault(); togglePanel()
       }
       // Workspace tab shortcuts
       if (ctrl && e.key.toLowerCase() === 'w' && !shift) {
@@ -146,26 +150,14 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setActiveActivity, toggleSidebar, handleActivityClick, activeTabId, closeTab, reopenLastClosed])
+  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, activeTabId, closeTab, reopenLastClosed])
 
   const renderSidebarContent = useCallback(() => {
-    const panel = (() => {
-      switch (activeActivity) {
-        case 'explorer': return <ExplorerPanel />
-        case 'workbench': return <WorkbenchPanel />
-        case 'design': return <DesignPanel />
-        case 'rack': return <RackPanel />
-        case 'topology': return <TopologyPanel />
-        case 'output': return <OutputPanel />
-        case 'deviceLibrary': return <DeviceLibraryPanel />
-        case 'settings': return <SettingsPanel />
-        default: return <ExplorerPanel />
-      }
-    })()
-    return <ErrorBoundary key={activeActivity}>{panel}</ErrorBoundary>
+    return <ErrorBoundary key={activeActivity}><FileExplorer /></ErrorBoundary>
   }, [activeActivity])
 
   return (
+    <ProjectProvider>
     <div
       className={clsx(
         'h-screen w-screen flex flex-col overflow-hidden',
@@ -180,8 +172,12 @@ export default function App() {
           sidebarVisible={sidebarVisible}
           panelVisible={panelVisible}
           sidebar={renderSidebarContent()}
-          editor={<WorkspaceErrorBoundary />}
-          bottomPanel={<div className="p-3 text-xs text-gray-400">输出日志</div>}
+          editor={
+            <WorkspaceErrorBoundary>
+              <WorkspaceView />
+            </WorkspaceErrorBoundary>
+          }
+          bottomPanel={<LogPanel />}
         />
       </div>
       <StatusBar />
@@ -191,5 +187,6 @@ export default function App() {
       <DeviceImportModal />
       <DeviceExportModal />
     </div>
+    </ProjectProvider>
   )
 }

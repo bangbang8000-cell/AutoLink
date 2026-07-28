@@ -197,6 +197,7 @@ class FatTreeTopology:
                     a_start_u=server.start_u, a_end_u=server.end_u,
                     z_cabinet_id=leaf.cabinet_id, z_cabinet_name=leaf.cabinet_name,
                     z_start_u=leaf.start_u, z_end_u=leaf.end_u,
+                    network_type=self.network_type,
                 )
                 conn_up = Connection(
                     a_device=leaf.name, a_port=leaf_port, a_module=self.network_speed,
@@ -207,6 +208,7 @@ class FatTreeTopology:
                     a_start_u=leaf.start_u, a_end_u=leaf.end_u,
                     z_cabinet_id=server.cabinet_id, z_cabinet_name=server.cabinet_name,
                     z_start_u=server.start_u, z_end_u=server.end_u,
+                    network_type=self.network_type,
                 )
 
                 server.add_connection(conn_down)
@@ -255,6 +257,7 @@ class FatTreeTopology:
                         a_start_u=leaf.start_u, a_end_u=leaf.end_u,
                         z_cabinet_id=spine.cabinet_id, z_cabinet_name=spine.cabinet_name,
                         z_start_u=spine.start_u, z_end_u=spine.end_u,
+                        network_type=self.network_type,
                     )
                     conn_spine_to_leaf = Connection(
                         a_device=spine.name, a_port=spine_port, a_module=self.network_speed,
@@ -265,6 +268,7 @@ class FatTreeTopology:
                         a_start_u=spine.start_u, a_end_u=spine.end_u,
                         z_cabinet_id=leaf.cabinet_id, z_cabinet_name=leaf.cabinet_name,
                         z_start_u=leaf.start_u, z_end_u=leaf.end_u,
+                        network_type=self.network_type,
                     )
 
                     leaf.add_connection(conn_leaf_to_spine)
@@ -313,6 +317,7 @@ class FatTreeTopology:
                         z_cabinet_name=self.cores[core_idx].cabinet_name,
                         z_start_u=self.cores[core_idx].start_u,
                         z_end_u=self.cores[core_idx].end_u,
+                        network_type=self.network_type,
                     )
                     conn_core_to_spine = Connection(
                         a_device=self.cores[core_idx].name, a_port=core_port, a_module=self.network_speed,
@@ -325,6 +330,7 @@ class FatTreeTopology:
                         a_end_u=self.cores[core_idx].end_u,
                         z_cabinet_id=spine.cabinet_id, z_cabinet_name=spine.cabinet_name,
                         z_start_u=spine.start_u, z_end_u=spine.end_u,
+                        network_type=self.network_type,
                     )
 
                     spine.add_connection(conn_spine_to_core)
@@ -361,6 +367,8 @@ class AccessAggTopology:
         self.redundancy = redundancy  # True=MLAG双接入
         # downlink_limit: None=自动(min(ports,25)), 数字=指定下行口数
         self.downlink_limit = downlink_limit
+        _network_type_map = {"OOB": "oob", "业务": "biz"}
+        self.network_type = _network_type_map.get(network_name, network_name.lower())
 
         # 交换机对象
         self.access_switches = []
@@ -473,6 +481,7 @@ class AccessAggTopology:
                     a_start_u=server.start_u, a_end_u=server.end_u,
                     z_cabinet_id=sw.cabinet_id, z_cabinet_name=sw.cabinet_name,
                     z_start_u=sw.start_u, z_end_u=sw.end_u,
+                    network_type=self.network_type,
                 )
                 conn_up = Connection(
                     a_device=sw.name, a_port=sw_port, a_module=self.downlink_speed,
@@ -483,6 +492,7 @@ class AccessAggTopology:
                     a_start_u=sw.start_u, a_end_u=sw.end_u,
                     z_cabinet_id=server.cabinet_id, z_cabinet_name=server.cabinet_name,
                     z_start_u=server.start_u, z_end_u=server.end_u,
+                    network_type=self.network_type,
                 )
                 server.add_connection(conn_down)
                 sw.add_connection(conn_up)
@@ -518,6 +528,7 @@ class AccessAggTopology:
                         a_start_u=server.start_u, a_end_u=server.end_u,
                         z_cabinet_id=sw.cabinet_id, z_cabinet_name=sw.cabinet_name,
                         z_start_u=sw.start_u, z_end_u=sw.end_u,
+                        network_type=self.network_type,
                     )
                     conn_up = Connection(
                         a_device=sw.name, a_port=sw_port, a_module=self.downlink_speed,
@@ -528,6 +539,7 @@ class AccessAggTopology:
                         a_start_u=sw.start_u, a_end_u=sw.end_u,
                         z_cabinet_id=server.cabinet_id, z_cabinet_name=server.cabinet_name,
                         z_start_u=server.start_u, z_end_u=server.end_u,
+                        network_type=self.network_type,
                     )
                     server.add_connection(conn_down)
                     sw.add_connection(conn_up)
@@ -569,6 +581,7 @@ class AccessAggTopology:
                         z_cabinet_name=self.agg_switches[agg_idx].cabinet_name,
                         z_start_u=self.agg_switches[agg_idx].start_u,
                         z_end_u=self.agg_switches[agg_idx].end_u,
+                        network_type=self.network_type,
                     )
                     conn_from_agg = Connection(
                         a_device=self.agg_switches[agg_idx].name,
@@ -582,6 +595,7 @@ class AccessAggTopology:
                         a_end_u=self.agg_switches[agg_idx].end_u,
                         z_cabinet_id=acc_sw.cabinet_id, z_cabinet_name=acc_sw.cabinet_name,
                         z_start_u=acc_sw.start_u, z_end_u=acc_sw.end_u,
+                        network_type=self.network_type,
                     )
                     acc_sw.add_connection(conn_to_agg)
                     self.agg_switches[agg_idx].add_connection(conn_from_agg)

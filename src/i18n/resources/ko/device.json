@@ -1,0 +1,93 @@
+{
+  "title": "장치 라이브러리",
+  "search": "장치 검색...",
+  "filter": {
+    "category": "분류",
+    "vendor": "제조사",
+    "networkType": "네트워크 유형",
+    "powerRange": "전력 범위",
+    "portRange": "포트 범위",
+    "all": "전체",
+    "apply": "필터 적용",
+    "reset": "초기화"
+  },
+  "category": {
+    "all": "전체 장치",
+    "gpu_servers": "GPU 서버",
+    "storage_servers": "스토리지 서버",
+    "compute_servers": "컴퓨팅 서버",
+    "switches": "스위치",
+    "custom": "사용자 정의"
+  },
+  "device": {
+    "vendor": "제조사",
+    "model": "모델",
+    "power": "전력",
+    "uHeight": "U 높이",
+    "cooling": "냉각",
+    "depth": "깊이",
+    "weight": "무게",
+    "namePrefix": "이름 접두사",
+    "ports": "포트 수",
+    "portSpeed": "포트 속도",
+    "portType": "포트 유형",
+    "downlinkPrefix": "다운링크 접두사",
+    "uplinkPrefix": "업링크 접두사",
+    "interfaceModels": "인터페이스 모델",
+    "networkType": "네트워크 유형",
+    "portCount": "포트 수",
+    "cableType": "케이블 유형",
+    "builtin": "내장",
+    "custom": "사용자 정의",
+    "verified": "검증됨",
+    "unverified": "미검증",
+    "datasheet": "데이터시트",
+    "noSelection": "장치를 선택하여 상세 정보 보기",
+    "noDevices": "장치 없음",
+    "deviceCount": "{{count}}개 장치"
+  },
+  "compare": {
+    "title": "장치 비교",
+    "add": "비교에 추가",
+    "remove": "비교에서 제거",
+    "clear": "비교 초기화",
+    "maxReached": "최대 3개 장치까지 비교 가능"
+  },
+  "actions": {
+    "addServer": "서버 추가",
+    "addSwitch": "스위치 추가",
+    "edit": "편집",
+    "delete": "삭제",
+    "copyToCustom": "사용자 정의로 복사",
+    "import": "가져오기",
+    "export": "내보내기",
+    "deleteConfirm": "장치 \"{{name}}\"을(를) 삭제하시겠습니까?",
+    "deleteNote": "내장 장치는 삭제할 수 없습니다. 사용자 정의로 복사 후 편집하세요"
+  },
+  "import": {
+    "title": "장치 일괄 가져오기",
+    "serverTab": "서버 템플릿",
+    "switchTab": "스위치 템플릿",
+    "uploadHint": "CSV 또는 Excel 파일 업로드",
+    "downloadTemplate": "템플릿 다운로드",
+    "preview": "미리보기",
+    "confirm": "가져오기 확인",
+    "cancel": "취소",
+    "total": "총 {{count}}건",
+    "valid": "유효 {{count}}건",
+    "invalid": "무효 {{count}}건",
+    "errors": "가져오기 오류"
+  },
+  "export": {
+    "title": "장치 내보내기",
+    "selectDevices": "내보낼 장치 선택",
+    "format": "내보내기 형식",
+    "json": "JSON (단일 파일)",
+    "excel": "Excel",
+    "zip": "ZIP (전체 라이브러리)",
+    "allDevices": "전체 라이브러리 장치",
+    "selectedDevices": "선택한 장치 ({{count}})",
+    "confirm": "내보내기",
+    "cancel": "취소"
+  }
+}

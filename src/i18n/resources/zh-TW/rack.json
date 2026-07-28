@@ -1,1 +1,12 @@
-{ "title": "" }
+{
+  "title": "機櫃規劃",
+  "cabinetLayout": "機櫃佈局",
+  "devicePlacement": "設備上架",
+  "uPosition": "U位位置",
+  "cabinetNo": "機櫃號",
+  "startU": "起始U",
+  "endU": "結束U",
+  "importExcel": "匯入 Excel",
+  "exportExcel": "匯出 Excel",
+  "noProject": "請先選擇一個專案"
+}

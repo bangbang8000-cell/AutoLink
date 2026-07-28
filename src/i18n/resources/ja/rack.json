@@ -1,1 +1,12 @@
-{ "title": "" }
+{
+  "title": "ラック計画",
+  "cabinetLayout": "ラックレイアウト",
+  "devicePlacement": "デバイス配置",
+  "uPosition": "U位置",
+  "cabinetNo": "ラック番号",
+  "startU": "開始U",
+  "endU": "終了U",
+  "importExcel": "Excelインポート",
+  "exportExcel": "Excelエクスポート",
+  "noProject": "先にプロジェクトを選択してください"
+}

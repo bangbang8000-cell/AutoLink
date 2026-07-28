@@ -1,0 +1,93 @@
+{
+  "title": "デバイスライブラリ",
+  "search": "デバイス検索...",
+  "filter": {
+    "category": "カテゴリ",
+    "vendor": "ベンダー",
+    "networkType": "ネットワークタイプ",
+    "powerRange": "電力範囲",
+    "portRange": "ポート範囲",
+    "all": "すべて",
+    "apply": "フィルター適用",
+    "reset": "リセット"
+  },
+  "category": {
+    "all": "すべてのデバイス",
+    "gpu_servers": "GPUサーバー",
+    "storage_servers": "ストレージサーバー",
+    "compute_servers": "計算サーバー",
+    "switches": "スイッチ",
+    "custom": "カスタム"
+  },
+  "device": {
+    "vendor": "ベンダー",
+    "model": "モデル",
+    "power": "電力",
+    "uHeight": "U高さ",
+    "cooling": "冷却",
+    "depth": "奥行き",
+    "weight": "重量",
+    "namePrefix": "名前プレフィックス",
+    "ports": "ポート数",
+    "portSpeed": "ポート速度",
+    "portType": "ポートタイプ",
+    "downlinkPrefix": "ダウンリンクプレフィックス",
+    "uplinkPrefix": "アップリンクプレフィックス",
+    "interfaceModels": "インターフェースモデル",
+    "networkType": "ネットワークタイプ",
+    "portCount": "ポート数",
+    "cableType": "ケーブルタイプ",
+    "builtin": "内蔵",
+    "custom": "カスタム",
+    "verified": "検証済み",
+    "unverified": "未検証",
+    "datasheet": "データシート",
+    "noSelection": "デバイスを選択して詳細を表示",
+    "noDevices": "デバイスがありません",
+    "deviceCount": "{{count}} 台のデバイス"
+  },
+  "compare": {
+    "title": "デバイス比較",
+    "add": "比較に追加",
+    "remove": "比較から削除",
+    "clear": "比較をクリア",
+    "maxReached": "最大3台まで比較可能"
+  },
+  "actions": {
+    "addServer": "サーバー追加",
+    "addSwitch": "スイッチ追加",
+    "edit": "編集",
+    "delete": "削除",
+    "copyToCustom": "カスタムにコピー",
+    "import": "インポート",
+    "export": "エクスポート",
+    "deleteConfirm": "デバイス \"{{name}}\" を削除してもよろしいですか？",
+    "deleteNote": "内蔵デバイスは削除できません。カスタムにコピーしてから編集してください"
+  },
+  "import": {
+    "title": "デバイス一括インポート",
+    "serverTab": "サーバーテンプレート",
+    "switchTab": "スイッチテンプレート",
+    "uploadHint": "CSV または Excel ファイルをアップロード",
+    "downloadTemplate": "テンプレートダウンロード",
+    "preview": "プレビュー",
+    "confirm": "インポート確認",
+    "cancel": "キャンセル",
+    "total": "合計 {{count}} 件",
+    "valid": "有効 {{count}} 件",
+    "invalid": "無効 {{count}} 件",
+    "errors": "インポートエラー"
+  },
+  "export": {
+    "title": "デバイスエクスポート",
+    "selectDevices": "エクスポートするデバイスを選択",
+    "format": "エクスポート形式",
+    "json": "JSON (単一ファイル)",
+    "excel": "Excel",
+    "zip": "ZIP (全ライブラリ)",
+    "allDevices": "全ライブラリのデバイス",
+    "selectedDevices": "選択デバイス ({{count}})",
+    "confirm": "エクスポート",
+    "cancel": "キャンセル"
+  }
+}
