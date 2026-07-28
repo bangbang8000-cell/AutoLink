@@ -581,4 +581,129 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (!fs.existsSync(fullPath)) return null
     return fs.readFileSync(fullPath, 'utf-8')
   }))
+
+  interface TemplateMeta {
+    name: string
+    description: string
+    scenario?: string
+    tags?: string[]
+    isBuiltin?: boolean
+    createdAt?: string
+    sourceProject?: string
+  }
+
+  ipcMain.handle('template:list', wrapHandler(async () => {
+    const tplDir = getTemplatePath()
+    if (!fs.existsSync(tplDir)) return []
+
+    const entries = fs.readdirSync(tplDir, { withFileTypes: true })
+    return entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+      .map((e) => {
+        const metaPath = path.join(tplDir, e.name, 'template.json')
+        let meta: TemplateMeta = { name: e.name, description: '' }
+        if (fs.existsSync(metaPath)) {
+          try {
+            meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+          } catch { /* ignore corrupt meta */ }
+        }
+        return {
+          id: e.name,
+          name: meta.name || e.name,
+          description: meta.description || '',
+          scenario: meta.scenario || '',
+          tags: meta.tags || [],
+          updatedAt: meta.createdAt || '',
+          isBuiltin: !!meta.isBuiltin,
+        }
+      })
+  }))
+
+  ipcMain.handle('template:create', wrapHandler(async (_event, projectName: string, meta: TemplateMeta) => {
+    sanitizeName(projectName)
+    sanitizeName(meta.name)
+
+    const wsp = getWorkspacePath()
+    const tplDir = getTemplatePath()
+    const srcDir = path.join(wsp, projectName)
+    const destDir = path.join(tplDir, meta.name)
+
+    if (!fs.existsSync(srcDir)) throw new Error(`项目 ${projectName} 不存在`)
+    if (fs.existsSync(destDir)) throw new Error(`模板 ${meta.name} 已存在`)
+
+    // Create template directory
+    fs.mkdirSync(destDir, { recursive: true })
+
+    // Copy config files
+    const filesToCopy = ['network_config.ini', 'project_config.json', 'project.json']
+    for (const file of filesToCopy) {
+      const src = path.join(srcDir, file)
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, path.join(destDir, file))
+      }
+    }
+
+    // Write template metadata
+    const templateMeta: TemplateMeta = {
+      name: meta.name,
+      description: meta.description || '',
+      scenario: meta.scenario || '',
+      tags: meta.tags || [],
+      isBuiltin: false,
+      createdAt: new Date().toISOString(),
+      sourceProject: projectName,
+    }
+    fs.writeFileSync(path.join(destDir, 'template.json'), JSON.stringify(templateMeta, null, 2), 'utf-8')
+  }))
+
+  ipcMain.handle('template:delete', wrapHandler(async (_event, templateName: string) => {
+    sanitizeName(templateName)
+    const tplDir = getTemplatePath()
+    const targetDir = path.join(tplDir, templateName)
+
+    if (!fs.existsSync(targetDir)) throw new Error(`模板 ${templateName} 不存在`)
+
+    // Check if builtin
+    const metaPath = path.join(targetDir, 'template.json')
+    if (fs.existsSync(metaPath)) {
+      try {
+        const meta: TemplateMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+        if (meta.isBuiltin) throw new Error('内置模板不可删除')
+      } catch (err) {
+        if (err instanceof Error && err.message === '内置模板不可删除') throw err
+        /* ignore corrupt meta */
+      }
+    }
+
+    fs.rmSync(targetDir, { recursive: true, force: true })
+  }))
+
+  // ===== Output File Deletion =====
+  ipcMain.handle('project:deleteOutputFile', wrapHandler(async (_event, projectName: string, filePath: string) => {
+    sanitizeName(projectName)
+    const fullPath = sanitizePath([projectName, 'output', filePath])
+    if (!fs.existsSync(fullPath)) throw new Error('文件不存在')
+    if (fs.statSync(fullPath).isDirectory()) throw new Error('不能删除目录，请使用删除批次功能')
+    fs.rmSync(fullPath)
+  }))
+
+  ipcMain.handle('project:deleteOutputBatch', wrapHandler(async (_event, projectName: string, batchName: string) => {
+    sanitizeName(projectName)
+    sanitizeName(batchName)
+    const fullPath = sanitizePath([projectName, 'output', batchName])
+    if (!fs.existsSync(fullPath)) throw new Error('批次不存在')
+    fs.rmSync(fullPath, { recursive: true, force: true })
+  }))
+
+  ipcMain.handle('project:clearOutput', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const outputDir = sanitizePath([projectName, 'output'])
+    if (!fs.existsSync(outputDir)) return
+
+    const entries = fs.readdirSync(outputDir, { withFileTypes: true })
+    for (const entry of entries) {
+      const entryPath = path.join(outputDir, entry.name)
+      fs.rmSync(entryPath, { recursive: true, force: true })
+    }
+  }))
 }

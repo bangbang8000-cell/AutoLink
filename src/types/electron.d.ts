@@ -12,10 +12,16 @@ interface Window {
       getFileBinary: (name: string, filePath: string) => Promise<Uint8Array | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
       listOutputBatches: (projectName: string) => Promise<Array<{ name: string; files: Array<{ name: string; path: string }> }>>
+      deleteOutputFile: (projectName: string, filePath: string) => Promise<void>
+      deleteOutputBatch: (projectName: string, batchName: string) => Promise<void>
+      clearOutput: (projectName: string) => Promise<void>
     }
     template: {
       getStructure: (templateName: string) => Promise<Array<{ name: string; type: string; children?: Array<{ name: string; type: string; children?: unknown[] }> }>>
       getFile: (templateName: string, filePath: string) => Promise<string | null>
+      list: () => Promise<Array<{ id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean }>>
+      create: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
+      delete: (templateName: string) => Promise<void>
     }
     design: {
       generate: (projectName: string, configINI?: string) => Promise<unknown>

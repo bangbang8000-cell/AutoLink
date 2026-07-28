@@ -19,6 +19,7 @@ import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AboutDialog } from '@/components/layout/AboutDialog'
 import { useToastStore } from '@/stores/toast.store'
+import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function FileExplorer() {
@@ -37,8 +38,10 @@ export function FileExplorer() {
 
 function ProjectExplorer() {
   const { t } = useTranslation()
-  const { projects, templates, selectProject, selectedProjectName } = useProjectStore()
+  const { projects, templates, selectProject, selectedProjectName, deleteProjects, convertToTemplate } = useProjectStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
+  const addToast = useToastStore((s) => s.addToast)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
   const handleOpenProject = useCallback((name: string) => {
     const project = projects.find((p) => p.name === name)
@@ -58,6 +61,18 @@ function ProjectExplorer() {
     const folderPath = `${wsp}\\${projectName}`
     window.electron?.shell?.showItemInFolder(folderPath)
   }, [])
+
+  const handleDeleteProject = useCallback((project: { id: number; name: string }) => {
+    setDeleteTarget({ name: project.name, type: 'project' })
+  }, [])
+
+  const handleConvertToTemplate = useCallback((projectName: string) => {
+    const name = prompt('请输入模板名称：', projectName)
+    if (!name?.trim()) return
+    convertToTemplate(projectName, { name: name.trim() })
+      .then(() => addToast('success', `项目 "${projectName}" 已转为模板 "${name.trim()}"`))
+      .catch((err) => addToast('error', `转换失败: ${err instanceof Error ? err.message : err}`))
+  }, [convertToTemplate, addToast])
 
   return (
     <div className="h-full flex flex-col">
@@ -95,6 +110,8 @@ function ProjectExplorer() {
               contextMenu={[
                 { label: '设为当前项目', action: () => handleOpenProject(p.name) },
                 { label: '在文件管理器中打开', action: () => handleOpenInExplorer(p.name) },
+                { label: '转为模板', action: () => handleConvertToTemplate(p.name) },
+                { label: '删除项目', action: () => handleDeleteProject(p) },
               ]}
             />
           ))}
@@ -106,6 +123,21 @@ function ProjectExplorer() {
         {/* Templates */}
         <TemplateSection templates={templates} openTab={openTab} handleOpenInExplorer={handleOpenInExplorer} />
       </div>
+
+      {/* Confirm Delete Dialog */}
+      {deleteTarget && (
+        <ConfirmDeleteDialog
+          target={deleteTarget}
+          onConfirm={async () => {
+            const project = projects.find((p) => p.name === deleteTarget.name)
+            if (project) {
+              await deleteProjects([String(project.id)])
+              addToast('success', `项目 "${deleteTarget.name}" 已删除`)
+            }
+          }}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }
@@ -219,6 +251,22 @@ function OutputSection({ projects, openTab }: {
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
   const [batchesMap, setBatchesMap] = useState<Record<string, Array<{ name: string; files: Array<{ name: string; path: string }> }>>>({})
   const [expandedBatches, setExpandedBatches] = useState<Record<string, boolean>>({})
+  const addToast = useToastStore((s) => s.addToast)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+
+  const refreshBatches = useCallback((projectName: string) => {
+    // Clear cache and force re-fetch
+    setBatchesMap((prev) => {
+      const next = { ...prev }
+      delete next[projectName]
+      return next
+    })
+    setExpandedProjects((prev) => {
+      const next = { ...prev }
+      delete next[projectName]
+      return next
+    })
+  }, [])
 
   const toggleProject = useCallback(async (projectName: string) => {
     const currently = expandedProjects[projectName]
@@ -250,58 +298,111 @@ function OutputSection({ projects, openTab }: {
   if (projects.length === 0) return null
 
   return (
-    <Section title="输出文件" icon={<FileOutput size={14} />}>
-      {projects.map((p) => {
-        const isExpanded = expandedProjects[p.name]
-        const batches = batchesMap[p.name] || []
-        return (
-          <div key={p.name}>
-            <TreeItem
-              label={p.name}
-              onClick={() => toggleProject(p.name)}
-            />
-            {isExpanded && batches.length === 0 && (
-              <div className="text-[10px] text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
-                {t('common:noData', '暂无输出批次')}
-              </div>
-            )}
-            {isExpanded && batches.map((batch) => {
-              const batchKey = `${p.name}/${batch.name}`
-              const isBatchExpanded = expandedBatches[batchKey]
-              return (
-                <div key={batchKey}>
-                  <ExpandableTreeItem
-                    label={batch.name}
-                    depth={6}
-                    onClick={() => toggleBatch(batchKey)}
-                  />
-                  {isBatchExpanded && batch.files.map((f) => (
-                    <ExpandableTreeItem
-                      key={f.path}
-                      label={f.name}
-                      depth={9}
-                      onClick={() => handleFileClick(f.path, f.name)}
-                    />
-                  ))}
+    <>
+      <Section title="输出文件" icon={<FileOutput size={14} />}>
+        {projects.map((p) => {
+          const isExpanded = expandedProjects[p.name]
+          const batches = batchesMap[p.name] || []
+          return (
+            <div key={p.name}>
+              <TreeItem
+                label={p.name}
+                onClick={() => toggleProject(p.name)}
+              />
+              {isExpanded && batches.length === 0 && (
+                <div className="text-[10px] text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
+                  {t('common:noData', '暂无输出批次')}
                 </div>
-              )
-            })}
-          </div>
-        )
-      })}
-    </Section>
+              )}
+              {isExpanded && batches.map((batch) => {
+                const batchKey = `${p.name}/${batch.name}`
+                const isBatchExpanded = expandedBatches[batchKey]
+                return (
+                  <div key={batchKey}>
+                    <ExpandableTreeItem
+                      label={batch.name}
+                      depth={6}
+                      onClick={() => toggleBatch(batchKey)}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        setDeleteTarget({ name: `${p.name} / ${batch.name}`, type: 'batch' })
+                      }}
+                    />
+                    {isBatchExpanded && batch.files.map((f) => (
+                      <ExpandableTreeItem
+                        key={f.path}
+                        label={f.name}
+                        depth={9}
+                        onClick={() => handleFileClick(f.path, f.name)}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          setDeleteTarget({ name: f.name, type: 'file' })
+                        }}
+                      />
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
+      </Section>
+
+      {/* Confirm Delete Dialog */}
+      {deleteTarget && (
+        <ConfirmDeleteDialog
+          target={deleteTarget}
+          onConfirm={async () => {
+            // Find which project the target belongs to
+            for (const p of projects) {
+              const batches = batchesMap[p.name] || []
+              for (const batch of batches) {
+                if (deleteTarget.type === 'batch' && deleteTarget.name === `${p.name} / ${batch.name}`) {
+                  await window.electron.project.deleteOutputBatch(p.name, batch.name)
+                  addToast('success', `批次 "${batch.name}" 已删除`)
+                  refreshBatches(p.name)
+                  return
+                }
+                if (deleteTarget.type === 'file') {
+                  for (const f of batch.files) {
+                    if (f.name === deleteTarget.name) {
+                      // filePath is like "projectName/output/batchName/fileName"
+                      const relPath = f.path.substring(f.path.indexOf('/output/') + 8) // strip "projectName/output/"
+                      await window.electron.project.deleteOutputFile(p.name, relPath)
+                      addToast('success', `文件 "${f.name}" 已删除`)
+                      refreshBatches(p.name)
+                      return
+                    }
+                  }
+                }
+              }
+              if (deleteTarget.type === 'clearOutput' && deleteTarget.name.startsWith(p.name)) {
+                await window.electron.project.clearOutput(p.name)
+                addToast('success', `项目 "${p.name}" 的输出已清空`)
+                refreshBatches(p.name)
+                return
+              }
+            }
+          }}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
+    </>
   )
 }
 
 // Template section with expandable file tree
 function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
-  templates: { id: string; name: string }[]
+  templates: { id: string; name: string; isBuiltin?: boolean }[]
   openTab: (tab: Omit<import('@/stores/workspace.store').WorkspaceTab, 'id'>) => string
   handleOpenInExplorer: (name: string) => void
 }) {
   const [expandedTemplates, setExpandedTemplates] = useState<Record<string, boolean>>({})
   const [structureMap, setStructureMap] = useState<Record<string, Array<{ name: string; type: string; children?: Array<{ name: string; type: string; children?: unknown[] }> }>>>({})
   const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({})
+  const deleteTemplate = useProjectStore((s) => s.deleteTemplate)
+  const addToast = useToastStore((s) => s.addToast)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
   const toggleTemplate = useCallback(async (tplName: string) => {
     const currently = expandedTemplates[tplName]
@@ -362,30 +463,45 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
   }
 
   return (
-    <Section title="模板中心" icon={<Folder size={14} />}>
-      {templates.map((tpl) => {
-        const isExpanded = expandedTemplates[tpl.name]
-        const structure = structureMap[tpl.name] || []
-        return (
-          <div key={tpl.id}>
-            <TreeItem
-              label={tpl.name}
-              onClick={() => toggleTemplate(tpl.name)}
-              contextMenu={[
-                { label: '查看模板文件', action: () => toggleTemplate(tpl.name) },
-                { label: '在文件管理器中打开', action: () => handleOpenInExplorer(tpl.name) },
-              ]}
-            />
-            {isExpanded && structure.length === 0 && (
-              <div className="text-[10px] text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
-                无模板文件
-              </div>
-            )}
-            {isExpanded && renderStructure(structure, tpl.name, '', 6)}
-          </div>
-        )
-      })}
-    </Section>
+    <>
+      <Section title="模板中心" icon={<Folder size={14} />}>
+        {templates.map((tpl) => {
+          const isExpanded = expandedTemplates[tpl.name]
+          const structure = structureMap[tpl.name] || []
+          return (
+            <div key={tpl.id}>
+              <TreeItem
+                label={tpl.name}
+                onClick={() => toggleTemplate(tpl.name)}
+                contextMenu={[
+                  { label: '查看模板文件', action: () => toggleTemplate(tpl.name) },
+                  { label: '在文件管理器中打开', action: () => handleOpenInExplorer(tpl.name) },
+                  ...(tpl.isBuiltin ? [] : [{ label: '删除模板', action: () => setDeleteTarget({ name: tpl.name, type: 'template' }) }]),
+                ]}
+              />
+              {isExpanded && structure.length === 0 && (
+                <div className="text-[10px] text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
+                  无模板文件
+                </div>
+              )}
+              {isExpanded && renderStructure(structure, tpl.name, '', 6)}
+            </div>
+          )
+        })}
+      </Section>
+
+      {/* Confirm Delete Dialog */}
+      {deleteTarget && (
+        <ConfirmDeleteDialog
+          target={deleteTarget}
+          onConfirm={async () => {
+            await deleteTemplate(deleteTarget.name)
+            addToast('success', `模板 "${deleteTarget.name}" 已删除`)
+          }}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
+    </>
   )
 }
 

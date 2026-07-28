@@ -20,12 +20,23 @@ const electronAPI = {
       ipcRenderer.invoke('project:listOutputFiles', name),
     listOutputBatches: (projectName: string) =>
       ipcRenderer.invoke('project:listOutputBatches', projectName),
+    deleteOutputFile: (projectName: string, filePath: string) =>
+      ipcRenderer.invoke('project:deleteOutputFile', projectName, filePath),
+    deleteOutputBatch: (projectName: string, batchName: string) =>
+      ipcRenderer.invoke('project:deleteOutputBatch', projectName, batchName),
+    clearOutput: (projectName: string) =>
+      ipcRenderer.invoke('project:clearOutput', projectName),
   },
   template: {
     getStructure: (templateName: string) =>
       ipcRenderer.invoke('template:getStructure', templateName),
     getFile: (templateName: string, filePath: string) =>
       ipcRenderer.invoke('template:getFile', templateName, filePath),
+    list: () => ipcRenderer.invoke('template:list'),
+    create: (projectName: string, meta: unknown) =>
+      ipcRenderer.invoke('template:create', projectName, meta),
+    delete: (templateName: string) =>
+      ipcRenderer.invoke('template:delete', templateName),
   },
   design: {
     generate: (projectName: string, configINI?: string) =>

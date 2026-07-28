@@ -20,6 +20,7 @@ export interface TemplateInfo {
   scenario: string
   tags: string[]
   updatedAt: string
+  isBuiltin?: boolean
 }
 
 interface ProjectState {
@@ -39,6 +40,8 @@ interface ProjectState {
   toggleFavorite: (name: string) => void
   trackRecent: (name: string) => void
   fetchTemplates: () => Promise<void>
+  deleteTemplate: (name: string) => Promise<void>
+  convertToTemplate: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
 }
 
 const builtinTemplates: TemplateInfo[] = [
@@ -49,6 +52,7 @@ const builtinTemplates: TemplateInfo[] = [
     scenario: 'H100-128台',
     tags: ['H100', '128台', '4组', '2层组网'],
     updatedAt: '2026-07-26',
+    isBuiltin: true,
   },
   {
     id: 'H100-100台',
@@ -57,6 +61,7 @@ const builtinTemplates: TemplateInfo[] = [
     scenario: 'H100-100台',
     tags: ['H100', '100台', '4组', '2层组网'],
     updatedAt: '2026-07-26',
+    isBuiltin: true,
   },
   {
     id: '空项目',
@@ -65,6 +70,7 @@ const builtinTemplates: TemplateInfo[] = [
     scenario: '自定义',
     tags: ['空白', '自定义'],
     updatedAt: '2026-07-26',
+    isBuiltin: true,
   },
 ]
 
@@ -152,8 +158,28 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       fetchTemplates: async () => {
-        // Templates are hardcoded; always available regardless of IPC
-        set({ templates: builtinTemplates })
+        try {
+          ensureIPC()
+          if (window.electron.template?.list) {
+            const templates = await window.electron.template.list()
+            set({ templates })
+          }
+        } catch {
+          // Fallback to hardcoded templates
+          set({ templates: builtinTemplates })
+        }
+      },
+
+      deleteTemplate: async (name) => {
+        ensureIPC()
+        await window.electron.template.delete(name)
+        await get().fetchTemplates()
+      },
+
+      convertToTemplate: async (projectName, meta) => {
+        ensureIPC()
+        await window.electron.template.create(projectName, meta)
+        await get().fetchTemplates()
       },
     }),
     {
