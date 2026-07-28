@@ -76,6 +76,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         const id = uid()
         const newTab: WorkspaceTab = { ...tab, id }
+
+        // Design tab: always insert right after the last workbench tab
+        if (tab.type === 'design') {
+          const wbIdx = tabs.map((t) => t.type).lastIndexOf('workbench')
+          const insertIdx = wbIdx >= 0 ? wbIdx + 1 : 0
+          const newTabs = [...tabs]
+          newTabs.splice(insertIdx, 0, newTab)
+          set({ tabs: newTabs, activeTabId: id })
+          return id
+        }
+
         set((s) => ({
           tabs: [...s.tabs, newTab],
           activeTabId: id,
