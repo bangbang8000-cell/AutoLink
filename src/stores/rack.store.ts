@@ -211,7 +211,7 @@ export const useRackStore = create<RackState>()(
 
   saveRackLayout: async (projectName) => {
     try {
-      if (window.electron?.project?.saveConfigFile) {
+      if (window.electron?.project?.saveConfigFile != null) {
         const { cabinets } = get()
         const data = { cabinets, updated_at: new Date().toISOString() }
         // Use saveConfigFile to save rack_layout.json via the existing save mechanism

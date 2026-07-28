@@ -1,10 +1,9 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { Info } from 'lucide-react'
 
 export function WizardStepBasic() {
-  const { t } = useTranslation('device')
+  useTranslation('device')
   const { config, templateName, updateMeta } = useWizardStore()
 
   return (

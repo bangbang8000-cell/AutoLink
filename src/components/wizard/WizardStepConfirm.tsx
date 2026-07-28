@@ -4,7 +4,7 @@ import { useWizardStore } from '@/stores/wizard.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import { DEVICE_REF_KEYS } from '@/types/project-config'
 import type { ProjectNetworks } from '@/types/project-config'
-import { Zap, HardDrive, Network, Monitor, Check } from 'lucide-react'
+import { Zap, HardDrive, Network, Monitor } from 'lucide-react'
 import clsx from 'clsx'
 
 /* ---------- network badge config ---------- */
@@ -35,7 +35,7 @@ const DEVICE_REF_GROUPS: Record<string, string[]> = {
 /* ---------- component ---------- */
 
 export function WizardStepConfirm() {
-  const { t } = useTranslation('device')
+  useTranslation('device')
   const { config } = useWizardStore()
   const { allDevices } = useDeviceLibraryStore()
 

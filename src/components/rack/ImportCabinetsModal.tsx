@@ -1,10 +1,8 @@
 import React, { useState, useRef } from 'react'
 import { X, Upload, FileSpreadsheet, Download, AlertTriangle } from 'lucide-react'
 import { parseCabinetCSV, parseCabinetXLSX, generateCabinetTemplateCSV } from '@/utils/cabinet-import'
-import type { ImportedCabinet, ParseResult } from '@/utils/cabinet-import'
+import type { ParseResult } from '@/utils/cabinet-import'
 import { useRackStore } from '@/stores/rack.store'
-import * as XLSX from 'xlsx'
-
 interface Props {
   open: boolean
   onClose: () => void

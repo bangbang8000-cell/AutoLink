@@ -53,13 +53,13 @@ export function Header() {
         'h-9 flex items-center justify-between shrink-0 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 select-none',
         isMac && 'pl-20',
       )}
-      style={{ WebkitAppRegion: 'drag' as any }}
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' as any }}>
+      <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <MenuBar />
       </div>
 
-      <div className="flex items-center gap-1 px-2" style={{ WebkitAppRegion: 'no-drag' as any }}>
+      <div className="flex items-center gap-1 px-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         {/* Theme */}
         <div className="relative">
           <button

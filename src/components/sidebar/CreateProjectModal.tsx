@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Package, FileText, Check } from 'lucide-react'
 import { useProjectStore, type TemplateInfo } from '@/stores/project.store'

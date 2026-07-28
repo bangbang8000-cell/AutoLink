@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Search, Zap, HardDrive, Server, Package, Filter } from 'lucide-react'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
@@ -9,7 +9,6 @@ interface Props {
   open: boolean
   onClose: () => void
   onSelect: (device: LibraryDevice) => void
-  networkType?: string
   deviceLabel?: string
   initialCategory?: string
 }
@@ -30,7 +29,7 @@ const DEVICE_TYPES = [
   { id: 'switch', label: '交换机' },
 ] as const
 
-export function DeviceLibraryPicker({ open, onClose, onSelect, networkType, deviceLabel, initialCategory }: Props) {
+export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, initialCategory }: Props) {
   const { t } = useTranslation('device')
   const {
     loading, allDevices, loadLibrary,

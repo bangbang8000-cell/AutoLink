@@ -2,11 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Wrench, Play, RefreshCw, CheckCircle, XCircle,
-  Server, HardDrive, Cpu, Network, Zap,
+  Server, HardDrive, Network, Zap,
   AlertTriangle, ChevronDown, ChevronRight, Loader2,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
-import { useDesignStore, type DesignConfig, type DesignSummary } from '@/stores/design.store'
+import { useDesignStore, type DesignSummary } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useRackStore } from '@/stores/rack.store'
 

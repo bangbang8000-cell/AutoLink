@@ -55,7 +55,7 @@ const NETWORK_CARDS: NetworkCard[] = [
 ]
 
 export function WizardStepNetworks() {
-  const { t } = useTranslation('device')
+  useTranslation('device')
   const { config, updateNetworks, updateTopology } = useWizardStore()
 
   const toggle = (key: keyof ProjectNetworks) => {

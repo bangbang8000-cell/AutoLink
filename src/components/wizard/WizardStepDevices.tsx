@@ -162,7 +162,7 @@ function getDefaultRefs(protocol: ParamProtocol, gpuLibraryId?: string): Record<
 /* ---------- component ---------- */
 
 export function WizardStepDevices() {
-  const { t } = useTranslation('device')
+  useTranslation('device')
   const { config, updateDeviceRefs, updateTopology, removeDeviceRef } = useWizardStore()
   const { allDevices } = useDeviceLibraryStore()
 

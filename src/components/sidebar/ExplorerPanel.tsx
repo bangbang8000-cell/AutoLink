@@ -1,12 +1,10 @@
-import React, { useState, useMemo, useCallback, memo } from 'react'
+import React, { useState, useMemo, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search, Plus, Trash2, Star, Clock, FolderOpen,
   ChevronRight, ChevronDown, RefreshCw, Package,
-  GripHorizontal, Check, X,
 } from 'lucide-react'
 import { useProjectStore, type ProjectInfo, type TemplateInfo } from '@/stores/project.store'
-import { useUIStore } from '@/stores/ui.store'
 import { CreateProjectWizardModal } from '../wizard/CreateProjectWizardModal'
 
 /* -------------------------------------------------- */
@@ -186,10 +184,8 @@ export function ExplorerPanel() {
     projects, selectedProjectName, templates,
     favoriteProjects, recentProjects,
     fetchProjects, selectProject, toggleFavorite,
-    createProject, deleteProjects,
+    deleteProjects,
   } = useProjectStore()
-  const explorerProjectListHeight = useUIStore((s) => s.explorerProjectListHeight)
-  const setExplorerProjectListHeight = useUIStore((s) => s.setExplorerProjectListHeight)
 
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)

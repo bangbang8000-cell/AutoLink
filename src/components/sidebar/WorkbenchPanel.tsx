@@ -1,4 +1,3 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Zap, FolderOpen, Settings } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'

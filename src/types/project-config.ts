@@ -2,7 +2,7 @@
 // AutoLink V2.1 — 项目配置类型
 // ============================================================
 
-import type { DeviceRef, NetworkType } from './device-profile'
+import type { DeviceRef } from './device-profile'
 
 /** 项目元数据 */
 export interface ProjectMeta {

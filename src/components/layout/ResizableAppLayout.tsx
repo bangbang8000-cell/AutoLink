@@ -9,7 +9,7 @@ interface Props {
   bottomPanel: ReactNode
 }
 
-export function ResizableAppLayout({ isDark, sidebarVisible, panelVisible, sidebar, editor, bottomPanel }: Props) {
+export function ResizableAppLayout({ sidebarVisible, panelVisible, sidebar, editor, bottomPanel }: Props) {
   const [sidebarWidth, setSidebarWidth] = useState(280)
   const [panelHeight, setPanelHeight] = useState(250)
 

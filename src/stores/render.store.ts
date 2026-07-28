@@ -36,7 +36,7 @@ interface RenderState {
   toggleBatchProject: (name: string) => void
 }
 
-export const useRenderStore = create<RenderState>()((set, get) => ({
+export const useRenderStore = create<RenderState>()((set) => ({
   progress: { status: 'idle', message: '', progress: 0 },
   results: [],
   selectedOutputTypes: ['connections', 'rackTable', 'topology', 'deviceList'],

@@ -1,6 +1,5 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderOpen, Layers } from 'lucide-react'
+import { FolderOpen } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRenderStore } from '@/stores/render.store'
 

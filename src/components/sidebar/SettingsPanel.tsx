@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Settings, Sun, Moon, Monitor, Globe, Keyboard, Info, FolderOpen } from 'lucide-react'
+import { Sun, Moon, Monitor, Globe, Keyboard, Info } from 'lucide-react'
 import { useUIStore, type ThemeMode } from '@/stores/ui.store'
 import { AboutDialog } from '@/components/layout/AboutDialog'
 

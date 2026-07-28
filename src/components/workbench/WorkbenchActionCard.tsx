@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Play, Eye, Trash2, Loader2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'

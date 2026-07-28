@@ -9,7 +9,7 @@ interface Window {
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
       getFile: (name: string, filePath: string) => Promise<string | null>
-      getFileBinary: (name: string, filePath: string) => Promise<string | null>
+      getFileBinary: (name: string, filePath: string) => Promise<Uint8Array | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
       listOutputBatches: (projectName: string) => Promise<Array<{ name: string; files: Array<{ name: string; path: string }> }>>
     }
@@ -47,6 +47,9 @@ interface Window {
       showItemInFolder: (path: string) => void
       openPath: (path: string) => Promise<string>
     }
+    dialog?: {
+      openDirectory: () => Promise<string | null>
+    }
     deviceLibrary: {
       list: () => Promise<{ categories: import('@/types/device-profile').DeviceCategory[] }>
       get: (deviceId: string) => Promise<import('@/types/device-profile').LibraryDevice | null>
@@ -67,3 +70,13 @@ interface Window {
     }
   }
 }
+
+/* Extend React CSSProperties for Electron window drag region */
+declare namespace React {
+  interface CSSProperties {
+    WebkitAppRegion?: string
+  }
+}
+
+/* Allow CSS imports */
+declare module '*.css' {}

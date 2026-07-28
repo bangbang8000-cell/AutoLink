@@ -1,5 +1,3 @@
-import React from 'react'
-import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { Layers } from 'lucide-react'
 import clsx from 'clsx'
@@ -10,7 +8,6 @@ const RACK_TYPE_OPTIONS = [
 ]
 
 export function WizardStepRack() {
-  const { t } = useTranslation('device')
   const { config, updateRackConfig } = useWizardStore()
   const rack = config.rack_config
 

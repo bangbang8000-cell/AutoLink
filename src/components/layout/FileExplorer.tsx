@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useUIStore, type ActivityType, type ThemeMode } from '@/stores/ui.store'
+import { useUIStore, type ThemeMode } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -11,7 +11,7 @@ import {
   FolderOpen, Folder, Search, ChevronRight, ChevronDown,
   Sun, Moon, Monitor, Globe, Keyboard, Info, Palette, FileOutput,
   Cpu, Wifi, Network, Database, AlertTriangle, Shield, Download,
-  Upload, RotateCcw, Trash2, ExternalLink, Check,
+  Upload, RotateCcw, ExternalLink, Check,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
 } from 'lucide-react'
@@ -22,7 +22,6 @@ import { useToastStore } from '@/stores/toast.store'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function FileExplorer() {
-  const { t } = useTranslation()
   const activeActivity = useUIStore((s) => s.activeActivity)
 
   switch (activeActivity) {
