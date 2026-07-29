@@ -12,7 +12,7 @@ class NetworkObject:
     """网络设备（服务器、Leaf/Spine/Core交换机）"""
 
     def __init__(self, name, obj_type, group=None, max_ports=64, podid=None,
-                 device_profile=None, power_watts=0, u_height=1):
+                 device_profile=None, power_watts=0, u_height=1, layer_hint=None):
         self.name = name
         self.obj_type = obj_type  # 'server', 'param_leaf', 'param_spine', 'param_core', 'storage_leaf', 'storage_spine'
         self.group = group
@@ -36,6 +36,11 @@ class NetworkObject:
         self.uplink_prefix: str = ""
         self.port_prefix: str = ""
 
+        # V2.4.2: 布局层级提示，显式指定拓扑图Y轴分层
+        # 取值: 'core'(L5) / 'spine'(L4) / 'leaf'(L3) / 'server'(L2) / 'access'(L1) / 'agg'(L0)
+        # 若未指定，则根据 obj_type 自动推断
+        self.layer_hint = layer_hint or self._infer_layer_hint(obj_type)
+
         # 根据设备类型初始化端口计数器
         if "leaf" in obj_type:
             # Leaf: 前一半端口用于服务器，后一半端口用于Spine
@@ -57,6 +62,23 @@ class NetworkObject:
             # 服务器使用普通端口计数器
             self.port_counter = 1
             self.port_limit = max_ports
+
+    @staticmethod
+    def _infer_layer_hint(obj_type: str) -> str:
+        """根据 obj_type 推断 layer_hint (V2.4.2)"""
+        if obj_type == 'server':
+            return 'server'
+        if 'core' in obj_type:
+            return 'core'
+        if 'spine' in obj_type:
+            return 'spine'
+        if 'leaf' in obj_type:
+            return 'leaf'
+        if 'access' in obj_type:
+            return 'access'
+        if 'agg' in obj_type:
+            return 'agg'
+        return 'server'
 
     def add_connection(self, connection):
         """添加连接关系"""

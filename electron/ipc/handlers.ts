@@ -587,6 +587,14 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return shell.openPath(filePath)
   }))
 
+  ipcMain.handle('shell:openExternal', wrapHandler(async (_event, url: string) => {
+    // 仅允许 https 协议，防止任意协议执行
+    if (!url.startsWith('https://')) {
+      throw new Error('仅允许打开 https 链接')
+    }
+    await shell.openExternal(url)
+  }))
+
   // ===== Update =====
   updateService.setWindow(mainWindow)
 

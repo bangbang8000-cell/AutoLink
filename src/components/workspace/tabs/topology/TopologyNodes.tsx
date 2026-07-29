@@ -59,7 +59,11 @@ export interface TopologyNodeData {
   [key: string]: unknown
 }
 
-/* ---------- 服务器节点 ---------- */
+/* ---------- 服务器节点 ----------
+ * V2.4.3: Handle 上下分开
+ *   - 顶部 "up" Handle：接 Access/OOB（业务/带外接入交换机，在服务器上方）
+ *   - 底部 "down" Handle：接 Leaf（参数/存储 Leaf，在服务器下方）
+ */
 
 function ServerNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
@@ -74,8 +78,8 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
         maxWidth: 160,
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: color, width: 5, height: 5 }} />
-      <Handle type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="up" type="target" position={Position.Top} style={{ background: color, width: 6, height: 6 }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
       <Server size={11} className="shrink-0" style={{ color }} />
       <div className="flex flex-col min-w-0">
         <span className="text-[9px] font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
@@ -87,13 +91,17 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
           </span>
         )}
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="down" type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
     </div>
   )
 }
 
-/* ---------- 交换机节点 ---------- */
+/* ---------- 交换机节点 ----------
+ * V2.4.3: Handle 上下分开
+ *   - 顶部 "up" Handle：接上层交换机（如 Spine 接 Leaf 的上方，或 Agg 接 Access 的上方）
+ *   - 底部 "down" Handle：接下层设备（如 Leaf 接服务器的下方，或 Access 接服务器的下方）
+ */
 
 function SwitchNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
@@ -108,8 +116,8 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
         maxWidth: 140,
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: color, width: 5, height: 5 }} />
-      <Handle type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="up" type="target" position={Position.Top} style={{ background: color, width: 6, height: 6 }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
       <Network size={11} className="shrink-0" style={{ color }} />
       <div className="flex flex-col min-w-0">
         <span className="text-[9px] font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
@@ -119,8 +127,8 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
           {NODE_LABELS[d.nodeType] || d.nodeType}
         </span>
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="down" type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
     </div>
   )
 }

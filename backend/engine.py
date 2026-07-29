@@ -207,31 +207,73 @@ def handle_design(params):
     nodes = []
     edges = []
 
+    def _sw_node(sw):
+        """V2.4.2: 构造交换机节点 dict，包含 layer_hint"""
+        return {
+            "id": sw.name,
+            "type": sw.obj_type,
+            "group": designer.switch_groups.get(sw.name, sw.group or ""),
+            "podid": designer.podid_map.get(sw.name, sw.podid or ""),
+            "layerHint": sw.layer_hint,
+            "maxPorts": sw.max_ports,
+        }
+
     for server in designer.servers:
         nodes.append({
             "id": server.name, "type": "server", "group": server.group, "podid": server.podid,
             "cabinetId": server.cabinet_id, "cabinetName": server.cabinet_name,
             "startU": server.start_u, "endU": server.end_u,
             "powerWatts": server.power_watts, "uHeight": server.u_height,
+            "layerHint": server.layer_hint,
         })
 
+    # V2.4.2: 输出全部 11 类交换机节点
     for sw in designer.param_leaves:
-        nodes.append({"id": sw.name, "type": "param_leaf", "group": designer.switch_groups.get(sw.name, ""), "podid": designer.podid_map.get(sw.name, "")})
+        nodes.append(_sw_node(sw))
     for sw in designer.param_spines:
-        nodes.append({"id": sw.name, "type": "param_spine", "group": designer.switch_groups.get(sw.name, ""), "podid": designer.podid_map.get(sw.name, "")})
+        nodes.append(_sw_node(sw))
+    for sw in designer.param_cores:
+        nodes.append(_sw_node(sw))
     for sw in designer.storage_leaves:
-        nodes.append({"id": sw.name, "type": "storage_leaf", "group": designer.switch_groups.get(sw.name, ""), "podid": designer.podid_map.get(sw.name, "")})
+        nodes.append(_sw_node(sw))
     for sw in designer.storage_spines:
-        nodes.append({"id": sw.name, "type": "storage_spine", "group": designer.switch_groups.get(sw.name, ""), "podid": designer.podid_map.get(sw.name, "")})
+        nodes.append(_sw_node(sw))
+    for sw in designer.storage_cores:
+        nodes.append(_sw_node(sw))
+    for sw in designer.biz_access:
+        nodes.append(_sw_node(sw))
+    for sw in designer.biz_agg:
+        nodes.append(_sw_node(sw))
+    for sw in designer.oob_access:
+        nodes.append(_sw_node(sw))
+    for sw in designer.oob_agg:
+        nodes.append(_sw_node(sw))
 
-    for server in designer.servers:
-        for conn in server.connections:
+    # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
+    # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
+    all_switches = (
+        designer.param_leaves + designer.param_spines + designer.param_cores +
+        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
+        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
+    )
+    all_devices = designer.servers + all_switches
+    seen_conns = set()
+    for dev in all_devices:
+        for conn in dev.connections:
+            # 只在 a_device 侧输出一次，避免双向存储导致的重复
+            if conn.a_device != dev.name:
+                continue
+            pair_key = tuple(sorted([conn.a_device, conn.z_device])) + (conn.a_port,)
+            if pair_key in seen_conns:
+                continue
+            seen_conns.add(pair_key)
             edges.append({
                 "source": conn.a_device,
                 "target": conn.z_device,
                 "speed": conn.a_module,
                 "cableType": conn.cable_type,
                 "description": conn.description,
+                "networkType": conn.network_type,
                 "aCabinetId": conn.a_cabinet_id,
                 "aCabinetName": conn.a_cabinet_name,
                 "aStartU": conn.a_start_u,

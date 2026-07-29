@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import clsx from 'clsx'
+import { X } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { AboutDialog } from './AboutDialog'
 
 interface MenuItem {
   label?: string
@@ -16,12 +18,14 @@ interface MenuItem {
 
 export function MenuBar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const togglePanel = useUIStore((s) => s.togglePanel)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
+  const showAboutDialog = useUIStore((s) => s.showAboutDialog)
   const setShowAboutDialog = useUIStore((s) => s.setShowAboutDialog)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const addToast = useToastStore((s) => s.addToast)
@@ -165,14 +169,19 @@ export function MenuBar() {
     }
   }, [selectedProjectName, addToast])
 
-  const handleUserGuide = useCallback(() => {
-    addToast('info', '请访问 AutoLink 文档页面查看用户指南')
+  const handleUserGuide = useCallback(async () => {
+    // V2.4.4: 通过 shell.openExternal 打开 GitHub Wiki 用户指南
+    try {
+      await window.electron?.shell?.openExternal?.('https://github.com/bangbang8000-cell/AutoLink/wiki')
+    } catch {
+      addToast('error', '无法打开用户指南，请检查网络连接')
+    }
   }, [addToast])
 
   const handleKeyboardShortcuts = useCallback(() => {
-    setActiveActivity('settings')
-    addToast('info', '快捷键: Ctrl+B 文件浏览器 | Ctrl+J 日志面板 | Ctrl+, 设置 | Ctrl+Shift+E/D/W/V 切换视图')
-  }, [setActiveActivity, addToast])
+    // V2.4.4: 弹出独立快捷键对话框（替代原来的 toast 提示）
+    setShowShortcutsDialog(true)
+  }, [])
 
   const handleCheckUpdate = useCallback(async () => {
     try {
@@ -286,6 +295,86 @@ export function MenuBar() {
           )}
         </div>
       ))}
+
+      {/* V2.4.4: AboutDialog 渲染（消费 ui.store.showAboutDialog 状态） */}
+      {showAboutDialog && (
+        <AboutDialog onClose={() => setShowAboutDialog(false)} />
+      )}
+
+      {/* V2.4.4: 快捷键参考对话框 */}
+      {showShortcutsDialog && (
+        <ShortcutsDialog onClose={() => setShowShortcutsDialog(false)} />
+      )}
+    </div>
+  )
+}
+
+/* ---------- V2.4.4: 快捷键参考对话框 ---------- */
+
+const SHORTCUTS: { category: string; items: { keys: string; desc: string }[] }[] = [
+  {
+    category: '通用',
+    items: [
+      { keys: 'Ctrl+N', desc: '新建项目' },
+      { keys: 'Ctrl+S', desc: '保存配置' },
+      { keys: 'Ctrl+,', desc: '打开首选项' },
+    ],
+  },
+  {
+    category: '视图',
+    items: [
+      { keys: 'Ctrl+B', desc: '切换文件浏览器' },
+      { keys: 'Ctrl+J', desc: '切换日志面板' },
+      { keys: 'Ctrl+=', desc: '放大' },
+      { keys: 'Ctrl+-', desc: '缩小' },
+      { keys: 'F11', desc: '全屏' },
+    ],
+  },
+  {
+    category: '工作区',
+    items: [
+      { keys: 'Ctrl+Shift+E', desc: '设计视图' },
+      { keys: 'Ctrl+Shift+D', desc: '设备视图' },
+      { keys: 'Ctrl+Shift+W', desc: '布线视图' },
+      { keys: 'Ctrl+Shift+V', desc: '可视化视图' },
+      { keys: 'Ctrl+K', desc: '快捷键参考' },
+    ],
+  },
+]
+
+function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[520px] max-h-[80vh] overflow-auto border border-gray-200 dark:border-gray-700"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">快捷键参考</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          {SHORTCUTS.map((group) => (
+            <div key={group.category}>
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                {group.category}
+              </h3>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <div key={item.keys} className="flex items-center justify-between py-1">
+                    <span className="text-xs text-gray-600 dark:text-gray-300">{item.desc}</span>
+                    <kbd className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                      {item.keys}
+                    </kbd>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

@@ -48,6 +48,10 @@ export interface TopologyNode {
   endU?: number
   powerWatts?: number
   uHeight?: number
+  /** V2.4.2: 布局层级提示 (core/spine/leaf/server/access/agg) */
+  layerHint?: string
+  /** V2.4.2: 最大端口数 */
+  maxPorts?: number
 }
 
 export interface TopologyEdge {
@@ -56,6 +60,8 @@ export interface TopologyEdge {
   speed: string
   cableType: string
   description: string
+  /** V2.4.2: 网络类型 (param/storage/oob/biz) */
+  networkType?: string
 }
 
 /* ---------- V2.4 估算相关类型 ---------- */

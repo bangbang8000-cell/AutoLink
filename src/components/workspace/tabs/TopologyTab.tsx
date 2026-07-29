@@ -37,6 +37,11 @@ import {
   type TopologyNodeData,
 } from './topology/TopologyNodes'
 import {
+  PodGroupNode,
+  getPodColor,
+  type PodGroupNodeData,
+} from './topology/PodGroupNode'
+import {
   computeTopologyLayout,
 } from './topology/topologyLayout'
 
@@ -45,6 +50,7 @@ import {
 const nodeTypes: NodeTypes = {
   server: ServerNode,
   switch: SwitchNode,
+  podGroup: PodGroupNode,
 }
 
 /* ---------- filter ---------- */
@@ -52,8 +58,17 @@ const nodeTypes: NodeTypes = {
 type FilterType = '全部' | '参数网络' | '存储网络' | 'OOB' | '业务网络'
 const FILTER_OPTIONS: FilterType[] = ['全部', '参数网络', '存储网络', 'OOB', '业务网络']
 
-function matchFilter(description: string, cableType: string, filter: FilterType): boolean {
+/** V2.4.2: 过滤匹配，优先使用 networkType 字段，回退到 description/cableType */
+function matchFilter(description: string, cableType: string, networkType: string, filter: FilterType): boolean {
   if (filter === '全部') return true
+  // 优先使用 networkType
+  if (networkType) {
+    if (filter === '参数网络') return networkType === 'param'
+    if (filter === '存储网络') return networkType === 'storage'
+    if (filter === 'OOB') return networkType === 'oob'
+    if (filter === '业务网络') return networkType === 'biz'
+  }
+  // 回退到旧逻辑
   if (filter === '参数网络') return description.includes('参数') || cableType.includes('参数')
   if (filter === '存储网络') return description.includes('存储') || cableType.includes('存储')
   if (filter === 'OOB') return description.includes('OOB') || cableType.includes('OOB')
@@ -61,7 +76,15 @@ function matchFilter(description: string, cableType: string, filter: FilterType)
   return true
 }
 
-function getEdgeColor(description: string, cableType: string): string {
+/** V2.4.2: 边颜色，优先使用 networkType 字段 */
+function getEdgeColor(description: string, cableType: string, networkType: string): string {
+  if (networkType) {
+    if (networkType === 'param') return EDGE_COLORS.param
+    if (networkType === 'storage') return EDGE_COLORS.storage
+    if (networkType === 'oob') return EDGE_COLORS.oob
+    if (networkType === 'biz') return EDGE_COLORS.biz
+  }
+  // 回退到旧逻辑
   if (description.includes('参数') || cableType.includes('参数')) return EDGE_COLORS.param
   if (description.includes('存储') || cableType.includes('存储')) return EDGE_COLORS.storage
   if (description.includes('OOB') || cableType.includes('OOB')) return EDGE_COLORS.oob
@@ -72,7 +95,27 @@ function getEdgeColor(description: string, cableType: string): string {
 /* ---------- saved layout ---------- */
 
 type SavedLayout = Record<string, { x: number; y: number }>
-function getStorageKey(projectName: string): string { return `autolink-topology-rf-${projectName}` }
+
+/** V2.4.5: 布局版本号，版本升级时自动清除旧 localStorage */
+const LAYOUT_VERSION = 'v4'
+
+function getStorageKey(projectName: string): string { return `autolink-topology-${LAYOUT_VERSION}-${projectName}` }
+
+/** V2.4.5: 清除旧版本布局数据 */
+function clearOldLayoutVersions(projectName: string) {
+  try {
+    const oldKeys = [
+      `autolink-topology-v3-${projectName}`,  // V2.4.4 旧版
+      `autolink-topology-v2-${projectName}`,  // V2.4.2/3 旧版
+      `autolink-topology-rf-${projectName}`,  // V2.4 旧版
+      `autolink-topology-${projectName}`,     // 更早版本
+    ]
+    for (const key of oldKeys) {
+      if (localStorage.getItem(key)) localStorage.removeItem(key)
+    }
+  } catch { /* ignore */ }
+}
+
 function loadLayout(projectName: string): SavedLayout | null {
   try {
     const raw = localStorage.getItem(getStorageKey(projectName))
@@ -116,7 +159,11 @@ function TopologyFlowInner() {
 
   /* ---------- check saved layout ---------- */
   useEffect(() => {
-    if (selectedProjectName) setHasSavedLayout(loadLayout(selectedProjectName) !== null)
+    if (selectedProjectName) {
+      // V2.4.2: 清除旧版本布局数据
+      clearOldLayoutVersions(selectedProjectName)
+      setHasSavedLayout(loadLayout(selectedProjectName) !== null)
+    }
   }, [selectedProjectName])
 
   /* ---------- filtered data ---------- */
@@ -125,7 +172,7 @@ function TopologyFlowInner() {
     if (filter === '全部') return { filteredNodes: topology.nodes, filteredEdges: topology.edges }
     const matchingEdgeSet = new Set<string>()
     for (const edge of topology.edges) {
-      if (matchFilter(edge.description, edge.cableType, filter)) {
+      if (matchFilter(edge.description, edge.cableType, edge.networkType || '', filter)) {
         matchingEdgeSet.add(edge.source)
         matchingEdgeSet.add(edge.target)
       }
@@ -133,7 +180,7 @@ function TopologyFlowInner() {
     const nodes = topology.nodes.filter((n) => matchingEdgeSet.has(n.id))
     const nodeIds = new Set(nodes.map((n) => n.id))
     const edges = topology.edges.filter(
-      (e) => nodeIds.has(e.source) && nodeIds.has(e.target) && matchFilter(e.description, e.cableType, filter),
+      (e) => nodeIds.has(e.source) && nodeIds.has(e.target) && matchFilter(e.description, e.cableType, e.networkType || '', filter),
     )
     return { filteredNodes: nodes, filteredEdges: edges }
   }, [topology, filter])
@@ -143,7 +190,8 @@ function TopologyFlowInner() {
     if (filteredNodes.length === 0) return { nodeCount: 0, edgeCount: 0, computedNodes: [] as Node[], computedEdges: [] as Edge[] }
 
     const saved = selectedProjectName ? loadLayout(selectedProjectName) : null
-    const { layoutNodes } = computeTopologyLayout(filteredNodes, filteredEdges)
+    // V2.4.2: 新布局 API 返回 LayoutResult (含 pods 背景框信息)
+    const { layoutNodes, pods } = computeTopologyLayout(filteredNodes, filteredEdges)
 
     // 计算连接数
     const connCount = new Map<string, number>()
@@ -151,6 +199,29 @@ function TopologyFlowInner() {
       connCount.set(e.source, (connCount.get(e.source) || 0) + 1)
       connCount.set(e.target, (connCount.get(e.target) || 0) + 1)
     }
+
+    // V2.4.2: 生成 POD 背景框节点 (zIndex 较低，置于设备节点之后)
+    const podGroupNodes: Node[] = pods.map((pod, idx) => {
+      const podData: PodGroupNodeData = {
+        podid: pod.podid,
+        podIndex: idx,
+        serverCount: pod.serverCount,
+        accessCount: pod.accessCount,
+        leafCount: pod.leafCount,
+        width: pod.width,
+        height: pod.height,
+        fillColor: getPodColor(idx),
+      }
+      return {
+        id: `pod-group-${pod.podid}`,
+        type: 'podGroup',
+        position: { x: pod.x, y: pod.y },
+        data: podData as unknown as Record<string, unknown>,
+        draggable: false,
+        selectable: false,
+        zIndex: 0,
+      }
+    })
 
     const posMap = new Map(layoutNodes.map((p) => [p.id, p]))
     const nodes: Node[] = filteredNodes.map((node) => {
@@ -176,22 +247,48 @@ function TopologyFlowInner() {
           y: saved?.[node.id]?.y ?? pos?.y ?? 260,
         },
         data: data as unknown as Record<string, unknown>,
+        zIndex: 10,
       }
     })
 
-    const edges: Edge[] = filteredEdges.map((e, idx) => ({
-      id: `e-${idx}-${e.source}-${e.target}`,
-      source: e.source,
-      target: e.target,
-      style: {
-        stroke: getEdgeColor(e.description, e.cableType),
-        strokeWidth: 1.2,
-        opacity: 0.5,
-      },
-      markerEnd: { type: MarkerType.ArrowClosed, width: 8, height: 8 },
-    }))
+    // POD 背景框 + 设备节点合并（背景框在前，确保渲染在底层）
+    const allNodes = [...podGroupNodes, ...nodes]
 
-    return { nodeCount: nodes.length, edgeCount: edges.length, computedNodes: nodes, computedEdges: edges }
+    // V2.4.3: 根据布局位置动态指定 sourceHandle/targetHandle
+    // 规则：source 在 target 上方 → source 用 "down" handle, target 用 "up" handle
+    //       source 在 target 下方 → source 用 "up" handle, target 用 "down" handle
+    const edges: Edge[] = filteredEdges.map((e, idx) => {
+      const sourcePos = posMap.get(e.source)
+      const targetPos = posMap.get(e.target)
+      let sourceHandle: string | undefined
+      let targetHandle: string | undefined
+      if (sourcePos && targetPos) {
+        if (sourcePos.y <= targetPos.y) {
+          // source 在上方（或同行）：source 底部 → target 顶部
+          sourceHandle = 'down'
+          targetHandle = 'up'
+        } else {
+          // source 在下方：source 顶部 → target 底部
+          sourceHandle = 'up'
+          targetHandle = 'down'
+        }
+      }
+      return {
+        id: `e-${idx}-${e.source}-${e.target}`,
+        source: e.source,
+        target: e.target,
+        sourceHandle,
+        targetHandle,
+        style: {
+          stroke: getEdgeColor(e.description, e.cableType, e.networkType || ''),
+          strokeWidth: 1.2,
+          opacity: 0.5,
+        },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 8, height: 8 },
+      }
+    })
+
+    return { nodeCount: nodes.length, edgeCount: edges.length, computedNodes: allNodes, computedEdges: edges }
   }, [filteredNodes, filteredEdges, selectedProjectName])
 
   /* ---------- sync computed nodes/edges to state (for drag-to-move) ---------- */
@@ -215,7 +312,11 @@ function TopologyFlowInner() {
   const handleSaveLayout = useCallback(() => {
     if (!selectedProjectName) return
     const layout: SavedLayout = {}
-    for (const n of rfNodes) layout[n.id] = { x: n.position.x, y: n.position.y }
+    // V2.4.2: 排除 POD 背景框节点（id 以 pod-group- 开头），只保存设备节点
+    for (const n of rfNodes) {
+      if (n.id.startsWith('pod-group-')) continue
+      layout[n.id] = { x: n.position.x, y: n.position.y }
+    }
     saveLayout(selectedProjectName, layout)
     setHasSavedLayout(true)
     addToast('success', '拓扑布局已保存')
@@ -225,22 +326,32 @@ function TopologyFlowInner() {
     if (!selectedProjectName) return
     clearLayout(selectedProjectName)
     setHasSavedLayout(false)
-    // 触发重新计算布局
+    // 触发重新计算布局 (V2.4.2: 新布局 API 返回 LayoutResult)
     const { layoutNodes } = computeTopologyLayout(filteredNodes, filteredEdges)
+    const posMap = new Map(layoutNodes.map((p) => [p.id, p]))
     setRfNodes((prev) => prev.map((n) => {
-      const pos = layoutNodes.find((p) => p.id === n.id)
+      const pos = posMap.get(n.id)
       return pos ? { ...n, position: { x: pos.x, y: pos.y } } : n
     }))
     addToast('success', '布局已重置')
   }, [selectedProjectName, filteredNodes, filteredEdges, addToast])
 
+  /* ---------- V2.4.4: 根据节点规模动态调整画布缩放范围 ---------- */
+  const { minZoom, fitViewPadding } = useMemo(() => {
+    const n = nodeCount
+    if (n > 500) return { minZoom: 0.05, fitViewPadding: 0.15 }  // 超大规模：允许缩得更小
+    if (n > 200) return { minZoom: 0.08, fitViewPadding: 0.18 }
+    if (n > 100) return { minZoom: 0.12, fitViewPadding: 0.2 }
+    return { minZoom: 0.15, fitViewPadding: 0.25 }               // 默认
+  }, [nodeCount])
+
   const handleFitView = useCallback(() => {
-    reactFlow.fitView({ padding: 0.2, duration: 300 })
-  }, [reactFlow])
+    reactFlow.fitView({ padding: fitViewPadding, duration: 300 })
+  }, [reactFlow, fitViewPadding])
 
   const handleExportPng = useCallback(() => {
     // react-flow 没有内置导出，使用 html-to-image 或截图
-    // 简化：提示用户使用截图工具
+    // 简化：提示用户使用截图工具导出，或右键复制图片
     addToast('info', '请使用系统截图工具导出，或右键复制图片')
   }, [addToast])
 
@@ -339,8 +450,8 @@ function TopologyFlowInner() {
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.15}
+          fitViewOptions={{ padding: fitViewPadding }}
+          minZoom={minZoom}
           maxZoom={4}
           nodesDraggable
           nodesConnectable={false}

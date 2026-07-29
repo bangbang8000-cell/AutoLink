@@ -75,6 +75,7 @@ interface Window {
     shell: {
       showItemInFolder: (path: string) => void
       openPath: (path: string) => Promise<string>
+      openExternal: (url: string) => Promise<void>
     }
     dialog?: {
       openDirectory: () => Promise<string | null>

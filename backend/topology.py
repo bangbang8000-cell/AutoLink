@@ -420,7 +420,7 @@ class AccessAggTopology:
         for i in range(1, num_access + 1):
             sw = NetworkObject(
                 name=f"{self.network_name}接入_{i}",
-                obj_type=f"{self.network_name.lower()}_access",
+                obj_type=f"{self.network_type}_access",
                 group=f"{self.network_name}接入组",
                 max_ports=self.access_down_ports + self.access_up_ports
             )
@@ -437,7 +437,7 @@ class AccessAggTopology:
         for i in range(1, num_agg + 1):
             sw = NetworkObject(
                 name=f"{self.network_name}汇聚_{i}",
-                obj_type=f"{self.network_name.lower()}_agg",
+                obj_type=f"{self.network_type}_agg",
                 group=f"{self.network_name}汇聚组",
                 max_ports=self.agg_down_ports
             )
