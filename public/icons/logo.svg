@@ -1,0 +1,73 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E0F2FE"/>
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7DD3FC"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bgGrad)"/>
+
+  <!-- Network topology forming "A" shape -->
+  <!-- Connection lines (drawn first, behind nodes) -->
+  <g filter="url(#glow)">
+    <!-- Left leg of A: bottom-left to apex -->
+    <line x1="160" y1="380" x2="256" y2="140" stroke="url(#lineGrad)" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+    <!-- Right leg of A: bottom-right to apex -->
+    <line x1="352" y1="380" x2="256" y2="140" stroke="url(#lineGrad)" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+    <!-- Crossbar of A: left-mid to right-mid -->
+    <line x1="200" y1="270" x2="312" y2="270" stroke="url(#lineGrad)" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+    <!-- Additional network connections -->
+    <line x1="160" y1="380" x2="200" y2="270" stroke="url(#lineGrad)" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <line x1="352" y1="380" x2="312" y2="270" stroke="url(#lineGrad)" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <line x1="200" y1="270" x2="256" y2="140" stroke="url(#lineGrad)" stroke-width="6" stroke-linecap="round" opacity="0.4"/>
+    <line x1="312" y1="270" x2="256" y2="140" stroke="url(#lineGrad)" stroke-width="6" stroke-linecap="round" opacity="0.4"/>
+  </g>
+
+  <!-- Nodes -->
+  <!-- Apex node (top) -->
+  <circle cx="256" cy="140" r="28" fill="url(#nodeGrad)" filter="url(#glow)"/>
+  <circle cx="256" cy="140" r="12" fill="#2563EB" opacity="0.6"/>
+
+  <!-- Crossbar nodes -->
+  <circle cx="200" cy="270" r="20" fill="url(#nodeGrad)" filter="url(#glow)"/>
+  <circle cx="200" cy="270" r="8" fill="#2563EB" opacity="0.5"/>
+
+  <circle cx="312" cy="270" r="20" fill="url(#nodeGrad)" filter="url(#glow)"/>
+  <circle cx="312" cy="270" r="8" fill="#2563EB" opacity="0.5"/>
+
+  <!-- Bottom nodes -->
+  <circle cx="160" cy="380" r="24" fill="url(#nodeGrad)" filter="url(#glow)"/>
+  <circle cx="160" cy="380" r="10" fill="#2563EB" opacity="0.6"/>
+
+  <circle cx="352" cy="380" r="24" fill="url(#nodeGrad)" filter="url(#glow)"/>
+  <circle cx="352" cy="380" r="10" fill="#2563EB" opacity="0.6"/>
+
+  <!-- Subtle dot pattern in background (network feel) -->
+  <g opacity="0.08" fill="#FFFFFF">
+    <circle cx="80" cy="80" r="3"/>
+    <circle cx="432" cy="80" r="3"/>
+    <circle cx="80" cy="432" r="3"/>
+    <circle cx="432" cy="432" r="3"/>
+    <circle cx="256" cy="60" r="2"/>
+    <circle cx="60" cy="256" r="2"/>
+    <circle cx="452" cy="256" r="2"/>
+    <circle cx="256" cy="452" r="2"/>
+  </g>
+</svg>

@@ -1,7 +1,6 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, GitBranch, ExternalLink } from 'lucide-react'
-
-const APP_VERSION = '2.3.0'
 
 interface Props {
   onClose: () => void
@@ -9,6 +8,15 @@ interface Props {
 
 export function AboutDialog({ onClose }: Props) {
   const { t } = useTranslation()
+  const [appVersion, setAppVersion] = useState('2.4.0')
+
+  useEffect(() => {
+    window.electron?.app?.getVersion?.().then((v: string) => {
+      if (v) setAppVersion(v)
+    }).catch(() => {
+      // fallback to hardcoded version
+    })
+  }, [])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -25,7 +33,10 @@ export function AboutDialog({ onClose }: Props) {
 
         {/* Content */}
         <div className="p-6 text-center">
-          <div className="text-4xl mb-3">🔗</div>
+          {/* Logo */}
+          <div className="flex justify-center mb-3">
+            <img src="icons/logo.svg" alt="AutoLink" className="w-20 h-20" />
+          </div>
           <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
             {t('app.title')}
           </h1>
@@ -35,7 +46,7 @@ export function AboutDialog({ onClose }: Props) {
 
           <div className="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
             <div>
-              <span className="text-gray-400">{t('about.version')}:</span> {APP_VERSION}
+              <span className="text-gray-400">{t('about.version')}:</span> {appVersion}
             </div>
             <div>
               <span className="text-gray-400">{t('about.electron')}:</span> 28.x

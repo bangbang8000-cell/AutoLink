@@ -10,15 +10,51 @@ const __dirname = path.dirname(__filename)
 
 class AutoLinkApp {
   private mainWindow: BrowserWindow | null = null
+  private splashWindow: BrowserWindow | null = null
+  private splashStartTime = 0
 
   async initialize(): Promise<void> {
     await app.whenReady()
     initializeAppDirs()
     ensureDemoProjects()
-    this.createMainWindow()
+    this.splashStartTime = Date.now()
+    this.createSplashWindow()
     Menu.setApplicationMenu(null)
     setupIpcHandlers(this.mainWindow!)
     this.registerAppEvents()
+  }
+
+  private createSplashWindow(): void {
+    this.splashWindow = new BrowserWindow({
+      width: 440,
+      height: 360,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      movable: true,
+      center: true,
+      show: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    })
+
+    if (isDev) {
+      this.splashWindow.loadURL('http://localhost:5173/splash.html')
+    } else {
+      this.splashWindow.loadFile(path.join(__dirname, '../dist/splash.html'))
+    }
+
+    this.splashWindow.on('closed', () => {
+      this.splashWindow = null
+    })
+
+    // Create main window (hidden) while splash is showing
+    this.createMainWindow()
   }
 
   private createMainWindow(): void {
@@ -52,7 +88,22 @@ class AutoLinkApp {
       return { action: 'deny' }
     })
 
-    this.mainWindow.show()
+    // Show main window and close splash when ready (min 1.5s splash display)
+    this.mainWindow.once('ready-to-show', () => {
+      const minSplashTime = 1500
+      const elapsed = Date.now() - this.splashStartTime
+      const delay = Math.max(0, minSplashTime - elapsed)
+
+      setTimeout(() => {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+          this.mainWindow.show()
+          this.mainWindow.focus()
+        }
+        if (this.splashWindow && !this.splashWindow.isDestroyed()) {
+          this.splashWindow.close()
+        }
+      }, delay)
+    })
 
     this.mainWindow.on('closed', () => {
       this.mainWindow = null

@@ -3,6 +3,9 @@ node_modules/
 dist/
 dist-electron/
 
+# Wiki (separate repository)
+wiki/
+
 # Electron
 release/
 *.log

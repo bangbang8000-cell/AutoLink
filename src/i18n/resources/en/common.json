@@ -53,7 +53,9 @@
     "downloaded": "Download complete",
     "restartToInstall": "Restart to install",
     "error": "Update error",
-    "retry": "Retry"
+    "retry": "Retry",
+    "releaseNotes": "Release Notes",
+    "newVersionAvailable": "New version v{{version}} available. Click the icon in the top right to view."
   },
   "about": {
     "title": "About AutoLink",
