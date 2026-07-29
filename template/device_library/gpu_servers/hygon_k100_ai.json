@@ -1,0 +1,72 @@
+{
+  "id": "hygon_k100_ai",
+  "vendor": "海光",
+  "model": "K100 AI 服务器",
+  "category": "gpu_servers",
+  "description": "海光 DCU K100 AI 服务器，搭载8颗海光K100 DCU加速卡，单卡64GB HBM，国产化x86兼容架构，面向信创AI训练场景",
+  "power_watts": 4500,
+  "weight_kg": 80,
+  "u_height": 6,
+  "depth_mm": 850,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "DCU-K100AI",
+  "rail_compatible": false,
+  "spectrum_x": false,
+  "nvlink_domain": 0,
+  "rdma_type": "RoCEv2",
+  "gpu_count": 8,
+  "gpu_memory_gb": 64,
+  "gpu_model": "海光K100",
+  "price_range": "中高",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 4,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "100G",
+      "port_type": "QSFP28",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["DCU", "海光", "K100", "国产化", "信创", "AI训练"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

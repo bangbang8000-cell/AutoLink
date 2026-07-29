@@ -1,0 +1,72 @@
+{
+  "id": "nvidia_dgx_a100",
+  "vendor": "NVIDIA",
+  "model": "DGX-A100",
+  "category": "gpu_servers",
+  "description": "NVIDIA DGX-A100 GPU服务器，搭载8块A100 80GB GPU，适用于大模型训练和推理，兼容老款集群扩容场景",
+  "power_watts": 6500,
+  "weight_kg": 130,
+  "u_height": 10,
+  "depth_mm": 900,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "GPU-DGXA100",
+  "rail_compatible": true,
+  "spectrum_x": false,
+  "nvlink_domain": 256,
+  "rdma_type": "both",
+  "gpu_count": 8,
+  "gpu_memory_gb": 80,
+  "gpu_model": "A100 80GB",
+  "price_range": "高",
+  "eol_date": "2027-12-31",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 8,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-12",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "100G",
+      "port_type": "QSFP28",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["GPU", "NVIDIA", "A100", "AI训练", "深度学习", "已发布型号"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "https://www.nvidia.com/en-us/data-center/dgx-a100/",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

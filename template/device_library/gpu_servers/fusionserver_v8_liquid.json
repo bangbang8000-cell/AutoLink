@@ -1,0 +1,72 @@
+{
+  "id": "fusionserver_v8_liquid",
+  "vendor": "超聚变",
+  "model": "FusionServer V8（冷板液冷）",
+  "category": "gpu_servers",
+  "description": "超聚变 FusionServer V8 液冷 GPU 服务器，搭载8颗H100/H200 GPU，采用冷板液冷散热，单机柜功率密度可达60kW，面向高密度液冷智算中心",
+  "power_watts": 11000,
+  "weight_kg": 90,
+  "u_height": 8,
+  "depth_mm": 900,
+  "cooling": "liquid",
+  "cooling_method": "cold_plate",
+  "name_prefix": "GPU-FSV8-LC",
+  "rail_compatible": true,
+  "spectrum_x": true,
+  "nvlink_domain": 256,
+  "rdma_type": "both",
+  "gpu_count": 8,
+  "gpu_memory_gb": 80,
+  "gpu_model": "H100 80GB（可选H200）",
+  "price_range": "极高",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 8,
+      "port_speed": "400G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 1,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["GPU", "超聚变", "液冷", "冷板", "H100", "高密度", "Spectrum-X", "AI训练"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

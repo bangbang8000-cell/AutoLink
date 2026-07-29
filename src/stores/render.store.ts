@@ -17,7 +17,7 @@ export interface RenderResult {
   timestamp: string
 }
 
-export type OutputType = 'connections' | 'rackTable' | 'topology' | 'deviceList'
+export type OutputType = 'connections' | 'rackTable' | 'topology' | 'deviceList' | 'cablingGuide' | 'bom'
 
 interface RenderState {
   progress: RenderProgress

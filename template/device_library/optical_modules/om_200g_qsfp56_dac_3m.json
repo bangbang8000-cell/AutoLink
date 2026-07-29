@@ -1,0 +1,14 @@
+{
+  "id": "om_200g_qsfp56_dac_3m",
+  "speed": "200G",
+  "form_factor": "QSFP56",
+  "spec": "DAC",
+  "distance_m": 3,
+  "fiber_type": "copper",
+  "power_watts": 2,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "200G QSFP56 DAC 直连铜缆，传输距离3米，无源铜缆",
+  "tags": ["200G", "QSFP56", "DAC", "copper", "3m"]
+}

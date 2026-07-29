@@ -1,0 +1,14 @@
+{
+  "id": "om_1600g_osfp_xd_2x800g_dac_3m",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "DAC",
+  "distance_m": 3,
+  "fiber_type": "copper",
+  "power_watts": 3,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD 2x800G DAC 直连铜缆，传输距离3米，双800G无源铜缆",
+  "tags": ["1.6T", "OSFP-XD", "DAC", "copper", "3m"]
+}

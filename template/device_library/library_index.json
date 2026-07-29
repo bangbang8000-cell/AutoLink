@@ -1,16 +1,24 @@
 {
-  "version": "1.1.0",
-  "updated_at": "2026-07-28",
+  "version": "2.0.0",
+  "updated_at": "2026-07-29",
   "categories": [
     {
       "id": "gpu_servers",
       "name": "GPU服务器",
-      "description": "GPU训练/推理服务器",
+      "description": "GPU/NPU训练/推理服务器",
       "device_ids": [
         "nvidia_dgx_h100",
         "nvidia_dgx_b200",
         "nvidia_dgx_gb300_nvl72",
+        "nvidia_dgx_a100",
+        "nvidia_hgx_h200",
+        "nvidia_l20_8u",
+        "nvidia_l40s_8u",
         "huawei_atlas_900",
+        "huawei_atlas_800t_a2",
+        "hygon_k100_ai",
+        "cambricon_mlu590_8u",
+        "fusionserver_v8_liquid",
         "h3c_r5500_g7",
         "inspur_nf5688m7",
         "generic_4u_gpu"
@@ -41,6 +49,19 @@
       ]
     },
     {
+      "id": "storage_servers_parallel_fs",
+      "name": "并行文件系统存储",
+      "description": "并行文件系统存储节点（BeeGFS/IBM Scale/WekaIO/Lustre等）",
+      "device_ids": [
+        "beegfs_storage_node",
+        "ibm_spectrum_scale_node",
+        "wekaio_storage_node",
+        "huawei_oceanstor_pacific",
+        "ddn_exascaler_node",
+        "vast_data_storage_node"
+      ]
+    },
+    {
       "id": "compute_servers",
       "name": "通算服务器",
       "description": "通用计算/管理服务器",
@@ -55,7 +76,7 @@
     {
       "id": "switches_param",
       "name": "参数网络交换机",
-      "description": "RoCEv2/IB 高速参数面交换机（含Leaf/Spine/Core）",
+      "description": "RoCEv2/IB 高速参数面交换机（含Leaf/Spine/Core，支持Rail-Optimized）",
       "device_ids": [
         "nvidia_mqm9700_64_400g_ib",
         "nvidia_mqm9790_64_400g_ib",
@@ -65,12 +86,15 @@
         "nvidia_q3400_144_800g_ib",
         "nvidia_sn5600_64_400g",
         "nvidia_sn5400_64_200g",
+        "nvidia_sn5240_64_800g",
         "huawei_ce9860_4c_ei",
         "huawei_ce8860_4c_ei",
         "huawei_ce8850_64cq_ei",
+        "huawei_ce16800_64_800g",
         "h3c_s9850_64h",
         "h3c_s9820_64h",
         "h3c_s9820_8c",
+        "h3c_s12500r_48_800g",
         "ruijie_rg_s6990_64oc2xs",
         "ruijie_rg_s9910_128oc2vs",
         "ruijie_rg_s6980_64qc",
@@ -84,6 +108,7 @@
       "device_ids": [
         "h3c_s6850_56hf",
         "huawei_ce6860_48s6cq",
+        "huawei_ce6881_48s6cq",
         "nvidia_sn4600c",
         "ruijie_rg_s6510_48vs8cq",
         "generic_48p_200g"
@@ -98,8 +123,10 @@
         "h3c_s6520x_54qc_ei",
         "huawei_s5735_l48p4x_a",
         "huawei_s6730_h48x6c",
+        "huawei_s5731_h48t4xc",
         "ruijie_rg_s5310_48gt4xs",
         "ruijie_rg_s6120_48xs8cq",
+        "ruijie_rg_s6000_8c_400g",
         "generic_48p_25g"
       ]
     },
@@ -109,12 +136,50 @@
       "description": "带外管理网络交换机（含接入和汇聚）",
       "device_ids": [
         "h3c_s5130s_52p_ei",
+        "h3c_s5130s_28p_ei",
         "h3c_s5120v3_52p_ei",
         "huawei_s5735_l48t4x_a",
         "huawei_s5732_h48s6q",
         "ruijie_rg_s2928g",
         "ruijie_rg_s5750c_48gt4xs_h",
         "generic_48p_1g"
+      ]
+    },
+    {
+      "id": "optical_modules",
+      "name": "光模块",
+      "description": "100G-1.6T 光模块/DAC/AOC（SR4/DR4/DR8/FR4/LR4/CWDM4等规格）",
+      "device_ids": [
+        "om_100g_qsfp28_sr4_100m",
+        "om_100g_qsfp28_lr4_10km",
+        "om_100g_qsfp28_cwdm4_2km",
+        "om_100g_qsfp28_dac_3m",
+        "om_100g_qsfp28_aoc_5m",
+        "om_200g_qsfp56_sr4_100m",
+        "om_200g_qsfp56_fr4_2km",
+        "om_200g_qsfp56_dr4_500m",
+        "om_200g_qsfp56_dac_3m",
+        "om_200g_qsfp56_aoc_5m",
+        "om_400g_qsfpdd_sr8_100m",
+        "om_400g_qsfpdd_dr4_500m",
+        "om_400g_qsfpdd_fr4_2km",
+        "om_400g_qsfpdd_lr4_10km",
+        "om_400g_qsfpdd_2xfr4_2km",
+        "om_400g_qsfpdd_dac_3m",
+        "om_400g_osfp_dr4_500m",
+        "om_400g_osfp_8x100g_aoc_5m",
+        "om_800g_osfp_dr8_500m",
+        "om_800g_osfp_2x400g_fr4_2km",
+        "om_800g_osfp_8x100g_aoc_5m",
+        "om_800g_osfp_xd_dr8_500m",
+        "om_800g_qsfpdd_2x400g_fr4_2km",
+        "om_800g_qsfpdd_8x100g_aoc_5m",
+        "om_800g_osfp_sr8_100m",
+        "om_800g_osfp_2x400g_dac_3m",
+        "om_1600g_osfp_xd_dr8_500m",
+        "om_1600g_osfp_xd_2x800g_aoc_5m",
+        "om_1600g_osfp_xd_sr8_100m",
+        "om_1600g_osfp_xd_2x800g_dac_3m"
       ]
     }
   ]

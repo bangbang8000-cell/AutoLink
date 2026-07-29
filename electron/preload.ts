@@ -43,6 +43,10 @@ const electronAPI = {
       ipcRenderer.invoke('design:generate', projectName, configINI),
     validate: (projectName: string, configINI?: string) =>
       ipcRenderer.invoke('design:validate', projectName, configINI),
+    estimate: (projectName: string, estimateParams?: Record<string, unknown>) =>
+      ipcRenderer.invoke('design:estimate', projectName, estimateParams),
+    report: (projectName: string) =>
+      ipcRenderer.invoke('design:report', projectName),
   },
   render: {
     exportConnections: (projectName: string, outputTypes: string[]) =>

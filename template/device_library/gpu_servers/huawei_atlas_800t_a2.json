@@ -1,0 +1,72 @@
+{
+  "id": "huawei_atlas_800t_a2",
+  "vendor": "华为",
+  "model": "Atlas 800T A2",
+  "category": "gpu_servers",
+  "description": "华为昇腾 Atlas 800T A2 训练服务器，搭载8颗昇腾910B NPU，单卡64GB HBM，面向国产化大模型训练场景",
+  "power_watts": 6200,
+  "weight_kg": 120,
+  "u_height": 8,
+  "depth_mm": 900,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "NPU-Atlas800T-A2",
+  "rail_compatible": true,
+  "spectrum_x": false,
+  "nvlink_domain": 0,
+  "rdma_type": "RoCEv2",
+  "gpu_count": 8,
+  "gpu_memory_gb": 64,
+  "gpu_model": "昇腾910B",
+  "price_range": "高",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 8,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "100G",
+      "port_type": "QSFP28",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["NPU", "华为", "昇腾", "910B", "国产化", "AI训练", "大模型"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "https://e.huawei.com/cn/products/computing/ascend/atlas-800-t-a2",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

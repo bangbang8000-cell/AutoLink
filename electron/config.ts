@@ -13,9 +13,9 @@ export function getAppPath(...segments: string[]): string {
 
 export function initializeAppDirs(): void {
   const userData = app.getPath('userData')
+  // 打包后模板从 resourcesPath/template 只读访问，仅需创建 workspace 目录
   const dirs = [
     path.join(userData, 'workspace'),
-    path.join(userData, 'templates'),
   ]
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) {
@@ -35,7 +35,8 @@ export function getTemplatePath(): string {
   if (isDev) {
     return path.join(process.cwd(), 'template')
   }
-  return path.join(app.getPath('userData'), 'templates')
+  // 打包后模板（含设备库）随 extraResources 复制到 resourcesPath/template
+  return path.join(process.resourcesPath, 'template')
 }
 
 export function getBackendPath(): string {
@@ -52,56 +53,35 @@ export function ensureDemoProjects(): void {
     fs.mkdirSync(wsp, { recursive: true })
   }
 
-  // Check if workspace already has projects
+  // 若 workspace 已有项目，不重复创建
   const existing = fs.readdirSync(wsp, { withFileTypes: true })
     .filter((d) => d.isDirectory())
   if (existing.length > 0) return
 
-  const demoData = getDemoDataPath()
-  if (!fs.existsSync(demoData)) return
-
+  // 内置示例项目：从 template 复制 network_config.ini 即可，
+  // 用户打开项目后点击"生成拓扑"即可查看完整效果
   const demoProjects = [
-    { name: 'Demo-128台H100', topology: '128H100_topology.json', rack: '128H100_rack_layout.json', output: '128H100_output' },
-    { name: 'Demo-100台H100', topology: '100H100_topology.json', rack: '100H100_rack_layout.json', output: '100H100_output' },
+    { name: '示例-H100-100台', tpl: 'H100-100台', desc: '100台H100 GPU + 14存储 + 20通算 — 入门示例' },
+    { name: '示例-H100-128台', tpl: 'H100-128台', desc: '128台H100 GPU (4组Rail) + 14存储 + 20通算 — Rail-Optimized 示例' },
+    { name: '示例-L20-推理-64', tpl: 'L20-推理-64', desc: '64台L20推理集群 — 推理场景示例' },
   ]
 
+  const tplPath = getTemplatePath()
   for (const dp of demoProjects) {
     const projectDir = path.join(wsp, dp.name)
     fs.mkdirSync(projectDir, { recursive: true })
     fs.mkdirSync(path.join(projectDir, 'output'), { recursive: true })
 
-    // Copy topology result
-    const topoFile = path.join(demoData, dp.topology)
-    if (fs.existsSync(topoFile)) {
-      fs.copyFileSync(topoFile, path.join(projectDir, 'topology_result.json'))
-    }
-
-    // Copy rack layout
-    const rackFile = path.join(demoData, dp.rack)
-    if (fs.existsSync(rackFile)) {
-      fs.copyFileSync(rackFile, path.join(projectDir, 'rack_layout.json'))
-    }
-
-    // Copy config from template
-    const tplName = dp.name.includes('128') ? 'H100-128台' : 'H100-100台'
-    const tplConfig = path.join(getTemplatePath(), tplName, 'network_config.ini')
+    // 从模板复制配置
+    const tplConfig = path.join(tplPath, dp.tpl, 'network_config.ini')
     if (fs.existsSync(tplConfig)) {
       fs.copyFileSync(tplConfig, path.join(projectDir, 'network_config.ini'))
     }
 
-    // Copy Excel output
-    const outputSrc = path.join(demoData, dp.output)
-    if (fs.existsSync(outputSrc)) {
-      const files = fs.readdirSync(outputSrc)
-      for (const f of files) {
-        fs.copyFileSync(path.join(outputSrc, f), path.join(projectDir, 'output', f))
-      }
-    }
-
-    // Create project.json
+    // 创建 project.json
     const meta = {
       name: dp.name,
-      description: `${dp.name.includes('128') ? '128' : '100'}台H100 GPU (4组) + 14存储 + 20通算 — 内置Demo项目`,
+      description: dp.desc,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       version: 1,

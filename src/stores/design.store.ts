@@ -58,6 +58,68 @@ export interface TopologyEdge {
   description: string
 }
 
+/* ---------- V2.4 估算相关类型 ---------- */
+
+export interface PUEEstimate {
+  pue: number
+  coolingPue: number
+  powerDistributionPue: number
+  otherPue: number
+  totalPowerKw: number
+  coolingPowerKw: number
+  upsLossKw: number
+  estimatedCoolingMethod: string
+  meetsTarget: boolean
+  recommendation: string
+  itPowerKw: number
+  serverPowerW: number
+  switchPowerW: number
+}
+
+export interface ConvergenceEstimate {
+  networkType: string
+  downlinkBwGbps: number
+  uplinkBwGbps: number
+  convergenceRatio: number
+  isBlocking: boolean
+  targetRatio: number
+  meetsTarget: boolean
+  recommendation: string
+}
+
+export interface CabinetDensity {
+  power_per_cabinet_w: number
+  density_level: string
+  recommended_cooling: string
+  total_power_kw: number
+  num_cabinets: number
+  avg_u_height: number
+}
+
+export interface EstimateInputs {
+  cooling_method: string
+  outdoor_temp_c: number
+  load_factor: number
+  ups_efficiency: number
+  has_free_cooling: boolean
+}
+
+export interface EstimationResult {
+  pue: PUEEstimate
+  convergence: Record<string, ConvergenceEstimate>
+  cabinetDensity: CabinetDensity
+  inputs: EstimateInputs
+  error?: string
+}
+
+export interface EstimateParams {
+  cooling_method?: 'air' | 'cold_plate' | 'immersion'
+  outdoor_temp_c?: number
+  load_factor?: number
+  ups_efficiency?: number
+  has_free_cooling?: boolean
+}
+
 /* ---------- defaults ---------- */
 
 export const defaultDesignConfig: DesignConfig = {
@@ -131,7 +193,9 @@ interface DesignState {
   summary: DesignSummary | null
   valid: boolean | null
   topology: { nodes: TopologyNode[]; edges: TopologyEdge[] } | null
+  estimation: EstimationResult | null
   generating: boolean
+  estimating: boolean
   error: string | null
   configLoaded: boolean
   projectName: string | null
@@ -143,6 +207,7 @@ interface DesignState {
   saveConfig: (projectName: string) => Promise<void>
   generate: (projectName: string) => Promise<void>
   validate: (projectName: string) => Promise<void>
+  estimate: (projectName: string, params?: EstimateParams) => Promise<void>
   clearResults: () => void
 }
 
@@ -153,7 +218,9 @@ export const useDesignStore = create<DesignState>()(
   summary: null,
   valid: null,
   topology: null,
+  estimation: null,
   generating: false,
+  estimating: false,
   error: null,
   configLoaded: false,
   projectName: null,
@@ -214,7 +281,7 @@ export const useDesignStore = create<DesignState>()(
   },
 
   generate: async (projectName) => {
-    set({ generating: true, error: null, summary: null, topology: null, valid: null })
+    set({ generating: true, error: null, summary: null, topology: null, valid: null, estimation: null })
     try {
       const { config } = get()
       const ini = configToINI(config)
@@ -226,18 +293,35 @@ export const useDesignStore = create<DesignState>()(
         summary: DesignSummary
         topology: { nodes: TopologyNode[]; edges: TopologyEdge[] }
         valid: boolean
+        estimation?: EstimationResult
       }
 
       set({
         summary: result.summary ?? null,
         topology: result.topology ?? null,
         valid: result.valid ?? null,
+        estimation: result.estimation ?? null,
         projectName,
       })
     } catch (err) {
       set({ error: (err as Error).message })
     } finally {
       set({ generating: false })
+    }
+  },
+
+  estimate: async (projectName, params) => {
+    set({ estimating: true, error: null })
+    try {
+      if (!window.electron?.design?.estimate) {
+        throw new Error('IPC 桥接未就绪')
+      }
+      const result = (await window.electron.design.estimate(projectName, (params || {}) as Record<string, unknown>)) as EstimationResult
+      set({ estimation: result, projectName })
+    } catch (err) {
+      set({ error: (err as Error).message })
+    } finally {
+      set({ estimating: false })
     }
   },
 
@@ -262,7 +346,7 @@ export const useDesignStore = create<DesignState>()(
     }
   },
 
-  clearResults: () => set({ summary: null, topology: null, valid: null, error: null }),
+  clearResults: () => set({ summary: null, topology: null, valid: null, estimation: null, error: null }),
   }),
   {
     name: 'autolink-design-state',

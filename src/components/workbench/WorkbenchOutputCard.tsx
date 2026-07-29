@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { FileSpreadsheet, GitBranch, Table2, List } from 'lucide-react'
+import { FileSpreadsheet, GitBranch, Table2, List, Cable, Calculator } from 'lucide-react'
 import { useRenderStore, type OutputType } from '@/stores/render.store'
 
 const outputDefs: { type: OutputType; icon: React.ReactNode; labelKey: string; descKey: string }[] = [
@@ -27,6 +27,18 @@ const outputDefs: { type: OutputType; icon: React.ReactNode; labelKey: string; d
     icon: <List size={14} className="text-gray-400" />,
     labelKey: 'workbench:deviceList',
     descKey: 'workbench:deviceListDesc',
+  },
+  {
+    type: 'cablingGuide',
+    icon: <Cable size={14} className="text-gray-400" />,
+    labelKey: 'workbench:cablingGuide',
+    descKey: 'workbench:cablingGuideDesc',
+  },
+  {
+    type: 'bom',
+    icon: <Calculator size={14} className="text-gray-400" />,
+    labelKey: 'workbench:bom',
+    descKey: 'workbench:bomDesc',
   },
 ]
 

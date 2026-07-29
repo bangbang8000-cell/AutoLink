@@ -26,6 +26,8 @@ interface Window {
     design: {
       generate: (projectName: string, configINI?: string) => Promise<unknown>
       validate: (projectName: string, configINI?: string) => Promise<unknown>
+      estimate: (projectName: string, estimateParams?: Record<string, unknown>) => Promise<unknown>
+      report: (projectName: string) => Promise<unknown>
     }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>

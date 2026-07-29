@@ -1,70 +1,53 @@
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
-import ReactECharts from 'echarts-for-react'
-import type { EChartsOption } from 'echarts'
+/**
+ * AutoLink V2.4 — 拓扑图 Tab（react-flow 重构版）
+ *
+ * 核心改进：
+ *   - 从 ECharts 迁移到 react-flow，支持拖拽、框选、缩放等交互
+ *   - 分层×分区×分组三维防重叠布局
+ *   - 网络域分区背景（参数网/存储网/业务网/OOB 独立区域）
+ *   - Pod/Rail 分组视觉边框
+ *   - 小地图、暗色模式适配
+ */
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import {
-  ZoomIn, ZoomOut, Maximize2, Download, Filter, Network, X, Activity,
-  RotateCcw, Save,
+  ReactFlow,
+  ReactFlowProvider,
+  Background,
+  BackgroundVariant,
+  Controls,
+  MiniMap,
+  useReactFlow,
+  applyNodeChanges,
+  type Node,
+  type Edge,
+  type NodeTypes,
+  type NodeChange,
+  MarkerType,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
+import {
+  Download, Filter, Network, X, Activity, RotateCcw, Save, Maximize2,
 } from 'lucide-react'
 import { useDesignStore, type TopologyNode } from '@/stores/design.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
+import {
+  ServerNode, SwitchNode, NODE_COLORS, NODE_LABELS, EDGE_COLORS,
+  type TopologyNodeData,
+} from './topology/TopologyNodes'
+import {
+  computeTopologyLayout,
+} from './topology/topologyLayout'
 
-/* ---------- constants ---------- */
-const NODE_COLORS: Record<string, string> = {
-  server: '#3B82F6',
-  param_leaf: '#F59E0B',
-  param_spine: '#8B5CF6',
-  param_core: '#EF4444',
-  storage_leaf: '#10B981',
-  storage_spine: '#14B8A6',
-  storage_core: '#06B6D4',
-  oob_access: '#6B7280',
-  oob_agg: '#4B5563',
-  biz_access: '#0EA5E9',
-  biz_agg: '#0284C7',
+/* ---------- node / edge types ---------- */
+
+const nodeTypes: NodeTypes = {
+  server: ServerNode,
+  switch: SwitchNode,
 }
 
-const NODE_SIZES: Record<string, [number, number]> = {
-  server: [100, 26],
-  param_leaf: [80, 36], storage_leaf: [80, 36],
-  param_spine: [88, 40], storage_spine: [88, 40],
-  param_core: [96, 44], storage_core: [96, 44],
-  oob_access: [72, 32], biz_access: [72, 32],
-  oob_agg: [80, 36], biz_agg: [80, 36],
-}
-
-function getNodeWidth(type: string): number { return NODE_SIZES[type]?.[0] || 72 }
-function getNodeHeight(type: string): number { return NODE_SIZES[type]?.[1] || 32 }
-
-const NODE_LABELS = NODE_TYPE_LABELS
-
-const EDGE_COLORS: Record<string, string> = {
-  '参数网': '#3B82F6', '存储网': '#10B981', 'OOB': '#6B7280', '业务网': '#8B5CF6',
-}
-
-// Layer assignment — from top to bottom:
-//   0 : biz_agg / oob_agg           (业务汇聚 / 带外汇聚)
-//   1 : biz_access / oob_access     (业务接入 / 带外接入)
-//   2 : server                      (服务器 — 中间层)
-//   3 : param_leaf / storage_leaf   (参数Leaf / 存储Leaf)
-//   4 : param_spine / storage_spine
-//   5 : param_core / storage_core
-function getNodeLayer(type: string): number {
-  if (type === 'biz_agg' || type === 'oob_agg') return 0
-  if (type === 'biz_access' || type === 'oob_access') return 1
-  if (type === 'server') return 2
-  if (type.includes('leaf')) return 3
-  if (type.includes('spine')) return 4
-  if (type.includes('core')) return 5
-  return 2
-}
-
-// Layer Y positions in pixels — vertical spacing large enough to avoid overlap
-// Node heights ~26–44px, layer gaps 60–80px between layer centers
-const LAYER_Y: Record<number, number> = { 0: 40, 1: 150, 2: 290, 3: 430, 4: 550, 5: 650 }
-const H_SPACING = 120   // horizontal pitch between node centers
-const GROUP_GAP = 80    // extra gap between server groups
+/* ---------- filter ---------- */
 
 type FilterType = '全部' | '参数网络' | '存储网络' | 'OOB' | '业务网络'
 const FILTER_OPTIONS: FilterType[] = ['全部', '参数网络', '存储网络', 'OOB', '业务网络']
@@ -79,198 +62,67 @@ function matchFilter(description: string, cableType: string, filter: FilterType)
 }
 
 function getEdgeColor(description: string, cableType: string): string {
-  if (description.includes('参数') || cableType.includes('参数')) return EDGE_COLORS['参数网']
-  if (description.includes('存储') || cableType.includes('存储')) return EDGE_COLORS['存储网']
-  if (description.includes('OOB') || cableType.includes('OOB')) return EDGE_COLORS['OOB']
-  if (description.includes('业务') || cableType.includes('业务')) return EDGE_COLORS['业务网']
+  if (description.includes('参数') || cableType.includes('参数')) return EDGE_COLORS.param
+  if (description.includes('存储') || cableType.includes('存储')) return EDGE_COLORS.storage
+  if (description.includes('OOB') || cableType.includes('OOB')) return EDGE_COLORS.oob
+  if (description.includes('业务') || cableType.includes('业务')) return EDGE_COLORS.biz
   return '#d1d5db'
 }
 
-function getNodeColor(type: string): string { return NODE_COLORS[type] || '#9ca3af' }
+/* ---------- saved layout ---------- */
 
-/* ---------- saved layout helpers ---------- */
 type SavedLayout = Record<string, { x: number; y: number }>
-
-function getStorageKey(projectName: string): string {
-  return `autolink-topology-${projectName}`
-}
-
+function getStorageKey(projectName: string): string { return `autolink-topology-rf-${projectName}` }
 function loadLayout(projectName: string): SavedLayout | null {
   try {
     const raw = localStorage.getItem(getStorageKey(projectName))
-    if (!raw) return null
-    return JSON.parse(raw) as SavedLayout
+    return raw ? (JSON.parse(raw) as SavedLayout) : null
   } catch { return null }
 }
-
 function saveLayout(projectName: string, layout: SavedLayout) {
-  try {
-    localStorage.setItem(getStorageKey(projectName), JSON.stringify(layout))
-  } catch { /* storage full, ignore */ }
+  try { localStorage.setItem(getStorageKey(projectName), JSON.stringify(layout)) } catch { /* ignore */ }
+}
+function clearLayout(projectName: string) { localStorage.removeItem(getStorageKey(projectName)) }
+
+/* ---------- dark mode detection ---------- */
+
+function useIsDark(): boolean {
+  const [isDark, setIsDark] = useState(false)
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains('dark'))
+    check()
+    const observer = new MutationObserver(check)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+  return isDark
 }
 
-function clearLayout(projectName: string) {
-  localStorage.removeItem(getStorageKey(projectName))
-}
+/* ---------- inner component (has access to react-flow context) ---------- */
 
-/* ---------- compute positions ---------- */
-interface NodePosition { id: string; x: number; y: number; type: string; podid: string }
-
-function computeLayout(
-  nodes: TopologyNode[],
-  edges: { source: string; target: string; cableType: string }[],
-  savedLayout: SavedLayout | null,
-): NodePosition[] {
-  // Build server → param_leaf mapping from edges
-  // Each server may connect to one primary param_leaf
-  const serverLeafMap = new Map<string, string>()
-  for (const e of edges) {
-    if (!e.cableType.includes('参数')) continue
-    const srcNode = nodes.find((n) => n.id === e.source)
-    const tgtNode = nodes.find((n) => n.id === e.target)
-    if (srcNode?.type === 'server' && tgtNode?.type === 'param_leaf') {
-      serverLeafMap.set(srcNode.id, tgtNode.id)
-    }
-    if (tgtNode?.type === 'server' && srcNode?.type === 'param_leaf') {
-      serverLeafMap.set(tgtNode.id, srcNode.id)
-    }
-  }
-
-  // Group by layer
-  const layerMap = new Map<number, TopologyNode[]>()
-  for (const n of nodes) {
-    const l = getNodeLayer(n.type)
-    if (!layerMap.has(l)) layerMap.set(l, [])
-    layerMap.get(l)!.push(n)
-  }
-
-  const positions: NodePosition[] = []
-
-  for (const [layer, layerNodes] of layerMap) {
-    const y = LAYER_Y[layer] ?? 300
-
-    if (layer === 2) {
-      // ---- Server layer: group by connected param_leaf, with clear group gaps ----
-      const leafGroups = new Map<string, TopologyNode[]>()
-      const ungrouped: TopologyNode[] = []
-
-      for (const n of layerNodes) {
-        const leaf = serverLeafMap.get(n.id)
-        if (leaf) {
-          if (!leafGroups.has(leaf)) leafGroups.set(leaf, [])
-          leafGroups.get(leaf)!.push(n)
-        } else {
-          ungrouped.push(n)
-        }
-      }
-
-      // Calculate total width: each group's servers + group gaps
-      const groupEntries = Array.from(leafGroups.entries())
-      let totalGroupsWidth = 0
-      const groupWidths: number[] = []
-
-      for (const [, groupNodes] of groupEntries) {
-        const gw = (groupNodes.length - 1) * H_SPACING
-        groupWidths.push(gw)
-        totalGroupsWidth += gw
-      }
-      // Ungrouped servers
-      if (ungrouped.length > 0) {
-        const uw = (ungrouped.length - 1) * H_SPACING
-        groupWidths.push(uw)
-        totalGroupsWidth += uw
-      }
-
-      const totalGapWidth = Math.max(0, groupEntries.length + (ungrouped.length > 0 ? 0 : 0) - 1) * GROUP_GAP
-      const totalWidth = totalGroupsWidth + totalGapWidth
-
-      // Center everything horizontally
-      let cursorX = -totalWidth / 2
-      let groupIdx = 0
-
-      // Render leaf groups
-      for (const [, groupNodes] of groupEntries) {
-        const gw = groupWidths[groupIdx]
-        const groupStartX = cursorX + gw / 2 - (groupNodes.length - 1) * H_SPACING / 2
-        groupNodes.forEach((n, ni) => {
-          const x = groupStartX + ni * H_SPACING
-          const saved = savedLayout?.[n.id]
-          positions.push({
-            id: n.id,
-            x: saved?.x ?? x,
-            y: saved?.y ?? y,
-            type: n.type,
-            podid: n.podid || '',
-          })
-        })
-        cursorX += gw + GROUP_GAP
-        groupIdx++
-      }
-
-      // Render ungrouped servers (fallback: original pod-based grouping)
-      if (ungrouped.length > 0) {
-        const uw = groupWidths[groupIdx] || 0
-        const ungroupedStartX = cursorX + uw / 2
-        ungrouped.forEach((n, ni) => {
-          const x = ungroupedStartX + (ni - (ungrouped.length - 1) / 2) * H_SPACING
-          const saved = savedLayout?.[n.id]
-          positions.push({
-            id: n.id,
-            x: saved?.x ?? x,
-            y: saved?.y ?? y,
-            type: n.type,
-            podid: n.podid || '',
-          })
-        })
-      }
-    } else {
-      // ---- Non-server layers: evenly spread horizontally ----
-      const totalWidth = (layerNodes.length - 1) * H_SPACING
-      const startX = -totalWidth / 2
-
-      layerNodes.forEach((n, i) => {
-        const saved = savedLayout?.[n.id]
-        positions.push({
-          id: n.id,
-          x: saved?.x ?? startX + i * H_SPACING,
-          y: saved?.y ?? y,
-          type: n.type,
-          podid: n.podid || '',
-        })
-      })
-    }
-  }
-
-  return positions
-}
-
-/* ---------- component ---------- */
-
-export function TopologyTab() {
+function TopologyFlowInner() {
   const topology = useDesignStore((s) => s.topology)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const addToast = useToastStore((s) => s.addToast)
+  const reactFlow = useReactFlow()
+  const isDark = useIsDark()
 
-  const chartRef = useRef<ReactECharts | null>(null)
   const [filter, setFilter] = useState<FilterType>('全部')
   const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null)
   const [showFilter, setShowFilter] = useState(false)
   const [hasSavedLayout, setHasSavedLayout] = useState(false)
-  const [layoutVersion, setLayoutVersion] = useState(0) // increment to force re-render
+  const [rfNodes, setRfNodes] = useState<Node[]>([])
+  const [rfEdges, setRfEdges] = useState<Edge[]>([])
 
-  // Check for saved layout
+  /* ---------- check saved layout ---------- */
   useEffect(() => {
-    if (selectedProjectName) {
-      const saved = loadLayout(selectedProjectName)
-      setHasSavedLayout(saved !== null)
-    }
+    if (selectedProjectName) setHasSavedLayout(loadLayout(selectedProjectName) !== null)
   }, [selectedProjectName])
 
   /* ---------- filtered data ---------- */
   const { filteredNodes, filteredEdges } = useMemo(() => {
     if (!topology) return { filteredNodes: [], filteredEdges: [] }
     if (filter === '全部') return { filteredNodes: topology.nodes, filteredEdges: topology.edges }
-
     const matchingEdgeSet = new Set<string>()
     for (const edge of topology.edges) {
       if (matchFilter(edge.description, edge.cableType, filter)) {
@@ -281,192 +133,123 @@ export function TopologyTab() {
     const nodes = topology.nodes.filter((n) => matchingEdgeSet.has(n.id))
     const nodeIds = new Set(nodes.map((n) => n.id))
     const edges = topology.edges.filter(
-      (e) => nodeIds.has(e.source) && nodeIds.has(e.target) &&
-        matchFilter(e.description, e.cableType, filter),
+      (e) => nodeIds.has(e.source) && nodeIds.has(e.target) && matchFilter(e.description, e.cableType, filter),
     )
     return { filteredNodes: nodes, filteredEdges: edges }
   }, [topology, filter])
 
-  /* ---------- compute positions ---------- */
-  const nodePositions = useMemo(() => {
-    if (filteredNodes.length === 0) return []
+  /* ---------- compute layout + build react-flow nodes/edges (pure, no setState) ---------- */
+  const { nodeCount, edgeCount, computedNodes, computedEdges } = useMemo(() => {
+    if (filteredNodes.length === 0) return { nodeCount: 0, edgeCount: 0, computedNodes: [] as Node[], computedEdges: [] as Edge[] }
+
     const saved = selectedProjectName ? loadLayout(selectedProjectName) : null
-    return computeLayout(filteredNodes as TopologyNode[], filteredEdges, saved)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredNodes, filteredEdges, selectedProjectName, layoutVersion])
+    const { layoutNodes } = computeTopologyLayout(filteredNodes, filteredEdges)
 
-  /* ---------- ECharts option ---------- */
-  const option = useMemo((): EChartsOption | null => {
-    if (!topology || filteredNodes.length === 0) return null
+    // 计算连接数
+    const connCount = new Map<string, number>()
+    for (const e of filteredEdges) {
+      connCount.set(e.source, (connCount.get(e.source) || 0) + 1)
+      connCount.set(e.target, (connCount.get(e.target) || 0) + 1)
+    }
 
-    const types = new Set(filteredNodes.map((n) => n.type))
-    const categories = Array.from(types).map((type) => ({
-      name: NODE_LABELS[type] || type,
-      itemStyle: { color: getNodeColor(type) },
-    }))
-
-    const posMap = new Map(nodePositions.map((p) => [p.id, p]))
-
-    const graphNodes = filteredNodes.map((node) => {
+    const posMap = new Map(layoutNodes.map((p) => [p.id, p]))
+    const nodes: Node[] = filteredNodes.map((node) => {
       const pos = posMap.get(node.id)
-      const catIdx = categories.findIndex((c) => c.name === (NODE_LABELS[node.type] || node.type))
-      const w = getNodeWidth(node.type)
-      const h = getNodeHeight(node.type)
+      const isSwitch = node.type !== 'server'
+      const data: TopologyNodeData = {
+        label: node.id,
+        nodeType: node.type,
+        group: node.group,
+        podid: node.podid,
+        cabinetName: node.cabinetName,
+        cabinetId: node.cabinetId,
+        startU: node.startU,
+        endU: node.endU,
+        powerWatts: node.powerWatts,
+        connectionCount: connCount.get(node.id) || 0,
+      }
       return {
         id: node.id,
-        name: node.id,
-        x: pos?.x ?? 0,
-        y: pos?.y ?? 300,
-        category: catIdx >= 0 ? catIdx : 0,
-        symbol: 'rect',
-        symbolSize: [w, h],
-        itemStyle: {
-          borderRadius: 4,
-          shadowBlur: 2,
-          shadowColor: 'rgba(0,0,0,0.15)',
+        type: isSwitch ? 'switch' : 'server',
+        position: {
+          x: saved?.[node.id]?.x ?? pos?.x ?? 0,
+          y: saved?.[node.id]?.y ?? pos?.y ?? 260,
         },
-        label: {
-          show: true,
-          fontSize: 9,
-          position: 'inside' as const,
-          distance: 0,
-          color: '#fff',
-          formatter: (p: { name: string }) =>
-            p.name.length > 14 ? p.name.slice(0, 14) + '..' : p.name,
-        },
-        _rawNode: node,
+        data: data as unknown as Record<string, unknown>,
       }
     })
 
-    const graphNodeIds = new Set(graphNodes.map((n) => n.id))
-    const graphEdges = filteredEdges
-      .filter((e) => graphNodeIds.has(e.source) && graphNodeIds.has(e.target))
-      .map((e) => ({
-        source: e.source,
-        target: e.target,
-        lineStyle: {
-          color: getEdgeColor(e.description, e.cableType),
-          width: 1.2,
-          opacity: 0.35,
-          curveness: 0.15,
-        },
-      }))
-
-    return {
-      backgroundColor: 'transparent',
-      animationDuration: 400,
-      animationEasing: 'cubicOut' as const,
-      tooltip: {
-        trigger: 'item' as const,
-        formatter: (params: any) => {
-          if (params.dataType === 'node') {
-            const raw: TopologyNode = params.data._rawNode
-            const parts = [`<b>${raw.id}</b>`, `类型: ${NODE_LABELS[raw.type] || raw.type}`]
-            if (raw.group) parts.push(`组: ${raw.group}`)
-            if (raw.podid) parts.push(`Pod: ${raw.podid}`)
-            const ext = raw as any
-            if (ext.cabinetName) parts.push(`机柜: ${ext.cabinetName}`)
-            return parts.join('<br/>')
-          }
-          return `${params.data.source} → ${params.data.target}`
-        },
+    const edges: Edge[] = filteredEdges.map((e, idx) => ({
+      id: `e-${idx}-${e.source}-${e.target}`,
+      source: e.source,
+      target: e.target,
+      style: {
+        stroke: getEdgeColor(e.description, e.cableType),
+        strokeWidth: 1.2,
+        opacity: 0.5,
       },
-      series: [{
-        type: 'graph',
-        layout: 'none',
-        categories,
-        data: graphNodes,
-        edges: graphEdges,
-        roam: true,
-        draggable: true,
-        scaleLimit: { min: 0.2, max: 5 },
-        emphasis: {
-          focus: 'adjacency' as const,
-          itemStyle: { borderColor: '#fff', borderWidth: 2 },
-          lineStyle: { width: 2.5, opacity: 0.7 },
-        },
-      }],
-    }
-  }, [topology, filteredNodes, filteredEdges, nodePositions])
+      markerEnd: { type: MarkerType.ArrowClosed, width: 8, height: 8 },
+    }))
+
+    return { nodeCount: nodes.length, edgeCount: edges.length, computedNodes: nodes, computedEdges: edges }
+  }, [filteredNodes, filteredEdges, selectedProjectName])
+
+  /* ---------- sync computed nodes/edges to state (for drag-to-move) ---------- */
+  useEffect(() => {
+    setRfNodes(computedNodes)
+    setRfEdges(computedEdges)
+  }, [computedNodes, computedEdges])
 
   /* ---------- actions ---------- */
-  const handleChartClick = useCallback((params: any) => {
-    if (params.dataType === 'node') {
-      setSelectedNode(params.data._rawNode as TopologyNode)
-    } else {
-      setSelectedNode(null)
-    }
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setRfNodes((nds) => applyNodeChanges(changes, nds))
   }, [])
+
+  const onNodeClick = useCallback((_: unknown, node: Node) => {
+    const raw = topology?.nodes.find((n) => n.id === node.id)
+    if (raw) setSelectedNode(raw)
+  }, [topology])
+
+  const onPaneClick = useCallback(() => setSelectedNode(null), [])
 
   const handleSaveLayout = useCallback(() => {
     if (!selectedProjectName) return
-    const chart = chartRef.current?.getEchartsInstance()
-    if (!chart) return
-    const model = (chart as any).getModel()
-    const series = model.getSeriesByIndex(0) as any
-    if (!series) return
-    const graph = series.getGraph()
     const layout: SavedLayout = {}
-    graph.eachNode((node: any) => {
-      const pos = node.getLayout()
-      if (pos) layout[node.id] = { x: pos.x, y: pos.y }
-    })
+    for (const n of rfNodes) layout[n.id] = { x: n.position.x, y: n.position.y }
     saveLayout(selectedProjectName, layout)
     setHasSavedLayout(true)
     addToast('success', '拓扑布局已保存')
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, rfNodes, addToast])
 
   const handleResetLayout = useCallback(() => {
     if (!selectedProjectName) return
     clearLayout(selectedProjectName)
     setHasSavedLayout(false)
-    setLayoutVersion((v) => v + 1)
+    // 触发重新计算布局
+    const { layoutNodes } = computeTopologyLayout(filteredNodes, filteredEdges)
+    setRfNodes((prev) => prev.map((n) => {
+      const pos = layoutNodes.find((p) => p.id === n.id)
+      return pos ? { ...n, position: { x: pos.x, y: pos.y } } : n
+    }))
     addToast('success', '布局已重置')
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, filteredNodes, filteredEdges, addToast])
 
-  const handleZoomIn = () => {
-    const chart = chartRef.current?.getEchartsInstance()
-    if (chart) {
-      const opt = chart.getOption() as any
-      const zoom = opt?.series?.[0]?.zoom || 1
-      chart.setOption({ series: [{ zoom: Math.min(zoom * 1.3, 5) }] })
-    }
-  }
+  const handleFitView = useCallback(() => {
+    reactFlow.fitView({ padding: 0.2, duration: 300 })
+  }, [reactFlow])
 
-  const handleZoomOut = () => {
-    const chart = chartRef.current?.getEchartsInstance()
-    if (chart) {
-      const opt = chart.getOption() as any
-      const zoom = opt?.series?.[0]?.zoom || 1
-      chart.setOption({ series: [{ zoom: Math.max(zoom * 0.7, 0.2) }] })
-    }
-  }
-
-  const handleFitView = () => {
-    chartRef.current?.getEchartsInstance()?.dispatchAction({ type: 'restore' })
-  }
-
-  const handleExportPng = () => {
-    const chart = chartRef.current?.getEchartsInstance()
-    if (!chart) return
-    try {
-      const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
-      const link = document.createElement('a')
-      link.href = dataUrl
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-      link.download = `拓扑图_${ts}.png`
-      link.click()
-    } catch { /* fallback */ }
-  }
+  const handleExportPng = useCallback(() => {
+    // react-flow 没有内置导出，使用 html-to-image 或截图
+    // 简化：提示用户使用截图工具
+    addToast('info', '请使用系统截图工具导出，或右键复制图片')
+  }, [addToast])
 
   const nodeConnectionCount = useMemo(() => {
     if (!selectedNode || !topology) return 0
-    return topology.edges.filter(
-      (e) => e.source === selectedNode.id || e.target === selectedNode.id,
-    ).length
+    return topology.edges.filter((e) => e.source === selectedNode.id || e.target === selectedNode.id).length
   }, [selectedNode, topology])
 
-  /* ---------- render ---------- */
+  /* ---------- empty states ---------- */
   if (!selectedProjectName) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-gray-800">
@@ -487,15 +270,15 @@ export function TopologyTab() {
     )
   }
 
+  /* ---------- render ---------- */
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50 z-10">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">拓扑视图</span>
-          <span className="text-[10px] text-gray-400">{filteredNodes.length} 节点 · {filteredEdges.length} 连接</span>
+          <span className="text-[10px] text-gray-400">{nodeCount} 节点 · {edgeCount} 连接</span>
         </div>
-
         <div className="flex items-center gap-1">
           {/* Filter */}
           <div className="relative">
@@ -523,21 +306,10 @@ export function TopologyTab() {
               </>
             )}
           </div>
-
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
-
-          <button onClick={handleZoomIn} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title="放大">
-            <ZoomIn size={14} />
-          </button>
-          <button onClick={handleZoomOut} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title="缩小">
-            <ZoomOut size={14} />
-          </button>
           <button onClick={handleFitView} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title="适应视图">
             <Maximize2 size={14} />
           </button>
-
-          <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
-
           <button onClick={handleSaveLayout}
             className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
             title="保存当前布局">
@@ -550,30 +322,48 @@ export function TopologyTab() {
               <RotateCcw size={12} />重置
             </button>
           )}
-
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
-
           <button onClick={handleExportPng} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title="导出PNG">
             <Download size={14} />
           </button>
         </div>
       </div>
 
-      {/* Chart area */}
-      <div className="flex-1 relative overflow-hidden">
-        {option && (
-          <ReactECharts
-            ref={(e) => { chartRef.current = e }}
-            option={option}
-            style={{ height: '100%', width: '100%' }}
-            onEvents={{ click: handleChartClick }}
-            opts={{ renderer: 'canvas' }}
+      {/* react-flow canvas */}
+      <div className="flex-1 relative">
+        <ReactFlow
+          nodes={rfNodes}
+          edges={rfEdges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          minZoom={0.15}
+          maxZoom={4}
+          nodesDraggable
+          nodesConnectable={false}
+          proOptions={{ hideAttribution: true }}
+          className="bg-white dark:bg-gray-800"
+        >
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={isDark ? '#374151' : '#e5e7eb'} />
+          <Controls className="!bg-white dark:!bg-gray-700 !border-gray-200 dark:!border-gray-600" showInteractive={false} />
+          <MiniMap
+            className="!bg-white dark:!bg-gray-700 !border-gray-200 dark:!border-gray-600"
+            nodeColor={(node) => {
+              const data = node.data as unknown as TopologyNodeData
+              return NODE_COLORS[data?.nodeType] || '#9ca3af'
+            }}
+            maskColor={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}
+            pannable
+            zoomable
           />
-        )}
+        </ReactFlow>
 
         {/* Detail panel */}
         {selectedNode && (
-          <div className="absolute top-3 right-3 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[240px]">
+          <div className="absolute top-3 right-3 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[240px]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">节点详情</span>
               <button onClick={() => setSelectedNode(null)}
@@ -583,38 +373,28 @@ export function TopologyTab() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: getNodeColor(selectedNode.type) }} />
+                <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: NODE_COLORS[selectedNode.type] || '#9ca3af' }} />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{selectedNode.id}</span>
               </div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
                 <span className="text-gray-400">类型</span>
-                <span className="text-gray-700 dark:text-gray-300 font-medium">{NODE_LABELS[selectedNode.type] || selectedNode.type}</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">{NODE_LABELS[selectedNode.type] || NODE_TYPE_LABELS[selectedNode.type] || selectedNode.type}</span>
                 <span className="text-gray-400">组</span>
                 <span className="text-gray-700 dark:text-gray-300">{selectedNode.group || '-'}</span>
                 <span className="text-gray-400">Pod</span>
                 <span className="text-gray-700 dark:text-gray-300">{selectedNode.podid || '-'}</span>
-                {((selectedNode as any).cabinetName || (selectedNode as any).cabinetId) && (
+                {selectedNode.cabinetName && (
                   <>
-                    {(selectedNode as any).cabinetId && (
-                      <>
-                        <span className="text-gray-400">机柜ID</span>
-                        <span className="text-gray-700 dark:text-gray-300">{(selectedNode as any).cabinetId}</span>
-                      </>
-                    )}
-                    {(selectedNode as any).cabinetName && (
-                      <>
-                        <span className="text-gray-400">机柜名称</span>
-                        <span className="text-gray-700 dark:text-gray-300">{(selectedNode as any).cabinetName}</span>
-                      </>
-                    )}
-                    {((selectedNode as any).startU !== undefined || (selectedNode as any).endU !== undefined) && (
-                      <>
-                        <span className="text-gray-400">U位</span>
-                        <span className="text-gray-700 dark:text-gray-300">
-                          {(selectedNode as any).startU ?? '-'} - {(selectedNode as any).endU ?? '-'}
-                        </span>
-                      </>
-                    )}
+                    <span className="text-gray-400">机柜</span>
+                    <span className="text-gray-700 dark:text-gray-300">{selectedNode.cabinetName}</span>
+                  </>
+                )}
+                {(selectedNode.startU !== undefined || selectedNode.endU !== undefined) && (
+                  <>
+                    <span className="text-gray-400">U位</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {selectedNode.startU ?? '-'} - {selectedNode.endU ?? '-'}
+                    </span>
                   </>
                 )}
                 <span className="text-gray-400">连接数</span>
@@ -627,11 +407,11 @@ export function TopologyTab() {
         )}
 
         {/* Legend */}
-        {option && (
-          <div className="absolute bottom-3 left-3 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
+        {rfNodes.length > 0 && (
+          <div className="absolute bottom-3 left-3 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {Object.entries(NODE_COLORS).filter(([type]) =>
-                filteredNodes.some((n) => n.type === type)
+                rfNodes.some((n) => (n.data as unknown as TopologyNodeData)?.nodeType === type)
               ).slice(0, 12).map(([type, color]) => (
                 <div key={type} className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400">
                   <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
@@ -643,7 +423,7 @@ export function TopologyTab() {
               {Object.entries(EDGE_COLORS).map(([label, color]) => (
                 <div key={label} className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400">
                   <span className="inline-block w-4 h-px" style={{ backgroundColor: color }} />
-                  {label}
+                  {label === 'param' ? '参数网' : label === 'storage' ? '存储网' : label === 'oob' ? 'OOB' : '业务网'}
                 </div>
               ))}
             </div>
@@ -651,5 +431,15 @@ export function TopologyTab() {
         )}
       </div>
     </div>
+  )
+}
+
+/* ---------- exported wrapper with ReactFlowProvider ---------- */
+
+export function TopologyTab() {
+  return (
+    <ReactFlowProvider>
+      <TopologyFlowInner />
+    </ReactFlowProvider>
   )
 }

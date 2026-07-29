@@ -1,0 +1,14 @@
+{
+  "id": "om_800g_osfp_sr8_100m",
+  "speed": "800G",
+  "form_factor": "OSFP",
+  "spec": "SR8",
+  "distance_m": 100,
+  "fiber_type": "MMF",
+  "power_watts": 16,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "800G OSFP SR8 多模光模块，传输距离100米，8x100G PAM4",
+  "tags": ["800G", "OSFP", "SR8", "MMF", "100m"]
+}

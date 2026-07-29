@@ -1,0 +1,14 @@
+{
+  "id": "om_100g_qsfp28_aoc_5m",
+  "speed": "100G",
+  "form_factor": "QSFP28",
+  "spec": "AOC",
+  "distance_m": 5,
+  "fiber_type": "MMF",
+  "power_watts": 3.5,
+  "vendors": ["NVIDIA", "华为", "H3C"],
+  "price_range": "低",
+  "category": "optical_modules",
+  "description": "100G QSFP28 AOC 有源光缆，传输距离5米，4x25G",
+  "tags": ["100G", "QSFP28", "AOC", "MMF", "5m"]
+}

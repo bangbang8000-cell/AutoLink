@@ -1,0 +1,14 @@
+{
+  "id": "om_100g_qsfp28_lr4_10km",
+  "speed": "100G",
+  "form_factor": "QSFP28",
+  "spec": "LR4",
+  "distance_m": 10000,
+  "fiber_type": "SMF",
+  "power_watts": 4,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "100G QSFP28 LR4 单模光模块，传输距离10公里，4x25G WDM",
+  "tags": ["100G", "QSFP28", "LR4", "SMF", "10km"]
+}

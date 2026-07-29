@@ -38,6 +38,24 @@ class DeviceProfile:
     port_type: Optional[str] = None
     downlink_prefix: Optional[str] = None
     uplink_prefix: Optional[str] = None
+    # V2.4 新增字段（可选，向后兼容）
+    cooling_method: str = "air"  # 'air' | 'cold_plate' | 'immersion'
+    rail_compatible: bool = False
+    spectrum_x: bool = False
+    nvlink_domain: Optional[int] = None
+    rdma_type: Optional[str] = None  # 'IB' | 'RoCEv2' | 'both'
+    gpu_count: Optional[int] = None
+    gpu_memory_gb: Optional[int] = None
+    gpu_model: Optional[str] = None
+    price_range: Optional[str] = None
+    eol_date: Optional[str] = None
+    # V2.4 光模块字段（仅 optical_modules 类别使用）
+    speed: Optional[str] = None          # '100G' | '200G' | '400G' | '800G' | '1600G'
+    form_factor: Optional[str] = None    # 'QSFP28' | 'QSFP56' | 'QSFP-DD' | 'OSFP' | 'OSFP-XD'
+    spec: Optional[str] = None           # 'DAC' | 'AOC' | 'SR4' | 'SR8' | 'DR4' | 'DR8' | 'FR4' | 'LR4' | 'CWDM4'
+    distance_m: Optional[int] = None     # 支持距离（米）
+    fiber_type: Optional[str] = None     # 'copper' | 'MMF' | 'SMF'
+    vendors: List[str] = field(default_factory=list)
 
     def is_server(self) -> bool:
         return len(self.interface_models) > 0
@@ -88,10 +106,12 @@ class DeviceLibrary:
             "compute_servers": "compute_servers",
             "storage_servers_all_flash": "storage_servers/all_flash",
             "storage_servers_hybrid_flash": "storage_servers/hybrid_flash",
+            "storage_servers_parallel_fs": "storage_servers/parallel_fs",
             "switches_param": "switches/param",
             "switches_storage": "switches/storage",
             "switches_biz": "switches/biz",
             "switches_oob": "switches/oob",
+            "optical_modules": "optical_modules",
             "custom": "custom",
         }
 
@@ -157,6 +177,24 @@ class DeviceLibrary:
             datasheet_url=data.get("datasheet_url"),
             added_at=data.get("added_at", ""),
             updated_at=data.get("updated_at", ""),
+            # V2.4 新增字段
+            cooling_method=data.get("cooling_method", "air"),
+            rail_compatible=data.get("rail_compatible", False),
+            spectrum_x=data.get("spectrum_x", False),
+            nvlink_domain=data.get("nvlink_domain"),
+            rdma_type=data.get("rdma_type"),
+            gpu_count=data.get("gpu_count"),
+            gpu_memory_gb=data.get("gpu_memory_gb"),
+            gpu_model=data.get("gpu_model"),
+            price_range=data.get("price_range"),
+            eol_date=data.get("eol_date"),
+            # V2.4 光模块字段
+            speed=data.get("speed"),
+            form_factor=data.get("form_factor"),
+            spec=data.get("spec"),
+            distance_m=data.get("distance_m"),
+            fiber_type=data.get("fiber_type"),
+            vendors=data.get("vendors", []),
         )
 
     def get(self, device_id: str) -> Optional[LibraryDevice]:
@@ -224,6 +262,24 @@ class DeviceLibrary:
             datasheet_url=device.datasheet_url,
             added_at=device.added_at,
             updated_at=device.updated_at,
+            # V2.4 新增字段
+            cooling_method=overrides.get("cooling_method", device.cooling_method),
+            rail_compatible=overrides.get("rail_compatible", device.rail_compatible),
+            spectrum_x=overrides.get("spectrum_x", device.spectrum_x),
+            nvlink_domain=overrides.get("nvlink_domain", device.nvlink_domain),
+            rdma_type=overrides.get("rdma_type", device.rdma_type),
+            gpu_count=overrides.get("gpu_count", device.gpu_count),
+            gpu_memory_gb=overrides.get("gpu_memory_gb", device.gpu_memory_gb),
+            gpu_model=overrides.get("gpu_model", device.gpu_model),
+            price_range=overrides.get("price_range", device.price_range),
+            eol_date=overrides.get("eol_date", device.eol_date),
+            # V2.4 光模块字段
+            speed=getattr(device, 'speed', None),
+            form_factor=getattr(device, 'form_factor', None),
+            spec=getattr(device, 'spec', None),
+            distance_m=getattr(device, 'distance_m', None),
+            fiber_type=getattr(device, 'fiber_type', None),
+            vendors=getattr(device, 'vendors', []),
         )
         return merged
 

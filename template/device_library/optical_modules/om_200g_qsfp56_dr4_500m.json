@@ -1,0 +1,14 @@
+{
+  "id": "om_200g_qsfp56_dr4_500m",
+  "speed": "200G",
+  "form_factor": "QSFP56",
+  "spec": "DR4",
+  "distance_m": 500,
+  "fiber_type": "SMF",
+  "power_watts": 6.5,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "200G QSFP56 DR4 单模光模块，传输距离500米，4x50G PAM4",
+  "tags": ["200G", "QSFP56", "DR4", "SMF", "500m"]
+}

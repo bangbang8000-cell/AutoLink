@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -35,6 +35,7 @@
     "test:all": "npm run test && npm run test:backend"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.2",
     "clsx": "^2.1.1",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",

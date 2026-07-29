@@ -1,0 +1,14 @@
+{
+  "id": "om_1600g_osfp_xd_2x800g_aoc_5m",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "AOC",
+  "distance_m": 5,
+  "fiber_type": "MMF",
+  "power_watts": 5,
+  "vendors": ["NVIDIA", "华为", "H3C"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD 2x800G AOC 有源光缆，传输距离5米，双800G 8x200G PAM4",
+  "tags": ["1.6T", "OSFP-XD", "AOC", "MMF", "5m"]
+}

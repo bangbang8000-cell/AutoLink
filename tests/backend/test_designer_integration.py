@@ -262,8 +262,8 @@ biz_enabled = False
 """)
             designer = NetworkDesignerV2(ini)
             result = designer.validate_topology()
-            # validate_topology 返回布尔值
-            assert result is True
+            # validate_topology 返回 {"valid": bool, "errors": list}
+            assert result["valid"] is True
 
     def test_validate_large_design(self):
         """大规模设计验证 (2层)"""
@@ -281,7 +281,7 @@ biz_enabled = False
 """)
             designer = NetworkDesignerV2(ini)
             result = designer.validate_topology()
-            assert result is True
+            assert result["valid"] is True
 
 
 class TestDesignerOOB:

@@ -1,0 +1,8 @@
+{
+  "id": "NVL72-单架",
+  "name": "GB200 NVL72单架方案",
+  "description": "72台B200 GPU（GB200 NVL72机架，Rail-Optimized 800G）+ 8存储 + 8通算",
+  "scenario": "NVL72",
+  "tags": ["B200", "72台", "Rail-Optimized", "NVL72", "800G", "液冷"],
+  "updatedAt": "2026-07-29"
+}

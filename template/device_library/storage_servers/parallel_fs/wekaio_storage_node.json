@@ -1,0 +1,58 @@
+{
+  "id": "wekaio_storage_node",
+  "vendor": "WekaIO",
+  "model": "WekaIO 存储节点",
+  "category": "storage_servers_parallel_fs",
+  "description": "WekaIO WekaFS 软件定义并行文件系统存储节点，全NVMe架构，支持S3协议和NFS导出，面向GPU直连AI训练数据加载",
+  "power_watts": 1600,
+  "weight_kg": 30,
+  "u_height": 2,
+  "depth_mm": 800,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "PFS-WekaIO",
+  "rail_compatible": false,
+  "spectrum_x": true,
+  "rdma_type": "RoCEv2",
+  "price_range": "高",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "storage",
+      "port_count": 4,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["存储", "并行文件系统", "WekaIO", "WekaFS", "NVMe", "S3", "软件定义", "Spectrum-X"],
+  "applicable_networks": ["storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "https://www.weka.io/",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

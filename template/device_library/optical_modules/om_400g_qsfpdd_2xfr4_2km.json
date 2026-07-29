@@ -1,0 +1,14 @@
+{
+  "id": "om_400g_qsfpdd_2xfr4_2km",
+  "speed": "400G",
+  "form_factor": "QSFP-DD",
+  "spec": "2xFR4",
+  "distance_m": 2000,
+  "fiber_type": "SMF",
+  "power_watts": 12,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "400G QSFP-DD 2xFR4 单模光模块，传输距离2公里，双波长4x100G PAM4",
+  "tags": ["400G", "QSFP-DD", "2xFR4", "SMF", "2km"]
+}

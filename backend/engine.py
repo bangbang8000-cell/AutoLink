@@ -14,8 +14,140 @@ import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from designer import NetworkDesignerV2
-from exporter import export_all_connections, generate_summary_data, generate_device_list
+from exporter import (
+    export_all_connections, generate_summary_data, generate_device_list,
+    export_cabling_guide, export_bom, generate_report_data,
+)
+from estimation import (
+    estimate_pue, calc_convergence_ratio, estimate_cabinet_power_density,
+    PUEInput,
+)
 import pandas as pd
+
+
+def _parse_speed_gbps(speed_str: str) -> float:
+    """将速率字符串（如 '400G'）解析为 Gbps 数值"""
+    if not speed_str:
+        return 400.0
+    s = speed_str.strip().upper()
+    for unit, factor in (('GB', 1.0), ('G', 1.0), ('TB', 1000.0), ('T', 1000.0)):
+        if s.endswith(unit):
+            try:
+                return float(s[:-len(unit)]) * factor
+            except ValueError:
+                break
+    try:
+        return float(s)
+    except ValueError:
+        return 400.0
+
+
+def _estimate_design(designer, params=None):
+    """V2.4: 综合 PUE/收敛比/机柜功率密度估算
+
+    params 可选字段：cooling_method / outdoor_temp_c / load_factor / ups_efficiency / has_free_cooling
+    """
+    params = params or {}
+
+    # 1. IT 功耗
+    all_switches = (
+        designer.param_leaves + designer.param_spines + designer.param_cores +
+        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
+        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
+    )
+    server_power = sum(s.power_watts or 0 for s in designer.servers)
+    switch_power = sum(sw.power_watts or 0 for sw in all_switches)
+    it_power_w = server_power + switch_power
+    it_power_kw = round(it_power_w / 1000.0, 2)
+
+    # 2. 机柜数量与功率密度
+    cabinet_ids = {s.cabinet_id for s in designer.servers if s.cabinet_id is not None}
+    num_cabinets = len(cabinet_ids) or 1
+    density = estimate_cabinet_power_density(it_power_kw, num_cabinets)
+
+    # 3. 默认散热方式：基于功率密度自动判断
+    default_cooling = density.get('recommended_cooling', 'air')
+
+    # 4. PUE 估算
+    pue_inp = PUEInput(
+        it_power_kw=it_power_kw,
+        cooling_method=params.get('cooling_method', default_cooling),
+        outdoor_temp_c=float(params.get('outdoor_temp_c', 25.0)),
+        load_factor=float(params.get('load_factor', 0.8)),
+        ups_efficiency=float(params.get('ups_efficiency', 0.96)),
+        has_free_cooling=bool(params.get('has_free_cooling', True)),
+    )
+    pue_result = estimate_pue(pue_inp)
+
+    # 5. 收敛比（参数网/存储网/业务网）
+    convergence = {}
+    # 参数网
+    if designer.param_leaf_count > 0:
+        param_dl = getattr(designer, 'param_dl', 0) or 0
+        param_ul = max(designer.param_switch_ports - param_dl, 0)
+        convergence['param'] = _conv_to_dict(calc_convergence_ratio(
+            'param', param_dl, param_ul,
+            _parse_speed_gbps(designer.param_speed),
+            designer.param_leaf_count,
+        ))
+    # 存储网
+    if designer.storage_leaf_count > 0:
+        storage_dl = getattr(designer, 'storage_dl', 0) or 0
+        storage_ul = max(designer.storage_switch_ports - storage_dl, 0)
+        convergence['storage'] = _conv_to_dict(calc_convergence_ratio(
+            'storage', storage_dl, storage_ul,
+            _parse_speed_gbps(designer.storage_speed),
+            designer.storage_leaf_count,
+        ))
+    # 业务网
+    if getattr(designer, 'biz_enabled', True) and getattr(designer, 'biz_access', None):
+        biz_ports = getattr(designer, 'biz_access_ports', 48)
+        biz_uplinks = getattr(designer, 'biz_access_uplinks', 8)
+        biz_speed = _parse_speed_gbps(getattr(designer, 'biz_port_speed', '25G'))
+        convergence['biz'] = _conv_to_dict(calc_convergence_ratio(
+            'biz', biz_ports, biz_uplinks, biz_speed, len(designer.biz_access),
+        ))
+
+    return {
+        'pue': {
+            'pue': pue_result.pue,
+            'coolingPue': pue_result.cooling_pue,
+            'powerDistributionPue': pue_result.power_distribution_pue,
+            'otherPue': pue_result.other_pue,
+            'totalPowerKw': pue_result.total_power_kw,
+            'coolingPowerKw': pue_result.cooling_power_kw,
+            'upsLossKw': pue_result.ups_loss_kw,
+            'estimatedCoolingMethod': pue_result.estimated_cooling_method,
+            'meetsTarget': pue_result.meets_target,
+            'recommendation': pue_result.recommendation,
+            'itPowerKw': it_power_kw,
+            'serverPowerW': server_power,
+            'switchPowerW': switch_power,
+        },
+        'convergence': convergence,
+        'cabinetDensity': density,
+        'inputs': {
+            'cooling_method': pue_inp.cooling_method,
+            'outdoor_temp_c': pue_inp.outdoor_temp_c,
+            'load_factor': pue_inp.load_factor,
+            'ups_efficiency': pue_inp.ups_efficiency,
+            'has_free_cooling': pue_inp.has_free_cooling,
+        },
+    }
+
+
+def _conv_to_dict(r):
+    """ConvergenceResult -> dict"""
+    return {
+        'networkType': r.network_type,
+        'downlinkBwGbps': r.downlink_bw_gbps,
+        'uplinkBwGbps': r.uplink_bw_gbps,
+        'convergenceRatio': r.convergence_ratio,
+        'isBlocking': r.is_blocking,
+        'targetRatio': r.target_ratio,
+        'meetsTarget': r.meets_target,
+        'recommendation': r.recommendation,
+    }
 
 
 def _get_config_file(params):
@@ -115,12 +247,39 @@ def handle_design(params):
     # 功率评估 (V2.1新增)
     power_data = _calculate_power_summary(designer)
 
+    # V2.4: PUE/收敛比/机柜功率密度估算
+    try:
+        estimation = _estimate_design(designer)
+    except Exception as e:
+        estimation = {"error": f"估算失败: {e}"}
+
     return {
         "summary": summary,
         "topology": {"nodes": nodes, "edges": edges},
         "valid": validate_result["valid"],
         "powerData": power_data,
+        "estimation": estimation,
     }
+
+
+def handle_estimate(params):
+    """V2.4: 参数化 PUE/收敛比估算（支持用户调整散热方式等参数）"""
+    config_file, error = _get_config_file(params)
+    if error:
+        return {"error": error}
+
+    designer = NetworkDesignerV2(config_file)
+    return _estimate_design(designer, params.get('estimateParams', {}))
+
+
+def handle_report(params):
+    """V2.4: 生成完整报告数据（供前端可视化展示）"""
+    config_file, error = _get_config_file(params)
+    if error:
+        return {"error": error}
+
+    designer = NetworkDesignerV2(config_file)
+    return generate_report_data(designer)
 
 
 def _calculate_power_summary(designer):
@@ -207,6 +366,32 @@ def handle_export(params):
         except Exception as e:
             results.append({"type": "deviceList", "file": fn, "status": "error", "error": str(e)})
 
+    # V2.4: 布线指导表
+    if 'cablingGuide' in output_types:
+        fn = os.path.join(output_dir, f"布线指导表_{mode}模式_{ts}.xlsx")
+        try:
+            export_cabling_guide(designer, fn)
+            results.append({"type": "cablingGuide", "file": fn, "status": "success"})
+        except Exception as e:
+            results.append({"type": "cablingGuide", "file": fn, "status": "error", "error": str(e)})
+
+    # V2.4: BOM 成本估算
+    if 'bom' in output_types:
+        fn = os.path.join(output_dir, f"BOM成本估算_{mode}模式_{ts}.xlsx")
+        try:
+            export_bom(designer, fn)
+            results.append({"type": "bom", "file": fn, "status": "success"})
+        except Exception as e:
+            results.append({"type": "bom", "file": fn, "status": "error", "error": str(e)})
+
+    # V2.4: PDF 报告数据（直接返回数据，不导出文件）
+    if 'reportData' in output_types:
+        try:
+            report_data = generate_report_data(designer)
+            results.append({"type": "reportData", "data": report_data, "status": "success"})
+        except Exception as e:
+            results.append({"type": "reportData", "status": "error", "error": str(e)})
+
     return {
         "results": results,
         "outputDir": output_dir,
@@ -225,6 +410,8 @@ def main():
             'design': handle_design,
             'validate': handle_validate,
             'export': handle_export,
+            'estimate': handle_estimate,
+            'report': handle_report,
         }
 
         handler = actions.get(action)

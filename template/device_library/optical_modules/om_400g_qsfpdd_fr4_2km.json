@@ -1,0 +1,14 @@
+{
+  "id": "om_400g_qsfpdd_fr4_2km",
+  "speed": "400G",
+  "form_factor": "QSFP-DD",
+  "spec": "FR4",
+  "distance_m": 2000,
+  "fiber_type": "SMF",
+  "power_watts": 9,
+  "vendors": ["NVIDIA", "华为", "H3C"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "400G QSFP-DD FR4 单模光模块，传输距离2公里，4x100G PAM4 WDM",
+  "tags": ["400G", "QSFP-DD", "FR4", "SMF", "2km"]
+}

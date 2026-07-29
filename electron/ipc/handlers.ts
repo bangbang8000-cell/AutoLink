@@ -10,10 +10,12 @@ const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
   compute_servers: 'compute_servers',
   storage_servers_all_flash: 'storage_servers/all_flash',
   storage_servers_hybrid_flash: 'storage_servers/hybrid_flash',
+  storage_servers_parallel_fs: 'storage_servers/parallel_fs',
   switches_param: 'switches/param',
   switches_storage: 'switches/storage',
   switches_biz: 'switches/biz',
   switches_oob: 'switches/oob',
+  optical_modules: 'optical_modules',
   custom: 'custom',
 }
 import { updateService } from '../services/update.service.js'
@@ -396,6 +398,31 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
 
     return pythonService.call('validate', { configFile: configPath })
+  }))
+
+  // V2.4: 参数化 PUE/收敛比估算
+  ipcMain.handle('design:estimate', wrapHandler(async (_event, projectName: string, estimateParams?: Record<string, unknown>) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`配置文件不存在: ${configPath}`)
+    }
+    return pythonService.call('estimate', {
+      configFile: configPath,
+      estimateParams: estimateParams || {},
+    }, 30000)
+  }))
+
+  // V2.4: 生成完整报告数据
+  ipcMain.handle('design:report', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`配置文件不存在: ${configPath}`)
+    }
+    return pythonService.call('report', { configFile: configPath }, 60000)
   }))
 
   // ===== Render =====

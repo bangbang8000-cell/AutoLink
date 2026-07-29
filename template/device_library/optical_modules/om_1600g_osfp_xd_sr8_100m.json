@@ -1,0 +1,14 @@
+{
+  "id": "om_1600g_osfp_xd_sr8_100m",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "SR8",
+  "distance_m": 100,
+  "fiber_type": "MMF",
+  "power_watts": 26,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD SR8 多模光模块，传输距离100米，8x200G PAM4",
+  "tags": ["1.6T", "OSFP-XD", "SR8", "MMF", "100m"]
+}

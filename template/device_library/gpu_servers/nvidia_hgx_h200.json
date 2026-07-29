@@ -1,0 +1,72 @@
+{
+  "id": "nvidia_hgx_h200",
+  "vendor": "NVIDIA",
+  "model": "HGX H200 8-GPU",
+  "category": "gpu_servers",
+  "description": "NVIDIA HGX H200 8-GPU 服务器，搭载8块H200 141GB GPU，NVLink 3.0全互联，面向万亿参数大模型训练",
+  "power_watts": 12000,
+  "weight_kg": 85,
+  "u_height": 8,
+  "depth_mm": 900,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "GPU-HGXH200",
+  "rail_compatible": true,
+  "spectrum_x": true,
+  "nvlink_domain": 256,
+  "rdma_type": "both",
+  "gpu_count": 8,
+  "gpu_memory_gb": 141,
+  "gpu_model": "H200 141GB",
+  "price_range": "极高",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 8,
+      "port_speed": "400G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "MPO-16",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 1,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["GPU", "NVIDIA", "H200", "AI训练", "大模型", "Spectrum-X", "HGX"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "https://www.nvidia.com/en-us/data-center/hgx/",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

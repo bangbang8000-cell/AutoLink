@@ -1,0 +1,14 @@
+{
+  "id": "om_400g_qsfpdd_sr8_100m",
+  "speed": "400G",
+  "form_factor": "QSFP-DD",
+  "spec": "SR8",
+  "distance_m": 100,
+  "fiber_type": "MMF",
+  "power_watts": 8,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "400G QSFP-DD SR8 多模光模块，传输距离100米，8x50G PAM4",
+  "tags": ["400G", "QSFP-DD", "SR8", "MMF", "100m"]
+}

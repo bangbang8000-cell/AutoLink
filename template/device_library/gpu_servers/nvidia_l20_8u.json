@@ -1,0 +1,72 @@
+{
+  "id": "nvidia_l20_8u",
+  "vendor": "NVIDIA",
+  "model": "L20 8卡推理服务器",
+  "category": "gpu_servers",
+  "description": "NVIDIA L20 8卡推理服务器，搭载8块L20 48GB GPU，单卡功耗275W，面向大模型推理和图文生成场景",
+  "power_watts": 3000,
+  "weight_kg": 50,
+  "u_height": 4,
+  "depth_mm": 800,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "GPU-L20",
+  "rail_compatible": false,
+  "spectrum_x": false,
+  "nvlink_domain": 0,
+  "rdma_type": "RoCEv2",
+  "gpu_count": 8,
+  "gpu_memory_gb": 48,
+  "gpu_model": "L20 48GB",
+  "price_range": "中",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 4,
+      "port_speed": "200G",
+      "port_type": "QSFP56",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 2,
+      "port_speed": "100G",
+      "port_type": "QSFP28",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": ["GPU", "NVIDIA", "L20", "AI推理", "图文生成"],
+  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "https://www.nvidia.com/en-us/data-center/l20/",
+  "added_at": "2026-07-29",
+  "updated_at": "2026-07-29"
+}

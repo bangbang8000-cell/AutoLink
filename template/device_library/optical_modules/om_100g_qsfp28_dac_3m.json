@@ -1,0 +1,14 @@
+{
+  "id": "om_100g_qsfp28_dac_3m",
+  "speed": "100G",
+  "form_factor": "QSFP28",
+  "spec": "DAC",
+  "distance_m": 3,
+  "fiber_type": "copper",
+  "power_watts": 1,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "低",
+  "category": "optical_modules",
+  "description": "100G QSFP28 DAC 直连铜缆，传输距离3米，无源铜缆",
+  "tags": ["100G", "QSFP28", "DAC", "copper", "3m"]
+}

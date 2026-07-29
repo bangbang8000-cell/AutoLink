@@ -1,0 +1,14 @@
+{
+  "id": "om_100g_qsfp28_sr4_100m",
+  "speed": "100G",
+  "form_factor": "QSFP28",
+  "spec": "SR4",
+  "distance_m": 100,
+  "fiber_type": "MMF",
+  "power_watts": 3.5,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "100G QSFP28 SR4 多模光模块，传输距离100米，4x25G",
+  "tags": ["100G", "QSFP28", "SR4", "MMF", "100m"]
+}

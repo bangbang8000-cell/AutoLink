@@ -1,0 +1,14 @@
+{
+  "id": "om_200g_qsfp56_sr4_100m",
+  "speed": "200G",
+  "form_factor": "QSFP56",
+  "spec": "SR4",
+  "distance_m": 100,
+  "fiber_type": "MMF",
+  "power_watts": 5.5,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "200G QSFP56 SR4 多模光模块，传输距离100米，4x50G PAM4",
+  "tags": ["200G", "QSFP56", "SR4", "MMF", "100m"]
+}

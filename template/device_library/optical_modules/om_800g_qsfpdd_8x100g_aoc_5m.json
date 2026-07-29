@@ -1,0 +1,14 @@
+{
+  "id": "om_800g_qsfpdd_8x100g_aoc_5m",
+  "speed": "800G",
+  "form_factor": "QSFP-DD",
+  "spec": "AOC",
+  "distance_m": 5,
+  "fiber_type": "MMF",
+  "power_watts": 5,
+  "vendors": ["NVIDIA", "华为", "H3C"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "800G QSFP-DD 8x100G AOC 有源光缆，传输距离5米，8x100G PAM4",
+  "tags": ["800G", "QSFP-DD", "AOC", "MMF", "5m"]
+}

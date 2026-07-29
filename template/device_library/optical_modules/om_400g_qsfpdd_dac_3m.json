@@ -1,0 +1,14 @@
+{
+  "id": "om_400g_qsfpdd_dac_3m",
+  "speed": "400G",
+  "form_factor": "QSFP-DD",
+  "spec": "DAC",
+  "distance_m": 3,
+  "fiber_type": "copper",
+  "power_watts": 3,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "400G QSFP-DD DAC 直连铜缆，传输距离3米，无源铜缆",
+  "tags": ["400G", "QSFP-DD", "DAC", "copper", "3m"]
+}

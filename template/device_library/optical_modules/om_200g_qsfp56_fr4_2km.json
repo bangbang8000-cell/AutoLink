@@ -1,0 +1,14 @@
+{
+  "id": "om_200g_qsfp56_fr4_2km",
+  "speed": "200G",
+  "form_factor": "QSFP56",
+  "spec": "FR4",
+  "distance_m": 2000,
+  "fiber_type": "SMF",
+  "power_watts": 6,
+  "vendors": ["NVIDIA", "华为", "H3C"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "description": "200G QSFP56 FR4 单模光模块，传输距离2公里，4x50G PAM4 WDM",
+  "tags": ["200G", "QSFP56", "FR4", "SMF", "2km"]
+}

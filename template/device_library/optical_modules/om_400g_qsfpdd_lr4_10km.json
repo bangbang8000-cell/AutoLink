@@ -1,0 +1,14 @@
+{
+  "id": "om_400g_qsfpdd_lr4_10km",
+  "speed": "400G",
+  "form_factor": "QSFP-DD",
+  "spec": "LR4",
+  "distance_m": 10000,
+  "fiber_type": "SMF",
+  "power_watts": 11,
+  "vendors": ["Finisar", "NVIDIA", "Cisco"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "400G QSFP-DD LR4 单模光模块，传输距离10公里，4x100G PAM4 WDM",
+  "tags": ["400G", "QSFP-DD", "LR4", "SMF", "10km"]
+}

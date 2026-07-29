@@ -1,0 +1,14 @@
+{
+  "id": "om_800g_osfp_xd_dr8_500m",
+  "speed": "800G",
+  "form_factor": "OSFP-XD",
+  "spec": "DR8",
+  "distance_m": 500,
+  "fiber_type": "SMF",
+  "power_watts": 20,
+  "vendors": ["NVIDIA", "Cisco", "Arista"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "800G OSFP-XD DR8 单模光模块，传输距离500米，扩展距离型8x100G PAM4",
+  "tags": ["800G", "OSFP-XD", "DR8", "SMF", "500m"]
+}

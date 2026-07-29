@@ -1,0 +1,14 @@
+{
+  "id": "om_800g_qsfpdd_2x400g_fr4_2km",
+  "speed": "800G",
+  "form_factor": "QSFP-DD",
+  "spec": "2xFR4",
+  "distance_m": 2000,
+  "fiber_type": "SMF",
+  "power_watts": 22,
+  "vendors": ["Finisar", "NVIDIA", "Cisco"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "800G QSFP-DD 2x400G FR4 单模光模块，传输距离2公里，双400G 8x100G PAM4 WDM",
+  "tags": ["800G", "QSFP-DD", "2xFR4", "SMF", "2km"]
+}

@@ -7,9 +7,11 @@ import {
   Settings2,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
-import { useDesignStore, type DesignSummary } from '@/stores/design.store'
+import { useDesignStore, type DesignSummary, type EstimateParams } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useRackStore } from '@/stores/rack.store'
+import { PUEEstimatePanel } from './PUEEstimatePanel'
+import { ReportViewPanel } from './ReportViewPanel'
 
 /* -------------------------------------------------- */
 /*  Sub-components (same as DesignPanel)              */
@@ -178,8 +180,8 @@ export function DesignTab() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const {
-    config, summary, valid, generating, error,
-    updateConfig, resetConfig, generate, loadConfig, loadSavedTopology, clearResults,
+    config, summary, valid, generating, error, estimation, estimating,
+    updateConfig, resetConfig, generate, loadConfig, loadSavedTopology, clearResults, estimate,
   } = useDesignStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
   const initFromTopology = useRackStore((s) => s.initFromTopology)
@@ -204,6 +206,11 @@ export function DesignTab() {
       initFromTopology(state.topology.nodes)
     }
   }, [selectedProjectName, generate, openTab, initFromTopology])
+
+  const handleReEstimate = useCallback((params: EstimateParams) => {
+    if (!selectedProjectName) return
+    estimate(selectedProjectName, params)
+  }, [selectedProjectName, estimate])
 
   const speedOptions = [
     { value: '100G', label: '100G' },
@@ -355,6 +362,24 @@ export function DesignTab() {
 
           {/* Design Summary */}
           {summary && <DesignSummaryView summary={summary} valid={valid} />}
+
+          {/* V2.4: PUE 与能耗估算 */}
+          {estimation && !estimation.error && (
+            <PUEEstimatePanel
+              estimation={estimation}
+              estimating={estimating}
+              onReEstimate={handleReEstimate}
+            />
+          )}
+          {estimation?.error && (
+            <div className="flex items-start gap-2 p-3 rounded text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300">
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+              <span className="flex-1">{estimation.error}</span>
+            </div>
+          )}
+
+          {/* V2.4: 完整报告视图（可折叠，按需加载） */}
+          {summary && <ReportViewPanel projectName={selectedProjectName} />}
 
           {/* Tip when no result */}
           {!summary && !error && !generating && (
