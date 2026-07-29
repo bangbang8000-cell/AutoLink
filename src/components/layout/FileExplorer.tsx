@@ -14,12 +14,15 @@ import {
   Upload, RotateCcw, ExternalLink, Check,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
+  Star,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AboutDialog } from '@/components/layout/AboutDialog'
 import { useToastStore } from '@/stores/toast.store'
 import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
+import { RenameProjectModal } from '@/components/layout/RenameProjectModal'
+import { EditTemplateModal } from '@/components/layout/EditTemplateModal'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function FileExplorer() {
@@ -38,10 +41,15 @@ export function FileExplorer() {
 
 function ProjectExplorer() {
   const { t } = useTranslation()
-  const { projects, templates, selectProject, selectedProjectName, deleteProjects, convertToTemplate } = useProjectStore()
+  const { projects, templates, selectProject, selectedProjectName, deleteProjects, convertToTemplate, duplicateProject, renameProject, exportProject, importProject, batchExportProjects, favoriteProjects, toggleFavorite } = useProjectStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
   const addToast = useToastStore((s) => s.addToast)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [renameModal, setRenameModal] = useState<{ type: 'rename' | 'duplicate'; projectName: string } | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [batchExporting, setBatchExporting] = useState(false)
 
   const handleOpenProject = useCallback((name: string) => {
     const project = projects.find((p) => p.name === name)
@@ -74,6 +82,97 @@ function ProjectExplorer() {
       .catch((err) => addToast('error', `转换失败: ${err instanceof Error ? err.message : err}`))
   }, [convertToTemplate, addToast])
 
+  const handleDuplicate = useCallback((projectName: string) => {
+    setRenameModal({ type: 'duplicate', projectName })
+  }, [])
+
+  const handleRename = useCallback((projectName: string) => {
+    setRenameModal({ type: 'rename', projectName })
+  }, [])
+
+  const handleRenameConfirm = useCallback(async (value: string) => {
+    if (!renameModal) return
+    if (renameModal.type === 'duplicate') {
+      await duplicateProject(renameModal.projectName, value)
+      addToast('success', `项目已复制为 "${value}"`)
+    } else {
+      await renameProject(renameModal.projectName, value)
+      addToast('success', `项目已重命名为 "${value}"`)
+    }
+  }, [renameModal, duplicateProject, renameProject, addToast])
+
+  const handleExport = useCallback(async (projectName: string) => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const result = await exportProject(projectName)
+      if (!result.canceled && result.zipPath) {
+        addToast('success', `项目 "${projectName}" 已导出到:\n${result.zipPath}`)
+      }
+    } catch (err) {
+      addToast('error', `导出失败: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setExporting(false)
+    }
+  }, [exporting, exportProject, addToast])
+
+  const handleImport = useCallback(async () => {
+    if (importing) return
+    setImporting(true)
+    try {
+      const result = await importProject()
+      if (!result.canceled && result.projectName) {
+        addToast('success', `项目 "${result.projectName}" 已导入`)
+      }
+    } catch (err) {
+      addToast('error', `导入失败: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setImporting(false)
+    }
+  }, [importing, importProject, addToast])
+
+  // 搜索过滤 + 收藏置顶排序
+  const favoriteSet = new Set(favoriteProjects)
+  const filteredProjects = searchQuery.trim()
+    ? projects.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : projects
+  // 排序：收藏在前，其余按原顺序
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    const aFav = favoriteSet.has(a.name) ? 0 : 1
+    const bFav = favoriteSet.has(b.name) ? 0 : 1
+    return aFav - bFav
+  })
+
+  const handleToggleFavorite = useCallback((e: React.MouseEvent, projectName: string) => {
+    e.stopPropagation()
+    toggleFavorite(projectName)
+  }, [toggleFavorite])
+
+  const handleBatchExport = useCallback(async () => {
+    if (batchExporting) return
+    if (sortedProjects.length === 0) {
+      addToast('warning', '没有可导出的项目')
+      return
+    }
+    setBatchExporting(true)
+    try {
+      const names = sortedProjects.map((p) => p.name)
+      const result = await batchExportProjects(names)
+      if (!result.canceled && result.result) {
+        const { successes, failures } = result.result
+        if (failures.length === 0) {
+          addToast('success', `批量导出完成：成功 ${successes.length} 个\n保存到: ${result.targetDir}`)
+        } else {
+          addToast('warning', `批量导出部分完成：成功 ${successes.length} 个，失败 ${failures.length} 个\n${failures.map((f) => `  - ${f.name}: ${f.error}`).join('\n')}`)
+        }
+      }
+    } catch (err) {
+      addToast('error', `批量导出失败: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setBatchExporting(false)
+    }
+  }, [batchExporting, batchExportProjects, sortedProjects, addToast])
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
@@ -81,10 +180,30 @@ function ProjectExplorer() {
         <div className="relative flex-1">
           <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common:search')}
             className="w-full pl-7 pr-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
+        <button
+          onClick={handleImport}
+          disabled={importing}
+          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={t('common:project.importZip', '导入项目 ZIP')}
+        >
+          {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+        </button>
+        {projects.length > 1 && (
+          <button
+            onClick={handleBatchExport}
+            disabled={batchExporting}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t('common:project.batchExport', '批量导出项目')}
+          >
+            {batchExporting ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
+          </button>
+        )}
         {selectedProjectName && (
           <button
             onClick={() => handleOpenInExplorer(selectedProjectName)}
@@ -100,21 +219,40 @@ function ProjectExplorer() {
       <div className="flex-1 overflow-auto py-1">
         {/* Projects section */}
         <Section title="全部项目" icon={<Folder size={14} />}>
-          {projects.map((p) => (
-            <TreeItem
-              key={p.name}
-              label={p.name}
-              active={p.name === selectedProjectName}
-              onClick={() => handleOpenProject(p.name)}
-              onDoubleClick={() => handleOpenProject(p.name)}
-              contextMenu={[
-                { label: '设为当前项目', action: () => handleOpenProject(p.name) },
-                { label: '在文件管理器中打开', action: () => handleOpenInExplorer(p.name) },
-                { label: '转为模板', action: () => handleConvertToTemplate(p.name) },
-                { label: '删除项目', action: () => handleDeleteProject(p) },
-              ]}
-            />
-          ))}
+          {sortedProjects.map((p) => {
+            const isFavorite = favoriteSet.has(p.name)
+            return (
+              <TreeItem
+                key={p.name}
+                label={p.name}
+                active={p.name === selectedProjectName}
+                onClick={() => handleOpenProject(p.name)}
+                onDoubleClick={() => handleOpenProject(p.name)}
+                contextMenu={[
+                  { label: '设为当前项目', action: () => handleOpenProject(p.name) },
+                  { label: '在文件管理器中打开', action: () => handleOpenInExplorer(p.name) },
+                  { label: '复制项目...', action: () => handleDuplicate(p.name) },
+                  { label: '重命名...', action: () => handleRename(p.name) },
+                  { label: '导出为 ZIP...', action: () => handleExport(p.name) },
+                  { label: '转为模板', action: () => handleConvertToTemplate(p.name) },
+                  { label: isFavorite ? '取消收藏' : '收藏置顶', action: () => toggleFavorite(p.name) },
+                  { label: '删除项目', action: () => handleDeleteProject(p) },
+                ]}
+                trailing={
+                  <button
+                    onClick={(e) => handleToggleFavorite(e, p.name)}
+                    className={clsx(
+                      'p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700',
+                      isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500'
+                    )}
+                    title={isFavorite ? '取消收藏' : '收藏置顶'}
+                  >
+                    <Star size={12} fill={isFavorite ? 'currentColor' : 'none'} />
+                  </button>
+                }
+              />
+            )
+          })}
         </Section>
 
         {/* Output Section */}
@@ -138,35 +276,54 @@ function ProjectExplorer() {
           onClose={() => setDeleteTarget(null)}
         />
       )}
+
+      {/* Rename/Duplicate Modal */}
+      {renameModal && (
+        <RenameProjectModal
+          title={renameModal.type === 'duplicate' ? t('common:project.duplicate') : t('common:project.rename')}
+          label={renameModal.type === 'duplicate' ? t('common:project.newName') : t('common:project.newName')}
+          defaultValue={renameModal.type === 'duplicate' ? `${renameModal.projectName}_副本` : renameModal.projectName}
+          onConfirm={handleRenameConfirm}
+          onClose={() => setRenameModal(null)}
+        />
+      )}
     </div>
   )
 }
 
 // Simple tree section component
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, icon, children, actions }: { title: string; icon: React.ReactNode; children: React.ReactNode; actions?: React.ReactNode }) {
   const [expanded, setExpanded] = React.useState(true)
   return (
     <div>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-      >
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {icon}
-        <span>{title}</span>
-      </button>
+      <div className="flex items-center group">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+        >
+          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {icon}
+          <span>{title}</span>
+        </button>
+        {actions && (
+          <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {actions}
+          </div>
+        )}
+      </div>
       {expanded && <div className="pl-1">{children}</div>}
     </div>
   )
 }
 
 // Simple tree item
-function TreeItem({ label, active, onClick, onDoubleClick, contextMenu }: {
-  label: string
+function TreeItem({ label, active, onClick, onDoubleClick, contextMenu, trailing }: {
+  label: React.ReactNode
   active?: boolean
   onClick?: () => void
   onDoubleClick?: () => void
   contextMenu?: { label: string; action: () => void }[]
+  trailing?: React.ReactNode
 }) {
   const [showContext, setShowContext] = React.useState(false)
   const [pos, setPos] = React.useState({ x: 0, y: 0 })
@@ -184,13 +341,18 @@ function TreeItem({ label, active, onClick, onDoubleClick, contextMenu }: {
         onDoubleClick={onDoubleClick}
         onContextMenu={handleContextMenu}
         className={clsx(
-          'flex items-center gap-1.5 px-3 pl-6 py-1 text-xs cursor-pointer select-none transition-colors',
+          'group flex items-center gap-1.5 px-3 pl-6 py-1 text-xs cursor-pointer select-none transition-colors',
           active
             ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent'
         )}
       >
-        <span className="truncate">{label}</span>
+        <span className="truncate flex-1">{label}</span>
+        {trailing && (
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            {trailing}
+          </span>
+        )}
       </div>
       {showContext && contextMenu && (
         <div
@@ -393,16 +555,19 @@ function OutputSection({ projects, openTab }: {
 
 // Template section with expandable file tree
 function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
-  templates: { id: string; name: string; isBuiltin?: boolean }[]
+  templates: { id: string; name: string; description?: string; scenario?: string; tags?: string[]; isBuiltin?: boolean }[]
   openTab: (tab: Omit<import('@/stores/workspace.store').WorkspaceTab, 'id'>) => string
   handleOpenInExplorer: (name: string) => void
 }) {
+  const { t } = useTranslation()
   const [expandedTemplates, setExpandedTemplates] = useState<Record<string, boolean>>({})
   const [structureMap, setStructureMap] = useState<Record<string, Array<{ name: string; type: string; children?: Array<{ name: string; type: string; children?: unknown[] }> }>>>({})
   const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({})
-  const deleteTemplate = useProjectStore((s) => s.deleteTemplate)
+  const { deleteTemplate, updateTemplate, exportTemplate, importTemplate } = useProjectStore()
   const addToast = useToastStore((s) => s.addToast)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string; description: string; scenario: string; tags: string[]; isBuiltin?: boolean } | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const toggleTemplate = useCallback(async (tplName: string) => {
     const currently = expandedTemplates[tplName]
@@ -429,6 +594,57 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
       state: { templateName: tplName, filePath, isTemplate: true },
     })
   }, [openTab])
+
+  const handleEditTemplate = useCallback((tpl: { id: string; name: string; description?: string; scenario?: string; tags?: string[]; isBuiltin?: boolean }) => {
+    if (tpl.isBuiltin) {
+      addToast('warning', '内置模板不可编辑')
+      return
+    }
+    setEditTarget({
+      id: tpl.id,
+      name: tpl.name,
+      description: tpl.description || '',
+      scenario: tpl.scenario || '',
+      tags: tpl.tags || [],
+      isBuiltin: tpl.isBuiltin,
+    })
+  }, [addToast])
+
+  const handleEditConfirm = useCallback(async (updates: { name: string; description: string; scenario: string; tags: string[]; configContent?: string }) => {
+    if (!editTarget) return
+    await updateTemplate(editTarget.id, updates)
+    addToast('success', `模板 "${editTarget.id}" 已更新`)
+  }, [editTarget, updateTemplate, addToast])
+
+  const handleExportTemplate = useCallback(async (tplName: string) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const result = await exportTemplate(tplName)
+      if (!result.canceled && result.zipPath) {
+        addToast('success', `模板 "${tplName}" 已导出到:\n${result.zipPath}`)
+      }
+    } catch (err) {
+      addToast('error', `导出失败: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setBusy(false)
+    }
+  }, [busy, exportTemplate, addToast])
+
+  const handleImportTemplate = useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const result = await importTemplate()
+      if (!result.canceled && result.templateName) {
+        addToast('success', `模板 "${result.templateName}" 已导入`)
+      }
+    } catch (err) {
+      addToast('error', `导入失败: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setBusy(false)
+    }
+  }, [busy, importTemplate, addToast])
 
   const renderStructure = (items: Array<{ name: string; type: string; children?: unknown[] }>, tplName: string, basePath: string, depth: number) => {
     return items.map((item) => {
@@ -464,7 +680,20 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
 
   return (
     <>
-      <Section title="模板中心" icon={<Folder size={14} />}>
+      <Section
+        title="模板中心"
+        icon={<Folder size={14} />}
+        actions={
+          <button
+            onClick={handleImportTemplate}
+            disabled={busy}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50"
+            title={t('common:template.importZip', '导入模板 ZIP')}
+          >
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+          </button>
+        }
+      >
         {templates.map((tpl) => {
           const isExpanded = expandedTemplates[tpl.name]
           const structure = structureMap[tpl.name] || []
@@ -476,7 +705,14 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                 contextMenu={[
                   { label: '查看模板文件', action: () => toggleTemplate(tpl.name) },
                   { label: '在文件管理器中打开', action: () => handleOpenInExplorer(tpl.name) },
-                  ...(tpl.isBuiltin ? [] : [{ label: '删除模板', action: () => setDeleteTarget({ name: tpl.name, type: 'template' }) }]),
+                  { label: '导出为 ZIP...', action: () => handleExportTemplate(tpl.name) },
+                  ...(tpl.isBuiltin
+                    ? []
+                    : [
+                        { label: '编辑模板...', action: () => handleEditTemplate(tpl) },
+                        { label: '删除模板', action: () => setDeleteTarget({ name: tpl.name, type: 'template' }) },
+                      ]
+                  ),
                 ]}
               />
               {isExpanded && structure.length === 0 && (
@@ -499,6 +735,15 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
             addToast('success', `模板 "${deleteTarget.name}" 已删除`)
           }}
           onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {/* Edit Template Modal */}
+      {editTarget && (
+        <EditTemplateModal
+          template={editTarget}
+          onConfirm={handleEditConfirm}
+          onClose={() => setEditTarget(null)}
         />
       )}
     </>

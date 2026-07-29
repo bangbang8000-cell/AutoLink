@@ -1,8 +1,9 @@
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { getWorkspacePath, getTemplatePath, getBackendPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
+import { projectIOService } from '../services/project-io.service.js'
 
 // Shared category-to-directory mapping for device library
 const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
@@ -275,6 +276,87 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         }
       }
     }
+  }))
+
+  // V2.4.1: 项目复制
+  ipcMain.handle('project:duplicate', wrapHandler(async (_event, sourceName: string, targetName: string) => {
+    sanitizeName(sourceName)
+    sanitizeName(targetName)
+    const wsp = getWorkspacePath()
+    const srcDir = path.join(wsp, sourceName)
+    const dstDir = path.join(wsp, targetName)
+    if (!fs.existsSync(srcDir)) {
+      throw new Error(`源项目不存在: ${sourceName}`)
+    }
+    if (fs.existsSync(dstDir)) {
+      throw new Error(`目标项目名已存在: ${targetName}`)
+    }
+    fs.cpSync(srcDir, dstDir, { recursive: true })
+  }))
+
+  // V2.4.1: 项目重命名
+  ipcMain.handle('project:rename', wrapHandler(async (_event, oldName: string, newName: string) => {
+    sanitizeName(oldName)
+    sanitizeName(newName)
+    const wsp = getWorkspacePath()
+    const oldDir = path.join(wsp, oldName)
+    const newDir = path.join(wsp, newName)
+    if (!fs.existsSync(oldDir)) {
+      throw new Error(`项目不存在: ${oldName}`)
+    }
+    if (fs.existsSync(newDir)) {
+      throw new Error(`项目名已存在: ${newName}`)
+    }
+    fs.renameSync(oldDir, newDir)
+  }))
+
+  // V2.4.1: 项目导出为 ZIP - 显示保存对话框
+  ipcMain.handle('project:exportZip', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: `导出项目 "${projectName}"`,
+      defaultPath: `${projectName}.zip`,
+      filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }],
+    })
+    if (result.canceled || !result.filePath) {
+      return { canceled: true, zipPath: '' }
+    }
+    await projectIOService.exportProjectZip(projectName, result.filePath)
+    return { canceled: false, zipPath: result.filePath }
+  }))
+
+  // V2.4.1: 项目导入 ZIP - 显示打开对话框
+  ipcMain.handle('project:importZip', wrapHandler(async (_event, options?: { projectName?: string; zipPath?: string }) => {
+    let zipPath = options?.zipPath
+    if (!zipPath) {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: '导入项目',
+        filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }],
+        properties: ['openFile'],
+      })
+      if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true, projectName: '' }
+      }
+      zipPath = result.filePaths[0]
+    }
+    const finalName = await projectIOService.importProjectZip(zipPath, options?.projectName)
+    return { canceled: false, projectName: finalName }
+  }))
+
+  // V2.4.1: 批量项目导出
+  ipcMain.handle('project:batchExportZip', wrapHandler(async (_event, projectNames: string[]) => {
+    for (const name of projectNames) {
+      sanitizeName(name)
+    }
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '批量导出项目',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true, result: null }
+    }
+    const batchResult = await projectIOService.batchExportProjects(projectNames, result.filePaths[0])
+    return { canceled: false, result: batchResult, targetDir: result.filePaths[0] }
   }))
 
   ipcMain.handle('project:getStructure', wrapHandler(async (_event, name: string) => {
@@ -616,6 +698,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     tags?: string[]
     isBuiltin?: boolean
     createdAt?: string
+    updatedAt?: string
     sourceProject?: string
   }
 
@@ -640,7 +723,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
           description: meta.description || '',
           scenario: meta.scenario || '',
           tags: meta.tags || [],
-          updatedAt: meta.createdAt || '',
+          updatedAt: meta.updatedAt || meta.createdAt || '',
           isBuiltin: !!meta.isBuiltin,
         }
       })
@@ -703,6 +786,88 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
 
     fs.rmSync(targetDir, { recursive: true, force: true })
+  }))
+
+  // V2.4.1: 模板编辑 - 更新元数据和配置内容
+  ipcMain.handle('template:update', wrapHandler(async (_event, templateName: string, updates: {
+    name?: string
+    description?: string
+    scenario?: string
+    tags?: string[]
+    configContent?: string
+  }) => {
+    sanitizeName(templateName)
+    const tplDir = getTemplatePath()
+    const targetDir = path.join(tplDir, templateName)
+    if (!fs.existsSync(targetDir)) throw new Error(`模板 ${templateName} 不存在`)
+
+    const metaPath = path.join(targetDir, 'template.json')
+    let meta: TemplateMeta = { name: templateName, description: '' }
+    if (fs.existsSync(metaPath)) {
+      try {
+        meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+      } catch { /* ignore */ }
+    }
+
+    if (meta.isBuiltin) {
+      throw new Error('内置模板不可编辑')
+    }
+
+    // 合并更新字段（不修改目录名，只更新 meta.name）
+    if (typeof updates.name === 'string' && updates.name.trim()) {
+      meta.name = updates.name.trim()
+    }
+    if (typeof updates.description === 'string') {
+      meta.description = updates.description
+    }
+    if (typeof updates.scenario === 'string') {
+      meta.scenario = updates.scenario
+    }
+    if (Array.isArray(updates.tags)) {
+      meta.tags = updates.tags
+    }
+    meta.updatedAt = new Date().toISOString()
+
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+
+    // 如果提供了配置内容，更新 network_config.ini
+    if (typeof updates.configContent === 'string') {
+      const configPath = path.join(targetDir, 'network_config.ini')
+      fs.writeFileSync(configPath, updates.configContent, 'utf-8')
+    }
+  }))
+
+  // V2.4.1: 模板导出为 ZIP - 显示保存对话框
+  ipcMain.handle('template:exportZip', wrapHandler(async (_event, templateName: string) => {
+    sanitizeName(templateName)
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: `导出模板 "${templateName}"`,
+      defaultPath: `${templateName}.zip`,
+      filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }],
+    })
+    if (result.canceled || !result.filePath) {
+      return { canceled: true, zipPath: '' }
+    }
+    await projectIOService.exportTemplateZip(templateName, result.filePath)
+    return { canceled: false, zipPath: result.filePath }
+  }))
+
+  // V2.4.1: 模板导入 ZIP - 显示打开对话框
+  ipcMain.handle('template:importZip', wrapHandler(async (_event, options?: { templateName?: string; zipPath?: string }) => {
+    let zipPath = options?.zipPath
+    if (!zipPath) {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: '导入模板',
+        filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }],
+        properties: ['openFile'],
+      })
+      if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true, templateName: '' }
+      }
+      zipPath = result.filePaths[0]
+    }
+    const finalName = await projectIOService.importTemplateZip(zipPath, options?.templateName)
+    return { canceled: false, templateName: finalName }
   }))
 
   // ===== Output File Deletion =====

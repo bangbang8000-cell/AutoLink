@@ -36,12 +36,26 @@ interface ProjectState {
   createProject: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
   createProjectWithConfig: (config: ProjectConfig) => Promise<void>
   deleteProjects: (ids: string[]) => Promise<void>
+  duplicateProject: (sourceName: string, targetName: string) => Promise<void>
+  renameProject: (oldName: string, newName: string) => Promise<void>
+  exportProject: (projectName: string) => Promise<{ canceled: boolean; zipPath: string }>
+  importProject: (options?: { projectName?: string; zipPath?: string }) => Promise<{ canceled: boolean; projectName: string }>
+  batchExportProjects: (projectNames: string[]) => Promise<{ canceled: boolean; result: { successes: { name: string }[]; failures: { name: string; error: string }[] } | null; targetDir: string }>
   selectProject: (project: ProjectInfo | null) => void
   toggleFavorite: (name: string) => void
   trackRecent: (name: string) => void
   fetchTemplates: () => Promise<void>
   deleteTemplate: (name: string) => Promise<void>
   convertToTemplate: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
+  updateTemplate: (templateName: string, updates: {
+    name?: string
+    description?: string
+    scenario?: string
+    tags?: string[]
+    configContent?: string
+  }) => Promise<void>
+  exportTemplate: (templateName: string) => Promise<{ canceled: boolean; zipPath: string }>
+  importTemplate: (options?: { templateName?: string; zipPath?: string }) => Promise<{ canceled: boolean; templateName: string }>
 }
 
 const builtinTemplates: TemplateInfo[] = [
@@ -125,8 +139,8 @@ export const useProjectStore = create<ProjectState>()(
         const indices = ids.map((id) => parseInt(id))
         await window.electron.project.delete(indices.map(String))
         const projects = await window.electron.project.list()
-        const { selectedProjectName } = get()
         const validNames = new Set(projects.map((p: ProjectInfo) => p.name))
+        const { selectedProjectName } = get()
         const selected = selectedProjectName && validNames.has(selectedProjectName)
           ? projects.find((p: ProjectInfo) => p.name === selectedProjectName) ?? null
           : null
@@ -135,6 +149,71 @@ export const useProjectStore = create<ProjectState>()(
           selectedProject: selected,
           selectedProjectName: selected?.name ?? null,
         })
+      },
+
+      duplicateProject: async (sourceName, targetName) => {
+        ensureIPC()
+        await window.electron.project.duplicate(sourceName, targetName)
+        await get().fetchProjects()
+        // 自动选中新复制的项目
+        const projects = get().projects
+        const newProject = projects.find((p) => p.name === targetName)
+        if (newProject) {
+          get().selectProject(newProject)
+        }
+      },
+
+      renameProject: async (oldName, newName) => {
+        ensureIPC()
+        await window.electron.project.rename(oldName, newName)
+        await get().fetchProjects()
+        // 保持选中重命名后的项目
+        const projects = get().projects
+        const renamed = projects.find((p) => p.name === newName)
+        if (renamed) {
+          get().selectProject(renamed)
+        }
+      },
+
+      exportProject: async (projectName) => {
+        ensureIPC()
+        const result = await window.electron.project.exportZip(projectName)
+        if (!result.canceled) {
+          // 导出成功不刷新列表，项目未变化
+          return result
+        }
+        return result
+      },
+
+      importProject: async (options) => {
+        ensureIPC()
+        const result = await window.electron.project.importZip(options)
+        if (!result.canceled && result.projectName) {
+          await get().fetchProjects()
+          // 自动选中新导入的项目
+          const projects = get().projects
+          const newProject = projects.find((p) => p.name === result.projectName)
+          if (newProject) {
+            get().selectProject(newProject)
+          }
+        }
+        return result
+      },
+
+      batchExportProjects: async (projectNames) => {
+        ensureIPC()
+        const raw = await window.electron.project.batchExportZip(projectNames)
+        if (raw.canceled) {
+          return { canceled: true, result: null, targetDir: '' }
+        }
+        // 简化 successes 结构，避免 zipPath 泄漏到前端
+        const simplified = raw.result
+          ? {
+              successes: raw.result.successes.map((s) => ({ name: s.name })),
+              failures: raw.result.failures,
+            }
+          : null
+        return { canceled: false, result: simplified, targetDir: raw.targetDir }
       },
 
       selectProject: (project) => {
@@ -180,6 +259,35 @@ export const useProjectStore = create<ProjectState>()(
         ensureIPC()
         await window.electron.template.create(projectName, meta)
         await get().fetchTemplates()
+      },
+
+      updateTemplate: async (templateName, updates) => {
+        ensureIPC()
+        if (!window.electron.template?.update) {
+          throw new Error('模板更新接口未就绪')
+        }
+        await window.electron.template.update(templateName, updates)
+        await get().fetchTemplates()
+      },
+
+      exportTemplate: async (templateName) => {
+        ensureIPC()
+        if (!window.electron.template?.exportZip) {
+          throw new Error('模板导出接口未就绪')
+        }
+        return window.electron.template.exportZip(templateName)
+      },
+
+      importTemplate: async (options) => {
+        ensureIPC()
+        if (!window.electron.template?.importZip) {
+          throw new Error('模板导入接口未就绪')
+        }
+        const result = await window.electron.template.importZip(options)
+        if (!result.canceled && result.templateName) {
+          await get().fetchTemplates()
+        }
+        return result
       },
     }),
     {

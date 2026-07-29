@@ -8,6 +8,16 @@ const electronAPI = {
     createWithConfig: (config: unknown) =>
       ipcRenderer.invoke('project:createWithConfig', config),
     delete: (ids: string[]) => ipcRenderer.invoke('project:delete', ids),
+    duplicate: (sourceName: string, targetName: string) =>
+      ipcRenderer.invoke('project:duplicate', sourceName, targetName),
+    rename: (oldName: string, newName: string) =>
+      ipcRenderer.invoke('project:rename', oldName, newName),
+    exportZip: (projectName: string) =>
+      ipcRenderer.invoke('project:exportZip', projectName),
+    importZip: (options?: { projectName?: string; zipPath?: string }) =>
+      ipcRenderer.invoke('project:importZip', options),
+    batchExportZip: (projectNames: string[]) =>
+      ipcRenderer.invoke('project:batchExportZip', projectNames),
     getStructure: (name: string) => ipcRenderer.invoke('project:getStructure', name),
     getConfigFile: (name: string) => ipcRenderer.invoke('project:getConfigFile', name),
     saveConfigFile: (name: string, content: string) =>
@@ -37,6 +47,12 @@ const electronAPI = {
       ipcRenderer.invoke('template:create', projectName, meta),
     delete: (templateName: string) =>
       ipcRenderer.invoke('template:delete', templateName),
+    update: (templateName: string, updates: unknown) =>
+      ipcRenderer.invoke('template:update', templateName, updates),
+    exportZip: (templateName: string) =>
+      ipcRenderer.invoke('template:exportZip', templateName),
+    importZip: (options?: { templateName?: string; zipPath?: string }) =>
+      ipcRenderer.invoke('template:importZip', options),
   },
   design: {
     generate: (projectName: string, configINI?: string) =>

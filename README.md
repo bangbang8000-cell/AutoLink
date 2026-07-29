@@ -2,7 +2,7 @@
 
 **AI 智算中心网络规划与可视化工具 | AI Data Center Network Planning & Visualization**
 
-[![Version](https://img.shields.io/badge/version-2.4.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-2.4.1-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -84,9 +84,9 @@
 ### 方式一：下载安装包（推荐）
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
-- **Windows**：`AutoLink-Setup-2.4.0-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-2.4.0-mac-x64.dmg` / `AutoLink-2.4.0-mac-arm64.dmg`
-- **Linux**：`AutoLink-2.4.0-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-2.4.1-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-2.4.1-mac-x64.dmg` / `AutoLink-2.4.1-mac-arm64.dmg`
+- **Linux**：`AutoLink-2.4.1-linux.AppImage` / `.deb`
 
 安装后首次启动会自动创建 3 个示例项目，内置 11 套场景模板和 109+ 款设备库。
 

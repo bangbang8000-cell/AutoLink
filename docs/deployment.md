@@ -69,19 +69,19 @@ npm run dev
 ### Windows (NSIS 安装包)
 ```bash
 npm run dist:win
-# 输出: release/AutoLink-Setup-2.4.0-win.exe
+# 输出: release/AutoLink-Setup-2.4.1-win.exe
 ```
 
 ### macOS (DMG)
 ```bash
 npm run dist:mac
-# 输出: release/AutoLink-2.4.0-mac-x64.dmg / AutoLink-2.4.0-mac-arm64.dmg
+# 输出: release/AutoLink-2.4.1-mac-x64.dmg / AutoLink-2.4.1-mac-arm64.dmg
 ```
 
 ### Linux (AppImage + DEB)
 ```bash
 npm run dist:linux
-# 输出: release/AutoLink-2.4.0-linux.AppImage / .deb
+# 输出: release/AutoLink-2.4.1-linux.AppImage / .deb
 ```
 
 ## 生产部署
@@ -157,8 +157,8 @@ V2.4 安装包内置以下资源（通过 `extraResources` 打包）：
 ### 触发 Release 构建
 ```bash
 # 打 tag 并推送
-git tag v2.4.0
-git push origin v2.4.0
+git tag v2.4.1
+git push origin v2.4.1
 ```
 
 GitHub Actions 自动构建三平台安装包并发布到 Releases 页面：

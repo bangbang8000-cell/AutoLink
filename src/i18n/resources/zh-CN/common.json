@@ -3,6 +3,30 @@
     "title": "AutoLink",
     "subtitle": "AI智算中心网络规划与可视化工具"
   },
+  "search": "搜索",
+  "cancel": "取消",
+  "confirm": "确认",
+  "save": "保存",
+  "processing": "处理中...",
+  "loading": "加载中...",
+  "noData": "暂无数据",
+  "project": {
+    "duplicate": "复制项目",
+    "rename": "重命名项目",
+    "newName": "新名称",
+    "nameRequired": "名称不能为空",
+    "importZip": "导入项目 ZIP",
+    "batchExport": "批量导出项目"
+  },
+  "template": {
+    "edit": "编辑模板",
+    "name": "模板名称",
+    "description": "描述",
+    "scenario": "场景",
+    "tags": "标签（逗号分隔）",
+    "configContent": "配置内容 (network_config.ini)",
+    "importZip": "导入模板 ZIP"
+  },
   "menu": {
     "projectExplorer": "项目浏览器",
     "workbench": "工作台",

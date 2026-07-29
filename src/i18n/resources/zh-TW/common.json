@@ -1,5 +1,29 @@
 {
   "app": { "title": "AutoLink", "subtitle": "AI 資料中心網路規劃與可視化工具" },
+  "search": "搜尋",
+  "cancel": "取消",
+  "confirm": "確認",
+  "save": "儲存",
+  "processing": "處理中...",
+  "loading": "載入中...",
+  "noData": "無資料",
+  "project": {
+    "duplicate": "複製專案",
+    "rename": "重新命名專案",
+    "newName": "新名稱",
+    "nameRequired": "名稱必填",
+    "importZip": "匯入專案 ZIP",
+    "batchExport": "批量匯出專案"
+  },
+  "template": {
+    "edit": "編輯範本",
+    "name": "範本名稱",
+    "description": "描述",
+    "scenario": "情境",
+    "tags": "標籤（逗號分隔）",
+    "configContent": "設定內容 (network_config.ini)",
+    "importZip": "匯入範本 ZIP"
+  },
   "menu": {
     "projectExplorer": "專案瀏覽器",
     "workbench": "工作台",

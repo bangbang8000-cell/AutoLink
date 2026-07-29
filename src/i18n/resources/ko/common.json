@@ -1,5 +1,29 @@
 {
   "app": { "title": "AutoLink", "subtitle": "AI 데이터센터 네트워크 계획 및 시각화 도구" },
+  "search": "검색",
+  "cancel": "취소",
+  "confirm": "확인",
+  "save": "저장",
+  "processing": "처리 중...",
+  "loading": "로딩 중...",
+  "noData": "데이터 없음",
+  "project": {
+    "duplicate": "프로젝트 복제",
+    "rename": "프로젝트 이름 변경",
+    "newName": "새 이름",
+    "nameRequired": "이름은 필수입니다",
+    "importZip": "프로젝트 ZIP 가져오기",
+    "batchExport": "프로젝트 일괄 내보내기"
+  },
+  "template": {
+    "edit": "템플릿 편집",
+    "name": "템플릿 이름",
+    "description": "설명",
+    "scenario": "시나리오",
+    "tags": "태그 (쉼표로 구분)",
+    "configContent": "설정 내용 (network_config.ini)",
+    "importZip": "템플릿 ZIP 가져오기"
+  },
   "menu": {
     "projectExplorer": "프로젝트",
     "workbench": "워크벤치",

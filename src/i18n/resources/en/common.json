@@ -3,6 +3,30 @@
     "title": "AutoLink",
     "subtitle": "AI Data Center Network Planning & Visualization"
   },
+  "search": "Search",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "save": "Save",
+  "processing": "Processing...",
+  "loading": "Loading...",
+  "noData": "No data",
+  "project": {
+    "duplicate": "Duplicate Project",
+    "rename": "Rename Project",
+    "newName": "New Name",
+    "nameRequired": "Name is required",
+    "importZip": "Import Project ZIP",
+    "batchExport": "Batch Export Projects"
+  },
+  "template": {
+    "edit": "Edit Template",
+    "name": "Template Name",
+    "description": "Description",
+    "scenario": "Scenario",
+    "tags": "Tags (comma separated)",
+    "configContent": "Config Content (network_config.ini)",
+    "importZip": "Import Template ZIP"
+  },
   "menu": {
     "projectExplorer": "Project Explorer",
     "workbench": "Workbench",

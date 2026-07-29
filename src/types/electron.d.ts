@@ -5,6 +5,18 @@ interface Window {
       create: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
       createWithConfig: (config: import('@/types/project-config').ProjectConfig) => Promise<void>
       delete: (ids: string[]) => Promise<void>
+      duplicate: (sourceName: string, targetName: string) => Promise<void>
+      rename: (oldName: string, newName: string) => Promise<void>
+      exportZip: (projectName: string) => Promise<{ canceled: boolean; zipPath: string }>
+      importZip: (options?: { projectName?: string; zipPath?: string }) => Promise<{ canceled: boolean; projectName: string }>
+      batchExportZip: (projectNames: string[]) => Promise<{
+        canceled: boolean
+        result: {
+          successes: { name: string; zipPath: string }[]
+          failures: { name: string; error: string }[]
+        } | null
+        targetDir: string
+      }>
       getStructure: (name: string) => Promise<unknown[]>
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
@@ -22,6 +34,15 @@ interface Window {
       list: () => Promise<Array<{ id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean }>>
       create: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
       delete: (templateName: string) => Promise<void>
+      update: (templateName: string, updates: {
+        name?: string
+        description?: string
+        scenario?: string
+        tags?: string[]
+        configContent?: string
+      }) => Promise<void>
+      exportZip: (templateName: string) => Promise<{ canceled: boolean; zipPath: string }>
+      importZip: (options?: { templateName?: string; zipPath?: string }) => Promise<{ canceled: boolean; templateName: string }>
     }
     design: {
       generate: (projectName: string, configINI?: string) => Promise<unknown>
