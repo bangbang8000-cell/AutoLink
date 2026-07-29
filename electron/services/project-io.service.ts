@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 import AdmZip from 'adm-zip'
 import { getWorkspacePath, getTemplatePath } from '../config.js'
 
@@ -45,7 +45,7 @@ export interface BatchExportResult {
 function archiveDirectory(sourceDir: string, zipPath: string, allowOutputDir: boolean): Promise<ExportResult> {
   return new Promise<ExportResult>((resolve, reject) => {
     const output = fs.createWriteStream(zipPath)
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
       zlib: { level: 6 },
     })
 
@@ -59,11 +59,11 @@ function archiveDirectory(sourceDir: string, zipPath: string, allowOutputDir: bo
       })
     })
 
-    output.on('error', (err) => {
+    output.on('error', (err: Error) => {
       reject(new Error(`写入 ZIP 失败: ${err.message}`))
     })
 
-    archive.on('error', (err) => {
+    archive.on('error', (err: Error) => {
       reject(new Error(`打包失败: ${err.message}`))
     })
 
