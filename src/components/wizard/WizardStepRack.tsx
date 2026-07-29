@@ -79,7 +79,7 @@ export function WizardStepRack() {
           className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
         />
         <p className="text-[10px] text-gray-400 mt-1">
-          生成机柜名称时将使用此前缀，例如 "机柜-A01"
+          生成机柜名称时将使用此前缀，例如 &quot;机柜-A01&quot;
         </p>
       </div>
     </div>
