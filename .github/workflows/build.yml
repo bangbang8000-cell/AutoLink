@@ -26,6 +26,15 @@ jobs:
       - run: npx electron-builder --win --publish=never
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Debug - list output directories
+        run: |
+          echo "=== dist ==="
+          ls -R dist/ 2>/dev/null || echo "(not found)"
+          echo "=== dist-electron ==="
+          ls -R dist-electron/ 2>/dev/null || echo "(not found)"
+          echo "=== release ==="
+          ls -R release/ 2>/dev/null || echo "(not found)"
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: AutoLink-win

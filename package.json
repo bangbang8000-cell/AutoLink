@@ -12,7 +12,7 @@
     "dev:all": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\" && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:all:clean": "npm run build:electron && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build:renderer": "vite build",
-    "build:electron": "npx rimraf dist-electron && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\"",
+    "build:electron": "node scripts/clean-dist.cjs && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/rename-preload.cjs",
     "build": "npm run build:renderer && npm run build:electron",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
