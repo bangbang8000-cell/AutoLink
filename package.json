@@ -107,8 +107,7 @@
           ]
         }
       ],
-      "icon": "public/icons/icon.ico",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}-win.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -121,15 +120,15 @@
     "mac": {
       "target": [
         {
-          "target": "zip",
+          "target": "dmg",
           "arch": [
             "x64",
             "arm64"
           ]
         }
       ],
-      "icon": "public/icons/icon.icns",
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": [
@@ -146,13 +145,8 @@
           ]
         }
       ],
-      "icon": "public/icons/icon.png",
-      "category": "Network"
+      "category": "Network",
+      "artifactName": "${productName}-${version}-linux.${ext}"
     }
-  },
-  "allowScripts": {
-    "electron@28.3.3": true,
-    "esbuild@0.21.5": true,
-    "electron-winstaller@5.4.0": true
   }
 }

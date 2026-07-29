@@ -1,14 +1,17 @@
 name: Build
+
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   build:
-    name: Build (${{ matrix.os }})
+    name: Build (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,30 +19,57 @@ jobs:
         include:
           - os: windows-latest
             platform: win
+            build_flag: '--win'
+            artifact_name: AutoLink-win
+          - os: macos-latest
+            platform: mac
+            build_flag: '--mac'
+            artifact_name: AutoLink-mac
+          - os: ubuntu-latest
+            platform: linux
+            build_flag: '--linux'
+            artifact_name: AutoLink-linux
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - run: npm ci --ignore-scripts
-      - run: npm run build
-      - run: npx electron-builder --win --publish=never
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app (renderer + electron)
+        run: npm run build
+
+      - name: Package with electron-builder
+        run: npx electron-builder ${{ matrix.build_flag }} --publish=never
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Debug - list output directories
-        run: |
-          echo "=== dist ==="
-          ls -R dist/ 2>/dev/null || echo "(not found)"
-          echo "=== dist-electron ==="
-          ls -R dist-electron/ 2>/dev/null || echo "(not found)"
-          echo "=== release ==="
-          ls -R release/ 2>/dev/null || echo "(not found)"
+          # Skip macOS code signing (no certificate in CI)
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: List release artifacts
         shell: bash
-      - uses: actions/upload-artifact@v4
+        run: |
+          echo "=== release/ ==="
+          ls -la release/ 2>/dev/null || echo "(empty or not found)"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: AutoLink-win
-          path: release/*.{exe,blockmap,yml}
+          name: ${{ matrix.artifact_name }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+            release/*.blockmap
+            release/*.yml
+          if-no-files-found: error
           retention-days: 30
+
   release:
     name: Create Release
     if: startsWith(github.ref, 'refs/tags/v')
@@ -49,18 +79,37 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
           path: release
+
+      - name: List downloaded artifacts
+        shell: bash
+        run: find release -type f | sort
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Delete existing release if re-running
           gh release delete "${{ github.ref_name }}" --yes || true
+
+          # Remove non-distributable files
           find release -name "builder-debug.yml" -delete || true
+          find release -name "builder-effective-config.yaml" -delete || true
+
+          # Collect all distributable files
           gh release create "${{ github.ref_name }}" \
-            release/*/*.exe \
-            release/*/*.blockmap \
-            release/*/*.yml \
+            release/AutoLink-win/*.exe \
+            release/AutoLink-win/*.blockmap \
+            release/AutoLink-win/*.yml \
+            release/AutoLink-mac/*.dmg \
+            release/AutoLink-mac/*.blockmap \
+            release/AutoLink-mac/*.yml \
+            release/AutoLink-linux/*.AppImage \
+            release/AutoLink-linux/*.deb \
+            release/AutoLink-linux/*.yml \
             --title "${{ github.ref_name }}" \
             --generate-notes

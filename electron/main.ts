@@ -29,7 +29,7 @@ class AutoLinkApp {
       minHeight: 800,
       frame: false,
       title: 'AutoLink',
-      icon: path.join(__dirname, '..', 'public', 'icons', 'icon.ico'),
+      icon: path.join(__dirname, '..', 'public', 'icons', 'icon.png'),
       backgroundColor: '#f9fafb',
       titleBarStyle: 'hidden',
       show: false,
