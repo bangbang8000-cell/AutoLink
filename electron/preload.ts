@@ -7,7 +7,7 @@ const electronAPI = {
       ipcRenderer.invoke('project:create', name, options),
     createWithConfig: (config: unknown) =>
       ipcRenderer.invoke('project:createWithConfig', config),
-    delete: (ids: string[]) => ipcRenderer.invoke('project:delete', ids),
+    delete: (names: string[]) => ipcRenderer.invoke('project:delete', names),
     duplicate: (sourceName: string, targetName: string) =>
       ipcRenderer.invoke('project:duplicate', sourceName, targetName),
     rename: (oldName: string, newName: string) =>
@@ -76,6 +76,8 @@ const electronAPI = {
   app: {
     getPath: (name: string) => ipcRenderer.invoke('app:getPath', name),
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
+    getStackVersions: () => ipcRenderer.invoke('app:getStackVersions'),
+    showBrandingAsset: (filename: string) => ipcRenderer.invoke('app:showBrandingAsset', filename),
     checkUpdate: () => ipcRenderer.invoke('app:check-update'),
     downloadUpdate: () => ipcRenderer.invoke('app:download-update'),
     quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install'),
@@ -136,6 +138,7 @@ const electronAPI = {
   versions: {
     node: process.versions.node,
     electron: process.versions.electron,
+    chromium: process.versions.chrome,
     platform: process.platform,
     arch: process.arch,
   },

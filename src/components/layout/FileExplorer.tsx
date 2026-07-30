@@ -14,7 +14,7 @@ import {
   Upload, RotateCcw, ExternalLink, Check,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
-  Star,
+  Star, Plus,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -44,6 +44,7 @@ function ProjectExplorer() {
   const { projects, templates, selectProject, selectedProjectName, deleteProjects, convertToTemplate, duplicateProject, renameProject, exportProject, importProject, batchExportProjects, favoriteProjects, toggleFavorite } = useProjectStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
   const addToast = useToastStore((s) => s.addToast)
+  const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [renameModal, setRenameModal] = useState<{ type: 'rename' | 'duplicate'; projectName: string } | null>(null)
@@ -177,6 +178,14 @@ function ProjectExplorer() {
     <div className="h-full flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <button
+          onClick={() => setShowCreateProjectWizard(true)}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded bg-primary-500 hover:bg-primary-600 text-white shrink-0"
+          title={t('common:project.new', '新建项目')}
+        >
+          <Plus size={13} />
+          <span>{t('common:project.new', '新建项目')}</span>
+        </button>
         <div className="relative flex-1">
           <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -269,7 +278,7 @@ function ProjectExplorer() {
           onConfirm={async () => {
             const project = projects.find((p) => p.name === deleteTarget.name)
             if (project) {
-              await deleteProjects([String(project.id)])
+              await deleteProjects([project.name])
               addToast('success', `项目 "${deleteTarget.name}" 已删除`)
             }
           }}

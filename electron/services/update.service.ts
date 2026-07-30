@@ -54,6 +54,11 @@ class UpdateService {
       throw new Error('electron-updater not available')
     }
 
+    // 注册前先清理监听器，避免多次下载时监听器累积导致回调重复执行与内存泄漏
+    updater.removeAllListeners('download-progress')
+    updater.removeAllListeners('update-downloaded')
+    updater.removeAllListeners('error')
+
     return new Promise<void>((resolve, reject) => {
       updater.on('download-progress', (progress: import('electron-updater').ProgressInfo) => {
         this.mainWindow?.webContents.send('update:downloadProgress', {

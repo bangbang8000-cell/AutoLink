@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { ZipArchive } from 'archiver'
 import AdmZip from 'adm-zip'
-import { getWorkspacePath, getTemplatePath } from '../config.js'
+import { getWorkspacePath, getTemplatePath, getUserTemplatePath } from '../config.js'
 
 // 允许的顶层文件白名单（防止打包系统文件或敏感数据）
 const ALLOWED_TOP_LEVEL = new Set([
@@ -251,8 +251,12 @@ class ProjectIOService {
    * 导出模板为 ZIP
    */
   async exportTemplateZip(templateName: string, zipPath: string): Promise<ExportResult> {
-    const tplPath = getTemplatePath()
-    const tplDir = path.join(tplPath, templateName)
+    // 优先查用户模板目录，再查内置模板目录
+    const userTplDir = path.join(getUserTemplatePath(), templateName)
+    const builtinTplDir = path.join(getTemplatePath(), templateName)
+    const tplDir = fs.existsSync(userTplDir)
+      ? userTplDir
+      : builtinTplDir
     if (!fs.existsSync(tplDir) || !fs.statSync(tplDir).isDirectory()) {
       throw new Error(`模板不存在: ${templateName}`)
     }
@@ -296,7 +300,8 @@ class ProjectIOService {
       throw new Error('ZIP 中未找到 network_config.ini 或 project_config.json，不是有效的模板包')
     }
 
-    const tplPath = getTemplatePath()
+    // 导入模板写入用户模板目录（可读写），内置模板目录只读
+    const tplPath = getUserTemplatePath()
     if (!fs.existsSync(tplPath)) {
       fs.mkdirSync(tplPath, { recursive: true })
     }

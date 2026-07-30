@@ -57,11 +57,25 @@ interface Window {
     app: {
       getPath: (name: string) => Promise<string>
       getVersion: () => Promise<string>
+      getStackVersions: () => Promise<{
+        app: string
+        electron: string
+        chrome: string
+        node: string
+        react: string
+        typescript: string
+        vite: string
+        echarts: string
+        xyflow: string
+        i18next: string
+        electronUpdater: string
+      } | null>
+      showBrandingAsset: (filename: string) => Promise<string>
       checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string }>
       downloadUpdate: () => Promise<void>
       quitAndInstall: () => void
       onUpdateAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => () => void
-      onUpdateDownloadProgress: (callback: (data: { percent: number }) => void) => () => void
+      onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number }) => void) => () => void
       onUpdateDownloaded: (callback: () => void) => () => void
       onUpdateError: (callback: (message: string) => void) => () => void
     }

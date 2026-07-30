@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "2.4.7",
+  "version": "2.5.0",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -51,6 +51,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.8",
@@ -71,6 +72,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.1.1",
+    "png-to-ico": "^3.0.2",
     "postcss": "^8.5.23",
     "prettier": "^3.9.6",
     "tailwindcss": "^3.4.1",
@@ -104,6 +106,14 @@
       {
         "from": "template",
         "to": "template"
+      },
+      {
+        "from": "build/logo.svg",
+        "to": "branding/logo.svg"
+      },
+      {
+        "from": "docs/v2.5/logo_specification.md",
+        "to": "branding/logo_specification.md"
       }
     ],
     "win": {

@@ -120,13 +120,14 @@ describe('ProjectStore', () => {
   })
 
   describe('deleteProjects', () => {
-    it('应该删除指定项目并更新列表', async () => {
+    it('应该按名称删除指定项目并更新列表', async () => {
       window.electron.project.delete = vi.fn().mockResolvedValue(undefined)
       window.electron.project.list = vi.fn().mockResolvedValue([{ id: 1, name: 'proj2', index: 0 }])
 
       useProjectStore.setState({ selectedProjectName: 'proj1', selectedProject: { id: 1, name: 'proj1', index: 0 } })
-      await useProjectStore.getState().deleteProjects(['1'])
+      await useProjectStore.getState().deleteProjects(['proj1'])
 
+      expect(window.electron.project.delete).toHaveBeenCalledWith(['proj1'])
       const state = useProjectStore.getState()
       expect(state.selectedProject).toBeNull()
       expect(state.selectedProjectName).toBeNull()

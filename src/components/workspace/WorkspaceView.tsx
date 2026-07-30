@@ -1,8 +1,9 @@
 import { useCallback, useState, useRef, useEffect } from 'react'
-import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Plus, Play, Building2 } from 'lucide-react'
+import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
+import { useToastStore } from '@/stores/toast.store'
 import { WorkbenchTab } from './tabs/WorkbenchTab'
 import { TopologyTab } from './tabs/TopologyTab'
 import { RackTab } from './tabs/RackTab'
@@ -36,8 +37,10 @@ export function WorkspaceView() {
   const closeTabsToRight = useWorkspaceStore((s) => s.closeTabsToRight)
   const openTab = useWorkspaceStore((s) => s.openTab)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
+  const importProject = useProjectStore((s) => s.importProject)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
+  const addToast = useToastStore((s) => s.addToast)
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
 
@@ -176,25 +179,80 @@ export function WorkspaceView() {
               <>
                 <p className="text-lg font-bold text-gray-600 dark:text-gray-300 mb-1">欢迎使用 AutoLink</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">AI 智算中心网络规划与可视化工具</p>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-3 gap-3 max-w-2xl">
                   <button
                     onClick={() => setShowCreateProjectWizard(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors shadow-sm"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
                   >
-                    <Plus size={16} /> 新建项目
+                    <Sparkles size={22} className="text-primary-500" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">新建项目</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">从空白开始</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setActiveActivity('project'); addToast('info', '请从左侧下方「模板」区域右键模板，选择「基于此模板创建」') }}
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <LayoutTemplate size={22} className="text-gray-500 dark:text-gray-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">从模板创建</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">选择场景模板</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setActiveActivity('project'); addToast('info', '请从左侧项目列表选择已有项目') }}
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <FolderOpen size={22} className="text-gray-500 dark:text-gray-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">打开项目</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">选择已有项目</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const result = await importProject()
+                        if (!result.canceled) addToast('success', `项目 "${result.projectName}" 已导入`)
+                      } catch (err: any) {
+                        addToast('error', `导入失败: ${err?.message || err}`)
+                      }
+                    }}
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <Upload size={22} className="text-gray-500 dark:text-gray-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">导入项目</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">从 ZIP 导入</div>
+                    </div>
                   </button>
                   <button
                     onClick={() => {
                       setActiveActivity('workbench')
                       openTab({ type: 'workbench', title: '工作台', closable: false })
                     }}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                   >
-                    <Play size={16} /> 打开 Demo 项目
+                    <Play size={22} className="text-gray-500 dark:text-gray-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">打开工作台</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">体验示例项目</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => window.electron?.shell?.openExternal?.('https://github.com/bangbang8000-cell/AutoLink')}
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <BookOpen size={22} className="text-gray-500 dark:text-gray-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">使用指南</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">查看文档</div>
+                    </div>
                   </button>
                 </div>
                 <div className="mt-6 text-[11px] text-gray-400 dark:text-gray-500 space-y-0.5">
-                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+Shift+N</kbd> 新建项目</p>
+                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+N</kbd> 新建项目</p>
                   <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+Shift+W</kbd> 工作台</p>
                 </div>
               </>

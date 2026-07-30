@@ -13,9 +13,11 @@ export function getAppPath(...segments: string[]): string {
 
 export function initializeAppDirs(): void {
   const userData = app.getPath('userData')
-  // 打包后模板从 resourcesPath/template 只读访问，仅需创建 workspace 目录
+  // 打包后内置模板从 resourcesPath/template 只读访问；
+  // 用户模板写入 userData/user-templates（可读写）
   const dirs = [
     path.join(userData, 'workspace'),
+    getUserTemplatePath(),
   ]
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) {
@@ -35,12 +37,42 @@ export function getTemplatePath(): string {
   if (isDev) {
     return path.join(process.cwd(), 'template')
   }
-  // 打包后模板（含设备库）随 extraResources 复制到 resourcesPath/template
+  // 打包后内置模板（含设备库）随 extraResources 复制到 resourcesPath/template（只读）
   return path.join(process.resourcesPath, 'template')
+}
+
+/**
+ * 用户模板路径（可读写）。
+ * 打包后内置模板目录只读，用户创建/编辑/删除的模板必须写入此处。
+ */
+export function getUserTemplatePath(): string {
+  if (isDev) {
+    return path.join(process.cwd(), 'user-templates')
+  }
+  return path.join(app.getPath('userData'), 'user-templates')
 }
 
 export function getBackendPath(): string {
   return getAppPath('backend')
+}
+
+/**
+ * 品牌资源路径（Logo 源码 + 设计规范文档）。
+ * - 打包后：resourcesPath/branding/<filename>（由 extraResources 复制）
+ * - 开发时：源文件散落在 build/ 和 docs/v2.5/，按文件名映射回真实路径
+ *
+ * 发布的 Logo 绘制逻辑包含：
+ *   - logo.svg                 512×512 主矢量源（绘制逻辑的最终表达）
+ *   - logo_specification.md    几何规格、SVG 源码、两个已验证的渲染陷阱
+ */
+export function getBrandingAssetPath(filename: string): string {
+  const safeName = path.basename(filename)
+  if (isDev) {
+    if (safeName === 'logo.svg') return path.join(process.cwd(), 'build', 'logo.svg')
+    if (safeName === 'logo_specification.md') return path.join(process.cwd(), 'docs', 'v2.5', 'logo_specification.md')
+    return ''
+  }
+  return path.join(process.resourcesPath, 'branding', safeName)
 }
 
 export function getDemoDataPath(): string {

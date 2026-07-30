@@ -18,6 +18,7 @@ import { ServerProfileForm } from '@/components/device/ServerProfileForm'
 import { SwitchProfileForm } from '@/components/device/SwitchProfileForm'
 import { DeviceImportModal } from '@/components/device/DeviceImportModal'
 import { DeviceExportModal } from '@/components/device/DeviceExportModal'
+import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
 import '@/i18n'
 
 /** Map activity types to workspace tab config */
@@ -44,6 +45,8 @@ export default function App() {
   const closeTab = useWorkspaceStore((s) => s.closeTab)
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
   const reopenLastClosed = useWorkspaceStore((s) => s.reopenLastClosed)
+  const showCreateProjectWizard = useUIStore((s) => s.showCreateProjectWizard)
+  const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
 
   // Apply dark mode to HTML element
   useEffect(() => {
@@ -141,6 +144,10 @@ export default function App() {
       if (ctrl && e.key.toLowerCase() === 'b') {
         e.preventDefault(); toggleSidebar()
       }
+      // Ctrl+N: 新建项目（不与 Ctrl+Shift+* 冲突）
+      if (ctrl && !shift && e.key.toLowerCase() === 'n') {
+        e.preventDefault(); setShowCreateProjectWizard(true)
+      }
       if (ctrl && e.key.toLowerCase() === 'j') {
         e.preventDefault(); togglePanel()
       }
@@ -192,6 +199,9 @@ export default function App() {
       <SwitchProfileForm />
       <DeviceImportModal />
       <DeviceExportModal />
+      {showCreateProjectWizard && (
+        <CreateProjectWizardModal onClose={() => setShowCreateProjectWizard(false)} />
+      )}
     </div>
     </ProjectProvider>
   )

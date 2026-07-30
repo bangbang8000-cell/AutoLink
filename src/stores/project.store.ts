@@ -35,7 +35,7 @@ interface ProjectState {
   fetchProjects: () => Promise<void>
   createProject: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
   createProjectWithConfig: (config: ProjectConfig) => Promise<void>
-  deleteProjects: (ids: string[]) => Promise<void>
+  deleteProjects: (names: string[]) => Promise<void>
   duplicateProject: (sourceName: string, targetName: string) => Promise<void>
   renameProject: (oldName: string, newName: string) => Promise<void>
   exportProject: (projectName: string) => Promise<{ canceled: boolean; zipPath: string }>
@@ -133,11 +133,9 @@ export const useProjectStore = create<ProjectState>()(
         await get().fetchProjects()
       },
 
-      deleteProjects: async (ids) => {
+      deleteProjects: async (names) => {
         ensureIPC()
-        // Convert string ids to indices for IPC
-        const indices = ids.map((id) => parseInt(id))
-        await window.electron.project.delete(indices.map(String))
+        await window.electron.project.delete(names)
         const projects = await window.electron.project.list()
         const validNames = new Set(projects.map((p: ProjectInfo) => p.name))
         const { selectedProjectName } = get()

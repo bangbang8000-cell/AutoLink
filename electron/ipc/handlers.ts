@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
-import { getWorkspacePath, getTemplatePath, getBackendPath } from '../config.js'
+import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
 import { projectIOService } from '../services/project-io.service.js'
 
@@ -264,16 +264,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     fs.writeFileSync(path.join(projectDir, 'project.json'), JSON.stringify(meta, null, 2), 'utf-8')
   }))
 
-  ipcMain.handle('project:delete', wrapHandler(async (_event, ids: string[]) => {
+  ipcMain.handle('project:delete', wrapHandler(async (_event, names: string[]) => {
     const wsp = getWorkspacePath()
-    const dirs = fs.readdirSync(wsp, { withFileTypes: true }).filter((d) => d.isDirectory())
-    for (const id of ids) {
-      const idx = parseInt(id) - 1
-      if (idx >= 0 && idx < dirs.length) {
-        const projectDir = path.join(wsp, dirs[idx].name)
-        if (fs.existsSync(projectDir)) {
-          fs.rmSync(projectDir, { recursive: true, force: true })
-        }
+    for (const name of names) {
+      sanitizeName(name)
+      const projectDir = path.join(wsp, name)
+      if (fs.existsSync(projectDir)) {
+        fs.rmSync(projectDir, { recursive: true, force: true })
       }
     }
   }))
@@ -576,6 +573,41 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
   })
 
+  // 返回产品软件栈关键依赖版本（供关于弹窗动态展示）
+  ipcMain.handle('app:getStackVersions', () => {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'))
+      const deps = pkg.dependencies || {}
+      return {
+        app: pkg.version || 'unknown',
+        electron: process.versions.electron,
+        chrome: process.versions.chrome,
+        node: process.versions.node,
+        react: deps['react'] || '',
+        reactDom: deps['react-dom'] || '',
+        typescript: deps['typescript'] || '',
+        vite: deps['vite'] || '',
+        echarts: deps['echarts'] || '',
+        xyflow: deps['@xyflow/react'] || '',
+        i18next: deps['i18next'] || '',
+        electronUpdater: deps['electron-updater'] || '',
+      }
+    } catch {
+      return null
+    }
+  })
+
+  // 在系统文件管理器中定位品牌资源（Logo 源码 / 设计规范文档）。
+  // 将 Logo 绘制逻辑作为程序的一部分发布，用户可从关于弹窗直达源文件。
+  ipcMain.handle('app:showBrandingAsset', wrapHandler(async (_event, filename: string) => {
+    const filePath = getBrandingAssetPath(filename)
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new Error(`品牌资源不存在: ${filename}`)
+    }
+    shell.showItemInFolder(filePath)
+    return filePath
+  }))
+
   // ===== Shell =====
   ipcMain.handle('shell:showItemInFolder', wrapHandler(async (_event, filePath: string) => {
     sanitizePath([filePath])
@@ -671,7 +703,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== Template =====
   ipcMain.handle('template:getStructure', wrapHandler(async (_event, templateName: string) => {
     sanitizeName(templateName)
-    const tplDir = path.join(getTemplatePath(), templateName)
+    // 优先查用户模板目录，再查内置模板目录
+    const userTplDir = path.join(getUserTemplatePath(), templateName)
+    const builtinTplDir = path.join(getTemplatePath(), templateName)
+    const tplDir = fs.existsSync(userTplDir) ? userTplDir : builtinTplDir
     if (!fs.existsSync(tplDir)) return []
 
     function walkDir(dir: string): { name: string; type: string; children?: unknown[] }[] {
@@ -690,9 +725,12 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('template:getFile', wrapHandler(async (_event, templateName: string, filePath: string) => {
     sanitizeName(templateName)
-    const tplDir = getTemplatePath()
-    const fullPath = path.resolve(tplDir, templateName, filePath)
-    if (!fullPath.startsWith(tplDir + path.sep) && fullPath !== tplDir) {
+    // 优先查用户模板目录，再查内置模板目录
+    const userTplDir = getUserTemplatePath()
+    const builtinTplDir = getTemplatePath()
+    const baseDir = fs.existsSync(path.join(userTplDir, templateName)) ? userTplDir : builtinTplDir
+    const fullPath = path.resolve(baseDir, templateName, filePath)
+    if (!fullPath.startsWith(baseDir + path.sep) && fullPath !== baseDir) {
       throw new Error('路径遍历攻击被阻止')
     }
     if (!fs.existsSync(fullPath)) return null
@@ -711,30 +749,40 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }
 
   ipcMain.handle('template:list', wrapHandler(async () => {
-    const tplDir = getTemplatePath()
-    if (!fs.existsSync(tplDir)) return []
+    // 读取单个模板目录，返回模板元信息数组
+    const readDir = (tplDir: string, isBuiltin: boolean) => {
+      if (!fs.existsSync(tplDir)) return []
+      const entries = fs.readdirSync(tplDir, { withFileTypes: true })
+      return entries
+        .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+        .map((e) => {
+          const metaPath = path.join(tplDir, e.name, 'template.json')
+          let meta: TemplateMeta = { name: e.name, description: '' }
+          if (fs.existsSync(metaPath)) {
+            try {
+              meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+            } catch { /* ignore corrupt meta */ }
+          }
+          return {
+            id: e.name,
+            name: meta.name || e.name,
+            description: meta.description || '',
+            scenario: meta.scenario || '',
+            tags: meta.tags || [],
+            updatedAt: meta.updatedAt || meta.createdAt || '',
+            isBuiltin: isBuiltin || !!meta.isBuiltin,
+          }
+        })
+    }
 
-    const entries = fs.readdirSync(tplDir, { withFileTypes: true })
-    return entries
-      .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
-      .map((e) => {
-        const metaPath = path.join(tplDir, e.name, 'template.json')
-        let meta: TemplateMeta = { name: e.name, description: '' }
-        if (fs.existsSync(metaPath)) {
-          try {
-            meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-          } catch { /* ignore corrupt meta */ }
-        }
-        return {
-          id: e.name,
-          name: meta.name || e.name,
-          description: meta.description || '',
-          scenario: meta.scenario || '',
-          tags: meta.tags || [],
-          updatedAt: meta.updatedAt || meta.createdAt || '',
-          isBuiltin: !!meta.isBuiltin,
-        }
-      })
+    // 合并内置模板（只读）+ 用户模板（可读写）
+    const builtinTplDir = getTemplatePath()
+    const userTplDir = getUserTemplatePath()
+    const builtin = readDir(builtinTplDir, true)
+    const user = readDir(userTplDir, false)
+    // 用户模板优先（同名时覆盖内置）
+    const userNames = new Set(user.map((t) => t.id))
+    return [...user, ...builtin.filter((t) => !userNames.has(t.id))]
   }))
 
   ipcMain.handle('template:create', wrapHandler(async (_event, projectName: string, meta: TemplateMeta) => {
@@ -742,9 +790,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     sanitizeName(meta.name)
 
     const wsp = getWorkspacePath()
-    const tplDir = getTemplatePath()
+    // 用户模板写入 userData/user-templates（可读写），内置模板目录只读
+    const userTplDir = getUserTemplatePath()
     const srcDir = path.join(wsp, projectName)
-    const destDir = path.join(tplDir, meta.name)
+    const destDir = path.join(userTplDir, meta.name)
 
     if (!fs.existsSync(srcDir)) throw new Error(`项目 ${projectName} 不存在`)
     if (fs.existsSync(destDir)) throw new Error(`模板 ${meta.name} 已存在`)
@@ -776,24 +825,18 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('template:delete', wrapHandler(async (_event, templateName: string) => {
     sanitizeName(templateName)
-    const tplDir = getTemplatePath()
-    const targetDir = path.join(tplDir, templateName)
-
-    if (!fs.existsSync(targetDir)) throw new Error(`模板 ${templateName} 不存在`)
-
-    // Check if builtin
-    const metaPath = path.join(targetDir, 'template.json')
-    if (fs.existsSync(metaPath)) {
-      try {
-        const meta: TemplateMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-        if (meta.isBuiltin) throw new Error('内置模板不可删除')
-      } catch (err) {
-        if (err instanceof Error && err.message === '内置模板不可删除') throw err
-        /* ignore corrupt meta */
-      }
+    // 优先在用户模板目录查找（可删除）；内置模板目录只读，不可删除
+    const userTargetDir = path.join(getUserTemplatePath(), templateName)
+    if (fs.existsSync(userTargetDir)) {
+      fs.rmSync(userTargetDir, { recursive: true, force: true })
+      return
     }
-
-    fs.rmSync(targetDir, { recursive: true, force: true })
+    // 若存在于内置目录，提示不可删除
+    const builtinTargetDir = path.join(getTemplatePath(), templateName)
+    if (fs.existsSync(builtinTargetDir)) {
+      throw new Error('内置模板不可删除')
+    }
+    throw new Error(`模板 ${templateName} 不存在`)
   }))
 
   // V2.4.1: 模板编辑 - 更新元数据和配置内容
@@ -805,8 +848,12 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     configContent?: string
   }) => {
     sanitizeName(templateName)
-    const tplDir = getTemplatePath()
-    const targetDir = path.join(tplDir, templateName)
+    // 优先在用户模板目录查找（可编辑）；内置模板目录只读，不可编辑
+    const userTargetDir = path.join(getUserTemplatePath(), templateName)
+    const builtinTargetDir = path.join(getTemplatePath(), templateName)
+    const targetDir = fs.existsSync(userTargetDir)
+      ? userTargetDir
+      : builtinTargetDir
     if (!fs.existsSync(targetDir)) throw new Error(`模板 ${templateName} 不存在`)
 
     const metaPath = path.join(targetDir, 'template.json')
@@ -817,7 +864,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       } catch { /* ignore */ }
     }
 
-    if (meta.isBuiltin) {
+    // 内置模板（在只读目录中）不可编辑
+    if (targetDir === builtinTargetDir) {
       throw new Error('内置模板不可编辑')
     }
 
