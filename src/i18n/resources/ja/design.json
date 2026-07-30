@@ -41,5 +41,6 @@
   "totalServers": "サーバー総数",
   "validationPassed": "検証成功",
   "validationFailed": "検証失敗",
+  "validationIssues": "検証問題",
   "loadConfig": "設定を読み込む"
 }

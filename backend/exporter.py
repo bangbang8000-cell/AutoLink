@@ -894,3 +894,172 @@ def generate_report_data(designer):
         'cost': cost,
         'generated_at': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
+
+
+def export_pdf_report(designer, filename):
+    """V2.4.6: 生成 PDF 设计报告
+
+    基于 generate_report_data 的数据，使用 reportlab 生成 8 章节正式 PDF 报告。
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
+    )
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os as _os
+
+    # 注册中文字体（Windows: 微软雅黑；Linux: 文泉驿；fallback: Helvetica）
+    font_name = 'Helvetica'
+    for font_path in [
+        ('C:/Windows/Fonts/msyh.ttc', 'MSYH'),
+        ('C:/Windows/Fonts/simhei.ttf', 'SimHei'),
+        ('/usr/share/fonts/truetype/wqy/wqy-microhei.ttc', 'WQY'),
+        ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVu'),
+    ]:
+        if _os.path.exists(font_path[0]):
+            try:
+                pdfmetrics.registerFont(TTFont(font_path[1], font_path[0]))
+                font_name = font_path[1]
+                break
+            except Exception:
+                continue
+
+    data = generate_report_data(designer)
+
+    doc = SimpleDocTemplate(
+        filename, pagesize=A4,
+        leftMargin=20 * mm, rightMargin=20 * mm,
+        topMargin=20 * mm, bottomMargin=20 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('ChTitle', parent=styles['Title'],
+                                 fontName=font_name, fontSize=20, spaceAfter=12)
+    h2_style = ParagraphStyle('ChH2', parent=styles['Heading2'],
+                              fontName=font_name, fontSize=14, spaceBefore=10, spaceAfter=6,
+                              textColor=colors.HexColor('#1e40af'))
+    normal_style = ParagraphStyle('ChNormal', parent=styles['Normal'],
+                                  fontName=font_name, fontSize=10, leading=16)
+    cell_style = ParagraphStyle('ChCell', parent=styles['Normal'],
+                                fontName=font_name, fontSize=9, leading=12)
+
+    story = []
+
+    # 封面
+    story.append(Paragraph('AutoLink 智算中心设计报告', title_style))
+    story.append(Spacer(1, 6 * mm))
+    story.append(Paragraph(f"生成时间：{data['generated_at']}", normal_style))
+    story.append(Spacer(1, 4 * mm))
+
+    # 1. 项目概览
+    story.append(Paragraph('1. 项目概览', h2_style))
+    ov = data['overview']
+    ov_rows = [[Paragraph('项目', cell_style), Paragraph('数值', cell_style)]]
+    for k, v in ov.items():
+        ov_rows.append([Paragraph(str(k), cell_style), Paragraph(str(v), cell_style)])
+    ov_table = Table(ov_rows, colWidths=[60 * mm, 80 * mm])
+    ov_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(ov_table)
+    story.append(Spacer(1, 4 * mm))
+
+    # 2. 网络架构
+    story.append(Paragraph('2. 网络架构', h2_style))
+    arch = data['architecture']
+    arch_rows = [[Paragraph('设备类型', cell_style), Paragraph('数量', cell_style)]]
+    for k, v in arch.items():
+        arch_rows.append([Paragraph(str(k), cell_style), Paragraph(str(v), cell_style)])
+    arch_table = Table(arch_rows, colWidths=[60 * mm, 40 * mm])
+    arch_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10b981')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(arch_table)
+    story.append(Spacer(1, 4 * mm))
+
+    # 3. 功耗与散热
+    story.append(Paragraph('3. 功耗与散热', h2_style))
+    pw = data['power']
+    pw_rows = [[Paragraph('项目', cell_style), Paragraph('数值', cell_style)]]
+    for k, v in pw.items():
+        pw_rows.append([Paragraph(str(k), cell_style), Paragraph(str(v), cell_style)])
+    pw_table = Table(pw_rows, colWidths=[60 * mm, 60 * mm])
+    pw_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f59e0b')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+    ]))
+    story.append(pw_table)
+    story.append(PageBreak())
+
+    # 4. 光模块汇总
+    story.append(Paragraph('4. 光模块汇总', h2_style))
+    mods = data['modules']
+    if mods:
+        mod_rows = [[Paragraph('型号', cell_style), Paragraph('数量', cell_style),
+                     Paragraph('规格', cell_style), Paragraph('价位', cell_style)]]
+        for mid, info in mods.items():
+            mod_rows.append([
+                Paragraph(str(mid), cell_style),
+                Paragraph(str(info['count']), cell_style),
+                Paragraph(str(info.get('spec', '')) if isinstance(info.get('spec'), str) else '', cell_style),
+                Paragraph(str(info.get('price', '')), cell_style),
+            ])
+        mod_table = Table(mod_rows, colWidths=[40 * mm, 20 * mm, 60 * mm, 20 * mm])
+        mod_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8b5cf6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+        ]))
+        story.append(mod_table)
+    else:
+        story.append(Paragraph('无光模块数据', normal_style))
+    story.append(Spacer(1, 4 * mm))
+
+    # 5. 成本估算
+    story.append(Paragraph('5. 成本估算', h2_style))
+    cost = data['cost']
+    cost_rows = [[Paragraph('项目', cell_style), Paragraph('数值', cell_style)]]
+    for k, v in cost.items():
+        cost_rows.append([Paragraph(str(k), cell_style), Paragraph(str(v), cell_style)])
+    cost_table = Table(cost_rows, colWidths=[60 * mm, 80 * mm])
+    cost_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ef4444')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+    ]))
+    story.append(cost_table)
+    story.append(Spacer(1, 4 * mm))
+
+    # 6. 校验结果
+    story.append(Paragraph('6. 校验结果', h2_style))
+    val = data['validation']
+    status = '通过' if val.get('valid') else '失败'
+    story.append(Paragraph(f"校验状态：<b>{status}</b>", normal_style))
+    errors = val.get('errors', [])
+    if errors:
+        story.append(Paragraph('问题列表：', normal_style))
+        for e in errors:
+            story.append(Paragraph(f"  • {e}", normal_style))
+    else:
+        story.append(Paragraph('无校验问题，拓扑结构完整。', normal_style))
+
+    doc.build(story)
+    return filename

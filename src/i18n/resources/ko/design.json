@@ -41,5 +41,6 @@
   "totalServers": "서버 총계",
   "validationPassed": "검증 통과",
   "validationFailed": "검증 실패",
+  "validationIssues": "검증 문제",
   "loadConfig": "설정 불러오기"
 }

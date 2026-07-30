@@ -41,5 +41,6 @@
   "totalServers": "伺服器總數",
   "validationPassed": "驗證通過",
   "validationFailed": "驗證失敗",
+  "validationIssues": "校驗問題",
   "loadConfig": "載入配置"
 }

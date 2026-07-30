@@ -41,6 +41,7 @@
   "totalServers": "Total Servers",
   "validationPassed": "Validation Passed",
   "validationFailed": "Validation Failed",
+  "validationIssues": "Validation Issues",
   "loadConfig": "Load Config",
   "pueEstimate": "PUE & Power Estimate",
   "convergence": "Convergence Ratio",

@@ -7,6 +7,7 @@ import math, os, json, configparser
 from models import NetworkObject, Connection
 from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier
 from device_library import get_device_library, LibraryDevice, InterfaceModel
+from rail_topology import RailOptimizedTopology
 
 
 class NetworkDesignerV2:
@@ -89,6 +90,12 @@ class NetworkDesignerV2:
 
         # --- 下行端口模式 ---
         self.downlink_mode = topo.get('downlink_mode', 'custom')
+
+        # V2.4.6: Rail-Optimized 模式开关
+        # rail_mode: "standard"(传统 Fat-Tree) / "rail_optimized"(NVIDIA SuperPOD 8-Rail)
+        # rail_count: Rail 数量，默认 8（NVIDIA 标准）
+        self.rail_mode = topo.get('rail_mode', 'standard')
+        self.rail_count = topo.get('rail_count', 8)
 
         # --- 网络开关 (V2.1: 通过 networks 选择控制) ---
         self.param_enabled = networks.get('param_network', True)
@@ -195,6 +202,10 @@ class NetworkDesignerV2:
         # --- 下行端口模式 ---
         self.downlink_mode = self.config.get('DEFAULT', 'downlink_mode', fallback='custom')
         self._resolve_downlink_limits()
+
+        # V2.4.6: Rail-Optimized 模式开关（INI 格式默认为 standard）
+        self.rail_mode = self.config.get('DEFAULT', 'rail_mode', fallback='standard')
+        self.rail_count = self.config.getint('DEFAULT', 'rail_count', fallback=8)
 
         # --- 网络开关 ---
         self.param_enabled = True
@@ -451,7 +462,10 @@ class NetworkDesignerV2:
             self.podid_map[s.name] = s.podid
 
         # 参数网络交换机
-        if self.param_3tier_needed:
+        if self.rail_mode == 'rail_optimized':
+            # V2.4.6: Rail-Optimized 模式（NVIDIA SuperPOD 8-Rail）
+            self._create_rail_optimized_switches(param_switch_profile)
+        elif self.param_3tier_needed:
             pt = FatTreeTopology(self.param_ports_per_server, self.param_switch_ports,
                                  self.param_speed, self.cable_types['param'], "param")
             pt.create_network_objects(self.param_pods, self.param_servers_per_pod)
@@ -523,6 +537,38 @@ class NetworkDesignerV2:
             self.switch_groups[sw.name] = sw.group
             self.podid_map[sw.name] = sw.podid
 
+    def _create_rail_optimized_switches(self, profile=None):
+        """V2.4.6: 创建 Rail-Optimized 参数网交换机（NVIDIA SuperPOD 8-Rail）"""
+        self._rail_topology = RailOptimizedTopology(
+            num_servers=self.num_servers,
+            num_rails=self.rail_count,
+            switch_ports=self.param_switch_ports,
+            ports_per_server=self.param_ports_per_server,
+            network_speed=self.param_speed,
+            network_type="param",
+        )
+        self._rail_topology.create_network_objects()
+
+        self.param_leaves = self._rail_topology.leaves
+        self.param_spines = self._rail_topology.spines
+        self.param_cores = self._rail_topology.cores
+
+        # 注册 switch_groups 和 podid_map
+        for sw in self.param_leaves + self.param_spines + self.param_cores:
+            self.switch_groups[sw.name] = sw.group
+            self.podid_map[sw.name] = sw.podid
+
+        # 为 GPU 服务器标注 rail_id 和 rail_role
+        servers_per_rail = math.ceil(self.num_servers / self.rail_count)
+        for idx, server in enumerate(self.servers[:self.num_servers]):
+            server.rail_id = idx // servers_per_rail
+            server.rail_role = "server_rail_endpoint"
+
+        # 应用交换机端口前缀
+        self._apply_switch_port_prefixes(
+            self.param_leaves + self.param_spines + self.param_cores, profile
+        )
+
     def _create_storage_switches(self, profile=None):
         for group in range(1, self.storage_groups + 1):
             for leaf_idx in range(1, self.storage_leaf_per_group + 1):
@@ -562,7 +608,10 @@ class NetworkDesignerV2:
     def generate_connections(self):
         gpu_servers = self.servers[:self.num_servers]
 
-        if self.param_3tier_needed:
+        if self.rail_mode == 'rail_optimized':
+            # V2.4.6: Rail-Optimized 拓扑连接
+            self._wire_rail_optimized(gpu_servers)
+        elif self.param_3tier_needed:
             pt = FatTreeTopology(self.param_ports_per_server, self.param_switch_ports,
                                  self.param_speed, self.cable_types['param'], "param")
             pt.leaves = self.param_leaves
@@ -573,6 +622,24 @@ class NetworkDesignerV2:
             self._wire_param_2tier(gpu_servers)
         if self.storage_enabled:
             self._wire_storage()
+
+    def _wire_rail_optimized(self, gpu_servers):
+        """V2.4.6: 生成 Rail-Optimized 连接（复用 RailOptimizedTopology）"""
+        server_names = [s.name for s in gpu_servers]
+        conns = self._rail_topology.generate_connections(server_names)
+
+        # 将 Connection 关联到 NetworkObject.connections
+        name_to_obj = {s.name: s for s in gpu_servers}
+        for sw in self.param_leaves + self.param_spines + self.param_cores:
+            name_to_obj[sw.name] = sw
+
+        for conn in conns:
+            a_obj = name_to_obj.get(conn.a_device)
+            z_obj = name_to_obj.get(conn.z_device)
+            if a_obj:
+                a_obj.connections.append(conn)
+            if z_obj:
+                z_obj.connections.append(conn)
 
     def _wire_param_2tier(self, gpu_servers):
         """参数网络2tier: GPU→Leaf + Leaf→Spine (每Spine 2×400G)"""

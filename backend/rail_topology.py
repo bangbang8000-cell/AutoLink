@@ -95,6 +95,8 @@ class RailOptimizedTopology:
                     group=f"Rail-{rail}",
                     max_ports=self.switch_ports,
                     podid=f"Rail-{rail}",
+                    rail_id=rail,
+                    rail_role="rail_leaf",
                 )
                 self.leaves.append(leaf)
                 rail_leaf_ids.append(leaf_name)
@@ -110,6 +112,8 @@ class RailOptimizedTopology:
                     group=f"Rail-{rail}",
                     max_ports=self.switch_ports,
                     podid=f"Rail-{rail}",
+                    rail_id=rail,
+                    rail_role="rail_spine",
                 )
                 self.spines.append(spine)
 

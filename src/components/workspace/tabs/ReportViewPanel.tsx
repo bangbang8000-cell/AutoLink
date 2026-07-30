@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next'
 import {
   FileText, ChevronDown, ChevronRight, RefreshCw, Loader2,
   Server, Network, Zap, Cable, DollarSign, CheckCircle, XCircle,
+  Download,
 } from 'lucide-react'
+import { useToastStore } from '@/stores/toast.store'
+import { useProjectStore } from '@/stores/project.store'
 
 interface Props {
   projectName: string
@@ -22,8 +25,10 @@ interface ReportData {
 
 export function ReportViewPanel({ projectName }: Props) {
   const { t } = useTranslation()
+  const addToast = useToastStore((s) => s.addToast)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ReportData | null>(null)
 
@@ -42,6 +47,24 @@ export function ReportViewPanel({ projectName }: Props) {
       setLoading(false)
     }
   }, [projectName])
+
+  // V2.4.6: 导出 PDF 报告
+  const handleExportPdf = useCallback(async () => {
+    setExportingPdf(true)
+    try {
+      if (!window.electron?.render?.exportConnections) {
+        throw new Error('IPC 桥接未就绪')
+      }
+      addToast('info', t('design:exportingPdf', '正在生成 PDF 报告...'))
+      await window.electron.render.exportConnections(projectName, ['pdfReport'])
+      addToast('success', t('design:pdfExported', 'PDF 报告已导出到项目 output 目录'))
+      useProjectStore.getState().fetchProjects()
+    } catch (err) {
+      addToast('error', `${t('design:pdfExportFailed', 'PDF 导出失败')}: ${(err as Error).message}`)
+    } finally {
+      setExportingPdf(false)
+    }
+  }, [projectName, addToast, t])
 
   const handleToggle = () => {
     const next = !open
@@ -73,14 +96,24 @@ export function ReportViewPanel({ projectName }: Props) {
           {/* Action bar */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400 dark:text-gray-500">{projectName}</span>
-            <button
-              onClick={loadReport}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-              {t('design:reEstimate')}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportPdf}
+                disabled={exportingPdf}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-600 dark:text-primary-400 disabled:opacity-50"
+              >
+                {exportingPdf ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                {t('design:exportPdf', '导出 PDF')}
+              </button>
+              <button
+                onClick={loadReport}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                {t('design:reEstimate')}
+              </button>
+            </div>
           </div>
 
           {loading && !data && (

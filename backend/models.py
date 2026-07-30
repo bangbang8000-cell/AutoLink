@@ -12,7 +12,8 @@ class NetworkObject:
     """网络设备（服务器、Leaf/Spine/Core交换机）"""
 
     def __init__(self, name, obj_type, group=None, max_ports=64, podid=None,
-                 device_profile=None, power_watts=0, u_height=1, layer_hint=None):
+                 device_profile=None, power_watts=0, u_height=1, layer_hint=None,
+                 rail_id=None, rail_role="none"):
         self.name = name
         self.obj_type = obj_type  # 'server', 'param_leaf', 'param_spine', 'param_core', 'storage_leaf', 'storage_spine'
         self.group = group
@@ -40,6 +41,12 @@ class NetworkObject:
         # 取值: 'core'(L5) / 'spine'(L4) / 'leaf'(L3) / 'server'(L2) / 'access'(L1) / 'agg'(L0)
         # 若未指定，则根据 obj_type 自动推断
         self.layer_hint = layer_hint or self._infer_layer_hint(obj_type)
+
+        # V2.4.6: Rail-Optimized 架构字段
+        # rail_id: 1-8，标识所属 Rail（NVIDIA 标准 8 Rail）
+        # rail_role: "rail_leaf" / "rail_spine" / "server_rail_endpoint" / "none"
+        self.rail_id: Optional[int] = rail_id
+        self.rail_role: str = rail_role
 
         # 根据设备类型初始化端口计数器
         if "leaf" in obj_type:

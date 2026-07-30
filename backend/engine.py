@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from designer import NetworkDesignerV2
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
-    export_cabling_guide, export_bom, generate_report_data,
+    export_cabling_guide, export_bom, generate_report_data, export_pdf_report,
 )
 from estimation import (
     estimate_pue, calc_convergence_ratio, estimate_cabinet_power_density,
@@ -201,6 +201,9 @@ def handle_design(params):
         },
         "rackType": getattr(designer, 'rack_type', 42),
         "powerLimitPerRack": getattr(designer, 'power_limit_per_rack', 6000),
+        # V2.4.6: Rail-Optimized 模式
+        "railMode": getattr(designer, 'rail_mode', 'standard'),
+        "railCount": getattr(designer, 'rail_count', 8),
     }
 
     # Build topology data for visualization
@@ -216,6 +219,9 @@ def handle_design(params):
             "podid": designer.podid_map.get(sw.name, sw.podid or ""),
             "layerHint": sw.layer_hint,
             "maxPorts": sw.max_ports,
+            # V2.4.6: Rail 字段
+            "railId": sw.rail_id,
+            "railRole": sw.rail_role,
         }
 
     for server in designer.servers:
@@ -225,6 +231,9 @@ def handle_design(params):
             "startU": server.start_u, "endU": server.end_u,
             "powerWatts": server.power_watts, "uHeight": server.u_height,
             "layerHint": server.layer_hint,
+            # V2.4.6: Rail 字段
+            "railId": server.rail_id,
+            "railRole": server.rail_role,
         })
 
     # V2.4.2: 输出全部 11 类交换机节点
@@ -286,6 +295,19 @@ def handle_design(params):
 
     validate_result = designer.validate_topology()
 
+    # V2.4.6: 结构化校验问题列表
+    validation_issues = [
+        {
+            "rule_id": "PORT_OVERFLOW" if "端口溢出" in e else "CONN_COUNT",
+            "severity": "error",
+            "category": "拓扑校验",
+            "message": e,
+            "affected_items": [e.split()[0]] if e.split() else [],
+            "recommendation": "调整服务器数量或交换机端口数" if "端口溢出" in e else "检查连接生成逻辑",
+        }
+        for e in validate_result.get("errors", [])
+    ]
+
     # 功率评估 (V2.1新增)
     power_data = _calculate_power_summary(designer)
 
@@ -299,6 +321,7 @@ def handle_design(params):
         "summary": summary,
         "topology": {"nodes": nodes, "edges": edges},
         "valid": validate_result["valid"],
+        "validationIssues": validation_issues,
         "powerData": power_data,
         "estimation": estimation,
     }
@@ -433,6 +456,15 @@ def handle_export(params):
             results.append({"type": "reportData", "data": report_data, "status": "success"})
         except Exception as e:
             results.append({"type": "reportData", "status": "error", "error": str(e)})
+
+    # V2.4.6: PDF 报告文件导出
+    if 'pdfReport' in output_types:
+        fn = os.path.join(output_dir, f"设计报告_{mode}模式_{ts}.pdf")
+        try:
+            export_pdf_report(designer, fn)
+            results.append({"type": "pdfReport", "file": fn, "status": "success"})
+        except Exception as e:
+            results.append({"type": "pdfReport", "file": fn, "status": "error", "error": str(e)})
 
     return {
         "results": results,

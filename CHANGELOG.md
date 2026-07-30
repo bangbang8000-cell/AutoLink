@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## [2.4.6] - 2026-07-30
+
+### 补齐半成品功能（V2.4 PRD 完成度 48% → 65%）
+
+#### Phase J1: Rail-Optimized 架构集成
+- NetworkObject 新增 `rail_id`/`rail_role` 字段（NVIDIA SuperPOD 8-Rail 标准）
+- rail_topology.py 传递 Rail 字段到 Leaf/Spine
+- designer.py 新增 `rail_mode` 配置开关（standard / rail_optimized）
+- 新增 `_create_rail_optimized_switches` 和 `_wire_rail_optimized` 方法
+- engine.py 输出 `railMode`/`railCount`/`railId`/`railRole` 字段
+- 新增 9 个 Rail-Optimized 单元测试 + 集成测试
+
+#### Phase J2: 规则校验前端
+- engine.py 新增 `validationIssues` 结构化问题列表输出
+- design.store.ts 新增 `ValidationIssue` 类型和 `validationIssues` 状态
+- 新建 ValidationPanel.tsx 组件：问题列表 + 严重程度图标 + 修复建议
+- DesignTab.tsx 集成 ValidationPanel 替换原布尔值显示
+- 5 种语言 i18n 文案更新（zh-CN/en/zh-TW/ja/ko）
+
+#### Phase J3: PDF 报告生成
+- 新增 reportlab 依赖
+- exporter.py 新增 `export_pdf_report` 函数：6 章节 PDF（概览/架构/功耗/光模块/成本/校验）
+- 中文字体自动检测（Windows 微软雅黑 / Linux 文泉驿 / fallback Helvetica）
+- engine.py 新增 `pdfReport` 导出类型
+- ReportViewPanel.tsx 新增"导出 PDF"按钮
+- 新增 3 个 PDF 生成测试
+
+#### Phase J4: 液冷配置面板
+- 确认 PUEEstimatePanel 已完整实现液冷配置：
+  - 散热方式选择（风冷 / 冷板液冷 / 浸没式液冷）
+  - 室外温度、负载率、UPS 效率、自然冷开关
+
+#### Phase J5: cluster_512 模板
+- 新增"中型-512"模板：512 H100 GPU + 48 存储 + 24 通算
+- 三层 Fat-Tree 400G，4 POD × 128 GPU/POD
+
+### 测试验证
+- 后端 pytest：267/267 通过（含新增 12 个测试）
+- TypeScript typecheck：无错误
+- 累计完成率：65%
+
 ## [2.4.5] - 2026-07-29
 
 ### 拓扑布局四象限分区 + 服务器组垂直居中

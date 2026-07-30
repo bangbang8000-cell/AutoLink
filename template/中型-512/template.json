@@ -1,0 +1,8 @@
+{
+  "id": "中型-512",
+  "name": "中型512台方案",
+  "description": "512台H100 GPU（三层Fat-Tree 400G，4 POD）+ 48存储 + 24通算",
+  "scenario": "中型-512",
+  "tags": ["H100", "512台", "3层组网", "Fat-Tree", "400G"],
+  "updatedAt": "2026-07-30"
+}

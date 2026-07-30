@@ -194,10 +194,21 @@ cable_biz_access_agg = 光纤
 
 /* ---------- store ---------- */
 
+/** V2.4.6: 结构化校验问题 */
+export interface ValidationIssue {
+  rule_id: string
+  severity: 'error' | 'warning' | 'info'
+  category: string
+  message: string
+  affected_items: string[]
+  recommendation: string
+}
+
 interface DesignState {
   config: DesignConfig
   summary: DesignSummary | null
   valid: boolean | null
+  validationIssues: ValidationIssue[]
   topology: { nodes: TopologyNode[]; edges: TopologyEdge[] } | null
   estimation: EstimationResult | null
   generating: boolean
@@ -223,6 +234,7 @@ export const useDesignStore = create<DesignState>()(
   config: { ...defaultDesignConfig },
   summary: null,
   valid: null,
+  validationIssues: [] as ValidationIssue[],
   topology: null,
   estimation: null,
   generating: false,
@@ -287,7 +299,7 @@ export const useDesignStore = create<DesignState>()(
   },
 
   generate: async (projectName) => {
-    set({ generating: true, error: null, summary: null, topology: null, valid: null, estimation: null })
+    set({ generating: true, error: null, summary: null, topology: null, valid: null, validationIssues: [], estimation: null })
     try {
       const { config } = get()
       const ini = configToINI(config)
@@ -299,6 +311,7 @@ export const useDesignStore = create<DesignState>()(
         summary: DesignSummary
         topology: { nodes: TopologyNode[]; edges: TopologyEdge[] }
         valid: boolean
+        validationIssues?: ValidationIssue[]
         estimation?: EstimationResult
       }
 
@@ -306,6 +319,7 @@ export const useDesignStore = create<DesignState>()(
         summary: result.summary ?? null,
         topology: result.topology ?? null,
         valid: result.valid ?? null,
+        validationIssues: result.validationIssues ?? [],
         estimation: result.estimation ?? null,
         projectName,
       })
@@ -342,9 +356,14 @@ export const useDesignStore = create<DesignState>()(
       }
       const result = (await window.electron.design.validate(projectName, ini)) as {
         valid: boolean
+        validationIssues?: ValidationIssue[]
       }
 
-      set({ valid: result.valid ?? null, projectName })
+      set({
+        valid: result.valid ?? null,
+        validationIssues: result.validationIssues ?? [],
+        projectName,
+      })
     } catch (err) {
       set({ error: (err as Error).message })
     } finally {
@@ -352,7 +371,7 @@ export const useDesignStore = create<DesignState>()(
     }
   },
 
-  clearResults: () => set({ summary: null, topology: null, valid: null, estimation: null, error: null }),
+  clearResults: () => set({ summary: null, topology: null, valid: null, validationIssues: [], estimation: null, error: null }),
   }),
   {
     name: 'autolink-design-state',

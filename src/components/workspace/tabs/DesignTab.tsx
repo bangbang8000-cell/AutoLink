@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Wrench, Play, RefreshCw, CheckCircle, XCircle,
+  Wrench, Play, RefreshCw,
   Server, HardDrive, Network, Zap,
   AlertTriangle, ChevronDown, ChevronRight, Loader2,
   Settings2,
@@ -12,6 +12,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useRackStore } from '@/stores/rack.store'
 import { PUEEstimatePanel } from './PUEEstimatePanel'
 import { ReportViewPanel } from './ReportViewPanel'
+import { ValidationPanel } from './ValidationPanel'
 
 /* -------------------------------------------------- */
 /*  Sub-components (same as DesignPanel)              */
@@ -94,7 +95,7 @@ function ToggleSwitch({ label, checked, onChange }: {
 /* -------------------------------------------------- */
 /*  DesignSummary (full width variant)                */
 /* -------------------------------------------------- */
-function DesignSummaryView({ summary, valid }: { summary: DesignSummary; valid: boolean | null }) {
+function DesignSummaryView({ summary }: { summary: DesignSummary; valid: boolean | null }) {
   const { t } = useTranslation()
   const totalSw = summary.paramLeafCount + summary.paramSpineCount + summary.paramCoreCount
     + summary.storageLeafCount + summary.storageSpineCount
@@ -143,13 +144,8 @@ function DesignSummaryView({ summary, valid }: { summary: DesignSummary; valid: 
           </div>
         </div>
 
-        {/* Validation */}
-        {valid !== null && (
-          <div className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded ${valid ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
-            {valid ? <CheckCircle size={14} /> : <XCircle size={14} />}
-            {valid ? t('design:validationPassed') : t('design:validationFailed')}
-          </div>
-        )}
+        {/* Validation - V2.4.6: 结构化问题列表 */}
+        <ValidationPanel />
       </div>
     </div>
   )
@@ -361,7 +357,7 @@ export function DesignTab() {
           )}
 
           {/* Design Summary */}
-          {summary && <DesignSummaryView summary={summary} valid={valid} />}
+          {summary && <DesignSummaryView summary={summary} valid={valid ?? null} />}
 
           {/* V2.4: PUE 与能耗估算 */}
           {estimation && !estimation.error && (
