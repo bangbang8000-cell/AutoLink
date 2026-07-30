@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Server, HardDrive, Plus, AlertTriangle, Loader2, Maximize2 } from 'lucide-react'
+import { Server, HardDrive, Plus, AlertTriangle, Loader2, Maximize2, Building2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -72,6 +72,14 @@ export function RackPanel() {
     })
   }, [openTab, cabinets])
 
+  const handleOpenDataCenter = useCallback(() => {
+    openTab({
+      type: 'datacenter',
+      title: `机房平面布局 - ${selectedProjectName}`,
+      closable: true,
+    })
+  }, [openTab, selectedProjectName])
+
   if (!selectedProjectName) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
@@ -109,6 +117,11 @@ export function RackPanel() {
           {t('rack:title')}
         </span>
         <div className="flex items-center gap-1">
+          <button onClick={() => handleOpenDataCenter()}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+            title="机房平面布局">
+            <Building2 size={13} />
+          </button>
           <button onClick={() => handleOpenWorkspace()}
             className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
             title="在工作区打开">

@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react'
-import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Plus, Play } from 'lucide-react'
+import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Plus, Play, Building2 } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -11,6 +11,7 @@ import { ProjectOverviewTab } from './tabs/ProjectOverviewTab'
 import { DesignTab } from './tabs/DesignTab'
 import { DeviceLibraryTab } from './tabs/DeviceLibraryTab'
 import { FileViewerTab } from './tabs/FileViewerTab'
+import { DataCenterTab } from './tabs/DataCenterTab'
 
 const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
   workbench: LayoutDashboard,
@@ -22,6 +23,7 @@ const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?
   deviceLibrary: Library,
   projectOverview: FolderOpen,
   fileViewer: Monitor,
+  datacenter: Building2,
 }
 
 export function WorkspaceView() {
@@ -82,6 +84,7 @@ export function WorkspaceView() {
           />
         )
       }
+      case 'datacenter': return <DataCenterTab />
     }
   }, [activeTab])
 

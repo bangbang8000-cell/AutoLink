@@ -1,7 +1,19 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useRackStore, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
-import { GripVertical, X, ArrowRight, ChevronDown, Plus } from 'lucide-react'
+import { RackPowerHeatView } from '@/components/rack/RackPowerHeatView'
+import { RackMultiCompareView } from '@/components/rack/RackMultiCompareView'
+import { RackIsometricView } from '@/components/rack/RackIsometricView'
+import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid } from 'lucide-react'
+
+type ViewMode = 'basic' | 'power-heat' | 'multi-compare' | 'isometric'
+
+const VIEW_MODES: { id: ViewMode; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'basic', label: '基础', icon: LayoutGrid },
+  { id: 'power-heat', label: '功率热力', icon: Flame },
+  { id: 'multi-compare', label: '多柜对比', icon: Columns },
+  { id: 'isometric', label: '3D 等距', icon: Box },
+]
 
 interface Props {
   cabinetId?: number | null
@@ -39,6 +51,7 @@ export function RackTab({ cabinetId }: Props) {
   const [selectedUnplaced, setSelectedUnplaced] = useState<string | null>(null)
   const [showUnplaced, setShowUnplaced] = useState(true)
   const [cabinetDropdownOpen, setCabinetDropdownOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('basic')
 
   // Find the target cabinet
   const cabinet = cabinetId != null ? cabinets.find((c) => c.id === cabinetId) : cabinets.find((c) => c.id === selectedCabinetId) || cabinets[0]
@@ -168,187 +181,248 @@ export function RackTab({ cabinetId }: Props) {
             {cabinet.totalU}U · {cabinet.devices.length}台设备
           </span>
         </div>
-        {/* Type legend */}
-        <div className="flex items-center gap-3 text-[10px]">
-          {Object.entries(typeCounts).map(([label, count]) => {
-            const colors: Record<string, string> = {
-              GPU: 'bg-blue-500', 存储: 'bg-green-500', 交换机: 'bg-amber-500', 通算: 'bg-purple-500',
-            }
-            const colorClass = colors[label] || 'bg-gray-400'
-            return (
-              <span key={label} className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                <span className={`w-2.5 h-2.5 rounded ${colorClass}`} />
-                {label}×{count}
-              </span>
-            )
-          })}
-        </div>
-      </div>
 
-      {/* Power bar */}
-      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <RackPowerBar used={power.used} limit={power.limit} compact />
-      </div>
-
-      {/* Main content: unplaced list + rack view */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Unplaced devices panel */}
-        <div className={`border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col transition-all ${showUnplaced ? 'w-[220px] shrink-0' : 'w-0 overflow-hidden'}`}>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-            <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-              待分配 ({unplacedDevices.length})
-            </span>
-            <button
-              onClick={() => setShowUnplaced(false)}
-              className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
-            >
-              <X size={12} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {unplacedDevices.length === 0 ? (
-              <div className="text-[11px] text-gray-400 text-center py-4">所有设备已分配</div>
-            ) : (
-              Object.entries(unplacedByType).map(([typeLabel, devices]) => (
-                <div key={typeLabel}>
-                  <div className="text-[10px] text-gray-400 dark:text-gray-500 px-1 mb-1 font-medium">{typeLabel} · {devices.length}</div>
-                  {devices.map((d) => (
-                    <button
-                      key={d.id}
-                      onClick={() => setSelectedUnplaced(selectedUnplaced === d.id ? null : d.id)}
-                      className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[11px] rounded mb-0.5 transition-colors text-left ${
-                        selectedUnplaced === d.id
-                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-1 ring-primary-300'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-                      }`}
-                    >
-                      <GripVertical size={11} className="shrink-0 text-gray-400" />
-                      <span className="truncate flex-1" title={d.name}>{d.name}</span>
-                      <span className="text-[9px] text-gray-400 shrink-0">{d.height}U</span>
-                    </button>
-                  ))}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Toggle unplaced panel button (when hidden) */}
-        {!showUnplaced && (
-          <button
-            onClick={() => setShowUnplaced(true)}
-            className="shrink-0 px-1 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
-            title="显示待分配设备"
-          >
-            <ArrowRight size={14} />
-          </button>
-        )}
-
-        {/* Rack visualization */}
-        <div className="flex-1 overflow-auto p-3">
-          {/* Placement hint */}
-          {selectedUnplaced && (
-            <div className="mb-2 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-[11px] rounded flex items-center gap-2">
-              <Plus size={13} />
-              <span>点击下方U位放置设备: <strong>{unplacedDevices.find(d => d.id === selectedUnplaced)?.name}</strong></span>
-              <button onClick={() => setSelectedUnplaced(null)} className="ml-auto p-0.5 rounded hover:bg-primary-200 dark:hover:bg-primary-800">
-                <X size={12} />
-              </button>
-            </div>
-          )}
-
-          <div className="flex gap-1 min-w-[320px] max-w-xl mx-auto">
-            {/* U number ruler */}
-            <div className="w-12 shrink-0 bg-gray-100 dark:bg-gray-700/50 rounded-l">
-              {Array.from({ length: cabinet.totalU }, (_, i) => {
-                const uNum = cabinet.totalU - i
-                const isConflictArea = selectedUnplaced
-                  ? getSlotConflicts(uNum, unplacedDevices.find(d => d.id === selectedUnplaced)!)
-                  : false
+        <div className="flex items-center gap-3">
+          {/* Type legend (仅在基础模式显示) */}
+          {viewMode === 'basic' && (
+            <div className="flex items-center gap-3 text-[10px]">
+              {Object.entries(typeCounts).map(([label, count]) => {
+                const colors: Record<string, string> = {
+                  GPU: 'bg-blue-500', 存储: 'bg-green-500', 交换机: 'bg-amber-500', 通算: 'bg-purple-500',
+                }
+                const colorClass = colors[label] || 'bg-gray-400'
                 return (
-                  <button
-                    key={i}
-                    onClick={() => handleSlotClick(uNum)}
-                    className={`h-7 flex items-center justify-end pr-1.5 text-[10px] border-b border-gray-200 dark:border-gray-700/50 last:border-b-0 w-full transition-colors ${
-                      isConflictArea
-                        ? 'text-red-300 dark:text-red-700 cursor-not-allowed'
-                        : selectedUnplaced
-                          ? 'text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 cursor-pointer'
-                          : 'text-gray-400 dark:text-gray-500'
-                    }`}
-                    disabled={isConflictArea}
-                    title={isConflictArea ? '空间或功率不足' : selectedUnplaced ? `放置设备到 U${uNum}` : undefined}
-                  >
-                    {uNum}
-                  </button>
+                  <span key={label} className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                    <span className={`w-2.5 h-2.5 rounded ${colorClass}`} />
+                    {label}×{count}
+                  </span>
                 )
               })}
             </div>
+          )}
 
-            {/* Device slots */}
-            <div className="flex-1 border border-gray-300 dark:border-gray-600 rounded-r overflow-hidden">
-              {uSlots.entries.map((entry, i) => {
-                const uNum = cabinet.totalU - i
-                const isConflictArea = selectedUnplaced
-                  ? getSlotConflicts(uNum, unplacedDevices.find(d => d.id === selectedUnplaced)!)
-                  : false
+          {/* 视图模式切换器 */}
+          <div className="flex items-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
+            {VIEW_MODES.map((mode) => {
+              const Icon = mode.icon
+              const isActive = viewMode === mode.id
+              return (
+                <button
+                  key={mode.id}
+                  onClick={() => setViewMode(mode.id)}
+                  title={mode.label}
+                  className={`flex items-center gap-1 px-2 py-1 text-[10px] transition-colors ${
+                    isActive
+                      ? 'bg-primary-500 text-white'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Icon size={11} />
+                  <span className="hidden sm:inline">{mode.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
 
-                // Highlight zones where the pending device would be placed
-                const pendingDevice = selectedUnplaced ? unplacedDevices.find(d => d.id === selectedUnplaced) : undefined
-                const isPendingSlot = pendingDevice && !isConflictArea &&
-                  pendingDevice.height >= uNum
+      {/* Power bar (仅在基础模式显示，避免与其他视图的功率信息重复) */}
+      {viewMode === 'basic' && (
+        <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <RackPowerBar used={power.used} limit={power.limit} compact />
+        </div>
+      )}
 
-                if (!entry) {
+      {/* Main content: unplaced list + rack view */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Unplaced devices panel (仅基础模式显示) */}
+        {viewMode === 'basic' && (
+          <>
+            <div className={`border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col transition-all ${showUnplaced ? 'w-[220px] shrink-0' : 'w-0 overflow-hidden'}`}>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                  待分配 ({unplacedDevices.length})
+                </span>
+                <button
+                  onClick={() => setShowUnplaced(false)}
+                  className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                {unplacedDevices.length === 0 ? (
+                  <div className="text-[11px] text-gray-400 text-center py-4">所有设备已分配</div>
+                ) : (
+                  Object.entries(unplacedByType).map(([typeLabel, devices]) => (
+                    <div key={typeLabel}>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 px-1 mb-1 font-medium">{typeLabel} · {devices.length}</div>
+                      {devices.map((d) => (
+                        <button
+                          key={d.id}
+                          onClick={() => setSelectedUnplaced(selectedUnplaced === d.id ? null : d.id)}
+                          className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[11px] rounded mb-0.5 transition-colors text-left ${
+                            selectedUnplaced === d.id
+                              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-1 ring-primary-300'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                          }`}
+                        >
+                          <GripVertical size={11} className="shrink-0 text-gray-400" />
+                          <span className="truncate flex-1" title={d.name}>{d.name}</span>
+                          <span className="text-[9px] text-gray-400 shrink-0">{d.height}U</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Toggle unplaced panel button (when hidden) */}
+            {!showUnplaced && (
+              <button
+                onClick={() => setShowUnplaced(true)}
+                className="shrink-0 px-1 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
+                title="显示待分配设备"
+              >
+                <ArrowRight size={14} />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Rack visualization (基础模式) */}
+        {viewMode === 'basic' && (
+          <div className="flex-1 overflow-auto p-3">
+            {/* Placement hint */}
+            {selectedUnplaced && (
+              <div className="mb-2 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-[11px] rounded flex items-center gap-2">
+                <Plus size={13} />
+                <span>点击下方U位放置设备: <strong>{unplacedDevices.find(d => d.id === selectedUnplaced)?.name}</strong></span>
+                <button onClick={() => setSelectedUnplaced(null)} className="ml-auto p-0.5 rounded hover:bg-primary-200 dark:hover:bg-primary-800">
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-1 min-w-[320px] max-w-xl mx-auto">
+              {/* U number ruler */}
+              <div className="w-12 shrink-0 bg-gray-100 dark:bg-gray-700/50 rounded-l">
+                {Array.from({ length: cabinet.totalU }, (_, i) => {
+                  const uNum = cabinet.totalU - i
+                  const isConflictArea = selectedUnplaced
+                    ? getSlotConflicts(uNum, unplacedDevices.find(d => d.id === selectedUnplaced)!)
+                    : false
                   return (
                     <button
                       key={i}
                       onClick={() => handleSlotClick(uNum)}
-                      className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 w-full transition-colors block ${
+                      className={`h-7 flex items-center justify-end pr-1.5 text-[10px] border-b border-gray-200 dark:border-gray-700/50 last:border-b-0 w-full transition-colors ${
                         isConflictArea
-                          ? 'bg-red-50 dark:bg-red-900/10 cursor-not-allowed'
-                          : selectedUnplaced && isPendingSlot
-                            ? 'bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 cursor-pointer'
-                            : selectedUnplaced
-                              ? 'bg-white dark:bg-gray-850 hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
-                              : 'bg-white dark:bg-gray-850'
+                          ? 'text-red-300 dark:text-red-700 cursor-not-allowed'
+                          : selectedUnplaced
+                            ? 'text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 cursor-pointer'
+                            : 'text-gray-400 dark:text-gray-500'
                       }`}
                       disabled={isConflictArea}
-                    />
+                      title={isConflictArea ? '空间或功率不足' : selectedUnplaced ? `放置设备到 U${uNum}` : undefined}
+                    >
+                      {uNum}
+                    </button>
                   )
-                }
+                })}
+              </div>
 
-                const { device, isFirst } = entry
-                const colorClass = getTypeColorClass(device.type)
+              {/* Device slots */}
+              <div className="flex-1 border border-gray-300 dark:border-gray-600 rounded-r overflow-hidden">
+                {uSlots.entries.map((entry, i) => {
+                  const uNum = cabinet.totalU - i
+                  const isConflictArea = selectedUnplaced
+                    ? getSlotConflicts(uNum, unplacedDevices.find(d => d.id === selectedUnplaced)!)
+                    : false
 
-                return (
-                  <div
-                    key={i}
-                    className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group`}
-                    title={`${device.name} (U${device.startU}-U${device.endU} · ${device.power_watts}W)`}
-                  >
-                    {isFirst && (
-                      <>
-                        <span className="text-[10px] font-medium truncate leading-none flex-1">
-                          {device.name}
-                          <span className="ml-1 opacity-70 font-normal">
-                            U{device.startU}-U{device.endU}
+                  // Highlight zones where the pending device would be placed
+                  const pendingDevice = selectedUnplaced ? unplacedDevices.find(d => d.id === selectedUnplaced) : undefined
+                  const isPendingSlot = pendingDevice && !isConflictArea &&
+                    pendingDevice.height >= uNum
+
+                  if (!entry) {
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSlotClick(uNum)}
+                        className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 w-full transition-colors block ${
+                          isConflictArea
+                            ? 'bg-red-50 dark:bg-red-900/10 cursor-not-allowed'
+                            : selectedUnplaced && isPendingSlot
+                              ? 'bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 cursor-pointer'
+                              : selectedUnplaced
+                                ? 'bg-white dark:bg-gray-850 hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
+                                : 'bg-white dark:bg-gray-850'
+                        }`}
+                        disabled={isConflictArea}
+                      />
+                    )
+                  }
+
+                  const { device, isFirst } = entry
+                  const colorClass = getTypeColorClass(device.type)
+
+                  return (
+                    <div
+                      key={i}
+                      className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group`}
+                      title={`${device.name} (U${device.startU}-U${device.endU} · ${device.power_watts}W)`}
+                    >
+                      {isFirst && (
+                        <>
+                          <span className="text-[10px] font-medium truncate leading-none flex-1">
+                            {device.name}
+                            <span className="ml-1 opacity-70 font-normal">
+                              U{device.startU}-U{device.endU}
+                            </span>
                           </span>
-                        </span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleRemoveDevice(device.id) }}
-                          className="shrink-0 p-0.5 rounded hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="移除设备"
-                        >
-                          <X size={11} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )
-              })}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRemoveDevice(device.id) }}
+                            className="shrink-0 p-0.5 rounded hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="移除设备"
+                          >
+                            <X size={11} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* 功率热力视图 */}
+        {viewMode === 'power-heat' && (
+          <div className="flex-1 overflow-hidden">
+            <RackPowerHeatView cabinet={cabinet} />
+          </div>
+        )}
+
+        {/* 多柜对比视图 */}
+        {viewMode === 'multi-compare' && (
+          <div className="flex-1 overflow-hidden">
+            <RackMultiCompareView
+              cabinets={cabinets}
+              activeCabinetId={cabinet.id}
+              onSelectCabinet={handleSelectCabinet}
+            />
+          </div>
+        )}
+
+        {/* 3D 等距视图 */}
+        {viewMode === 'isometric' && (
+          <div className="flex-1 overflow-hidden">
+            <RackIsometricView cabinet={cabinet} />
+          </div>
+        )}
       </div>
     </div>
   )

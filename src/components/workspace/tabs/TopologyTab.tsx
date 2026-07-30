@@ -8,7 +8,7 @@
  *   - Pod/Rail 分组视觉边框
  *   - 小地图、暗色模式适配
  */
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -27,10 +27,13 @@ import {
 import '@xyflow/react/dist/style.css'
 import {
   Download, Filter, Network, X, Activity, RotateCcw, Save, Maximize2,
+  Search, MousePointer2, Box, Undo2, Redo2,
 } from 'lucide-react'
 import { useDesignStore, type TopologyNode } from '@/stores/design.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
+import { exportTopologyPng } from '@/utils/exportTopology'
+import { makeTimestampedFilename } from '@/utils/exportSvg'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 import {
   ServerNode, SwitchNode, NODE_COLORS, NODE_LABELS, EDGE_COLORS,
@@ -156,6 +159,99 @@ function TopologyFlowInner() {
   const [hasSavedLayout, setHasSavedLayout] = useState(false)
   const [rfNodes, setRfNodes] = useState<Node[]>([])
   const [rfEdges, setRfEdges] = useState<Edge[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [selectionMode, setSelectionMode] = useState(false)
+
+  /* ---------- V2.4.7: 撤销/重做 ---------- */
+  // 历史栈存储节点位置快照（只记录设备节点，不含 POD 背景框）
+  const pastRef = useRef<Map<string, { x: number; y: number }>[]>([])
+  const futureRef = useRef<Map<string, { x: number; y: number }>[]>([])
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+  const HISTORY_LIMIT = 50
+
+  /** 记录当前节点位置快照到历史栈 */
+  const pushHistory = useCallback(() => {
+    const snapshot = new Map<string, { x: number; y: number }>()
+    for (const n of rfNodes) {
+      if (n.id.startsWith('pod-group-')) continue
+      snapshot.set(n.id, { x: n.position.x, y: n.position.y })
+    }
+    pastRef.current.push(snapshot)
+    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift()
+    futureRef.current = []  // 新操作清空 future
+    setCanUndo(pastRef.current.length > 0)
+    setCanRedo(false)
+  }, [rfNodes])
+
+  /** 从当前 rfNodes 生成快照 */
+  const currentSnapshot = useCallback(() => {
+    const snapshot = new Map<string, { x: number; y: number }>()
+    for (const n of rfNodes) {
+      if (n.id.startsWith('pod-group-')) continue
+      snapshot.set(n.id, { x: n.position.x, y: n.position.y })
+    }
+    return snapshot
+  }, [rfNodes])
+
+  /** 应用快照到 rfNodes */
+  const applySnapshot = useCallback((snapshot: Map<string, { x: number; y: number }>) => {
+    setRfNodes((prev) => prev.map((n) => {
+      if (n.id.startsWith('pod-group-')) return n
+      const pos = snapshot.get(n.id)
+      return pos ? { ...n, position: { x: pos.x, y: pos.y } } : n
+    }))
+  }, [])
+
+  const handleUndo = useCallback(() => {
+    if (pastRef.current.length === 0) return
+    const current = currentSnapshot()
+    const prev = pastRef.current.pop()!
+    futureRef.current.push(current)
+    applySnapshot(prev)
+    setCanUndo(pastRef.current.length > 0)
+    setCanRedo(futureRef.current.length > 0)
+  }, [currentSnapshot, applySnapshot])
+
+  const handleRedo = useCallback(() => {
+    if (futureRef.current.length === 0) return
+    const current = currentSnapshot()
+    const next = futureRef.current.pop()!
+    pastRef.current.push(current)
+    applySnapshot(next)
+    setCanUndo(pastRef.current.length > 0)
+    setCanRedo(futureRef.current.length > 0)
+  }, [currentSnapshot, applySnapshot])
+
+  /** Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z 快捷键 */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      const key = e.key.toLowerCase()
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        handleUndo()
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault()
+        handleRedo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleUndo, handleRedo])
+
+  /* ---------- V2.4.7: POD 折叠/展开 ---------- */
+  const [collapsedPods, setCollapsedPods] = useState<Set<string>>(new Set())
+
+  const togglePodCollapse = useCallback((podid: string) => {
+    setCollapsedPods((prev) => {
+      const next = new Set(prev)
+      if (next.has(podid)) next.delete(podid)
+      else next.add(podid)
+      return next
+    })
+  }, [])
 
   /* ---------- check saved layout ---------- */
   useEffect(() => {
@@ -297,10 +393,120 @@ function TopologyFlowInner() {
     setRfEdges(computedEdges)
   }, [computedNodes, computedEdges])
 
+  /* ---------- V2.4.7: 显示层 = 折叠隐藏 + 搜索高亮 ---------- */
+  const displayNodes = useMemo(() => {
+    // 构建折叠 POD 内设备节点 ID 集合
+    const collapsedNodeIds = new Set<string>()
+    if (collapsedPods.size > 0) {
+      for (const n of rfNodes) {
+        if (n.id.startsWith('pod-group-')) continue
+        const data = n.data as unknown as TopologyNodeData
+        if (data?.podid && collapsedPods.has(data.podid)) {
+          collapsedNodeIds.add(n.id)
+        }
+      }
+    }
+
+    const q = searchQuery.toLowerCase().trim()
+    const hasSearch = !!q
+
+    return rfNodes.map((n) => {
+      // POD 背景框节点：传递 collapsed 状态和切换回调
+      if (n.id.startsWith('pod-group-')) {
+        const podid = n.id.replace('pod-group-', '')
+        const isCollapsed = collapsedPods.has(podid)
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            collapsed: isCollapsed,
+            onToggleCollapse: togglePodCollapse,
+          } as unknown as Record<string, unknown>,
+        }
+      }
+
+      // 折叠 POD 内的设备节点：隐藏
+      if (collapsedNodeIds.has(n.id)) {
+        return { ...n, hidden: true }
+      }
+
+      // 搜索高亮
+      if (hasSearch) {
+        const matches = n.id.toLowerCase().includes(q) ||
+          (n.data?.label as string)?.toLowerCase().includes(q) ||
+          (n.data?.nodeType as string)?.toLowerCase().includes(q)
+        if (matches) {
+          return {
+            ...n,
+            hidden: false,
+            style: { ...n.style, opacity: 1, boxShadow: '0 0 0 2px #3b82f6' },
+          }
+        }
+        return {
+          ...n,
+          hidden: false,
+          style: { ...n.style, opacity: 0.12 },
+        }
+      }
+
+      return { ...n, hidden: false }
+    })
+  }, [rfNodes, searchQuery, collapsedPods, togglePodCollapse])
+
+  const displayEdges = useMemo(() => {
+    // 构建折叠 POD 内设备节点 ID 集合
+    const collapsedNodeIds = new Set<string>()
+    if (collapsedPods.size > 0) {
+      for (const n of rfNodes) {
+        if (n.id.startsWith('pod-group-')) continue
+        const data = n.data as unknown as TopologyNodeData
+        if (data?.podid && collapsedPods.has(data.podid)) {
+          collapsedNodeIds.add(n.id)
+        }
+      }
+    }
+
+    const hasSearch = !!searchQuery.trim()
+
+    return rfEdges.map((e) => {
+      // 折叠 POD 内的边：隐藏
+      if (collapsedNodeIds.has(e.source) || collapsedNodeIds.has(e.target)) {
+        return { ...e, hidden: true }
+      }
+      // 搜索时降低所有边的透明度
+      if (hasSearch) {
+        return { ...e, hidden: false, style: { ...e.style, opacity: 0.05 } }
+      }
+      return { ...e, hidden: false }
+    })
+  }, [rfNodes, rfEdges, searchQuery, collapsedPods])
+
+  /* ---------- search & focus: center on first matching node ---------- */
+  const handleSearchFocus = useCallback(() => {
+    if (!searchQuery.trim() || !reactFlow) return
+    const q = searchQuery.toLowerCase().trim()
+    const match = rfNodes.find((n) => {
+      if (n.id.startsWith('pod-group-')) return false
+      return n.id.toLowerCase().includes(q) ||
+        (n.data?.label as string)?.toLowerCase().includes(q) ||
+        (n.data?.nodeType as string)?.toLowerCase().includes(q)
+    })
+    if (match) {
+      reactFlow.setCenter(match.position.x, match.position.y, { zoom: 1.2, duration: 500 })
+    } else {
+      addToast('info', '未找到匹配的节点')
+    }
+  }, [searchQuery, rfNodes, reactFlow, addToast])
+
   /* ---------- actions ---------- */
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setRfNodes((nds) => applyNodeChanges(changes, nds))
   }, [])
+
+  /** V2.4.7: 拖拽结束时记录历史快照 */
+  const onNodeDragStop = useCallback(() => {
+    pushHistory()
+  }, [pushHistory])
 
   const onNodeClick = useCallback((_: unknown, node: Node) => {
     const raw = topology?.nodes.find((n) => n.id === node.id)
@@ -349,11 +555,26 @@ function TopologyFlowInner() {
     reactFlow.fitView({ padding: fitViewPadding, duration: 300 })
   }, [reactFlow, fitViewPadding])
 
-  const handleExportPng = useCallback(() => {
-    // react-flow 没有内置导出，使用 html-to-image 或截图
-    // 简化：提示用户使用截图工具导出，或右键复制图片
-    addToast('info', '请使用系统截图工具导出，或右键复制图片')
-  }, [addToast])
+  const handleExportPng = useCallback(async () => {
+    if (!topology || !selectedProjectName) {
+      addToast('error', '无拓扑数据可导出')
+      return
+    }
+    addToast('info', '正在生成拓扑图 PNG...')
+    try {
+      const base64 = await exportTopologyPng(topology.nodes, topology.edges)
+      const filename = makeTimestampedFilename('组网拓扑图', 'png')
+      if (window.electron?.export?.saveFile) {
+        await window.electron.export.saveFile(selectedProjectName, filename, base64)
+        addToast('success', `拓扑图已导出到 output/${filename}`)
+      } else {
+        addToast('error', 'IPC 桥接未就绪，无法保存文件')
+      }
+    } catch (err) {
+      console.error('Export topology PNG failed:', err)
+      addToast('error', `导出失败: ${err instanceof Error ? err.message : '未知错误'}`)
+    }
+  }, [topology, selectedProjectName, addToast])
 
   const nodeConnectionCount = useMemo(() => {
     if (!selectedNode || !topology) return 0
@@ -391,6 +612,86 @@ function TopologyFlowInner() {
           <span className="text-[10px] text-gray-400">{nodeCount} 节点 · {edgeCount} 连接</span>
         </div>
         <div className="flex items-center gap-1">
+          {/* 搜索框 */}
+          <div className="flex items-center gap-1">
+            {showSearch ? (
+              <div className="flex items-center gap-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5">
+                <Search size={11} className="text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearchFocus(); if (e.key === 'Escape') { setSearchQuery(''); setShowSearch(false) } }}
+                  placeholder="搜索节点..."
+                  className="w-28 bg-transparent text-[11px] outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSearchFocus}
+                  className="text-[10px] text-primary-500 hover:text-primary-600"
+                  title="定位到匹配节点"
+                >
+                  定位
+                </button>
+                <button
+                  onClick={() => { setSearchQuery(''); setShowSearch(false) }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+                title="搜索节点"
+              >
+                <Search size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* 框选模式切换 */}
+          <button
+            onClick={() => setSelectionMode(!selectionMode)}
+            className={`p-1 rounded transition-colors ${
+              selectionMode
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+            }`}
+            title={selectionMode ? '框选模式（点击切换为平移）' : '平移模式（点击切换为框选）'}
+          >
+            {selectionMode ? <Box size={14} /> : <MousePointer2 size={14} />}
+          </button>
+
+          {/* V2.4.7: 撤销/重做 */}
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className={`p-1 rounded transition-colors ${
+              canUndo
+                ? 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+                : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+            }`}
+            title="撤销 (Ctrl+Z)"
+          >
+            <Undo2 size={14} />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className={`p-1 rounded transition-colors ${
+              canRedo
+                ? 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+                : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+            }`}
+            title="重做 (Ctrl+Y)"
+          >
+            <Redo2 size={14} />
+          </button>
+
+          <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
+
           {/* Filter */}
           <div className="relative">
             <button onClick={() => setShowFilter(!showFilter)}
@@ -443,11 +744,12 @@ function TopologyFlowInner() {
       {/* react-flow canvas */}
       <div className="flex-1 relative">
         <ReactFlow
-          nodes={rfNodes}
-          edges={rfEdges}
+          nodes={displayNodes}
+          edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onNodeClick={onNodeClick}
+          onNodeDragStop={onNodeDragStop}
           onPaneClick={onPaneClick}
           fitView
           fitViewOptions={{ padding: fitViewPadding }}
@@ -455,6 +757,9 @@ function TopologyFlowInner() {
           maxZoom={4}
           nodesDraggable
           nodesConnectable={false}
+          selectionOnDrag={selectionMode}
+          panOnDrag={!selectionMode}
+          selectionKeyCode={selectionMode ? undefined : 'Shift'}
           proOptions={{ hideAttribution: true }}
           className="bg-white dark:bg-gray-800"
         >
