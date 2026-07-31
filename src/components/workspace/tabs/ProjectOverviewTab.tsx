@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Server, Zap, HardDrive, FolderOpen, FileText,
   Play, Download, GitBranch, CheckCircle,
@@ -40,10 +41,10 @@ function groupDevices(nodes: TopologyNode[]): DeviceGroup[] {
   for (const [key, val] of map) {
     let label = key
     let icon: React.ReactNode = <Server size={14} />
-    if (key.toLowerCase().includes('gpu')) { label = 'GPU服务器'; icon = <Server size={14} className="text-blue-500" /> }
-    else if (key.toLowerCase().includes('storage') || key.toLowerCase().includes('存储')) { label = '存储服务器'; icon = <HardDrive size={14} className="text-green-500" /> }
+    if (key.toLowerCase().includes('gpu')) { label = 'GPU服务器'; icon = <Server size={14} className="text-info-500" /> }
+    else if (key.toLowerCase().includes('storage') || key.toLowerCase().includes('存储')) { label = '存储服务器'; icon = <HardDrive size={14} className="text-success-500" /> }
     else if (key.toLowerCase().includes('compute') || key.toLowerCase().includes('通算')) { label = '通算服务器'; icon = <Monitor size={14} className="text-purple-500" /> }
-    else if (key.toLowerCase().includes('switch') || key.toLowerCase().includes('交换机')) { label = '交换机'; icon = <GitBranch size={14} className="text-amber-500" /> }
+    else if (key.toLowerCase().includes('switch') || key.toLowerCase().includes('交换机')) { label = '交换机'; icon = <GitBranch size={14} className="text-warning-500" /> }
     result.push({ type: key, count: val.count, totalPower: val.totalPower, label, icon })
   }
   // Sort: servers first, then switches
@@ -74,6 +75,7 @@ function Skeleton({ lines = 3 }: { lines?: number }) {
 /*  ProjectOverviewTab                                */
 /* -------------------------------------------------- */
 export function ProjectOverviewTab({ projectName }: Props) {
+  const { t } = useTranslation()
   const topology = useDesignStore((s) => s.topology)
   const summary = useDesignStore((s) => s.summary)
   const valid = useDesignStore((s) => s.valid)
@@ -116,7 +118,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
   // T10: 一键渲染方案 A — 跳转工作台 + toast 提示(真正渲染由工作台触发)
   const handleQuickRender = useCallback(() => {
     openTab({ type: 'workbench', title: '工作台', closable: false })
-    addToast('info', '请在工作台点击"一键渲染"开始渲染')
+    addToast('info', t('common:toast.renderHint'))
   }, [openTab, addToast])
 
   // No project name
@@ -157,8 +159,8 @@ export function ProjectOverviewTab({ projectName }: Props) {
   const topologyMode = summary?.mode || (topology ? '已生成' : null)
 
   const fileIcon = (type: string) => {
-    if (type === 'xlsx' || type === 'xls') return <FileText size={14} className="text-green-500 shrink-0" />
-    if (type === 'png' || type === 'jpg' || type === 'jpeg') return <Monitor size={14} className="text-blue-500 shrink-0" />
+    if (type === 'xlsx' || type === 'xls') return <FileText size={14} className="text-success-500 shrink-0" />
+    if (type === 'png' || type === 'jpg' || type === 'jpeg') return <Monitor size={14} className="text-info-500 shrink-0" />
     return <FileText size={14} className="text-gray-500 shrink-0" />
   }
 
@@ -197,7 +199,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
           <SectionCard title="设备清单" icon={<Server size={14} />}>
             {deviceGroups.length > 0 ? (
               <div className="space-y-1">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pb-1">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-2xs text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pb-1">
                   <span>设备类型</span>
                   <span className="text-right">数量</span>
                   <span className="text-right">功耗</span>
@@ -268,8 +270,8 @@ export function ProjectOverviewTab({ projectName }: Props) {
                       </span>
                     </div>
                     {valid !== null && (
-                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] ${
-                        valid ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-2xs ${
+                        valid ? 'bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-300' : 'bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300'
                       }`}>
                         {valid ? <CheckCircle size={12} /> : <XCircle size={12} />}
                         {valid ? '验证通过' : '验证未通过'}
@@ -307,12 +309,12 @@ export function ProjectOverviewTab({ projectName }: Props) {
                       </div>
                       <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-primary-500'}`}
+                          className={`h-full rounded-full transition-all ${pct > 90 ? 'bg-error-500' : pct > 70 ? 'bg-warning-500' : 'bg-primary-500'}`}
                           style={{ width: `${Math.min(pct, 100)}%` }}
                         />
                       </div>
                       {powerPct > 0 && (
-                        <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+                        <div className="flex items-center gap-1 text-2xs text-gray-400 dark:text-gray-500">
                           <Zap size={10} />
                           <span>功耗 {powerPct}%</span>
                         </div>
@@ -352,7 +354,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
                   >
                     {fileIcon(f.type)}
                     <span className="text-gray-700 dark:text-gray-300 truncate">{f.name}</span>
-                    <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500 uppercase">{f.type}</span>
+                    <span className="ml-auto text-2xs text-gray-400 dark:text-gray-500 uppercase">{f.type}</span>
                   </div>
                 ))}
               </div>
@@ -365,7 +367,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
 
       {/* Quick Actions */}
       <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-2">快速操作</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-2">快速操作</span>
         <button
           onClick={handleQuickRender}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white transition-colors"
@@ -430,7 +432,7 @@ function EmptyState({ icon, text, action }: {
       {action && (
         <button
           onClick={action.onClick}
-          className="px-3 py-1 text-[11px] rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+          className="px-3 py-1 text-2xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
         >
           {action.label}
         </button>

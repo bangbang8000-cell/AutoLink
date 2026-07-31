@@ -8,6 +8,10 @@ export interface ProjectInfo {
   id: number
   name: string
   index: number
+  status?: 'ready' | 'configured' | 'designed' | 'layouted'
+  fileCount?: number
+  updatedAt?: string
+  description?: string
 }
 
 export interface ProjectStatus {

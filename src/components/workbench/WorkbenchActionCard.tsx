@@ -53,13 +53,13 @@ export function WorkbenchActionCard() {
 
   const handleRender = useCallback(async () => {
     if (!selectedProjectName && !batchMode) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('common:toast.selectProjectFirst'))
       return
     }
 
     const projects = batchMode ? batchProjects : [selectedProjectName!]
     if (projects.length === 0) {
-      addToast('warning', '请选择要渲染的项目')
+      addToast('warning', t('common:toast.selectRenderProject'))
       return
     }
 
@@ -186,12 +186,12 @@ export function WorkbenchActionCard() {
           updateProgress()
         }
       } catch (err) {
-        addToast('error', `${projectName} 渲染失败: ${(err as Error).message}`)
+        addToast('error', t('common:toast.renderFailed', { project: projectName, error: (err as Error).message }))
       }
     }
 
     setProgress({ status: 'complete', message: '渲染完成', progress: 100 })
-    addToast('success', '渲染完成')
+    addToast('success', t('common:toast.renderComplete'))
   }, [
     selectedProjectName, batchMode, batchProjects, selectedOutputTypes,
     cabinets, topology, exportToExcel,
@@ -213,7 +213,7 @@ export function WorkbenchActionCard() {
         {/* Progress bar */}
         {isRendering && (
           <div className="space-y-1">
-            <div className="flex justify-between text-[10px] text-gray-500">
+            <div className="flex justify-between text-2xs text-gray-500">
               <span>{progress.message}</span>
               <span>{progress.progress}%</span>
             </div>
@@ -242,7 +242,7 @@ export function WorkbenchActionCard() {
           </button>
 
           <button
-            onClick={() => addToast('info', '预览功能开发中')}
+            onClick={() => addToast('info', t('common:toast.previewInProgress'))}
             className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             <Eye size={13} />

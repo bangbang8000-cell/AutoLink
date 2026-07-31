@@ -5,22 +5,17 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Server, Network } from 'lucide-react'
+import {
+  TOPOLOGY_NODE_STYLES,
+  TOPOLOGY_NODE_DEFAULT_COLOR,
+} from '@/constants/topology-colors'
 
 /* ---------- 节点颜色 / 标签常量 ---------- */
 
-export const NODE_COLORS: Record<string, string> = {
-  server: '#3B82F6',
-  param_leaf: '#F59E0B',
-  param_spine: '#8B5CF6',
-  param_core: '#EF4444',
-  storage_leaf: '#10B981',
-  storage_spine: '#14B8A6',
-  storage_core: '#06B6D4',
-  oob_access: '#6B7280',
-  oob_agg: '#4B5563',
-  biz_access: '#0EA5E9',
-  biz_agg: '#0284C7',
-}
+// U5: 节点颜色统一引用 @/constants/topology-colors,保留导出名 NODE_COLORS
+export const NODE_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(TOPOLOGY_NODE_STYLES).map(([type, style]) => [type, style.color]),
+)
 
 export const NODE_LABELS: Record<string, string> = {
   server: '服务器',
@@ -67,7 +62,7 @@ export interface TopologyNodeData {
 
 function ServerNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
-  const color = NODE_COLORS[d.nodeType] || '#9ca3af'
+  const color = NODE_COLORS[d.nodeType] || TOPOLOGY_NODE_DEFAULT_COLOR
   return (
     <div
       className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-gray-700 shadow-sm transition-shadow"
@@ -82,11 +77,11 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
       <Handle id="left" type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
       <Server size={11} className="shrink-0" style={{ color }} />
       <div className="flex flex-col min-w-0">
-        <span className="text-[9px] font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
+        <span className="text-3xs font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
           {d.label}
         </span>
         {(d.cabinetName || d.startU !== undefined) && (
-          <span className="text-[8px] text-gray-400 dark:text-gray-500 leading-tight">
+          <span className="text-3xs text-gray-400 dark:text-gray-500 leading-tight">
             {d.cabinetName || ''}{d.startU !== undefined ? ` U${d.startU}` : ''}
           </span>
         )}
@@ -105,7 +100,7 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
 
 function SwitchNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
-  const color = NODE_COLORS[d.nodeType] || '#9ca3af'
+  const color = NODE_COLORS[d.nodeType] || TOPOLOGY_NODE_DEFAULT_COLOR
   return (
     <div
       className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-gray-700 shadow-sm transition-shadow"
@@ -120,10 +115,10 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
       <Handle id="left" type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
       <Network size={11} className="shrink-0" style={{ color }} />
       <div className="flex flex-col min-w-0">
-        <span className="text-[9px] font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
+        <span className="text-3xs font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
           {d.label}
         </span>
-        <span className="text-[8px] text-gray-400 dark:text-gray-500 leading-tight">
+        <span className="text-3xs text-gray-400 dark:text-gray-500 leading-tight">
           {NODE_LABELS[d.nodeType] || d.nodeType}
         </span>
       </div>

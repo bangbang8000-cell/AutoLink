@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileSpreadsheet, GitBranch, Table2, List, Cable, Calculator } from 'lucide-react'
 import { useRenderStore, type OutputType } from '@/stores/render.store'
@@ -71,7 +71,7 @@ export function WorkbenchOutputCard() {
                 {t(def.labelKey)}
               </span>
             </div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto hidden sm:inline">
+            <span className="text-2xs text-gray-400 dark:text-gray-500 ml-auto hidden sm:inline">
               {t(def.descKey)}
             </span>
           </label>

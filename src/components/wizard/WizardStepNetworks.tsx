@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { Zap, HardDrive, Network, Monitor } from 'lucide-react'
@@ -158,7 +158,7 @@ export function WizardStepNetworks() {
                       RoCEv2
                     </button>
                   </div>
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-2xs text-gray-400">
                     {config.topology.param_protocol === 'IB'
                       ? 'IB 优先推荐 NVIDIA 交换机'
                       : 'RoCE 优先推荐 H3C 交换机'}

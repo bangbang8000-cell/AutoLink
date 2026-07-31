@@ -45,15 +45,15 @@ export function DataCenterTab() {
   const handleExportSvg = async () => {
     const svg = svgContainerRef.current?.querySelector('svg')
     if (!svg || !selectedProjectName) {
-      addToast('error', '无机柜数据可导出')
+      addToast('error', t('common:toast.noRackDataToExport'))
       return
     }
     try {
       const filename = makeTimestampedFilename('机房平面布局', 'svg')
       await exportSvgFile(svg as SVGSVGElement, selectedProjectName, filename)
-      addToast('success', `已导出到 output/${filename}`)
+      addToast('success', t('common:toast.exportedToOutput', { filename }))
     } catch (err) {
-      addToast('error', `导出失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
     }
     setShowExportMenu(false)
   }
@@ -61,16 +61,16 @@ export function DataCenterTab() {
   const handleExportPng = async () => {
     const svg = svgContainerRef.current?.querySelector('svg')
     if (!svg || !selectedProjectName) {
-      addToast('error', '无机柜数据可导出')
+      addToast('error', t('common:toast.noRackDataToExport'))
       return
     }
-    addToast('info', '正在生成 PNG...')
+    addToast('info', t('common:toast.generatingPng'))
     try {
       const filename = makeTimestampedFilename('机房平面布局', 'png')
       await exportSvgAsPng(svg as SVGSVGElement, selectedProjectName, filename, 2)
-      addToast('success', `已导出到 output/${filename}`)
+      addToast('success', t('common:toast.exportedToOutput', { filename }))
     } catch (err) {
-      addToast('error', `导出失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
     }
     setShowExportMenu(false)
   }
@@ -141,7 +141,7 @@ export function DataCenterTab() {
       {showSettings && (
         <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-            <label className="text-[11px]">
+            <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetsPerRow', '每排机柜数')}</span>
               <input
                 type="number"
@@ -152,7 +152,7 @@ export function DataCenterTab() {
                 className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               />
             </label>
-            <label className="text-[11px]">
+            <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetWidth', '机柜宽度(px)')}</span>
               <input
                 type="number"
@@ -163,7 +163,7 @@ export function DataCenterTab() {
                 className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               />
             </label>
-            <label className="text-[11px]">
+            <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetHeight', '机柜高度(px)')}</span>
               <input
                 type="number"
@@ -174,7 +174,7 @@ export function DataCenterTab() {
                 className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               />
             </label>
-            <label className="text-[11px]">
+            <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:rowGap', '排间距(px)')}</span>
               <input
                 type="number"

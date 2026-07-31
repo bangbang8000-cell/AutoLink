@@ -11,6 +11,45 @@
   "processing": "处理中...",
   "loading": "加载中...",
   "noData": "暂无数据",
+  "tabs": {
+    "workbench": "工作台",
+    "design": "设计",
+    "visualization": "可视化",
+    "visualizationWithProject": "可视化 - {{name}}",
+    "deviceLibrary": "设备库"
+  },
+  "confirmDelete": {
+    "title": {
+      "project": "删除项目 {{name}}",
+      "template": "删除模板 {{name}}",
+      "file": "删除输出文件 {{name}}",
+      "batch": "删除输出批次 {{name}}",
+      "clearOutput": "清空 {{name}} 的全部输出"
+    },
+    "warning": {
+      "project": "此操作不可撤销。项目文件夹及其所有配置、输出文件将被永久删除。",
+      "template": "模板将被永久删除，但不会影响已创建的项目。",
+      "file": "此文件将被永久删除。",
+      "batch": "该批次目录及所有文件将被永久删除。",
+      "clearOutput": "所有渲染输出文件（拓扑图、表格、清单等）将被永久删除。此操作不可撤销。"
+    },
+    "confirmNamePrompt": "请输入 {{name}} 以确认删除：",
+    "confirmDelete": "确认删除",
+    "deleteFailed": "删除失败"
+  },
+  "errorBoundary": {
+    "pageTitle": "页面",
+    "loadFailed": "{{title}} 加载失败",
+    "unknownError": "未知错误",
+    "retry": "重试",
+    "workspace": "工作区"
+  },
+  "logPanel": {
+    "title": "输出日志",
+    "clear": "清除",
+    "collapse": "折叠",
+    "waiting": "等待输出..."
+  },
   "project": {
     "duplicate": "复制项目",
     "rename": "重命名项目",
@@ -433,5 +472,33 @@
     "unsupportedType": "不支持的文件类型: {{type}}",
     "emptyTable": "空表格",
     "cannotPreview": "无法预览此文件"
+  },
+  "toast": {
+    "projectCreated": "项目创建成功",
+    "projectCreateFailed": "创建项目失败: {{error}}",
+    "templateHint": "请从左侧下方「模板」区域右键模板，选择「基于此模板创建」",
+    "selectProjectFromList": "请从左侧项目列表选择已有项目",
+    "projectImported": "项目 \"{{name}}\" 已导入",
+    "importFailed": "导入失败: {{error}}",
+    "selectProjectFirst": "请先选择一个项目",
+    "selectRenderProject": "请选择要渲染的项目",
+    "renderFailed": "{{project}} 渲染失败: {{error}}",
+    "renderComplete": "渲染完成",
+    "previewInProgress": "预览功能开发中",
+    "topologyValidationComplete": "拓扑校验完成",
+    "validationFailed": "校验失败: {{error}}",
+    "nodeNotFound": "未找到匹配的节点",
+    "topologyLayoutSaved": "拓扑布局已保存",
+    "layoutReset": "布局已重置",
+    "noTopologyToExport": "无拓扑数据可导出",
+    "generatingTopologyPng": "正在生成拓扑图 PNG...",
+    "topologyExported": "拓扑图已导出到 output/{{filename}}",
+    "ipcNotReady": "IPC 桥接未就绪，无法保存文件",
+    "exportFailed": "导出失败: {{error}}",
+    "unknownError": "未知错误",
+    "noRackDataToExport": "无机柜数据可导出",
+    "exportedToOutput": "已导出到 output/{{filename}}",
+    "generatingPng": "正在生成 PNG...",
+    "renderHint": "请在工作台点击\"一键渲染\"开始渲染"
   }
 }

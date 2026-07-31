@@ -111,7 +111,7 @@ export function UpdatePopover() {
         title={t('common:update.title')}
       >
         {status === 'downloaded' ? (
-          <CheckCircle size={15} className="text-green-500" />
+          <CheckCircle size={15} className="text-success-500" />
         ) : status === 'error' ? (
           <AlertTriangle size={15} className="text-gray-400" />
         ) : status === 'downloading' ? (
@@ -120,7 +120,7 @@ export function UpdatePopover() {
           <ArrowUpCircle size={15} />
         )}
         {hasUpdate && (
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-blue-500" />
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-info-500" />
         )}
       </button>
 
@@ -163,13 +163,13 @@ export function UpdatePopover() {
                     <div>
                       <button
                         onClick={() => setShowNotes(!showNotes)}
-                        className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        className="flex items-center gap-1 text-2xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
                         {showNotes ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                         {t('common:update.releaseNotes')}
                       </button>
                       {showNotes && (
-                        <div className="mt-1 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-900/50 rounded text-[10px] text-gray-600 dark:text-gray-400 whitespace-pre-wrap border border-gray-200 dark:border-gray-700">
+                        <div className="mt-1 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-900/50 rounded text-2xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap border border-gray-200 dark:border-gray-700">
                           {releaseNotes}
                         </div>
                       )}
@@ -177,7 +177,7 @@ export function UpdatePopover() {
                   )}
                   <button
                     onClick={handleDownload}
-                    className="w-full px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full px-3 py-1.5 text-xs bg-info-500 hover:bg-info-600 text-white rounded transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Download size={13} />
                     {t('common:update.download')}
@@ -192,7 +192,7 @@ export function UpdatePopover() {
                   </p>
                   <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                      className="h-full bg-info-500 rounded-full transition-all duration-300"
                       style={{ width: `${downloadPercent}%` }}
                     />
                   </div>
@@ -201,13 +201,13 @@ export function UpdatePopover() {
 
               {status === 'downloaded' && (
                 <div className="space-y-2">
-                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <p className="text-xs text-success-600 dark:text-success-400 flex items-center gap-1">
                     <CheckCircle size={13} />
                     {t('common:update.downloaded')}
                   </p>
                   <button
                     onClick={handleQuitAndInstall}
-                    className="w-full px-3 py-1.5 text-xs bg-green-500 hover:bg-green-600 text-white rounded transition-colors"
+                    className="w-full px-3 py-1.5 text-xs bg-success-500 hover:bg-success-600 text-white rounded transition-colors"
                   >
                     {t('common:update.restartToInstall')}
                   </button>
@@ -216,7 +216,7 @@ export function UpdatePopover() {
 
               {status === 'error' && (
                 <div className="space-y-2">
-                  <p className="text-xs text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-error-500 flex items-center gap-1">
                     <AlertTriangle size={13} />
                     {errorMessage || t('common:update.error')}
                   </p>

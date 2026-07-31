@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+﻿import React, { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Wrench, Play, RefreshCw, CheckCircle, XCircle,
@@ -38,7 +38,7 @@ function NumberInput({ label, value, onChange, min = 0, max = 99999, step = 1, c
 }) {
   return (
     <div className={className}>
-      <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className="block text-2xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       <input
         type="number" min={min} max={max} step={step}
         value={value}
@@ -55,7 +55,7 @@ function SelectInput({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className="block text-2xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -83,7 +83,7 @@ function ToggleSwitch({ label, checked, onChange }: {
       >
         <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${checked ? 'left-4' : 'left-0.5'}`} />
       </button>
-      <span className="text-[11px] text-gray-600 dark:text-gray-400">{label}</span>
+      <span className="text-2xs text-gray-600 dark:text-gray-400">{label}</span>
     </label>
   )
 }
@@ -110,7 +110,7 @@ function DesignSummaryView({ summary, valid }: { summary: DesignSummary; valid: 
 
         {/* Param network */}
         <div>
-          <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+          <div className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
             {t('design:summaryParam')} ({summary.paramSpeed})
           </div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -121,7 +121,7 @@ function DesignSummaryView({ summary, valid }: { summary: DesignSummary; valid: 
 
         {/* Storage network */}
         <div>
-          <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+          <div className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
             {t('design:summaryStorage')} ({summary.storageSpeed})
           </div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -146,7 +146,7 @@ function StatItem({ label, value }: { label: string; value: number }) {
   return (
     <div className="bg-gray-50 dark:bg-gray-800/80 rounded px-2 py-1.5 text-center">
       <div className="text-lg font-bold text-gray-800 dark:text-gray-100">{value}</div>
-      <div className="text-[10px] text-gray-400 dark:text-gray-500">{label}</div>
+      <div className="text-2xs text-gray-400 dark:text-gray-500">{label}</div>
     </div>
   )
 }
@@ -217,13 +217,13 @@ export function DesignPanel() {
     <div className="h-full flex flex-col">
       {/* Title bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('design:title')}
         </span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => { resetConfig(); clearResults() }}
-            className="px-2 py-0.5 text-[10px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="px-2 py-0.5 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
           >
             <RefreshCw size={12} />
           </button>
@@ -234,7 +234,7 @@ export function DesignPanel() {
       <div className="flex-1 overflow-auto p-3 space-y-3">
         {/* Mode toggle */}
         <div>
-          <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">{t('design:mode')}</label>
+          <label className="block text-2xs text-gray-500 dark:text-gray-400 mb-1.5">{t('design:mode')}</label>
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             <button
               onClick={() => updateConfig({ downlink_mode: 'full' })}
@@ -257,7 +257,7 @@ export function DesignPanel() {
               {t('design:modeCustom')}
             </button>
           </div>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          <p className="text-2xs text-gray-400 dark:text-gray-500 mt-1">
             {config.downlink_mode === 'full' ? t('design:modeFullDesc') : t('design:modeCustomDesc')}
           </p>
         </div>

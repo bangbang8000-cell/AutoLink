@@ -3,19 +3,23 @@
  * Used by WorkbenchPanel to generate topology PNG during rendering
  */
 import type { TopologyNode, TopologyEdge } from '@/stores/design.store'
+import {
+  TOPOLOGY_NODE_STYLES,
+  TOPOLOGY_NODE_DEFAULT_COLOR,
+} from '@/constants/topology-colors'
 
-const categories: Record<string, { name: string; itemStyle: { color: string }; symbol: string }> = {
-  server: { name: 'Server', itemStyle: { color: '#6366f1' }, symbol: 'circle' },
-  param_leaf: { name: 'Param Leaf', itemStyle: { color: '#3b82f6' }, symbol: 'roundRect' },
-  param_spine: { name: 'Param Spine', itemStyle: { color: '#f59e0b' }, symbol: 'roundRect' },
-  param_core: { name: 'Param Core', itemStyle: { color: '#ef4444' }, symbol: 'roundRect' },
-  storage_leaf: { name: 'Storage Leaf', itemStyle: { color: '#10b981' }, symbol: 'roundRect' },
-  storage_spine: { name: 'Storage Spine', itemStyle: { color: '#8b5cf6' }, symbol: 'roundRect' },
-  oob_access: { name: 'OOB Access', itemStyle: { color: '#6b7280' }, symbol: 'roundRect' },
-  oob_agg: { name: 'OOB Agg', itemStyle: { color: '#4b5563' }, symbol: 'roundRect' },
-  biz_access: { name: 'Biz Access', itemStyle: { color: '#14b8a6' }, symbol: 'roundRect' },
-  biz_agg: { name: 'Biz Agg', itemStyle: { color: '#0d9488' }, symbol: 'roundRect' },
-}
+// U5: 节点颜色统一引用 @/constants/topology-colors,保留局部名 categories
+const categories: Record<string, { name: string; itemStyle: { color: string }; symbol: string }> =
+  Object.fromEntries(
+    Object.entries(TOPOLOGY_NODE_STYLES).map(([type, style]) => [
+      type,
+      {
+        name: style.echartsName,
+        itemStyle: { color: style.color },
+        symbol: style.echartsSymbol,
+      },
+    ]),
+  )
 
 const typeOrder: Record<string, number> = {
   server: 0,
@@ -36,7 +40,7 @@ export async function exportTopologyPng(
   // Build category list
   const types = new Set(nodes.map((n) => n.type))
   const catList = Array.from(types).map(
-    (t) => categories[t] || { name: t, itemStyle: { color: '#9ca3af' }, symbol: 'circle' },
+    (t) => categories[t] || { name: t, itemStyle: { color: TOPOLOGY_NODE_DEFAULT_COLOR }, symbol: 'circle' },
   )
 
   // Compute layered positions

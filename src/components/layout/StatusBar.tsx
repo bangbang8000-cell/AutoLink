@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+﻿import { useTranslation } from 'react-i18next'
 import { useProjectStore } from '@/stores/project.store'
 
 export function StatusBar() {
@@ -7,7 +7,7 @@ export function StatusBar() {
   const projects = useProjectStore((s) => s.projects)
 
   return (
-    <div className="h-6 flex items-center justify-between shrink-0 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-3 text-[11px] text-gray-500 dark:text-gray-400 select-none">
+    <div className="h-6 flex items-center justify-between shrink-0 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-3 text-2xs text-gray-500 dark:text-gray-400 select-none">
       <div className="flex items-center gap-3">
         <span>
           {selectedProject

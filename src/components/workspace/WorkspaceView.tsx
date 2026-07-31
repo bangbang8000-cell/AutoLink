@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react'
+﻿import { useCallback, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
@@ -114,7 +114,7 @@ export function WorkspaceView() {
                   border-r border-gray-200 dark:border-gray-700 shrink-0 max-w-[180px]
                   ${isActive
                     ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 border-t-2 border-t-primary-500'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-750 border-t-2 border-t-transparent'}
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border-t-2 border-t-transparent'}
                 `}
               >
                 <Icon size={13} className="shrink-0" />
@@ -192,36 +192,36 @@ export function WorkspaceView() {
                     <Sparkles size={22} className="text-primary-500" />
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.newProject')}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.newProjectDesc')}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500">{t('welcome.newProjectDesc')}</div>
                     </div>
                   </button>
                   <button
-                    onClick={() => { setActiveActivity('project'); addToast('info', '请从左侧下方「模板」区域右键模板，选择「基于此模板创建」') }}
+                    onClick={() => { setActiveActivity('project'); addToast('info', t('common:toast.templateHint')) }}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                   >
                     <LayoutTemplate size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.fromTemplate')}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.fromTemplateDesc')}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500">{t('welcome.fromTemplateDesc')}</div>
                     </div>
                   </button>
                   <button
-                    onClick={() => { setActiveActivity('project'); addToast('info', '请从左侧项目列表选择已有项目') }}
+                    onClick={() => { setActiveActivity('project'); addToast('info', t('common:toast.selectProjectFromList')) }}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                   >
                     <FolderOpen size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.openProject')}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.openProjectDesc')}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500">{t('welcome.openProjectDesc')}</div>
                     </div>
                   </button>
                   <button
                     onClick={async () => {
                       try {
                         const result = await importProject()
-                        if (!result.canceled) addToast('success', `项目 "${result.projectName}" 已导入`)
+                        if (!result.canceled) addToast('success', t('common:toast.projectImported', { name: result.projectName }))
                       } catch (err: any) {
-                        addToast('error', `导入失败: ${err?.message || err}`)
+                        addToast('error', t('common:toast.importFailed', { error: err?.message || err }))
                       }
                     }}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -229,7 +229,7 @@ export function WorkspaceView() {
                     <Upload size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.importProject')}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.importProjectDesc')}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500">{t('welcome.importProjectDesc')}</div>
                     </div>
                   </button>
                   <button
@@ -242,7 +242,7 @@ export function WorkspaceView() {
                     <Play size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.openWorkbench')}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.openWorkbenchDesc')}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500">{t('welcome.openWorkbenchDesc')}</div>
                     </div>
                   </button>
                   <button
@@ -253,13 +253,13 @@ export function WorkspaceView() {
                     <BookOpen size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.userGuide')}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.userGuideDesc')}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500">{t('welcome.userGuideDesc')}</div>
                     </div>
                   </button>
                 </div>
-                <div className="mt-6 text-[11px] text-gray-400 dark:text-gray-500 space-y-0.5">
-                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+N</kbd> {t('welcome.shortcutNewProject')}</p>
-                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+Shift+W</kbd> {t('welcome.shortcutWorkbench')}</p>
+                <div className="mt-6 text-2xs text-gray-400 dark:text-gray-500 space-y-0.5">
+                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-2xs">Ctrl+N</kbd> {t('welcome.shortcutNewProject')}</p>
+                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-2xs">Ctrl+Shift+W</kbd> {t('welcome.shortcutWorkbench')}</p>
                 </div>
               </>
             )}

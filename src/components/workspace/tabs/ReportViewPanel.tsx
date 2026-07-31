@@ -85,7 +85,7 @@ export function ReportViewPanel({ projectName }: Props) {
         <FileText size={14} className="text-primary-500" />
         {t('design:reportView')}
         {data?.generated_at && (
-          <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500">
+          <span className="ml-auto text-2xs text-gray-400 dark:text-gray-500">
             {data.generated_at}
           </span>
         )}
@@ -100,7 +100,7 @@ export function ReportViewPanel({ projectName }: Props) {
               <button
                 onClick={handleExportPdf}
                 disabled={exportingPdf}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-600 dark:text-primary-400 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-600 dark:text-primary-400 disabled:opacity-50"
               >
                 {exportingPdf ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
                 {t('design:exportPdf', '导出 PDF')}
@@ -108,7 +108,7 @@ export function ReportViewPanel({ projectName }: Props) {
               <button
                 onClick={loadReport}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
               >
                 {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                 {t('design:reEstimate')}
@@ -123,7 +123,7 @@ export function ReportViewPanel({ projectName }: Props) {
           )}
 
           {error && (
-            <div className="flex items-start gap-2 p-3 rounded text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+            <div className="flex items-start gap-2 p-3 rounded text-xs bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300">
               <XCircle size={13} className="shrink-0 mt-0.5" />
               <span className="flex-1">{error}</span>
             </div>
@@ -183,7 +183,7 @@ export function ReportViewPanel({ projectName }: Props) {
 
               {/* 校验结果 */}
               <Section icon={data.validation?.valid ? <CheckCircle size={12} /> : <XCircle size={12} />} title={t('design:validate')}>
-                <div className={`text-xs px-2 py-1.5 rounded ${data.validation?.valid ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+                <div className={`text-xs px-2 py-1.5 rounded ${data.validation?.valid ? 'bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-300' : 'bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300'}`}>
                   {data.validation?.valid ? t('design:validationPassed') : t('design:validationFailed')}
                 </div>
                 {Array.isArray(data.validation?.issues) && data.validation.issues.length > 0 && (

@@ -155,17 +155,63 @@ export function sendLog(mainWindow: BrowserWindow | null, message: string, level
 
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== Project Management =====
+  // U1: project:list 扩展返回 status/fileCount/updatedAt/description
   ipcMain.handle('project:list', wrapHandler(async () => {
     const wsp = getWorkspacePath()
     if (!fs.existsSync(wsp)) return []
     const dirs = fs.readdirSync(wsp, { withFileTypes: true })
-    return dirs
       .filter((d) => d.isDirectory())
-      .map((d, i) => ({
+    return dirs.map((d, i) => {
+      const projectDir = path.join(wsp, d.name)
+      // 状态推断:基于关键文件存在性
+      let status: 'ready' | 'configured' | 'designed' | 'layouted' = 'ready'
+      if (fs.existsSync(path.join(projectDir, 'rack_layout.json'))) {
+        status = 'layouted'
+      } else if (fs.existsSync(path.join(projectDir, 'topology.json'))) {
+        status = 'designed'
+      } else if (
+        fs.existsSync(path.join(projectDir, 'network_config.ini')) ||
+        fs.existsSync(path.join(projectDir, 'project_config.json'))
+      ) {
+        status = 'configured'
+      }
+      // 读取 project.json 元数据
+      let updatedAt: string | undefined
+      let description: string | undefined
+      try {
+        const metaPath = path.join(projectDir, 'project.json')
+        if (fs.existsSync(metaPath)) {
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+          updatedAt = meta.updatedAt
+          description = meta.description
+        }
+      } catch { /* 忽略损坏的 project.json */ }
+      // 文件数统计(递归,跳过 node_modules/.git)
+      let fileCount = 0
+      try {
+        const countFiles = (dir: string): void => {
+          for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            if (entry.name === 'node_modules' || entry.name === '.git') continue
+            const fullPath = path.join(dir, entry.name)
+            if (entry.isDirectory()) {
+              countFiles(fullPath)
+            } else {
+              fileCount++
+            }
+          }
+        }
+        countFiles(projectDir)
+      } catch { /* 忽略统计失败 */ }
+      return {
         id: i + 1,
         name: d.name,
         index: i,
-      }))
+        status,
+        fileCount,
+        updatedAt,
+        description,
+      }
+    })
   }))
 
   ipcMain.handle('project:create', wrapHandler(async (_event, name: string, options?: { template?: string; empty?: boolean }) => {

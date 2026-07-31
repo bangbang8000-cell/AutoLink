@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
 import { ProjectWizard } from './ProjectWizard'
 import { useWizardStore } from '@/stores/wizard.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -29,9 +29,9 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
       await createProjectWithConfig(config)
       closeWizard()
       onClose()
-      addToast('success', '项目创建成功')
+      addToast('success', t('common:toast.projectCreated'))
     } catch (err: any) {
-      addToast('error', `创建项目失败: ${err?.message || err}`)
+      addToast('error', t('common:toast.projectCreateFailed', { error: err?.message || err }))
       console.error('[Wizard] create project failed:', err)
     }
   }
@@ -42,29 +42,22 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            {t('project:createProject')}
-          </h2>
-          <button
-            onClick={handleCancel}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Wizard */}
-        <div className="flex-1 min-h-0 flex flex-col">
-          <ProjectWizard
-            onComplete={handleComplete}
-            onCancel={handleCancel}
-          />
-        </div>
+    <Modal
+      open
+      onClose={handleCancel}
+      title={t('project:createProject')}
+      width={640}
+      maxHeight="85vh"
+      closeOnEsc
+      showCloseButton={false}
+      bodyClassName="p-0"
+    >
+      <div className="flex-1 min-h-0 flex flex-col">
+        <ProjectWizard
+          onComplete={handleComplete}
+          onCancel={handleCancel}
+        />
       </div>
-    </div>
+    </Modal>
   )
 }

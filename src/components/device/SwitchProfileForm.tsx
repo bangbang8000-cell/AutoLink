@@ -146,11 +146,11 @@ export function SwitchProfileForm() {
                 onChange={(e) => updateField('vendor', e.target.value)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.vendor ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.vendor ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="厂商"
               />
-              {errors.vendor && <div className="text-[10px] text-red-500 mt-0.5">{errors.vendor}</div>}
+              {errors.vendor && <div className="text-2xs text-error-500 mt-0.5">{errors.vendor}</div>}
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{t('device.model')} *</label>
@@ -160,11 +160,11 @@ export function SwitchProfileForm() {
                 onChange={(e) => updateField('model', e.target.value)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.model ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.model ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="型号"
               />
-              {errors.model && <div className="text-[10px] text-red-500 mt-0.5">{errors.model}</div>}
+              {errors.model && <div className="text-2xs text-error-500 mt-0.5">{errors.model}</div>}
             </div>
           </div>
 
@@ -189,10 +189,10 @@ export function SwitchProfileForm() {
                 onChange={(e) => updateField('power_watts', parseInt(e.target.value) || 0)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.power_watts ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.power_watts ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
-              {errors.power_watts && <div className="text-[10px] text-red-500 mt-0.5">{errors.power_watts}</div>}
+              {errors.power_watts && <div className="text-2xs text-error-500 mt-0.5">{errors.power_watts}</div>}
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{t('device.uHeight')} *</label>
@@ -202,10 +202,10 @@ export function SwitchProfileForm() {
                 onChange={(e) => updateField('u_height', parseInt(e.target.value) || 0)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.u_height ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.u_height ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
-              {errors.u_height && <div className="text-[10px] text-red-500 mt-0.5">{errors.u_height}</div>}
+              {errors.u_height && <div className="text-2xs text-error-500 mt-0.5">{errors.u_height}</div>}
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{t('device.depth')} (mm)</label>
@@ -247,11 +247,11 @@ export function SwitchProfileForm() {
                 onChange={(e) => updateField('name_prefix', e.target.value)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.name_prefix ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.name_prefix ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="前缀"
               />
-              {errors.name_prefix && <div className="text-[10px] text-red-500 mt-0.5">{errors.name_prefix}</div>}
+              {errors.name_prefix && <div className="text-2xs text-error-500 mt-0.5">{errors.name_prefix}</div>}
             </div>
           </div>
 
@@ -260,7 +260,7 @@ export function SwitchProfileForm() {
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">端口配置</label>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-[10px] text-gray-400 mb-1 block">{t('device.ports')}</label>
+                <label className="text-2xs text-gray-400 mb-1 block">{t('device.ports')}</label>
                 <input
                   type="number"
                   value={device.port_count || ''}
@@ -269,37 +269,37 @@ export function SwitchProfileForm() {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-400 mb-1 block">{t('device.portSpeed')} *</label>
+                <label className="text-2xs text-gray-400 mb-1 block">{t('device.portSpeed')} *</label>
                 <input
                   type="text"
                   value={device.port_speed || ''}
                   onChange={(e) => updateField('port_speed', e.target.value)}
                   className={clsx(
                     'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                    errors.port_speed ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                    errors.port_speed ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                   )}
                   placeholder="如 400G"
                 />
-                {errors.port_speed && <div className="text-[10px] text-red-500 mt-0.5">{errors.port_speed}</div>}
+                {errors.port_speed && <div className="text-2xs text-error-500 mt-0.5">{errors.port_speed}</div>}
               </div>
               <div>
-                <label className="text-[10px] text-gray-400 mb-1 block">{t('device.portType')} *</label>
+                <label className="text-2xs text-gray-400 mb-1 block">{t('device.portType')} *</label>
                 <input
                   type="text"
                   value={device.port_type || ''}
                   onChange={(e) => updateField('port_type', e.target.value)}
                   className={clsx(
                     'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                    errors.port_type ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                    errors.port_type ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                   )}
                   placeholder="如 QSFP56"
                 />
-                {errors.port_type && <div className="text-[10px] text-red-500 mt-0.5">{errors.port_type}</div>}
+                {errors.port_type && <div className="text-2xs text-error-500 mt-0.5">{errors.port_type}</div>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div>
-                <label className="text-[10px] text-gray-400 mb-1 block">{t('device.downlinkPrefix')}</label>
+                <label className="text-2xs text-gray-400 mb-1 block">{t('device.downlinkPrefix')}</label>
                 <input
                   type="text"
                   value={device.downlink_prefix || ''}
@@ -308,7 +308,7 @@ export function SwitchProfileForm() {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-400 mb-1 block">{t('device.uplinkPrefix')}</label>
+                <label className="text-2xs text-gray-400 mb-1 block">{t('device.uplinkPrefix')}</label>
                 <input
                   type="text"
                   value={device.uplink_prefix || ''}

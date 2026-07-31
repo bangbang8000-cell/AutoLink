@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AutoLink V2.4.5 — POD 分组背景框节点（轻量细线样式）
  *
  * V2.4.5 改进：背景框改为轻量细虚线，减少视觉干扰
@@ -73,7 +73,7 @@ function PodGroupNodeImpl({ data }: NodeProps) {
     <div style={style} className="flex flex-col">
       {/* POD 标题栏 */}
       <div
-        className="flex items-center justify-between px-2 py-0.5 text-[10px] font-medium select-none"
+        className="flex items-center justify-between px-2 py-0.5 text-2xs font-medium select-none"
         style={{ color: color.border.replace('0.25', '0.75') }}
       >
         <div className="flex items-center gap-0.5 min-w-0">
@@ -95,13 +95,13 @@ function PodGroupNodeImpl({ data }: NodeProps) {
           )}
           <span className="truncate">{podLabel}</span>
         </div>
-        <span className="text-[9px] opacity-60 shrink-0 ml-1">
+        <span className="text-3xs opacity-60 shrink-0 ml-1">
           {podData.serverCount > 0 && `${podData.serverCount}台`}
         </span>
       </div>
       {/* V2.4.7: 折叠时显示摘要 */}
       {collapsed && (
-        <div className="px-2 py-1 text-[9px] opacity-50 italic">
+        <div className="px-2 py-1 text-3xs opacity-50 italic">
           已折叠 · {podData.serverCount}服务器 / {podData.accessCount + podData.leafCount}交换机
         </div>
       )}

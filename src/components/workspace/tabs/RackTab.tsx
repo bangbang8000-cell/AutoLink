@@ -21,11 +21,11 @@ interface Props {
 
 const getTypeColorClass = (type: string) => {
   const t = type.toLowerCase()
-  if (t.includes('gpu')) return 'bg-blue-500 dark:bg-blue-600'
-  if (t.includes('存储') || t.includes('storage')) return 'bg-green-500 dark:bg-green-600'
-  if (t.includes('switch') || t.includes('交换机') || t.includes('leaf') || t.includes('spine') || t.includes('core')) return 'bg-amber-500 dark:bg-amber-600'
+  if (t.includes('gpu')) return 'bg-info-500 dark:bg-info-600'
+  if (t.includes('存储') || t.includes('storage')) return 'bg-success-500 dark:bg-success-600'
+  if (t.includes('switch') || t.includes('交换机') || t.includes('leaf') || t.includes('spine') || t.includes('core')) return 'bg-warning-500 dark:bg-warning-600'
   if (t.includes('通算') || t.includes('compute')) return 'bg-purple-500 dark:bg-purple-600'
-  if (t.includes('安全') || t.includes('security')) return 'bg-red-500 dark:bg-red-600'
+  if (t.includes('安全') || t.includes('security')) return 'bg-error-500 dark:bg-error-600'
   return 'bg-gray-400 dark:bg-gray-500'
 }
 
@@ -177,7 +177,7 @@ export function RackTab({ cabinetId }: Props) {
               </>
             )}
           </div>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">
+          <span className="text-2xs text-gray-400 dark:text-gray-500">
             {cabinet.totalU}U · {cabinet.devices.length}台设备
           </span>
         </div>
@@ -185,10 +185,10 @@ export function RackTab({ cabinetId }: Props) {
         <div className="flex items-center gap-3">
           {/* Type legend (仅在基础模式显示) */}
           {viewMode === 'basic' && (
-            <div className="flex items-center gap-3 text-[10px]">
+            <div className="flex items-center gap-3 text-2xs">
               {Object.entries(typeCounts).map(([label, count]) => {
                 const colors: Record<string, string> = {
-                  GPU: 'bg-blue-500', 存储: 'bg-green-500', 交换机: 'bg-amber-500', 通算: 'bg-purple-500',
+                  GPU: 'bg-info-500', 存储: 'bg-success-500', 交换机: 'bg-warning-500', 通算: 'bg-purple-500',
                 }
                 const colorClass = colors[label] || 'bg-gray-400'
                 return (
@@ -211,7 +211,7 @@ export function RackTab({ cabinetId }: Props) {
                   key={mode.id}
                   onClick={() => setViewMode(mode.id)}
                   title={mode.label}
-                  className={`flex items-center gap-1 px-2 py-1 text-[10px] transition-colors ${
+                  className={`flex items-center gap-1 px-2 py-1 text-2xs transition-colors ${
                     isActive
                       ? 'bg-primary-500 text-white'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
@@ -240,7 +240,7 @@ export function RackTab({ cabinetId }: Props) {
           <>
             <div className={`border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col transition-all ${showUnplaced ? 'w-[220px] shrink-0' : 'w-0 overflow-hidden'}`}>
               <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                <span className="text-2xs font-semibold text-gray-600 dark:text-gray-300">
                   待分配 ({unplacedDevices.length})
                 </span>
                 <button
@@ -252,16 +252,16 @@ export function RackTab({ cabinetId }: Props) {
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-2">
                 {unplacedDevices.length === 0 ? (
-                  <div className="text-[11px] text-gray-400 text-center py-4">所有设备已分配</div>
+                  <div className="text-2xs text-gray-400 text-center py-4">所有设备已分配</div>
                 ) : (
                   Object.entries(unplacedByType).map(([typeLabel, devices]) => (
                     <div key={typeLabel}>
-                      <div className="text-[10px] text-gray-400 dark:text-gray-500 px-1 mb-1 font-medium">{typeLabel} · {devices.length}</div>
+                      <div className="text-2xs text-gray-400 dark:text-gray-500 px-1 mb-1 font-medium">{typeLabel} · {devices.length}</div>
                       {devices.map((d) => (
                         <button
                           key={d.id}
                           onClick={() => setSelectedUnplaced(selectedUnplaced === d.id ? null : d.id)}
-                          className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[11px] rounded mb-0.5 transition-colors text-left ${
+                          className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-2xs rounded mb-0.5 transition-colors text-left ${
                             selectedUnplaced === d.id
                               ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-1 ring-primary-300'
                               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
@@ -269,7 +269,7 @@ export function RackTab({ cabinetId }: Props) {
                         >
                           <GripVertical size={11} className="shrink-0 text-gray-400" />
                           <span className="truncate flex-1" title={d.name}>{d.name}</span>
-                          <span className="text-[9px] text-gray-400 shrink-0">{d.height}U</span>
+                          <span className="text-3xs text-gray-400 shrink-0">{d.height}U</span>
                         </button>
                       ))}
                     </div>
@@ -296,7 +296,7 @@ export function RackTab({ cabinetId }: Props) {
           <div className="flex-1 overflow-auto p-3">
             {/* Placement hint */}
             {selectedUnplaced && (
-              <div className="mb-2 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-[11px] rounded flex items-center gap-2">
+              <div className="mb-2 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-2xs rounded flex items-center gap-2">
                 <Plus size={13} />
                 <span>点击下方U位放置设备: <strong>{unplacedDevices.find(d => d.id === selectedUnplaced)?.name}</strong></span>
                 <button onClick={() => setSelectedUnplaced(null)} className="ml-auto p-0.5 rounded hover:bg-primary-200 dark:hover:bg-primary-800">
@@ -317,9 +317,9 @@ export function RackTab({ cabinetId }: Props) {
                     <button
                       key={i}
                       onClick={() => handleSlotClick(uNum)}
-                      className={`h-7 flex items-center justify-end pr-1.5 text-[10px] border-b border-gray-200 dark:border-gray-700/50 last:border-b-0 w-full transition-colors ${
+                      className={`h-7 flex items-center justify-end pr-1.5 text-2xs border-b border-gray-200 dark:border-gray-700/50 last:border-b-0 w-full transition-colors ${
                         isConflictArea
-                          ? 'text-red-300 dark:text-red-700 cursor-not-allowed'
+                          ? 'text-error-300 dark:text-error-700 cursor-not-allowed'
                           : selectedUnplaced
                             ? 'text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 cursor-pointer'
                             : 'text-gray-400 dark:text-gray-500'
@@ -353,12 +353,12 @@ export function RackTab({ cabinetId }: Props) {
                         onClick={() => handleSlotClick(uNum)}
                         className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 w-full transition-colors block ${
                           isConflictArea
-                            ? 'bg-red-50 dark:bg-red-900/10 cursor-not-allowed'
+                            ? 'bg-error-50 dark:bg-error-900/10 cursor-not-allowed'
                             : selectedUnplaced && isPendingSlot
                               ? 'bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 cursor-pointer'
                               : selectedUnplaced
-                                ? 'bg-white dark:bg-gray-850 hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
-                                : 'bg-white dark:bg-gray-850'
+                                ? 'bg-white dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
+                                : 'bg-white dark:bg-gray-800'
                         }`}
                         disabled={isConflictArea}
                       />
@@ -376,7 +376,7 @@ export function RackTab({ cabinetId }: Props) {
                     >
                       {isFirst && (
                         <>
-                          <span className="text-[10px] font-medium truncate leading-none flex-1">
+                          <span className="text-2xs font-medium truncate leading-none flex-1">
                             {device.name}
                             <span className="ml-1 opacity-70 font-normal">
                               U{device.startU}-U{device.endU}

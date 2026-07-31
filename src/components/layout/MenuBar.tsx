@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+﻿import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
-import { X } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
+import { Modal } from '@/components/ui/Modal'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
@@ -314,7 +314,7 @@ export function MenuBar() {
                   >
                     <span>{item.label}</span>
                     {item.shortcut && (
-                      <span className="text-[10px] text-gray-400 ml-6">{item.shortcut}</span>
+                      <span className="text-2xs text-gray-400 ml-6">{item.shortcut}</span>
                     )}
                   </button>
                 )
@@ -374,37 +374,33 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[520px] max-h-[80vh] overflow-auto border border-gray-200 dark:border-gray-700"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('menu.shortcuts.title')}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400">
-            <X size={16} />
-          </button>
-        </div>
-        <div className="p-4 space-y-4">
-          {SHORTCUTS.map((group) => (
-            <div key={group.category}>
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                {group.category}
-              </h3>
-              <div className="space-y-1">
-                {group.items.map((item) => (
-                  <div key={item.keys} className="flex items-center justify-between py-1">
-                    <span className="text-xs text-gray-600 dark:text-gray-300">{item.desc}</span>
-                    <kbd className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
-                      {item.keys}
-                    </kbd>
-                  </div>
-                ))}
+    <Modal
+      open
+      onClose={onClose}
+      title={t('menu.shortcuts.title')}
+      width={520}
+      maxHeight="80vh"
+      closeOnEsc
+      closeOnOverlay
+      bodyClassName="p-4 space-y-4"
+    >
+      {SHORTCUTS.map((group) => (
+        <div key={group.category}>
+          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            {group.category}
+          </h3>
+          <div className="space-y-1">
+            {group.items.map((item) => (
+              <div key={item.keys} className="flex items-center justify-between py-1">
+                <span className="text-xs text-gray-600 dark:text-gray-300">{item.desc}</span>
+                <kbd className="text-2xs font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                  {item.keys}
+                </kbd>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+      ))}
+    </Modal>
   )
 }

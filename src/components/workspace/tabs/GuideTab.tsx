@@ -51,7 +51,7 @@ export function GuideTab() {
 
   if (error) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-red-500 dark:text-red-400 gap-2 p-6">
+      <div className="h-full flex flex-col items-center justify-center text-error-500 dark:text-error-400 gap-2 p-6">
         <AlertCircle size={24} />
         <span className="text-sm text-center">{error}</span>
       </div>

@@ -10,10 +10,10 @@ const iconMap = {
 }
 
 const bgMap = {
-  success: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
-  error: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20',
-  warning: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20',
-  info: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20',
+  success: 'border-success-200 dark:border-success-800 bg-success-50 dark:bg-success-900/20',
+  error: 'border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20',
+  warning: 'border-warning-200 dark:border-warning-800 bg-warning-50 dark:bg-warning-900/20',
+  info: 'border-info-200 dark:border-info-800 bg-info-50 dark:bg-info-900/20',
 }
 
 function ToastItem({ toast }: { toast: Toast }) {

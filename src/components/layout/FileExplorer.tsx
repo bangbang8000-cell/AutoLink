@@ -15,6 +15,7 @@ import {
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
   Star, Plus,
+  FileText, Image as ImageIcon, FileCode, File as FileIcon, LayoutTemplate,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -23,6 +24,7 @@ import { useToastStore } from '@/stores/toast.store'
 import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
 import { RenameProjectModal } from '@/components/layout/RenameProjectModal'
 import { EditTemplateModal } from '@/components/layout/EditTemplateModal'
+import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function FileExplorer() {
@@ -249,7 +251,7 @@ function ProjectExplorer() {
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <button
           onClick={() => setShowCreateProjectWizard(true)}
-          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded bg-primary-500 hover:bg-primary-600 text-white shrink-0"
+          className="flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded bg-primary-500 hover:bg-primary-600 text-white shrink-0"
           title={t('common:project.new', '新建项目')}
         >
           <Plus size={13} />
@@ -261,7 +263,7 @@ function ProjectExplorer() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common:search')}
-            className="w-full pl-7 pr-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+            className="w-full pl-7 pr-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
         <button
@@ -308,6 +310,18 @@ function ProjectExplorer() {
                   active={p.name === selectedProjectName}
                   onClick={() => toggleProjectExpand(p.name)}
                   onDoubleClick={() => handleOpenProject(p.name)}
+                  leading={
+                    <span
+                      className={clsx('w-1.5 h-1.5 rounded-full', getStatusDotClass(p.status))}
+                      title={p.status || 'ready'}
+                    />
+                  }
+                  meta={
+                    <span className="flex items-center gap-1.5">
+                      {p.fileCount != null && <span>{p.fileCount} 文件</span>}
+                      {p.updatedAt && <span>{formatRelativeTime(p.updatedAt)}</span>}
+                    </span>
+                  }
                   contextMenu={[
                     { label: t('common:explorer.contextMenu.setAsCurrent'), action: () => handleOpenProject(p.name) },
                     { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(p.name) },
@@ -327,7 +341,7 @@ function ProjectExplorer() {
                         onClick={(e) => handleToggleFavorite(e, p.name)}
                         className={clsx(
                           'p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700',
-                          isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500'
+                          isFavorite ? 'text-warning-400' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500'
                         )}
                         title={isFavorite ? t('common:explorer.contextMenu.unfavorite') : t('common:explorer.contextMenu.favorite')}
                       >
@@ -388,7 +402,7 @@ function Section({ title, icon, children, actions }: { title: string; icon: Reac
       <div className="flex items-center group">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex-1 flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+          className="flex-1 flex items-center gap-1.5 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           {icon}
@@ -405,16 +419,69 @@ function Section({ title, icon, children, actions }: { title: string; icon: Reac
   )
 }
 
+// U1: 项目状态点颜色
+function getStatusDotClass(status?: string): string {
+  switch (status) {
+    case 'layouted':   return 'bg-success-500'
+    case 'designed':   return 'bg-primary-500'
+    case 'configured': return 'bg-info-500'
+    default:           return 'bg-gray-300 dark:bg-gray-600'
+  }
+}
+
+// U1: 相对时间格式化
+function formatRelativeTime(dateString?: string): string {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return ''
+  const now = Date.now()
+  const diff = now - date.getTime()
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  const week = 7 * day
+  if (diff < minute) return '刚刚'
+  if (diff < hour) return `${Math.floor(diff / minute)}分钟前`
+  if (diff < day) return `${Math.floor(diff / hour)}小时前`
+  if (diff < week) return `${Math.floor(diff / day)}天前`
+  if (diff < 4 * week) return `${Math.floor(diff / week)}周前`
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+// U1: 输出文件图标
+function getFileIcon(fileName: string): { Icon: React.ComponentType<{ size?: number; className?: string }>; color: string } {
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'xlsx':
+    case 'csv':
+      return { Icon: FileSpreadsheet, color: 'text-success-500' }
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'svg':
+      return { Icon: ImageIcon, color: 'text-info-500' }
+    case 'json':
+    case 'txt':
+    case 'md':
+      return { Icon: FileText, color: 'text-gray-400' }
+    case 'html':
+      return { Icon: FileCode, color: 'text-warning-500' }
+    default:
+      return { Icon: FileIcon, color: 'text-gray-400' }
+  }
+}
+
 // Simple tree item
-function TreeItem({ label, active, onClick, onDoubleClick, contextMenu, trailing }: {
+function TreeItem({ label, active, onClick, onDoubleClick, contextMenu, trailing, leading, meta }: {
   label: React.ReactNode
   active?: boolean
   onClick?: () => void
   onDoubleClick?: () => void
-  contextMenu?: { label: string; action: () => void }[]
+  contextMenu?: ContextMenuItem[]
   trailing?: React.ReactNode
+  leading?: React.ReactNode
+  meta?: React.ReactNode
 }) {
-  const { t } = useTranslation()
   const [showContext, setShowContext] = React.useState(false)
   const [pos, setPos] = React.useState({ x: 0, y: 0 })
 
@@ -437,7 +504,9 @@ function TreeItem({ label, active, onClick, onDoubleClick, contextMenu, trailing
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent'
         )}
       >
+        {leading && <span className="shrink-0">{leading}</span>}
         <span className="truncate flex-1">{label}</span>
+        {meta && <span className="shrink-0 text-2xs text-gray-400 dark:text-gray-500">{meta}</span>}
         {trailing && (
           <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             {trailing}
@@ -445,50 +514,33 @@ function TreeItem({ label, active, onClick, onDoubleClick, contextMenu, trailing
         )}
       </div>
       {showContext && contextMenu && (
-        <div
-          className="fixed z-[80] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[180px]"
-          style={{ left: pos.x, top: pos.y }}
-        >
-          {contextMenu.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => { item.action(); setShowContext(false) }}
-              className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-            >
-              {item.label}
-            </button>
-          ))}
-          <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
-          <button
-            onClick={() => setShowContext(false)}
-            className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
-          >
-            {t('common:explorer.close')}
-          </button>
-        </div>
-      )}
-      {/* Click outside to close */}
-      {showContext && (
-        <div className="fixed inset-0 z-[79]" onClick={() => setShowContext(false)} />
+        <ContextMenu
+          items={contextMenu}
+          x={pos.x}
+          y={pos.y}
+          onClose={() => setShowContext(false)}
+        />
       )}
     </>
   )
 }
 
 // Expandable tree item for nested structures (output batches, template files)
-function ExpandableTreeItem({ label, depth = 6, onClick, onContextMenu }: {
+function ExpandableTreeItem({ label, depth = 6, onClick, onContextMenu, icon }: {
   label: string
   depth?: number
   onClick?: () => void
   onContextMenu?: React.MouseEventHandler
+  icon?: React.ReactNode
 }) {
   return (
     <div
       onClick={onClick}
       onContextMenu={onContextMenu}
-      className="flex items-center gap-1.5 px-3 py-0.5 text-[11px] cursor-pointer select-none text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent"
+      className="flex items-center gap-1.5 px-3 py-0.5 text-2xs cursor-pointer select-none text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent"
       style={{ paddingLeft: `${depth * 4 + 4}px` }}
     >
+      {icon && <span className="shrink-0">{icon}</span>}
       <span className="truncate">{label}</span>
     </div>
   )
@@ -562,7 +614,7 @@ function OutputSection({ projects, openTab }: {
                 onClick={() => toggleProject(p.name)}
               />
               {isExpanded && batches.length === 0 && (
-                <div className="text-[10px] text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
+                <div className="text-2xs text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
                   {t('common:noData', '暂无输出批次')}
                 </div>
               )}
@@ -580,18 +632,22 @@ function OutputSection({ projects, openTab }: {
                         setDeleteTarget({ name: `${p.name} / ${batch.name}`, type: 'batch' })
                       }}
                     />
-                    {isBatchExpanded && batch.files.map((f) => (
-                      <ExpandableTreeItem
-                        key={f.path}
-                        label={f.name}
-                        depth={9}
-                        onClick={() => handleFileClick(f.path, f.name)}
-                        onContextMenu={(e) => {
-                          e.preventDefault()
-                          setDeleteTarget({ name: f.name, type: 'file' })
-                        }}
-                      />
-                    ))}
+                    {isBatchExpanded && batch.files.map((f) => {
+                      const { Icon, color } = getFileIcon(f.name)
+                      return (
+                        <ExpandableTreeItem
+                          key={f.path}
+                          label={f.name}
+                          depth={9}
+                          icon={<Icon size={12} className={color} />}
+                          onClick={() => handleFileClick(f.path, f.name)}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            setDeleteTarget({ name: f.name, type: 'file' })
+                          }}
+                        />
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -792,6 +848,19 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
               <TreeItem
                 label={tpl.name}
                 onClick={() => toggleTemplate(tpl.name)}
+                leading={<LayoutTemplate size={12} className="text-gray-400 dark:text-gray-500 shrink-0" />}
+                meta={
+                  <span className="flex items-center gap-1.5">
+                    {tpl.isBuiltin && (
+                      <span className="text-3xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1 rounded">
+                        {t('common:template.builtin', '内置')}
+                      </span>
+                    )}
+                    {tpl.description && (
+                      <span className="truncate max-w-[120px]">{tpl.description}</span>
+                    )}
+                  </span>
+                }
                 contextMenu={[
                   { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplate(tpl.name) },
                   { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(tpl.name) },
@@ -806,7 +875,7 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                 ]}
               />
               {isExpanded && structure.length === 0 && (
-                <div className="text-[10px] text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
+                <div className="text-2xs text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
                   {t('common:explorer.noTemplateFiles')}
                 </div>
               )}
@@ -888,9 +957,9 @@ function DesignExplorer() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.design.title')}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.design.title')}</span>
         <button onClick={handleOpenFullDesign}
-          className="text-[10px] px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
           {t('common:explorer.design.openFullSize')}
         </button>
       </div>
@@ -906,7 +975,7 @@ function DesignExplorer() {
 
         {/* Server config */}
         <div className="space-y-2">
-          <label className="text-[10px] text-gray-500 uppercase tracking-wider">{t('common:explorer.design.gpuServer')}</label>
+          <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.design.gpuServer')}</label>
           <NumberInputMini label={t('common:explorer.design.gpuCount')} value={config.num_servers}
             onChange={(v) => updateConfig({ num_servers: v })} />
           <NumberInputMini label={t('common:explorer.design.paramPortsPerServer')} value={config.param_ports_per_server}
@@ -915,7 +984,7 @@ function DesignExplorer() {
 
         {/* Switch config */}
         <div className="space-y-2">
-          <label className="text-[10px] text-gray-500 uppercase tracking-wider">{t('common:explorer.design.switchParams')}</label>
+          <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.design.switchParams')}</label>
           <NumberInputMini label={t('common:explorer.design.paramSwitchPorts')} value={config.param_switch_ports}
             onChange={(v) => updateConfig({ param_switch_ports: v })} />
           <SelectMini label={t('common:explorer.design.paramNetworkSpeed')} value={config.param_speed}
@@ -943,11 +1012,11 @@ function DesignExplorer() {
           <div className="border border-gray-200 dark:border-gray-700 rounded p-2.5 space-y-1.5">
             <div className="flex items-center gap-1.5">
               {valid ? <CheckCircle size={12} className="text-gray-400" /> : <XCircle size={12} className="text-gray-400" />}
-              <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">
                 {valid ? t('common:explorer.design.validationPassed') : t('common:explorer.design.validationFailed')}
               </span>
             </div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 space-y-0.5">
+            <div className="text-2xs text-gray-500 dark:text-gray-400 space-y-0.5">
               <div>GPU: {summary.numServers} · Leaf: {summary.paramLeafCount} · Spine: {summary.paramSpineCount}</div>
               <div>{summary.paramSpeed} · {summary.storageSpeed}</div>
             </div>
@@ -989,9 +1058,9 @@ function WorkbenchExplorer() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.title')}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.title')}</span>
         <button onClick={handleOpenFullWorkbench}
-          className="text-[10px] px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
           {t('common:explorer.workbench.openFullSize')}
         </button>
       </div>
@@ -1011,16 +1080,16 @@ function WorkbenchExplorer() {
             {valid === true ? <CheckCircle size={11} className="text-gray-400" />
               : valid === false ? <XCircle size={11} className="text-gray-400" />
               : <AlertTriangle size={11} className="text-gray-400" />}
-            <span className="text-[10px] text-gray-500">
+            <span className="text-2xs text-gray-500">
               {valid === true ? t('common:explorer.workbench.topologyPassed') : valid === false ? t('common:explorer.workbench.topologyFailed') : t('common:explorer.workbench.topologyPending')}
             </span>
-            {summary && <span className="text-[10px] text-gray-400">({summary.totalServers})</span>}
+            {summary && <span className="text-2xs text-gray-400">({summary.totalServers})</span>}
           </div>
           <div className="flex items-center gap-1.5">
             {rackReady ? <CheckCircle size={11} className="text-gray-400" />
               : totalDevices > 0 ? <AlertTriangle size={11} className="text-gray-400" />
               : <AlertTriangle size={11} className="text-gray-400" />}
-            <span className="text-[10px] text-gray-500">
+            <span className="text-2xs text-gray-500">
               {totalDevices === 0 ? t('common:explorer.workbench.rackPending') : rackReady ? t('common:explorer.workbench.rackReady', { count: placedDevices }) : t('common:explorer.workbench.rackPartial', { placed: placedDevices, total: totalDevices })}
             </span>
           </div>
@@ -1028,7 +1097,7 @@ function WorkbenchExplorer() {
 
         {/* Output types */}
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800/50 text-[10px] font-medium text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.outputTypes')}</div>
+          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800/50 text-2xs font-medium text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.outputTypes')}</div>
           <div className="p-2 space-y-1">
             {([
               { type: 'connections' as const, icon: <FileSpreadsheet size={12} className="text-gray-400" />, label: t('common:explorer.workbench.connectionTable') },
@@ -1040,7 +1109,7 @@ function WorkbenchExplorer() {
                 <input type="checkbox" checked={selectedOutputTypes.includes(def.type)}
                   onChange={() => toggleOutputType(def.type)} className="text-primary-500 shrink-0 w-3 h-3" />
                 {def.icon}
-                <span className="text-[11px] text-gray-600 dark:text-gray-400">{def.label}</span>
+                <span className="text-2xs text-gray-600 dark:text-gray-400">{def.label}</span>
               </label>
             ))}
           </div>
@@ -1080,9 +1149,9 @@ function VisualizationExplorer() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.visualization.title')}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.visualization.title')}</span>
         <button onClick={handleOpenFullVisualization}
-          className="text-[10px] px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
           {t('common:explorer.visualization.openFullSize')}
         </button>
       </div>
@@ -1092,14 +1161,14 @@ function VisualizationExplorer() {
           <div className="text-center py-6">
             <GitBranch size={24} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
             <p className="text-xs text-gray-400">{t('common:explorer.visualization.noTopology')}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{t('common:explorer.visualization.generateInDesign')}</p>
+            <p className="text-2xs text-gray-400 mt-0.5">{t('common:explorer.visualization.generateInDesign')}</p>
           </div>
         ) : (
           <>
             {/* Topology Overview */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-1.5">
-              <label className="text-[10px] text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.topologyOverview')}</label>
-              <div className="space-y-1 text-[11px]">
+              <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.topologyOverview')}</label>
+              <div className="space-y-1 text-2xs">
                 <div className="flex justify-between">
                   <span className="text-gray-500">{t('common:explorer.visualization.totalNodes')}</span>
                   <span className="font-medium text-gray-700 dark:text-gray-300">{topology.nodes.length}</span>
@@ -1113,16 +1182,16 @@ function VisualizationExplorer() {
 
             {/* Node Type Stats */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5">
-              <label className="text-[10px] text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.nodeTypeStats')}</label>
+              <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.nodeTypeStats')}</label>
               <div className="mt-1.5 space-y-1">
                 {Object.entries(nodeStats).map(([type, count]) => (
                   <div key={type} className="flex justify-between items-center">
-                    <span className="text-[10px] text-gray-500">{NODE_TYPE_LABELS[type] || type}</span>
-                    <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
+                    <span className="text-2xs text-gray-500">{NODE_TYPE_LABELS[type] || type}</span>
+                    <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">{count}</span>
                   </div>
                 ))}
                 {Object.keys(nodeStats).length === 0 && (
-                  <p className="text-[10px] text-gray-400 italic">{t('common:explorer.visualization.noNodeData')}</p>
+                  <p className="text-2xs text-gray-400 italic">{t('common:explorer.visualization.noNodeData')}</p>
                 )}
               </div>
             </div>
@@ -1130,12 +1199,12 @@ function VisualizationExplorer() {
             {/* Cabinet List */}
             {cabinets.length > 0 && (
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5">
-                <label className="text-[10px] text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.cabinetList')}</label>
+                <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.cabinetList')}</label>
                 <div className="mt-1.5 space-y-1">
                   {cabinets.map((cab) => (
                     <div key={cab.id} className="flex justify-between items-center">
-                      <span className="text-[10px] text-gray-500 truncate max-w-[120px]">{cab.name}</span>
-                      <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">{cab.devices.length}</span>
+                      <span className="text-2xs text-gray-500 truncate max-w-[120px]">{cab.name}</span>
+                      <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">{cab.devices.length}</span>
                     </div>
                   ))}
                 </div>
@@ -1253,7 +1322,7 @@ function DeviceLibExplorer() {
     <div className="h-full flex flex-col">
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{t('common:explorer.deviceLibrary.title')}</p>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{t('common:explorer.deviceLibrary.deviceCount', { count: allDevices.length })}</p>
+        <p className="text-2xs text-gray-400 dark:text-gray-500 mt-0.5">{t('common:explorer.deviceLibrary.deviceCount', { count: allDevices.length })}</p>
       </div>
       <div className="flex-1 overflow-y-auto py-1">
         {/* "全部设备" */}
@@ -1268,7 +1337,7 @@ function DeviceLibExplorer() {
         >
           <Package size={13} />
           <span>{t('common:explorer.deviceLibrary.allDevices')}</span>
-          <span className="ml-auto text-[10px] text-gray-400">{allDevices.length}</span>
+          <span className="ml-auto text-2xs text-gray-400">{allDevices.length}</span>
         </button>
 
         {DEVICE_CATEGORY_TREE.map((node) => {
@@ -1300,7 +1369,7 @@ function DeviceLibExplorer() {
                 )}
                 <Icon size={13} className="shrink-0" />
                 <span className="truncate">{t(`common:explorer.deviceLibrary.categories.${node.label}`)}</span>
-                <span className="ml-auto text-[10px] text-gray-400 shrink-0">{count}</span>
+                <span className="ml-auto text-2xs text-gray-400 shrink-0">{count}</span>
               </button>
 
               {hasChildren && isExpanded && node.children!.map((child) => {
@@ -1311,14 +1380,14 @@ function DeviceLibExplorer() {
                     key={child.key}
                     onClick={() => handleOpenCategory(child.label, child.key)}
                     className={clsx(
-                      'w-full flex items-center gap-2 pl-8 pr-3 py-1.5 text-[11px] transition-colors',
+                      'w-full flex items-center gap-2 pl-8 pr-3 py-1.5 text-2xs transition-colors',
                       childActive
                         ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
                         : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
                     )}
                   >
                     <span className="truncate">{t(`common:explorer.deviceLibrary.categories.${child.label}`)}</span>
-                    <span className="ml-auto text-[10px] text-gray-400 shrink-0">{childCount}</span>
+                    <span className="ml-auto text-2xs text-gray-400 shrink-0">{childCount}</span>
                   </button>
                 )
               })}
@@ -1355,7 +1424,7 @@ function SettingsExplorer() {
   return (
     <div className="h-full flex flex-col">
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.settings.title')}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.settings.title')}</span>
       </div>
       <div className="flex-1 flex overflow-hidden">
         {/* Left: category nav */}
@@ -1402,10 +1471,13 @@ function SettingsExplorer() {
 
 /* ---------- sub-components ---------- */
 
+// U3: 统一 input/select 样式常量
+const INPUT_CLASS = 'text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700'
+
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-4">
-      <h4 className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">{title}</h4>
+      <h4 className="text-2xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">{title}</h4>
       <div className="space-y-2">{children}</div>
     </div>
   )
@@ -1440,7 +1512,7 @@ function AppearanceSettings() {
           <button
             key={item.mode}
             onClick={() => setTheme(item.mode)}
-            className={`flex flex-col items-center gap-0.5 py-2 rounded border text-[10px] transition-colors
+            className={`flex flex-col items-center gap-0.5 py-2 rounded border text-2xs transition-colors
               ${theme === item.mode
                 ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                 : 'border-gray-200 dark:border-gray-600 text-gray-500 hover:border-gray-300'}`}
@@ -1549,13 +1621,13 @@ function OutputSettings() {
       </SettingsRow>
       <SettingsRow label={t('common:explorer.settings.output.outputDir')}>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-gray-400 max-w-[120px] truncate">{outputDir || t('common:explorer.settings.output.default')}</span>
+          <span className="text-2xs text-gray-400 max-w-[120px] truncate">{outputDir || t('common:explorer.settings.output.default')}</span>
           <button
             onClick={async () => {
               const result = await window.electron?.dialog?.openDirectory?.()
               if (result) setOutputDir(result as string)
             }}
-            className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+            className="text-2xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
             {t('common:explorer.settings.output.select')}
           </button>
         </div>
@@ -1593,7 +1665,7 @@ function KeyboardSettings() {
           <div key={s.keys}
             className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 text-xs">
             <span className="text-gray-600 dark:text-gray-400">{s.desc}</span>
-            <kbd className="px-1.5 py-0.5 text-[10px] rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono">
+            <kbd className="px-1.5 py-0.5 text-2xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono">
               {s.keys}
             </kbd>
           </div>
@@ -1614,13 +1686,13 @@ function DeviceLibrarySettings() {
     <SettingsSection title={t('common:explorer.settings.deviceLibrary.title')}>
       <SettingsRow label={t('common:explorer.settings.deviceLibrary.dataDir')}>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-gray-400 max-w-[120px] truncate">{dataDir || t('common:explorer.settings.output.default')}</span>
+          <span className="text-2xs text-gray-400 max-w-[120px] truncate">{dataDir || t('common:explorer.settings.output.default')}</span>
           <button
             onClick={async () => {
               const result = await window.electron?.dialog?.openDirectory?.()
               if (result) setDataDir(result as string)
             }}
-            className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+            className="text-2xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
             {t('common:explorer.settings.output.select')}
           </button>
         </div>
@@ -1655,7 +1727,7 @@ function NetworkSettings() {
           <span className="text-gray-400">:</span>
           <input placeholder={t('common:explorer.settings.network.port')} value={proxyPort}
             onChange={(e) => setProxyPort(e.target.value)}
-            className="w-14 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700" />
+            className={clsx('w-20', INPUT_CLASS)} />
         </div>
       </SettingsRow>
     </SettingsSection>
@@ -1725,7 +1797,7 @@ function DataSettings() {
         <Upload size={13} />{t('common:explorer.settings.data.importData')}
       </button>
       <button onClick={handleReset}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10">
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-error-200 dark:border-error-800 text-error-500 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/10">
         <RotateCcw size={13} />{t('common:explorer.settings.data.resetAll')}
       </button>
     </SettingsSection>
@@ -1736,10 +1808,21 @@ function DataSettings() {
 function AboutSettings({ onOpenAbout }: { onOpenAbout: () => void }) {
   const { t } = useTranslation()
   const [lastCheck, setLastCheck] = useLocalStorage('autolink-last-update-check', '')
+  const [appVersion, setAppVersion] = useState('...')
 
-  const handleCheckUpdate = () => {
-    const now = new Date().toISOString()
-    setLastCheck(now)
+  useEffect(() => {
+    window.electron?.app?.getVersion?.().then((v: string) => v && setAppVersion(v)).catch(() => {})
+  }, [])
+
+  const handleCheckUpdate = async () => {
+    try {
+      await window.electron?.app?.checkUpdate?.()
+      const now = new Date().toISOString()
+      setLastCheck(now)
+      onOpenAbout()
+    } catch {
+      onOpenAbout()
+    }
   }
 
   return (
@@ -1748,7 +1831,7 @@ function AboutSettings({ onOpenAbout }: { onOpenAbout: () => void }) {
         <div className="text-xs space-y-1.5">
           <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">{t('common:explorer.settings.about.version')}</span>
-            <span className="font-medium text-gray-700 dark:text-gray-300">2.0.1</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">{appVersion}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">{t('common:explorer.settings.about.license')}</span>
@@ -1797,10 +1880,10 @@ function useRequireToast() {
 function NumberInputMini({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[10px] text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="text-2xs text-gray-500 dark:text-gray-400">{label}</span>
       <input type="number" value={value}
         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(v) }}
-        className="w-20 px-1.5 py-1 text-[11px] text-right rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400" />
+        className="w-20 px-1.5 py-1 text-2xs text-right rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400" />
     </div>
   )
 }
@@ -1810,9 +1893,9 @@ function SelectMini({ label, value, onChange, options }: {
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[10px] text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="text-2xs text-gray-500 dark:text-gray-400">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-20 px-1 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400">
+        className="w-20 px-1 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -1822,7 +1905,7 @@ function SelectMini({ label, value, onChange, options }: {
 function ToggleMini({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center justify-between gap-2 cursor-pointer">
-      <span className="text-[10px] text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="text-2xs text-gray-500 dark:text-gray-400">{label}</span>
       <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
         className={`relative w-7 h-4 rounded-full transition-colors ${checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
         <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${checked ? 'left-3.5' : 'left-0.5'}`} />

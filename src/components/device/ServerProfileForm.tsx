@@ -103,7 +103,7 @@ function InterfaceModelRow({
         placeholder="下行前缀"
       />
       {canRemove && (
-        <button onClick={() => onRemove(index)} className="p-1 text-red-400 hover:text-red-600">
+        <button onClick={() => onRemove(index)} className="p-1 text-error-400 hover:text-error-600">
           <Trash2 size={12} />
         </button>
       )}
@@ -232,11 +232,11 @@ export function ServerProfileForm() {
                 onChange={(e) => updateField('vendor', e.target.value)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.vendor ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.vendor ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="厂商"
               />
-              {errors.vendor && <div className="text-[10px] text-red-500 mt-0.5">{errors.vendor}</div>}
+              {errors.vendor && <div className="text-2xs text-error-500 mt-0.5">{errors.vendor}</div>}
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{t('device.model')} *</label>
@@ -246,11 +246,11 @@ export function ServerProfileForm() {
                 onChange={(e) => updateField('model', e.target.value)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.model ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.model ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="型号"
               />
-              {errors.model && <div className="text-[10px] text-red-500 mt-0.5">{errors.model}</div>}
+              {errors.model && <div className="text-2xs text-error-500 mt-0.5">{errors.model}</div>}
             </div>
           </div>
 
@@ -275,10 +275,10 @@ export function ServerProfileForm() {
                 onChange={(e) => updateField('power_watts', parseInt(e.target.value) || 0)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.power_watts ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.power_watts ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
-              {errors.power_watts && <div className="text-[10px] text-red-500 mt-0.5">{errors.power_watts}</div>}
+              {errors.power_watts && <div className="text-2xs text-error-500 mt-0.5">{errors.power_watts}</div>}
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{t('device.uHeight')} *</label>
@@ -288,10 +288,10 @@ export function ServerProfileForm() {
                 onChange={(e) => updateField('u_height', parseInt(e.target.value) || 0)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.u_height ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.u_height ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
-              {errors.u_height && <div className="text-[10px] text-red-500 mt-0.5">{errors.u_height}</div>}
+              {errors.u_height && <div className="text-2xs text-error-500 mt-0.5">{errors.u_height}</div>}
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{t('device.depth')} (mm)</label>
@@ -333,11 +333,11 @@ export function ServerProfileForm() {
                 onChange={(e) => updateField('name_prefix', e.target.value)}
                 className={clsx(
                   'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
-                  errors.name_prefix ? 'border-red-400' : 'border-gray-200 dark:border-gray-600',
+                  errors.name_prefix ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="前缀"
               />
-              {errors.name_prefix && <div className="text-[10px] text-red-500 mt-0.5">{errors.name_prefix}</div>}
+              {errors.name_prefix && <div className="text-2xs text-error-500 mt-0.5">{errors.name_prefix}</div>}
             </div>
           </div>
 
@@ -355,7 +355,7 @@ export function ServerProfileForm() {
                     <button
                       key={nt.value}
                       onClick={() => addInterfaceModel(nt.value)}
-                      className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 text-2xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
                       <Plus size={10} /> {nt.label}
                     </button>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, GitBranch, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Download, RotateCw, Loader2, Palette, Keyboard } from 'lucide-react'
+import { GitBranch, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Download, RotateCw, Loader2, Palette, Keyboard } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
 import { useUIStore } from '@/stores/ui.store'
 
 interface Props {
@@ -130,92 +131,17 @@ export function AboutDialog({ onClose }: Props) {
     : []
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[480px] border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            {t('about.title')}
-          </h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* 品牌区 */}
-        <div className="px-6 pt-6 pb-3 text-center shrink-0">
-          <div className="flex justify-center mb-2">
-            <img src="icons/logo.svg" alt="AutoLink" className="w-24 h-24" />
-          </div>
-          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {t('app.title')}
-          </h1>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {t('app.subtitle')}
-          </p>
-          {/* T3: 产品简介 */}
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 px-4 leading-relaxed">
-            {t('app.description')}
-          </p>
-        </div>
-
-        {/* 信息区：软件栈 + 快捷链接 */}
-        <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 overflow-y-auto">
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-2">
-            {t('about.version')}
-          </p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-            {stackEntries.length === 0 ? (
-              <div className="col-span-2 text-gray-400">{appVersion}</div>
-            ) : stackEntries.map(([name, ver]) => (
-              <div key={name} className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">{name}</span>
-                <span className="text-gray-600 dark:text-gray-300 font-mono">{ver || '-'}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* 快捷链接 */}
-          <div className="mt-4 flex items-center justify-center gap-4 text-[11px] flex-wrap">
-            <a
-              href="https://github.com/bangbang8000-cell/AutoLink"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
-            >
-              <GitBranch size={12} />
-              {t('about.repository')}
-              <ExternalLink size={9} />
-            </a>
-            <span className="text-gray-300 dark:text-gray-600">·</span>
-            <button
-              type="button"
-              onClick={() => setShowShortcutsDialog(true)}
-              className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
-            >
-              <Keyboard size={12} />
-              {t('about.shortcuts.title')}
-            </button>
-            <span className="text-gray-300 dark:text-gray-600">·</span>
-            <button
-              type="button"
-              onClick={handleShowLogoSpec}
-              title={t('about.logoSpec')}
-              className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
-            >
-              <Palette size={12} />
-              {t('about.logoSpec')}
-            </button>
-          </div>
-          {/* 版权信息 */}
-          <p className="mt-3 text-center text-[10px] text-gray-400 dark:text-gray-500">
-            © {new Date().getFullYear()} AutoLink Team. MIT License.
-          </p>
-        </div>
-
-        {/* 底部状态栏：版本号 + 检查更新 + 关闭 */}
-        <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shrink-0 bg-gray-50 dark:bg-gray-900/30">
-          <div className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+    <Modal
+      open
+      onClose={onClose}
+      title={t('about.title')}
+      width={480}
+      maxHeight="90vh"
+      closeOnEsc
+      bodyClassName="p-0"
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-2xs text-gray-400 dark:text-gray-500 shrink-0">
             v{appVersion}{stack?.buildNumber ? ` · 构建 #${stack.buildNumber}` : ''}
           </div>
 
@@ -224,32 +150,32 @@ export function AboutDialog({ onClose }: Props) {
             {updateState === 'idle' && (
               <button
                 onClick={handleCheckUpdate}
-                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-primary-500 hover:bg-primary-600 text-white"
+                className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white"
               >
                 <RefreshCw size={11} />
                 {t('about.checkUpdate')}
               </button>
             )}
             {updateState === 'checking' && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="inline-flex items-center gap-1 text-2xs text-gray-500 dark:text-gray-400">
                 <Loader2 size={11} className="animate-spin" />
                 {t('about.checking')}
               </span>
             )}
             {updateState === 'latest' && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
+              <span className="inline-flex items-center gap-1 text-2xs text-success-600 dark:text-success-400">
                 <CheckCircle size={11} />
                 {t('about.latest')}
               </span>
             )}
             {updateState === 'available' && (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-600 dark:text-gray-300">
+                <span className="text-2xs text-gray-600 dark:text-gray-300">
                   {t('about.foundUpdate')} v{updateVersion}
                 </span>
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-primary-500 hover:bg-primary-600 text-white"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white"
                 >
                   <Download size={10} />
                   {t('about.downloadInstall')}
@@ -264,20 +190,20 @@ export function AboutDialog({ onClose }: Props) {
                     style={{ width: `${downloadPercent}%` }}
                   />
                 </div>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 shrink-0">
+                <span className="text-2xs text-gray-500 dark:text-gray-400 shrink-0">
                   {downloadPercent.toFixed(0)}% · {formatBytes(downloadTransferred)}/{formatBytes(downloadTotal)}
                 </span>
               </div>
             )}
             {updateState === 'downloaded' && (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-green-600 dark:text-green-400">
+                <span className="text-2xs text-success-600 dark:text-success-400">
                   <CheckCircle size={11} className="inline mr-1" />
                   {t('about.downloaded')}
                 </span>
                 <button
                   onClick={handleRestart}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-green-600 hover:bg-green-700 text-white"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-success-600 hover:bg-success-700 text-white"
                 >
                   <RotateCw size={10} />
                   {t('about.restart')}
@@ -286,13 +212,13 @@ export function AboutDialog({ onClose }: Props) {
             )}
             {updateState === 'error' && (
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[11px] text-red-500 dark:text-red-400 truncate" title={updateError}>
+                <span className="inline-flex items-center gap-1 text-2xs text-error-500 dark:text-error-400 truncate" title={updateError}>
                   <AlertCircle size={11} />
                   {t('about.updateFailed')}
                 </span>
                 <button
                   onClick={handleCheckUpdate}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
                 >
                   <RefreshCw size={10} />
                   {t('about.retry')}
@@ -303,12 +229,83 @@ export function AboutDialog({ onClose }: Props) {
 
           <button
             onClick={onClose}
-            className="px-3 py-1 text-[11px] rounded bg-gray-500 hover:bg-gray-600 text-white shrink-0"
+            className="px-3 py-1 text-2xs rounded bg-gray-500 hover:bg-gray-600 text-white shrink-0"
           >
             {t('about.close')}
           </button>
         </div>
+      }
+    >
+      {/* 品牌区 */}
+      <div className="px-6 pt-6 pb-3 text-center shrink-0">
+        <div className="flex justify-center mb-2">
+          <img src="icons/logo.svg" alt="AutoLink" className="w-24 h-24" />
+        </div>
+        <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+          {t('app.title')}
+        </h1>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          {t('app.subtitle')}
+        </p>
+        {/* T3: 产品简介 */}
+        <p className="text-2xs text-gray-400 dark:text-gray-500 mt-2 px-4 leading-relaxed">
+          {t('app.description')}
+        </p>
       </div>
-    </div>
+
+      {/* 信息区：软件栈 + 快捷链接 */}
+      <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <p className="text-2xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+          {t('about.version')}
+        </p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-2xs">
+          {stackEntries.length === 0 ? (
+            <div className="col-span-2 text-gray-400">{appVersion}</div>
+          ) : stackEntries.map(([name, ver]) => (
+            <div key={name} className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">{name}</span>
+              <span className="text-gray-600 dark:text-gray-300 font-mono">{ver || '-'}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 快捷链接 */}
+        <div className="mt-4 flex items-center justify-center gap-4 text-2xs flex-wrap">
+          <a
+            href="https://github.com/bangbang8000-cell/AutoLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
+          >
+            <GitBranch size={12} />
+            {t('about.repository')}
+            <ExternalLink size={9} />
+          </a>
+          <span className="text-gray-300 dark:text-gray-600">·</span>
+          <button
+            type="button"
+            onClick={() => setShowShortcutsDialog(true)}
+            className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
+          >
+            <Keyboard size={12} />
+            {t('about.shortcuts.title')}
+          </button>
+          <span className="text-gray-300 dark:text-gray-600">·</span>
+          <button
+            type="button"
+            onClick={handleShowLogoSpec}
+            title={t('about.logoSpec')}
+            className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
+          >
+            <Palette size={12} />
+            {t('about.logoSpec')}
+          </button>
+        </div>
+        {/* 版权信息 */}
+        <p className="mt-3 text-center text-2xs text-gray-400 dark:text-gray-500">
+          {t('about.copyright')}
+        </p>
+      </div>
+    </Modal>
   )
 }

@@ -82,7 +82,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
         </div>
         <button
           onClick={() => { resetFilter(); selectDevice(null) }}
-          className="flex items-center gap-1 px-2 py-1 text-[11px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
         >
           重置筛选
         </button>
@@ -96,7 +96,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
       )}
       {error && (
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="flex items-start gap-2 p-3 rounded text-sm bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 max-w-md">
+          <div className="flex items-start gap-2 p-3 rounded text-sm bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300 max-w-md">
             <AlertTriangle size={14} className="shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
@@ -202,26 +202,26 @@ function DeviceListItem({ device, isSelected, onClick }: {
     >
       <div className="shrink-0 mt-0.5">
         {isServer
-          ? <Server size={14} className="text-blue-500" />
-          : <Network size={14} className="text-amber-500" />}
+          ? <Server size={14} className="text-info-500" />
+          : <Network size={14} className="text-warning-500" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{device.model}</div>
-        <div className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
+        <div className="text-2xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
           <span>{device.vendor}</span>
-          {device.verified && <Award size={10} className="text-green-500" />}
+          {device.verified && <Award size={10} className="text-success-500" />}
         </div>
         {isServer && (
           <div className="flex gap-1 mt-0.5">
             {device.interface_models?.map((m) => (
-              <span key={m.network_type} className="text-[9px] px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+              <span key={m.network_type} className="text-3xs px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                 {m.port_count}×{m.port_speed}
               </span>
             ))}
           </div>
         )}
         {!isServer && (
-          <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+          <div className="text-2xs text-gray-500 dark:text-gray-400 mt-0.5">
             {device.port_count}口 · {device.port_speed}
           </div>
         )}
@@ -243,13 +243,13 @@ function DeviceDetailCard({ device }: { device: LibraryDevice }) {
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{device.model}</h2>
           {device.verified && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300">
               <Award size={10} />
               已认证
             </span>
           )}
           {device.source === 'custom' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300">
               自定义
             </span>
           )}
@@ -261,7 +261,7 @@ function DeviceDetailCard({ device }: { device: LibraryDevice }) {
       {device.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-5">
           {device.tags.map((tag) => (
-            <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+            <span key={tag} className="text-2xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
               <Tags size={10} className="inline mr-0.5" />
               {tag}
             </span>
@@ -288,9 +288,9 @@ function DeviceDetailCard({ device }: { device: LibraryDevice }) {
             <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded p-3 mb-2 last:mb-0">
               <div className="flex items-center gap-2 mb-2">
                 <span className={clsx(
-                  'text-[10px] font-medium px-2 py-0.5 rounded',
-                  m.network_type === 'param' && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-                  m.network_type === 'storage' && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+                  'text-2xs font-medium px-2 py-0.5 rounded',
+                  m.network_type === 'param' && 'bg-info-100 dark:bg-info-900/30 text-info-700 dark:text-info-300',
+                  m.network_type === 'storage' && 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300',
                   m.network_type === 'biz' && 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
                   m.network_type === 'oob' && 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
                 )}>
@@ -379,8 +379,8 @@ function DetailRow({ label, value, icon }: { label: string; value: string; icon?
 function DetailMini({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-[11px] text-gray-400 dark:text-gray-500">{label}</span>
-      <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">{value}</span>
+      <span className="text-2xs text-gray-400 dark:text-gray-500">{label}</span>
+      <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">{value}</span>
     </div>
   )
 }

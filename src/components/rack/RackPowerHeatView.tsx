@@ -79,7 +79,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
             {(totalPower / 1000).toFixed(2)} kW
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-2xs text-gray-500 dark:text-gray-400">
           <span>功率密度:</span>
           <span className="flex items-center gap-0.5">
             <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#dcfce7', border: '1px solid #16a34a' }} />
@@ -108,7 +108,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
             {Array.from({ length: cabinet.totalU }, (_, i) => (
               <div
                 key={i}
-                className="h-7 flex items-center justify-end pr-1.5 text-[10px] text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700/50 last:border-b-0"
+                className="h-7 flex items-center justify-end pr-1.5 text-2xs text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700/50 last:border-b-0"
               >
                 {cabinet.totalU - i}
               </div>
@@ -122,7 +122,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
                 return (
                   <div
                     key={i}
-                    className="h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 bg-gray-50 dark:bg-gray-850"
+                    className="h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 bg-gray-50 dark:bg-gray-800"
                   />
                 )
               }
@@ -159,22 +159,22 @@ export function RackPowerHeatView({ cabinet }: Props) {
                 >
                   <div className="flex-1 flex items-center justify-between min-w-0">
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] font-medium truncate" style={{ color: color.text }}>
+                      <span className="text-2xs font-medium truncate" style={{ color: color.text }}>
                         {device.name}
                       </span>
-                      <span className="text-[9px] opacity-70" style={{ color: color.text }}>
+                      <span className="text-3xs opacity-70" style={{ color: color.text }}>
                         U{device.startU}-U{device.endU} · {uCount}U
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span
-                        className="text-[10px] font-bold tabular-nums"
+                        className="text-2xs font-bold tabular-nums"
                         style={{ color: color.text }}
                       >
                         {device.power_watts}W
                       </span>
                       <span
-                        className="text-[9px] px-1 py-0.5 rounded"
+                        className="text-3xs px-1 py-0.5 rounded"
                         style={{
                           background: color.stroke,
                           color: '#fff',
@@ -184,7 +184,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
                       </span>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRemove(device.id) }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-red-500"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-error-500"
                         title="移除设备"
                       >
                         ✕

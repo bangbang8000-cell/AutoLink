@@ -121,7 +121,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
                       : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                 >
-                  <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded bg-info-50 dark:bg-info-900/30 flex items-center justify-center">
                     <Package size={16} className="text-gray-400" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -134,7 +134,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
                     {tmpl.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-1.5 py-0.5 text-[10px] rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                        className="px-1.5 py-0.5 text-2xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                       >
                         {tag}
                       </span>
@@ -150,7 +150,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
 
           {/* Error */}
           {error && (
-            <p className="text-xs text-red-500">{error}</p>
+            <p className="text-xs text-error-500">{error}</p>
           )}
         </div>
 

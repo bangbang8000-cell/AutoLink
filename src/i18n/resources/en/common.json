@@ -11,6 +11,45 @@
   "processing": "Processing...",
   "loading": "Loading...",
   "noData": "No data",
+  "tabs": {
+    "workbench": "Workbench",
+    "design": "Topology Design",
+    "visualization": "Visualization",
+    "visualizationWithProject": "Visualization - {{name}}",
+    "deviceLibrary": "Device Library"
+  },
+  "confirmDelete": {
+    "title": {
+      "project": "Delete Project {{name}}",
+      "template": "Delete Template {{name}}",
+      "file": "Delete Output File {{name}}",
+      "batch": "Delete Output Batch {{name}}",
+      "clearOutput": "Clear All Output for {{name}}"
+    },
+    "warning": {
+      "project": "This action cannot be undone. The project folder and all its configurations and output files will be permanently deleted.",
+      "template": "The template will be permanently deleted, but this will not affect already created projects.",
+      "file": "This file will be permanently deleted.",
+      "batch": "The batch directory and all files will be permanently deleted.",
+      "clearOutput": "All rendered output files (topology diagrams, tables, lists, etc.) will be permanently deleted. This action cannot be undone."
+    },
+    "confirmNamePrompt": "Type {{name}} to confirm deletion:",
+    "confirmDelete": "Confirm Delete",
+    "deleteFailed": "Delete failed"
+  },
+  "errorBoundary": {
+    "pageTitle": "Page",
+    "loadFailed": "{{title}} failed to load",
+    "unknownError": "Unknown error",
+    "retry": "Retry",
+    "workspace": "Workspace"
+  },
+  "logPanel": {
+    "title": "Output Log",
+    "clear": "Clear",
+    "collapse": "Collapse",
+    "waiting": "Waiting for output..."
+  },
   "project": {
     "duplicate": "Duplicate Project",
     "rename": "Rename Project",
@@ -433,5 +472,33 @@
     "unsupportedType": "Unsupported file type: {{type}}",
     "emptyTable": "Empty table",
     "cannotPreview": "Cannot preview this file"
+  },
+  "toast": {
+    "projectCreated": "Project created successfully",
+    "projectCreateFailed": "Failed to create project: {{error}}",
+    "templateHint": "Right-click a template in the \"Templates\" area at the bottom left, then choose \"Create from Template\"",
+    "selectProjectFromList": "Please select an existing project from the list on the left",
+    "projectImported": "Project \"{{name}}\" imported",
+    "importFailed": "Import failed: {{error}}",
+    "selectProjectFirst": "Please select a project first",
+    "selectRenderProject": "Please select a project to render",
+    "renderFailed": "{{project}} render failed: {{error}}",
+    "renderComplete": "Rendering complete",
+    "previewInProgress": "Preview feature is under development",
+    "topologyValidationComplete": "Topology validation complete",
+    "validationFailed": "Validation failed: {{error}}",
+    "nodeNotFound": "No matching node found",
+    "topologyLayoutSaved": "Topology layout saved",
+    "layoutReset": "Layout reset",
+    "noTopologyToExport": "No topology data to export",
+    "generatingTopologyPng": "Generating topology PNG...",
+    "topologyExported": "Topology diagram exported to output/{{filename}}",
+    "ipcNotReady": "IPC bridge not ready, unable to save file",
+    "exportFailed": "Export failed: {{error}}",
+    "unknownError": "Unknown error",
+    "noRackDataToExport": "No rack data to export",
+    "exportedToOutput": "Exported to output/{{filename}}",
+    "generatingPng": "Generating PNG...",
+    "renderHint": "Click \"One-Click Render\" in the workbench to start rendering"
   }
 }

@@ -40,8 +40,8 @@ export function WorkbenchTab() {
       <div className="flex-1 overflow-auto p-4">
         {/* Row 1: Project info card (full width) */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 flex items-center gap-4">
-          <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-            <FolderOpen size={20} className="text-amber-500" />
+          <div className="p-2 rounded-lg bg-warning-100 dark:bg-warning-900/30">
+            <FolderOpen size={20} className="text-warning-500" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -54,7 +54,7 @@ export function WorkbenchTab() {
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700/50">
             <Settings size={14} className="text-gray-400" />
             <span className="text-xs text-gray-500 dark:text-gray-400">{t('workbench:status')}:</span>
-            <span className="inline-block px-2 py-0.5 text-[10px] rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
+            <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">
               Ready
             </span>
           </div>

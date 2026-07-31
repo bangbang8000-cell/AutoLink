@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
 
 interface Props {
   title: string
@@ -17,8 +17,8 @@ export function RenameProjectModal({ title, label, defaultValue, confirmText, on
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Modal 自动聚焦第一个 input,这里补齐选中文本
   useEffect(() => {
-    // 自动聚焦并选中全部文本
     const input = document.getElementById('rename-project-input') as HTMLInputElement
     if (input) {
       input.focus()
@@ -52,41 +52,19 @@ export function RenameProjectModal({ title, label, defaultValue, confirmText, on
     if (e.key === 'Enter') {
       e.preventDefault()
       handleConfirm()
-    } else if (e.key === 'Escape') {
-      onClose()
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[360px] border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">{label}</label>
-          <input
-            id="rename-project-input"
-            type="text"
-            value={value}
-            onChange={(e) => { setValue(e.target.value); setError('') }}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-            className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          {error && (
-            <p className="mt-2 text-xs text-red-500">{error}</p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+    <Modal
+      open
+      onClose={onClose}
+      title={title}
+      width={360}
+      closeOnEsc
+      bodyClassName="p-4"
+      footer={
+        <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
             disabled={loading}
@@ -102,7 +80,21 @@ export function RenameProjectModal({ title, label, defaultValue, confirmText, on
             {loading ? t('common:processing') : (confirmText || t('common:confirm'))}
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">{label}</label>
+      <input
+        id="rename-project-input"
+        type="text"
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setError('') }}
+        onKeyDown={handleKeyDown}
+        disabled={loading}
+        className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+      />
+      {error && (
+        <p className="mt-2 text-xs text-error-500">{error}</p>
+      )}
+    </Modal>
   )
 }

@@ -64,17 +64,17 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
       <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Columns size={13} className="text-blue-500" />
+            <Columns size={13} className="text-info-500" />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
               多柜对比视图
             </span>
-            <span className="text-[10px] text-gray-400">
+            <span className="text-2xs text-gray-400">
               ({selectedCabinets.length}/4)
             </span>
           </div>
           <button
             onClick={() => setShowPicker(!showPicker)}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
           >
             选择机柜
             <ChevronRight size={11} className={showPicker ? 'rotate-90' : ''} />
@@ -90,7 +90,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
                 <button
                   key={c.id}
                   onClick={() => toggleSelect(c.id)}
-                  className={`px-2 py-1 text-[10px] rounded border transition-colors ${
+                  className={`px-2 py-1 text-2xs rounded border transition-colors ${
                     isSelected
                       ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-400 text-primary-700 dark:text-primary-300'
                       : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300'
@@ -173,15 +173,15 @@ function CompactCabinet({
     >
       {/* 头部统计 */}
       <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-800/70 rounded-t-md border-b border-gray-200 dark:border-gray-700">
-        <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 truncate">
+        <div className="text-2xs font-semibold text-gray-700 dark:text-gray-200 truncate">
           {cabinet.name}
         </div>
-        <div className="flex items-center justify-between mt-0.5 text-[9px]">
+        <div className="flex items-center justify-between mt-0.5 text-3xs">
           <span className="text-gray-500 dark:text-gray-400">
-            U: <span className={`font-medium ${uPercent >= 80 ? 'text-red-500' : uPercent >= 60 ? 'text-amber-500' : 'text-green-500'}`}>{uPercent}%</span>
+            U: <span className={`font-medium ${uPercent >= 80 ? 'text-error-500' : uPercent >= 60 ? 'text-warning-500' : 'text-success-500'}`}>{uPercent}%</span>
           </span>
           <span className="text-gray-500 dark:text-gray-400">
-            P: <span className={`font-medium ${powerExceeded ? 'text-red-500' : powerPercent >= 80 ? 'text-amber-500' : 'text-green-500'}`}>{powerPercent}%</span>
+            P: <span className={`font-medium ${powerExceeded ? 'text-error-500' : powerPercent >= 80 ? 'text-warning-500' : 'text-success-500'}`}>{powerPercent}%</span>
           </span>
         </div>
       </div>
@@ -232,7 +232,7 @@ function CompactCabinet({
       </div>
 
       {/* 底部信息 */}
-      <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-800/70 rounded-b-md border-t border-gray-200 dark:border-gray-700 text-[9px]">
+      <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-800/70 rounded-b-md border-t border-gray-200 dark:border-gray-700 text-3xs">
         <div className="flex justify-between text-gray-500 dark:text-gray-400">
           <span>设备: <span className="font-medium text-gray-700 dark:text-gray-200">{cabinet.devices.length}</span></span>
           <span>{(totalPower / 1000).toFixed(1)}kW</span>

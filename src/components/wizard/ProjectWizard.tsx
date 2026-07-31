@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore, type WizardStep } from '@/stores/wizard.store'
 import { WizardStepBasic } from './WizardStepBasic'
@@ -61,7 +61,7 @@ export function ProjectWizard({ onComplete, onCancel }: Props) {
             <div className="flex items-center gap-1.5">
               <div
                 className={clsx(
-                  'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-medium transition-colors',
+                  'w-6 h-6 rounded-full flex items-center justify-center text-2xs font-medium transition-colors',
                   step === s.step
                     ? 'bg-primary-500 text-white'
                     : step > s.step
@@ -73,7 +73,7 @@ export function ProjectWizard({ onComplete, onCancel }: Props) {
               </div>
               <span
                 className={clsx(
-                  'text-[11px] hidden sm:inline',
+                  'text-2xs hidden sm:inline',
                   step >= s.step
                     ? 'text-gray-700 dark:text-gray-200 font-medium'
                     : 'text-gray-400',

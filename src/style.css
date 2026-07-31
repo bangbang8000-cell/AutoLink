@@ -3,26 +3,16 @@
 @tailwind utilities;
 
 /* ---- Design Tokens ---- */
+/* U4: 移除未使用的 CSS 变量(--color-surface 等组件代码 0 引用),仅保留字号调节用变量 */
 :root {
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f9fafb;
-  --color-border: #e5e7eb;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
   --font-size-base: 14px;
-}
-.dark {
-  --color-surface: #1f2937;
-  --color-surface-secondary: #111827;
-  --color-border: #374151;
 }
 
 /* ---- Base ---- */
 body {
   margin: 0;
   font-size: var(--font-size-base);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* U4: 字体堆栈由 tailwind.config.js fontFamily.sans 接管,body 继承 font-sans */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

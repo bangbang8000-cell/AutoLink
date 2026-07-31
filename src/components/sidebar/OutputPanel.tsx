@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import { FileCheck, FileSpreadsheet, Image, FileText, File, Loader2, FolderOpen, RefreshCw, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -73,7 +73,7 @@ export function OutputPanel() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           输出结果
         </span>
         <div className="flex items-center gap-1">
@@ -97,11 +97,11 @@ export function OutputPanel() {
         ) : files.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center px-3">
             <FolderOpen size={24} className="text-gray-300 dark:text-gray-600 mb-1" />
-            <p className="text-[10px] text-gray-400">暂无输出文件</p>
+            <p className="text-2xs text-gray-400">暂无输出文件</p>
           </div>
         ) : (
           <div className="py-1">
-            <div className="px-3 py-1 text-[10px] font-medium text-gray-400 uppercase">
+            <div className="px-3 py-1 text-2xs font-medium text-gray-400 uppercase">
               {selectedProjectName}
             </div>
             {files.map((file) => (

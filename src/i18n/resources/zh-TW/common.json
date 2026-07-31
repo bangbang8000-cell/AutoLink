@@ -7,6 +7,45 @@
   "processing": "處理中...",
   "loading": "載入中...",
   "noData": "無資料",
+  "tabs": {
+    "workbench": "工作台",
+    "design": "設計",
+    "visualization": "視覺化",
+    "visualizationWithProject": "視覺化 - {{name}}",
+    "deviceLibrary": "設備庫"
+  },
+  "confirmDelete": {
+    "title": {
+      "project": "刪除專案 {{name}}",
+      "template": "刪除範本 {{name}}",
+      "file": "刪除輸出檔案 {{name}}",
+      "batch": "刪除輸出批次 {{name}}",
+      "clearOutput": "清空 {{name}} 的全部輸出"
+    },
+    "warning": {
+      "project": "此操作不可撤銷。專案資料夾及其所有設定、輸出檔案將被永久刪除。",
+      "template": "範本將被永久刪除，但不會影響已建立的專案。",
+      "file": "此檔案將被永久刪除。",
+      "batch": "該批次目錄及所有檔案將被永久刪除。",
+      "clearOutput": "所有渲染輸出檔案（拓撲圖、表格、清單等）將被永久刪除。此操作不可撤銷。"
+    },
+    "confirmNamePrompt": "請輸入 {{name}} 以確認刪除：",
+    "confirmDelete": "確認刪除",
+    "deleteFailed": "刪除失敗"
+  },
+  "errorBoundary": {
+    "pageTitle": "頁面",
+    "loadFailed": "{{title}} 載入失敗",
+    "unknownError": "未知錯誤",
+    "retry": "重試",
+    "workspace": "工作區"
+  },
+  "logPanel": {
+    "title": "輸出日誌",
+    "clear": "清除",
+    "collapse": "折疊",
+    "waiting": "等待輸出..."
+  },
   "project": {
     "duplicate": "複製專案",
     "rename": "重新命名專案",
@@ -418,5 +457,33 @@
     "unsupportedType": "不支援的檔案類型: {{type}}",
     "emptyTable": "空表格",
     "cannotPreview": "無法預覽此檔案"
+  },
+  "toast": {
+    "projectCreated": "專案建立成功",
+    "projectCreateFailed": "建立專案失敗: {{error}}",
+    "templateHint": "請從左側下方「範本」區域右鍵範本，選擇「基於此範本建立」",
+    "selectProjectFromList": "請從左側專案清單選擇已有專案",
+    "projectImported": "專案 \"{{name}}\" 已匯入",
+    "importFailed": "匯入失敗: {{error}}",
+    "selectProjectFirst": "請先選擇一個專案",
+    "selectRenderProject": "請選擇要算繪的專案",
+    "renderFailed": "{{project}} 算繪失敗: {{error}}",
+    "renderComplete": "算繪完成",
+    "previewInProgress": "預覽功能開發中",
+    "topologyValidationComplete": "拓撲校驗完成",
+    "validationFailed": "校驗失敗: {{error}}",
+    "nodeNotFound": "未找到符合的節點",
+    "topologyLayoutSaved": "拓撲佈局已儲存",
+    "layoutReset": "佈局已重置",
+    "noTopologyToExport": "無拓撲資料可匯出",
+    "generatingTopologyPng": "正在產生拓撲圖 PNG...",
+    "topologyExported": "拓撲圖已匯出到 output/{{filename}}",
+    "ipcNotReady": "IPC 橋接未就緒，無法儲存檔案",
+    "exportFailed": "匯出失敗: {{error}}",
+    "unknownError": "未知錯誤",
+    "noRackDataToExport": "無機櫃資料可匯出",
+    "exportedToOutput": "已匯出到 output/{{filename}}",
+    "generatingPng": "正在產生 PNG...",
+    "renderHint": "請在工作台點擊\"一鍵算繪\"開始算繪"
   }
 }

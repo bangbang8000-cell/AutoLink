@@ -291,7 +291,7 @@ export function WizardStepDevices() {
               <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
                 {group.label}
               </span>
-              <span className="text-[10px] text-gray-400">{group.description}</span>
+              <span className="text-2xs text-gray-400">{group.description}</span>
             </div>
 
             <div className="p-3 space-y-2">
@@ -313,13 +313,13 @@ export function WizardStepDevices() {
                           <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
                             {device.vendor} {device.model}
                           </span>
-                          <span className="text-[10px] text-gray-400 shrink-0">
+                          <span className="text-2xs text-gray-400 shrink-0">
                             {device.port_count}口·{device.port_speed}
                           </span>
                         </div>
                         <button
                           onClick={() => handleClear(refKey)}
-                          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 shrink-0"
+                          className="p-1.5 rounded hover:bg-error-50 dark:hover:bg-error-900/20 text-gray-400 hover:text-error-500 shrink-0"
                           title="更换设备"
                         >
                           <X size={14} />
@@ -360,13 +360,13 @@ export function WizardStepDevices() {
                               <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
                                 {device.vendor} {device.model}
                               </span>
-                              <span className="text-[10px] text-gray-400 shrink-0">
+                              <span className="text-2xs text-gray-400 shrink-0">
                                 {device.u_height}U·{device.power_watts}W
                               </span>
                             </div>
                             <button
                               onClick={() => handleClear(server.refKey)}
-                              className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 shrink-0"
+                              className="p-1.5 rounded hover:bg-error-50 dark:hover:bg-error-900/20 text-gray-400 hover:text-error-500 shrink-0"
                             >
                               <X size={14} />
                             </button>
@@ -384,7 +384,7 @@ export function WizardStepDevices() {
                         {/* Server count */}
                         {count !== undefined && (
                           <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-[10px] text-gray-400">数量</span>
+                            <span className="text-2xs text-gray-400">数量</span>
                             <input
                               type="number"
                               min={0}

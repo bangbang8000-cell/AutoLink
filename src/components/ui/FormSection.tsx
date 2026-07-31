@@ -21,12 +21,12 @@ export function FormSection({ label, htmlFor, hint, error, children, className }
           {label}
         </label>
         {hint && (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">{hint}</span>
+          <span className="text-2xs text-gray-400 dark:text-gray-500">{hint}</span>
         )}
       </div>
       {children}
       {error && (
-        <p className="mt-0.5 text-[10px] text-red-500 dark:text-red-400">{error}</p>
+        <p className="mt-0.5 text-2xs text-error-500 dark:text-error-400">{error}</p>
       )}
     </div>
   )

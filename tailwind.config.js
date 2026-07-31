@@ -71,6 +71,25 @@ export default {
       borderRadius: {
         'token': '6px',
       },
+      // U4: 字号 token(渐进式,新增 text-2xs/text-3xs,保留现有 text-xs/sm/base 语义)
+      fontSize: {
+        '3xs': ['9px', '12px'],   // 原 text-[9px]/text-[8px],徽章/计数等极小字
+        '2xs': ['10px', '14px'],  // 原 text-[10px]/text-[11px],次要信息/时间戳/版权
+      },
+      // U4: 中文字体堆栈
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"PingFang SC"',      // macOS
+          '"Microsoft YaHei"',  // Windows
+          '"Hiragino Sans GB"', // macOS 备选
+          '"Source Han Sans CN"', // 思源黑体
+          'sans-serif',
+        ],
+      },
     },
   },
   plugins: [typography],

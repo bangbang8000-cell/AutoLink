@@ -29,7 +29,7 @@ function Section({
     <div className="select-none">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
+        className="w-full flex items-center gap-1 px-3 py-1.5 text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         {icon}
@@ -83,14 +83,14 @@ const ProjectItem = memo(function ProjectItem({
       <div className="hidden group-hover:flex items-center gap-0.5">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
-          className={`p-0.5 rounded ${isFavorite ? 'text-amber-400' : 'text-gray-400 hover:text-amber-400'}`}
+          className={`p-0.5 rounded ${isFavorite ? 'text-warning-400' : 'text-gray-400 hover:text-warning-400'}`}
           title={t('project:favorites')}
         >
           <Star size={11} fill={isFavorite ? 'currentColor' : 'none'} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="p-0.5 rounded text-gray-400 hover:text-red-500"
+          className="p-0.5 rounded text-gray-400 hover:text-error-500"
           title={t('project:deleteProject')}
         >
           <Trash2 size={11} />
@@ -129,7 +129,7 @@ function DeleteConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600"
+            className="px-3 py-1 text-xs rounded bg-error-500 text-white hover:bg-error-600"
           >
             {t('project:confirm')}
           </button>
@@ -157,7 +157,7 @@ const TemplateItem = memo(function TemplateItem({
       <Package size={13} className="shrink-0 text-gray-400" />
       <div className="flex-1 min-w-0">
         <div className="truncate font-medium">{template.name}</div>
-        <div className="truncate text-[10px] text-gray-400 dark:text-gray-500">
+        <div className="truncate text-2xs text-gray-400 dark:text-gray-500">
           {template.description}
         </div>
       </div>
@@ -165,7 +165,7 @@ const TemplateItem = memo(function TemplateItem({
         {template.tags.slice(0, 2).map((tag) => (
           <span
             key={tag}
-            className="px-1 py-0.5 text-[9px] rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="px-1 py-0.5 text-3xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
           >
             {tag}
           </span>
@@ -211,7 +211,7 @@ export function ExplorerPanel() {
     <div className="h-full flex flex-col">
       {/* Title bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('project:title')}
         </span>
         <div className="flex items-center gap-1">
@@ -242,7 +242,7 @@ export function ExplorerPanel() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('project:projectNamePlaceholder') ?? 'Search...'}
-              className="w-full pl-6 pr-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:border-primary-400"
+              className="w-full pl-6 pr-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:border-primary-400"
             />
           </div>
         </div>

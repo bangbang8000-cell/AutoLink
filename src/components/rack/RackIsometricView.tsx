@@ -12,6 +12,7 @@
  *   screenY = (x + z) * sin(30°) - y = (x + z) * 0.5 - y
  */
 import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { type RackCabinet } from '@/stores/rack.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -111,6 +112,7 @@ const getTypeColor = (type: string): { fill: string; stroke: string } => {
 }
 
 export function RackIsometricView({ cabinet }: Props) {
+  const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const addToast = useToastStore((s) => s.addToast)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -126,22 +128,22 @@ export function RackIsometricView({ cabinet }: Props) {
     try {
       const filename = makeTimestampedFilename(`机架3D_${cabinet.name}`, 'svg')
       await exportSvgFile(svgRef.current, selectedProjectName, filename)
-      addToast('success', `已导出到 output/${filename}`)
+      addToast('success', t('common:toast.exportedToOutput', { filename }))
     } catch (err) {
-      addToast('error', `导出失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
     }
     setShowExportMenu(false)
   }
 
   const handleExportPng = async () => {
     if (!svgRef.current || !selectedProjectName) return
-    addToast('info', '正在生成 PNG...')
+    addToast('info', t('common:toast.generatingPng'))
     try {
       const filename = makeTimestampedFilename(`机架3D_${cabinet.name}`, 'png')
       await exportSvgAsPng(svgRef.current, selectedProjectName, filename, 2)
-      addToast('success', `已导出到 output/${filename}`)
+      addToast('success', t('common:toast.exportedToOutput', { filename }))
     } catch (err) {
-      addToast('error', `导出失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
     }
     setShowExportMenu(false)
   }
@@ -249,7 +251,7 @@ export function RackIsometricView({ cabinet }: Props) {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-3 text-2xs text-gray-500 dark:text-gray-400">
               <span>{cabinet.devices.length} 台设备</span>
               <span className="font-medium text-orange-600 dark:text-orange-400">
                 {(totalPower / 1000).toFixed(2)} kW
@@ -259,7 +261,7 @@ export function RackIsometricView({ cabinet }: Props) {
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+                className="flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
               >
                 <Download size={11} />
                 <ChevronDown size={9} />
@@ -270,13 +272,13 @@ export function RackIsometricView({ cabinet }: Props) {
                   <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 min-w-[110px]">
                     <button
                       onClick={handleExportSvg}
-                      className="block w-full text-left px-3 py-1 text-[10px] hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
                       导出 SVG
                     </button>
                     <button
                       onClick={handleExportPng}
-                      className="block w-full text-left px-3 py-1 text-[10px] hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
                       导出 PNG
                     </button>

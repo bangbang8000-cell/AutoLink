@@ -28,16 +28,16 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
   const warning = percent >= 60 && percent < 80
 
   const barColor = exceeded
-    ? 'bg-red-500 dark:bg-red-600'
+    ? 'bg-error-500 dark:bg-error-600'
     : warning
-      ? 'bg-amber-500 dark:bg-amber-600'
-      : 'bg-green-500 dark:bg-green-600'
+      ? 'bg-warning-500 dark:bg-warning-600'
+      : 'bg-success-500 dark:bg-success-600'
 
   const textColor = exceeded
-    ? 'text-red-600 dark:text-red-400'
+    ? 'text-error-600 dark:text-error-400'
     : warning
-      ? 'text-amber-600 dark:text-amber-400'
-      : 'text-green-600 dark:text-green-400'
+      ? 'text-warning-600 dark:text-warning-400'
+      : 'text-success-600 dark:text-success-400'
 
   if (compact) {
     return (
@@ -59,9 +59,9 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
   return (
     <div className={clsx('p-4 rounded-lg border', className,
       exceeded
-        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+        ? 'bg-error-50 dark:bg-error-900/10 border-error-200 dark:border-error-800'
         : warning
-          ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800'
+          ? 'bg-warning-50 dark:bg-warning-900/10 border-warning-200 dark:border-warning-800'
           : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
     )}>
       <div className="flex items-center justify-between mb-2">
@@ -71,7 +71,7 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
             机柜功率
           </span>
           {exceeded && (
-            <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-medium bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded">
+            <span className="flex items-center gap-1 text-xs text-error-600 dark:text-error-400 font-medium bg-error-100 dark:bg-error-900/30 px-2 py-0.5 rounded">
               <AlertTriangle size={11} />
               功率超限
             </span>

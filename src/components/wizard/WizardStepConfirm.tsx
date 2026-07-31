@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
@@ -92,7 +92,7 @@ export function WizardStepConfirm() {
               <span
                 key={net.key}
                 className={clsx(
-                  'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium',
+                  'inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium',
                   net.color,
                 )}
               >
@@ -113,7 +113,7 @@ export function WizardStepConfirm() {
             className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2"
           >
             <div className="flex items-center gap-2">
-              <span className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium', net.color)}>
+              <span className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium', net.color)}>
                 {net.icon}
                 {net.label}
               </span>
@@ -152,25 +152,25 @@ export function WizardStepConfirm() {
             <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">
               {config.topology.num_gpu_servers}
             </div>
-            <div className="text-[10px] text-gray-400">GPU服务器</div>
+            <div className="text-2xs text-gray-400">GPU服务器</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">
               {config.topology.num_all_flash_storage}
             </div>
-            <div className="text-[10px] text-gray-400">全闪存储(2U)</div>
+            <div className="text-2xs text-gray-400">全闪存储(2U)</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">
               {config.topology.num_hybrid_flash_storage}
             </div>
-            <div className="text-[10px] text-gray-400">混闪存储(4U)</div>
+            <div className="text-2xs text-gray-400">混闪存储(4U)</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">
               {config.topology.num_compute_servers}
             </div>
-            <div className="text-[10px] text-gray-400">通算服务器</div>
+            <div className="text-2xs text-gray-400">通算服务器</div>
           </div>
         </div>
       </div>

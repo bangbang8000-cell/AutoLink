@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { useProjectStore } from '@/stores/project.store'
 import { ProjectProvider } from '@/stores/ProjectContext'
@@ -22,14 +23,15 @@ import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizar
 import i18n from '@/i18n'
 
 /** Map activity types to workspace tab config */
-const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary'; title: string; closable: boolean }> = {
-  workbench: { type: 'workbench', title: '工作台', closable: false },
-  design: { type: 'design', title: '设计', closable: true },
-  visualization: { type: 'visualization', title: '可视化', closable: true },
-  device_library: { type: 'deviceLibrary', title: '设备库', closable: true },
+const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary'; titleKey: string; closable: boolean }> = {
+  workbench: { type: 'workbench', titleKey: 'common:tabs.workbench', closable: false },
+  design: { type: 'design', titleKey: 'common:tabs.design', closable: true },
+  visualization: { type: 'visualization', titleKey: 'common:tabs.visualization', closable: true },
+  device_library: { type: 'deviceLibrary', titleKey: 'common:tabs.deviceLibrary', closable: true },
 }
 
 export default function App() {
+  const { t } = useTranslation()
   const fetchProjects = useProjectStore((s) => s.fetchProjects)
   const fetchTemplates = useProjectStore((s) => s.fetchTemplates)
   const activeActivity = useUIStore((s) => s.activeActivity)
@@ -120,13 +122,13 @@ export default function App() {
       if (activity === 'design' || activity === 'device_library') return
 
       // Resolve dynamic title
-      let title = config.title
+      let title = t(config.titleKey)
       if (activity === 'visualization' && selectedProjectName) {
-        title = `可视化 - ${selectedProjectName}`
+        title = t('common:tabs.visualizationWithProject', { name: selectedProjectName })
       }
       openTab({ type: config.type, title, closable: config.closable })
     }
-  }, [openTab, setActiveActivity, selectedProjectName])
+  }, [openTab, setActiveActivity, selectedProjectName, t])
 
   // Keyboard shortcuts
   useEffect(() => {

@@ -9,6 +9,7 @@
  *   - 小地图、暗色模式适配
  */
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -147,6 +148,7 @@ function useIsDark(): boolean {
 /* ---------- inner component (has access to react-flow context) ---------- */
 
 function TopologyFlowInner() {
+  const { t } = useTranslation()
   const topology = useDesignStore((s) => s.topology)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const addToast = useToastStore((s) => s.addToast)
@@ -494,7 +496,7 @@ function TopologyFlowInner() {
     if (match) {
       reactFlow.setCenter(match.position.x, match.position.y, { zoom: 1.2, duration: 500 })
     } else {
-      addToast('info', '未找到匹配的节点')
+      addToast('info', t('common:toast.nodeNotFound'))
     }
   }, [searchQuery, rfNodes, reactFlow, addToast])
 
@@ -525,7 +527,7 @@ function TopologyFlowInner() {
     }
     saveLayout(selectedProjectName, layout)
     setHasSavedLayout(true)
-    addToast('success', '拓扑布局已保存')
+    addToast('success', t('common:toast.topologyLayoutSaved'))
   }, [selectedProjectName, rfNodes, addToast])
 
   const handleResetLayout = useCallback(() => {
@@ -539,7 +541,7 @@ function TopologyFlowInner() {
       const pos = posMap.get(n.id)
       return pos ? { ...n, position: { x: pos.x, y: pos.y } } : n
     }))
-    addToast('success', '布局已重置')
+    addToast('success', t('common:toast.layoutReset'))
   }, [selectedProjectName, filteredNodes, filteredEdges, addToast])
 
   /* ---------- V2.4.4: 根据节点规模动态调整画布缩放范围 ---------- */
@@ -557,22 +559,22 @@ function TopologyFlowInner() {
 
   const handleExportPng = useCallback(async () => {
     if (!topology || !selectedProjectName) {
-      addToast('error', '无拓扑数据可导出')
+      addToast('error', t('common:toast.noTopologyToExport'))
       return
     }
-    addToast('info', '正在生成拓扑图 PNG...')
+    addToast('info', t('common:toast.generatingTopologyPng'))
     try {
       const base64 = await exportTopologyPng(topology.nodes, topology.edges)
       const filename = makeTimestampedFilename('组网拓扑图', 'png')
       if (window.electron?.export?.saveFile) {
         await window.electron.export.saveFile(selectedProjectName, filename, base64)
-        addToast('success', `拓扑图已导出到 output/${filename}`)
+        addToast('success', t('common:toast.topologyExported', { filename }))
       } else {
-        addToast('error', 'IPC 桥接未就绪，无法保存文件')
+        addToast('error', t('common:toast.ipcNotReady'))
       }
     } catch (err) {
       console.error('Export topology PNG failed:', err)
-      addToast('error', `导出失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
     }
   }, [topology, selectedProjectName, addToast])
 
@@ -609,7 +611,7 @@ function TopologyFlowInner() {
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50 z-10">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">拓扑视图</span>
-          <span className="text-[10px] text-gray-400">{nodeCount} 节点 · {edgeCount} 连接</span>
+          <span className="text-2xs text-gray-400">{nodeCount} 节点 · {edgeCount} 连接</span>
         </div>
         <div className="flex items-center gap-1">
           {/* 搜索框 */}
@@ -623,12 +625,12 @@ function TopologyFlowInner() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearchFocus(); if (e.key === 'Escape') { setSearchQuery(''); setShowSearch(false) } }}
                   placeholder="搜索节点..."
-                  className="w-28 bg-transparent text-[11px] outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400"
+                  className="w-28 bg-transparent text-2xs outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400"
                   autoFocus
                 />
                 <button
                   onClick={handleSearchFocus}
-                  className="text-[10px] text-primary-500 hover:text-primary-600"
+                  className="text-2xs text-primary-500 hover:text-primary-600"
                   title="定位到匹配节点"
                 >
                   定位
@@ -695,7 +697,7 @@ function TopologyFlowInner() {
           {/* Filter */}
           <div className="relative">
             <button onClick={() => setShowFilter(!showFilter)}
-              className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded border transition-colors ${
+              className={`flex items-center gap-1 px-2 py-1 text-2xs rounded border transition-colors ${
                 filter !== '全部'
                   ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                   : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -708,7 +710,7 @@ function TopologyFlowInner() {
                 <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 min-w-[120px]">
                   {FILTER_OPTIONS.map((opt) => (
                     <button key={opt} onClick={() => { setFilter(opt); setShowFilter(false) }}
-                      className={`block w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                      className={`block w-full text-left px-3 py-1.5 text-2xs hover:bg-gray-50 dark:hover:bg-gray-700 ${
                         filter === opt ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
                       }`}>
                       {opt}
@@ -723,13 +725,13 @@ function TopologyFlowInner() {
             <Maximize2 size={14} />
           </button>
           <button onClick={handleSaveLayout}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
             title="保存当前布局">
             <Save size={12} />保存布局
           </button>
           {hasSavedLayout && (
             <button onClick={handleResetLayout}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
               title="重置为自动布局">
               <RotateCcw size={12} />重置
             </button>
@@ -792,7 +794,7 @@ function TopologyFlowInner() {
                 <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: NODE_COLORS[selectedNode.type] || '#9ca3af' }} />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{selectedNode.id}</span>
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-2xs">
                 <span className="text-gray-400">类型</span>
                 <span className="text-gray-700 dark:text-gray-300 font-medium">{NODE_LABELS[selectedNode.type] || NODE_TYPE_LABELS[selectedNode.type] || selectedNode.type}</span>
                 <span className="text-gray-400">组</span>
@@ -829,7 +831,7 @@ function TopologyFlowInner() {
               {Object.entries(NODE_COLORS).filter(([type]) =>
                 rfNodes.some((n) => (n.data as unknown as TopologyNodeData)?.nodeType === type)
               ).slice(0, 12).map(([type, color]) => (
-                <div key={type} className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400">
+                <div key={type} className="flex items-center gap-1.5 text-2xs text-gray-600 dark:text-gray-400">
                   <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
                   {NODE_LABELS[type] || type}
                 </div>
@@ -837,7 +839,7 @@ function TopologyFlowInner() {
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-700">
               {Object.entries(EDGE_COLORS).map(([label, color]) => (
-                <div key={label} className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400">
+                <div key={label} className="flex items-center gap-1.5 text-2xs text-gray-600 dark:text-gray-400">
                   <span className="inline-block w-4 h-px" style={{ backgroundColor: color }} />
                   {label === 'param' ? '参数网' : label === 'storage' ? '存储网' : label === 'oob' ? 'OOB' : '业务网'}
                 </div>

@@ -7,6 +7,45 @@
   "processing": "처리 중...",
   "loading": "로딩 중...",
   "noData": "데이터 없음",
+  "tabs": {
+    "workbench": "워크벤치",
+    "design": "설계",
+    "visualization": "시각화",
+    "visualizationWithProject": "시각화 - {{name}}",
+    "deviceLibrary": "장치 라이브러리"
+  },
+  "confirmDelete": {
+    "title": {
+      "project": "프로젝트 삭제 {{name}}",
+      "template": "템플릿 삭제 {{name}}",
+      "file": "출력 파일 삭제 {{name}}",
+      "batch": "출력 일괄 삭제 {{name}}",
+      "clearOutput": "{{name}}의 모든 출력 지우기"
+    },
+    "warning": {
+      "project": "이 작업은 취소할 수 없습니다. 프로젝트 폴더와 모든 구성 및 출력 파일이 영구적으로 삭제됩니다.",
+      "template": "템플릿이 영구적으로 삭제되지만 이미 생성된 프로젝트에는 영향을 미치지 않습니다.",
+      "file": "이 파일은 영구적으로 삭제됩니다.",
+      "batch": "일괄 디렉토리와 모든 파일이 영구적으로 삭제됩니다.",
+      "clearOutput": "모든 렌더링 출력 파일(토폴로지 다이어그램, 테이블, 목록 등)이 영구적으로 삭제됩니다. 이 작업은 취소할 수 없습니다."
+    },
+    "confirmNamePrompt": "삭제를 확인하려면 {{name}}을(를) 입력하세요:",
+    "confirmDelete": "삭제 확인",
+    "deleteFailed": "삭제 실패"
+  },
+  "errorBoundary": {
+    "pageTitle": "페이지",
+    "loadFailed": "{{title}} 로딩 실패",
+    "unknownError": "알 수 없는 오류",
+    "retry": "재시도",
+    "workspace": "워크스페이스"
+  },
+  "logPanel": {
+    "title": "출력 로그",
+    "clear": "지우기",
+    "collapse": "접기",
+    "waiting": "출력 대기 중..."
+  },
   "project": {
     "duplicate": "프로젝트 복제",
     "rename": "프로젝트 이름 변경",
@@ -418,5 +457,33 @@
     "unsupportedType": "지원되지 않는 파일 형식: {{type}}",
     "emptyTable": "빈 테이블",
     "cannotPreview": "이 파일을 미리 볼 수 없습니다"
+  },
+  "toast": {
+    "projectCreated": "프로젝트가 성공적으로 생성되었습니다",
+    "projectCreateFailed": "프로젝트 생성 실패: {{error}}",
+    "templateHint": "왼쪽 하단의 «템플릿» 영역에서 템플릿을 우클릭하고 «이 템플릿에서 만들기»를 선택하세요",
+    "selectProjectFromList": "왼쪽 프로젝트 목록에서 기존 프로젝트를 선택하세요",
+    "projectImported": "프로젝트 \"{{name}}\"을(를) 가져왔습니다",
+    "importFailed": "가져오기 실패: {{error}}",
+    "selectProjectFirst": "먼저 프로젝트를 선택하세요",
+    "selectRenderProject": "렌더링할 프로젝트를 선택하세요",
+    "renderFailed": "{{project}} 렌더링 실패: {{error}}",
+    "renderComplete": "렌더링 완료",
+    "previewInProgress": "미리보기 기능은 개발 중입니다",
+    "topologyValidationComplete": "토폴로지 검증 완료",
+    "validationFailed": "검증 실패: {{error}}",
+    "nodeNotFound": "일치하는 노드를 찾을 수 없습니다",
+    "topologyLayoutSaved": "토폴로지 레이아웃이 저장되었습니다",
+    "layoutReset": "레이아웃이 재설정되었습니다",
+    "noTopologyToExport": "내보낼 토폴로지 데이터가 없습니다",
+    "generatingTopologyPng": "토폴로지 다이어그램 PNG 생성 중...",
+    "topologyExported": "토폴로지 다이어그램이 output/{{filename}}로 내보내졌습니다",
+    "ipcNotReady": "IPC 브리지가 준비되지 않아 파일을 저장할 수 없습니다",
+    "exportFailed": "내보내기 실패: {{error}}",
+    "unknownError": "알 수 없는 오류",
+    "noRackDataToExport": "내보낼 랙 데이터가 없습니다",
+    "exportedToOutput": "output/{{filename}}로 내보내졌습니다",
+    "generatingPng": "PNG 생성 중...",
+    "renderHint": "워크벤치에서 «원클릭 렌더링»을 클릭하여 렌더링을 시작하세요"
   }
 }

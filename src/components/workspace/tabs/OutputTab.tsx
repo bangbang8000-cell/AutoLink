@@ -79,7 +79,7 @@ export function OutputTab({ fileName, fileType }: Props) {
   if (error) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4">
-        <p className="text-sm text-red-500">{error}</p>
+        <p className="text-sm text-error-500">{error}</p>
       </div>
     )
   }

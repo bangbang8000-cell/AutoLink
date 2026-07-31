@@ -138,10 +138,10 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
             {/* Format hint */}
             <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 max-w-md">
               <p className="text-xs font-medium text-gray-500 mb-2">CSV 列格式说明：</p>
-              <code className="text-[11px] text-gray-400 block">
+              <code className="text-2xs text-gray-400 block">
                 机柜编号,机柜名称,类型,U数,功率上限(W),位置,备注
               </code>
-              <p className="text-[10px] text-gray-400 mt-2">
+              <p className="text-2xs text-gray-400 mt-2">
                 类型支持: GPU柜 / 存储柜 / 网络柜 / 通算柜 / 安全柜 / 混合柜
               </p>
             </div>
@@ -161,7 +161,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
 
             {/* Errors */}
             {result?.errors && result.errors.length > 0 && (
-              <div className="mx-4 mt-2 p-2 rounded bg-red-50 dark:bg-red-900/20 text-xs text-red-600 dark:text-red-400">
+              <div className="mx-4 mt-2 p-2 rounded bg-error-50 dark:bg-error-900/20 text-xs text-error-600 dark:text-error-400">
                 {result.errors.map((err, i) => (
                   <div key={i} className="flex items-center gap-1">
                     <AlertTriangle size={11} />{err}
@@ -172,7 +172,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
 
             {/* Warnings */}
             {result?.warnings && result.warnings.length > 0 && (
-              <div className="mx-4 mt-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-600 dark:text-amber-400">
+              <div className="mx-4 mt-2 p-2 rounded bg-warning-50 dark:bg-warning-900/20 text-xs text-warning-600 dark:text-warning-400">
                 {result.warnings.map((w, i) => (
                   <div key={i}>{w}</div>
                 ))}

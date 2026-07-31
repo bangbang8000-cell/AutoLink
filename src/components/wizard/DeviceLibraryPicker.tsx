@@ -191,18 +191,18 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
             <div className="flex flex-col items-center justify-center py-10 text-xs text-gray-400">
               <Filter size={24} className="text-gray-300 dark:text-gray-600 mb-2" />
               <p>无匹配设备</p>
-              <p className="text-[10px] mt-1">尝试调整筛选条件</p>
+              <p className="text-2xs mt-1">尝试调整筛选条件</p>
             </div>
           ) : (
             <div className="space-y-1">
-              <div className="px-1 py-1 text-[10px] text-gray-400">
+              <div className="px-1 py-1 text-2xs text-gray-400">
                 共 {filteredDevices.length} 款设备
               </div>
               {filteredDevices.map((device) => (
                 <button
                   key={device.id}
                   onClick={() => handleSelect(device)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-gray-750 text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors"
                 >
                   <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                     {getCategoryIcon(device.category)}
@@ -213,16 +213,16 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
                         {device.vendor} {device.model}
                       </span>
                       {device.verified && (
-                        <span className="px-1 py-0.5 text-[9px] rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                        <span className="px-1 py-0.5 text-3xs rounded bg-success-100 dark:bg-success-900/30 text-success-600 dark:text-success-400">
                           已验证
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                    <div className="text-2xs text-gray-400 truncate mt-0.5">
                       {device.description}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0 text-[10px] text-gray-400">
+                  <div className="flex items-center gap-1.5 shrink-0 text-2xs text-gray-400">
                     <span>{device.u_height}U</span>
                     <span>{device.power_watts}W</span>
                   </div>

@@ -7,6 +7,45 @@
   "processing": "処理中...",
   "loading": "読み込み中...",
   "noData": "データなし",
+  "tabs": {
+    "workbench": "ワークベンチ",
+    "design": "設計",
+    "visualization": "可視化",
+    "visualizationWithProject": "可視化 - {{name}}",
+    "deviceLibrary": "デバイスライブラリ"
+  },
+  "confirmDelete": {
+    "title": {
+      "project": "プロジェクトを削除 {{name}}",
+      "template": "テンプレートを削除 {{name}}",
+      "file": "出力ファイルを削除 {{name}}",
+      "batch": "出力バッチを削除 {{name}}",
+      "clearOutput": "{{name}} のすべての出力をクリア"
+    },
+    "warning": {
+      "project": "この操作は元に戻せません。プロジェクトフォルダとそのすべての設定、出力ファイルが完全に削除されます。",
+      "template": "テンプレートは完全に削除されますが、既に作成されたプロジェクトには影響しません。",
+      "file": "このファイルは完全に削除されます。",
+      "batch": "バッチディレクトリとすべてのファイルが完全に削除されます。",
+      "clearOutput": "すべてのレンダリング出力ファイル（トポロジ図、テーブル、リストなど）が完全に削除されます。この操作は元に戻せません。"
+    },
+    "confirmNamePrompt": "削除を確認するには {{name}} と入力してください：",
+    "confirmDelete": "削除を確認",
+    "deleteFailed": "削除に失敗しました"
+  },
+  "errorBoundary": {
+    "pageTitle": "ページ",
+    "loadFailed": "{{title}} の読み込みに失敗しました",
+    "unknownError": "不明なエラー",
+    "retry": "再試行",
+    "workspace": "ワークスペース"
+  },
+  "logPanel": {
+    "title": "出力ログ",
+    "clear": "クリア",
+    "collapse": "折りたたむ",
+    "waiting": "出力を待っています..."
+  },
   "project": {
     "duplicate": "プロジェクト複製",
     "rename": "プロジェクト名変更",
@@ -418,5 +457,33 @@
     "unsupportedType": "サポートされていないファイル形式です: {{type}}",
     "emptyTable": "空のテーブル",
     "cannotPreview": "このファイルはプレビューできません"
+  },
+  "toast": {
+    "projectCreated": "プロジェクトが正常に作成されました",
+    "projectCreateFailed": "プロジェクトの作成に失敗しました: {{error}}",
+    "templateHint": "左下の「テンプレート」エリアでテンプレートを右クリックし、「このテンプレートから作成」を選択してください",
+    "selectProjectFromList": "左側のプロジェクトリストから既存のプロジェクトを選択してください",
+    "projectImported": "プロジェクト \"{{name}}\" をインポートしました",
+    "importFailed": "インポートに失敗しました: {{error}}",
+    "selectProjectFirst": "最初にプロジェクトを選択してください",
+    "selectRenderProject": "レンダリングするプロジェクトを選択してください",
+    "renderFailed": "{{project}} のレンダリングに失敗しました: {{error}}",
+    "renderComplete": "レンダリングが完了しました",
+    "previewInProgress": "プレビュー機能は開発中です",
+    "topologyValidationComplete": "トポロジ検証が完了しました",
+    "validationFailed": "検証に失敗しました: {{error}}",
+    "nodeNotFound": "一致するノードが見つかりません",
+    "topologyLayoutSaved": "トポロジレイアウトを保存しました",
+    "layoutReset": "レイアウトをリセットしました",
+    "noTopologyToExport": "エクスポートするトポロジデータがありません",
+    "generatingTopologyPng": "トポロジ図 PNG を生成中...",
+    "topologyExported": "トポロジ図を output/{{filename}} にエクスポートしました",
+    "ipcNotReady": "IPC ブリッジの準備ができていないため、ファイルを保存できません",
+    "exportFailed": "エクスポートに失敗しました: {{error}}",
+    "unknownError": "不明なエラー",
+    "noRackDataToExport": "エクスポートするラックデータがありません",
+    "exportedToOutput": "output/{{filename}} にエクスポートしました",
+    "generatingPng": "PNG を生成中...",
+    "renderHint": "ワークベンチで「ワンクリックレンダリング」をクリックしてレンダリングを開始してください"
   }
 }

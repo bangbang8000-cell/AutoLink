@@ -42,7 +42,7 @@ function NumberInput({ label, value, onChange, min = 0, max = 99999, step = 1, c
 }) {
   return (
     <div className={className}>
-      <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className="block text-2xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       <input
         type="number" min={min} max={max} step={step}
         value={value}
@@ -59,7 +59,7 @@ function SelectInput({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className="block text-2xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -87,7 +87,7 @@ function ToggleSwitch({ label, checked, onChange }: {
       >
         <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${checked ? 'left-4' : 'left-0.5'}`} />
       </button>
-      <span className="text-[11px] text-gray-600 dark:text-gray-400">{label}</span>
+      <span className="text-2xs text-gray-600 dark:text-gray-400">{label}</span>
     </label>
   )
 }
@@ -155,7 +155,7 @@ function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-gray-50 dark:bg-gray-800/80 rounded px-3 py-2 text-center">
       <div className="text-lg font-bold text-gray-800 dark:text-gray-100">{value}</div>
-      <div className="text-[10px] text-gray-400 dark:text-gray-500">{label}</div>
+      <div className="text-2xs text-gray-400 dark:text-gray-500">{label}</div>
     </div>
   )
 }
@@ -238,7 +238,7 @@ export function DesignTab() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => { resetConfig(); clearResults() }}
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="flex items-center gap-1 px-2.5 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
           >
             <RefreshCw size={12} />
             重置
@@ -274,7 +274,7 @@ export function DesignTab() {
                 {t('design:modeCustom')}
               </button>
             </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+            <p className="text-2xs text-gray-400 dark:text-gray-500 mt-1.5">
               {config.downlink_mode === 'full' ? t('design:modeFullDesc') : t('design:modeCustomDesc')}
             </p>
           </div>
@@ -350,7 +350,7 @@ export function DesignTab() {
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 p-3 rounded text-sm bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+            <div className="flex items-start gap-2 p-3 rounded text-sm bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300">
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span className="flex-1">{error}</span>
             </div>
@@ -368,7 +368,7 @@ export function DesignTab() {
             />
           )}
           {estimation?.error && (
-            <div className="flex items-start gap-2 p-3 rounded text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300">
+            <div className="flex items-start gap-2 p-3 rounded text-sm bg-warning-50 dark:bg-warning-900/20 text-warning-700 dark:text-warning-300">
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span className="flex-1">{estimation.error}</span>
             </div>

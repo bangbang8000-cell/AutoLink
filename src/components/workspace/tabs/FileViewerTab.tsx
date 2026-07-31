@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import { Copy, Check, Table2, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
@@ -148,7 +148,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
               <button
                 key={s}
                 onClick={() => s !== current && switchSheet(s)}
-                className={`px-2.5 py-0.5 text-[11px] rounded ${
+                className={`px-2.5 py-0.5 text-2xs rounded ${
                   s === current
                     ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
                     : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'

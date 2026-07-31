@@ -96,7 +96,7 @@ export function DeviceExportModal() {
                       'flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0 transition-colors',
                       isSelected
                         ? 'bg-primary-50 dark:bg-primary-900/20'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-750',
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700',
                     )}
                   >
                     <div className={clsx(

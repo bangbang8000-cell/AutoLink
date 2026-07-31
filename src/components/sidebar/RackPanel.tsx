@@ -118,7 +118,7 @@ export function RackPanel() {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle size={24} className="text-gray-400 mb-2" />
-        <p className="text-xs text-red-500 mb-1">初始化失败</p>
+        <p className="text-xs text-error-500 mb-1">初始化失败</p>
         <button onClick={() => { setInitialized(false); setInitError(null) }}
           className="px-2 py-1 text-xs rounded bg-primary-500 text-white">
           重试
@@ -130,7 +130,7 @@ export function RackPanel() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('rack:title')}
         </span>
         <div className="flex items-center gap-1">
@@ -175,7 +175,7 @@ export function RackPanel() {
                 <div className="flex items-center gap-1.5">
                   <HardDrive size={12} className="text-gray-400" />
                   <span className="font-medium truncate">{cab.name}</span>
-                  <span className="text-[10px] text-gray-400 ml-auto">
+                  <span className="text-2xs text-gray-400 ml-auto">
                     {pct}%
                   </span>
                 </div>
@@ -184,7 +184,7 @@ export function RackPanel() {
                     <div className="h-full rounded-full bg-primary-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
-                <div className="text-[10px] text-gray-400 mt-1">
+                <div className="text-2xs text-gray-400 mt-1">
                   {cab.totalU}U · {cab.devices.length}台 · {pu.used}W/{pu.limit}W
                 </div>
               </button>
@@ -196,7 +196,7 @@ export function RackPanel() {
       {/* Unplaced devices summary */}
       {unplacedDevices.length > 0 && (
         <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 px-3 py-2">
-          <div className="text-[10px] font-medium text-gray-500 mb-1">
+          <div className="text-2xs font-medium text-gray-500 mb-1">
             待分配: {unplacedDevices.length} 台
           </div>
         </div>

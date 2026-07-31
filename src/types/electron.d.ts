@@ -1,7 +1,7 @@
 interface Window {
   electron: {
     project: {
-      list: () => Promise<{ id: number; name: string; index: number }[]>
+      list: () => Promise<{ id: number; name: string; index: number; status?: 'ready' | 'configured' | 'designed' | 'layouted'; fileCount?: number; updatedAt?: string; description?: string }[]>
       create: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
       createWithConfig: (config: import('@/types/project-config').ProjectConfig) => Promise<void>
       delete: (ids: string[]) => Promise<void>

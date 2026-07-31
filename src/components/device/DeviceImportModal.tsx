@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+﻿import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Upload, Download, AlertTriangle, CheckCircle } from 'lucide-react'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
@@ -264,7 +264,7 @@ export function DeviceImportModal() {
           >
             <Upload size={24} className="mx-auto text-gray-400 mb-2" />
             <div className="text-xs text-gray-500">{t('import.uploadHint')}</div>
-            <div className="text-[10px] text-gray-400 mt-1">{fileName || '未选择文件'}</div>
+            <div className="text-2xs text-gray-400 mt-1">{fileName || '未选择文件'}</div>
             <input
               ref={fileInputRef}
               type="file"

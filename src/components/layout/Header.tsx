@@ -122,7 +122,7 @@ export function Header() {
           <button onClick={handleMaximize} className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500">
             {isMaximized ? <Square size={12} /> : <Maximize2 size={12} />}
           </button>
-          <button onClick={handleClose} className="w-7 h-7 flex items-center justify-center hover:bg-red-500 hover:text-white text-gray-500">
+          <button onClick={handleClose} className="w-7 h-7 flex items-center justify-center hover:bg-error-500 hover:text-white text-gray-500">
             <X size={14} />
           </button>
         </div>

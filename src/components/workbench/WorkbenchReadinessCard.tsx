@@ -28,9 +28,9 @@ export function WorkbenchReadinessCard() {
     setValidatingTopo(true)
     try {
       await validate(selectedProjectName)
-      addToast('success', '拓扑校验完成')
+      addToast('success', t('common:toast.topologyValidationComplete'))
     } catch (err) {
-      addToast('error', `校验失败: ${(err as Error).message}`)
+      addToast('error', t('common:toast.validationFailed', { error: (err as Error).message }))
     } finally {
       setValidatingTopo(false)
     }
@@ -46,7 +46,7 @@ export function WorkbenchReadinessCard() {
         <button
           onClick={handleValidate}
           disabled={validatingTopo || generating || !selectedProjectName}
-          className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {validatingTopo ? (
             <Loader2 size={10} className="animate-spin" />
@@ -71,10 +71,10 @@ export function WorkbenchReadinessCard() {
           </span>
           <span className={
             valid === true
-              ? 'text-green-600 dark:text-green-400 font-medium'
+              ? 'text-success-600 dark:text-success-400 font-medium'
               : valid === false
-                ? 'text-red-600 dark:text-red-400 font-medium'
-                : 'text-amber-600 dark:text-amber-400'
+                ? 'text-error-600 dark:text-error-400 font-medium'
+                : 'text-warning-600 dark:text-warning-400'
           }>
             {valid === true
               ? t('workbench:topologyComplete')
@@ -83,7 +83,7 @@ export function WorkbenchReadinessCard() {
                 : t('workbench:topologyPending')}
           </span>
           {summary && (
-            <span className="text-gray-400 text-[10px]">
+            <span className="text-gray-400 text-2xs">
               ({summary.totalServers} {t('workbench:servers')})
             </span>
           )}
@@ -103,9 +103,9 @@ export function WorkbenchReadinessCard() {
           </span>
           <span className={
             rackReady
-              ? 'text-green-600 dark:text-green-400 font-medium'
+              ? 'text-success-600 dark:text-success-400 font-medium'
               : totalDevices > 0
-                ? 'text-amber-600 dark:text-amber-400'
+                ? 'text-warning-600 dark:text-warning-400'
                 : 'text-gray-400'
           }>
             {totalDevices === 0

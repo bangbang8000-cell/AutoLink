@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+﻿import { useTranslation } from 'react-i18next'
 import { FolderOpen } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRenderStore } from '@/stores/render.store'
@@ -51,7 +51,7 @@ export function WorkbenchScopeCard() {
         {batchMode && (
           <div className="ml-6 max-h-32 overflow-auto space-y-0.5">
             {projects.length === 0 ? (
-              <p className="text-[10px] text-gray-400">{t('workbench:noProjects')}</p>
+              <p className="text-2xs text-gray-400">{t('workbench:noProjects')}</p>
             ) : (
               projects.map((p) => (
                 <label key={p.name} className="flex items-center gap-1.5 cursor-pointer">
@@ -61,7 +61,7 @@ export function WorkbenchScopeCard() {
                     onChange={() => toggleBatchProject(p.name)}
                     className="text-primary-500"
                   />
-                  <span className="text-[11px] text-gray-600 dark:text-gray-400 truncate">{p.name}</span>
+                  <span className="text-2xs text-gray-600 dark:text-gray-400 truncate">{p.name}</span>
                 </label>
               ))
             )}

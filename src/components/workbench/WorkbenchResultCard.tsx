@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, FolderOpen, FileSpreadsheet, GitBranch, Table2, List } from 'lucide-react'
 import { useRenderStore, type RenderResult } from '@/stores/render.store'
@@ -57,7 +57,7 @@ export function WorkbenchResultCard() {
               <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
                 {resultLabels[result.type] || result.type}
               </span>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+              <span className="text-2xs text-gray-400 dark:text-gray-500">
                 {new Date(result.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>

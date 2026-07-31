@@ -19,9 +19,9 @@ export function WizardStepBasic() {
 
       {/* Template info banner */}
       {templateName && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-info-200 dark:border-info-800 bg-info-50 dark:bg-info-900/20">
           <Info size={14} className="text-gray-400 shrink-0" />
-          <span className="text-xs text-blue-600 dark:text-blue-400">
+          <span className="text-xs text-info-600 dark:text-info-400">
             基于模板: {templateName}
           </span>
         </div>
@@ -30,7 +30,7 @@ export function WizardStepBasic() {
       {/* Project name */}
       <div>
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">
-          项目名称 <span className="text-red-400">*</span>
+          项目名称 <span className="text-error-400">*</span>
         </label>
         <input
           type="text"
