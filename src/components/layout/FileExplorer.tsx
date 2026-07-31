@@ -25,6 +25,8 @@ import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/Conf
 import { RenameProjectModal } from '@/components/layout/RenameProjectModal'
 import { EditTemplateModal } from '@/components/layout/EditTemplateModal'
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
+import { Toggle } from '@/components/ui/Toggle'
+import { SettingsSection, SettingsRow, INPUT_CLASS } from '@/components/ui/SettingsRow'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 
 export function FileExplorer() {
@@ -994,9 +996,9 @@ function DesignExplorer() {
 
         {/* Network toggles */}
         <div className="space-y-1.5">
-          <ToggleMini label={t('common:explorer.design.bizInbandMgmt')} checked={config.biz_enabled}
+          <Toggle size="sm" label={t('common:explorer.design.bizInbandMgmt')} checked={config.biz_enabled}
             onChange={(v) => updateConfig({ biz_enabled: v })} />
-          <ToggleMini label={t('common:explorer.design.oobMgmt')} checked={config.oob_enabled}
+          <Toggle size="sm" label={t('common:explorer.design.oobMgmt')} checked={config.oob_enabled}
             onChange={(v) => updateConfig({ oob_enabled: v })} />
         </div>
 
@@ -1471,27 +1473,6 @@ function SettingsExplorer() {
 
 /* ---------- sub-components ---------- */
 
-// U3: 统一 input/select 样式常量
-const INPUT_CLASS = 'text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700'
-
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-4">
-      <h4 className="text-2xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">{title}</h4>
-      <div className="space-y-2">{children}</div>
-    </div>
-  )
-}
-
-function SettingsRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-gray-600 dark:text-gray-400">{label}</span>
-      <div className="shrink-0">{children}</div>
-    </div>
-  )
-}
-
 /* 1. Appearance */
 function AppearanceSettings() {
   const { t } = useTranslation()
@@ -1857,20 +1838,6 @@ function AboutSettings({ onOpenAbout }: { onOpenAbout: () => void }) {
 
 /* ---------- shared mini components ---------- */
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative w-8 h-4 rounded-full transition-colors ${checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-    >
-      <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${checked ? 'left-4' : 'left-0.5'}`} />
-    </button>
-  )
-}
-
 function useRequireToast() {
   return useToastStore.getState().addToast
 }
@@ -1899,17 +1866,5 @@ function SelectMini({ label, value, onChange, options }: {
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
-  )
-}
-
-function ToggleMini({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-center justify-between gap-2 cursor-pointer">
-      <span className="text-2xs text-gray-500 dark:text-gray-400">{label}</span>
-      <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
-        className={`relative w-7 h-4 rounded-full transition-colors ${checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-        <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${checked ? 'left-3.5' : 'left-0.5'}`} />
-      </button>
-    </label>
   )
 }

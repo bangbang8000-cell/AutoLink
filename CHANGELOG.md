@@ -1,5 +1,177 @@
 # CHANGELOG
 
+## [2.6.3] - 2026-07-31
+
+### UI 系统优化（U1-U9 全部完成）
+
+#### P0 用户关注点
+- **U1 项目浏览器信息密度增强**：项目项卡片化（状态点 + 名称 + 文件数 + 时间 + 收藏）；输出文件按扩展名显示类型图标（xlsx/csv/png/json 等）；模板项卡片化（描述 + 标签 + 内置徽章）
+- **U2 关于界面排版优化**：4 区块内边距统一（px-6 / px-4）；字号梯度从 5 种收敛到 3 种；快捷链接图标统一 12px；版权走 i18n（`about.copyright`）；AboutSettings 版本号动态获取
+- **U3 设置界面优化**：删除死代码 `SettingsPanel.tsx`；控件宽度统一（select w-32 / input w-20）；抽象 `ui/Toggle.tsx` + `ui/SettingsRow.tsx` + `INPUT_CLASS` 常量；快捷键列表以 MenuBar ShortcutsDialog 为权威源
+- **U4 全局字体体系统一**：tailwind.config.js 新增 `text-2xs`(10px)/`text-3xs`(9px) token；中文字体堆栈配置 PingFang SC / Microsoft YaHei / Hiragino Sans GB / Source Han Sans CN；全项目迁移 `text-[10px]`/`text-[11px]`/`text-[9px]`/`text-[8px]` 任意值类（248 处 → 0）；修复 `gray-750`/`gray-850` 无效颜色类
+
+#### P1 结构性优化
+- **U5 颜色体系统一**：启用语义色板 success/error/warning/info 替换 green/red/amber/blue 基础色（333 处）；新建 `constants/topology-colors.ts` 统一 TopologyNodes 与 exportTopology 节点色常量
+- **U6 通用 Modal 组件**：新建 `ui/Modal.tsx`（ESC 关闭/遮罩关闭/焦点陷阱/body 滚动锁定可配置）；迁移 ConfirmDeleteDialog / RenameProjectModal / CreateProjectWizardModal / AboutDialog / EditTemplateModal / ShortcutsDialog
+- **U7 通用 ContextMenu 组件**：新建 `ui/ContextMenu.tsx`（统一 z-index / 点击外部关闭 / 分隔线 / 禁用态 / 危险态 / 图标支持）；迁移 FileExplorer + WorkspaceView 右键菜单
+- **U8 i18n 补全**：App.tsx Tab 标题、18 处 toast 消息、ConfirmDeleteDialog、ErrorBoundary、WorkspaceErrorBoundary、LogPanel 全部走 i18n（5 语言对齐）
+- **U9 删除死代码**：`SettingsPanel.tsx` / `WorkspaceWelcome.tsx` / `WorkspaceTabBar.tsx` 全部删除
+
+### 回归测试
+- TypeScript typecheck：0 errors
+- ESLint：0 errors（78 warnings 为历史遗留）
+- 前端 vitest：196/196 通过
+- 后端 pytest：299/299 通过
+
+---
+
+## [2.6.2] - 2026-07-31
+
+### 核心功能修复与持久化
+
+#### T1 更新功能致命 bug 修复
+- **根因**：`electron-updater` 错误放在 `devDependencies`，打包后 asar 内模块缺失，`import('electron-updater')` 静默失败导致更新功能完全失效
+- **修复**：将 `electron-updater` 移到 `dependencies`；`update.service.ts` 增加 dev 模式 `forceDevRunConfig` 支持
+- **验证**：打包后 app.asar 内包含 electron-updater 模块
+
+#### T2 关于页面软件栈修复
+- `handlers.ts` 使用 `app.getAppPath()` 替代 `__dirname/../..` 读取 package.json（修复打包后路径失效）
+- 依赖读取合并 `dependencies` + `devDependencies`（修复 typescript/vite 显示 `-`）
+- Python 检测增加 `py --version`（Windows py launcher）回退
+
+#### T3 关于页面产品简介
+- AboutDialog 新增 `app.description` 段落
+- 5 语言 common.json 补充 `app.description` key
+
+#### T4 菜单栏 Logo
+- Header.tsx 在 MenuBar 前插入 Logo（macOS 自动避让红绿灯按钮）
+
+#### T5 编辑菜单扩充
+- Edit 菜单从 1 项扩充为 9 项：撤销/重做/剪切/复制/粘贴/全选/查找/首选项
+- 调用 Clipboard API 与 `document.execCommand` 实现基础功能
+
+#### T6 拓扑数据按项目持久化（核心）
+- 新增 `project:saveFile` IPC（白名单：`topology.json` / `rack_layout.json` / `network_config.ini`）
+- `design.store` 改为读写项目根目录 `topology.json`；加载失败清空 store（不残留上个项目）
+- `rack.store` 改为保存 `rack_layout.json` 到项目根目录；防抖 500ms 自动保存
+- `project.store.selectProject` 统一加载入口：异步加载 config + topology + rack layout
+- 项目导出 ZIP 白名单纳入 `topology.json` / `rack_layout.json`
+
+### 测试验证
+- TypeScript typecheck：0 errors
+- 前端 vitest：196/196 通过
+- 后端 pytest：299/299 通过
+- CI 三平台构建成功（run id: 30614761805）
+
+---
+
+## [2.6.1] - 2026-07-31
+
+### 体验完善与死代码清理
+
+#### R12 全局 ErrorBoundary
+- App.tsx 最外层加 ErrorBoundary 包裹整个 render 树
+- 各 Modal 独立 ErrorBoundary，避免组件崩溃导致白屏
+- Workspace 组件均包裹 WorkspaceErrorBoundary
+
+#### R13 workspace.store 持久化校验
+- 加载持久化 tabs 时通过 `project:list` 校验项目存在性，无效 tabs 自动过滤
+- `reopenLastClosedClosed` 同步校验
+- Tab 状态持久化在 localStorage，可通过「Reset Workspace」按钮重置
+
+#### R14-R15 死代码清理与拆分
+- 删除 `sidebar/` 目录 9 个未引用文件
+- 删除 `WorkspaceTabBar.tsx` / `WorkspaceWelcome.tsx`
+- FileExplorer.tsx 从 1736 行按模块拆分为 6 个 Explorer 子组件
+- TopologyTab.tsx 从 855 行按职责拆分为 hooks + 子组件
+
+#### R16 TopologyTab 暗色模式适配
+- 使用 MutationObserver 追踪 dark mode 变化
+- ECharts 配色方案随主题切换
+
+#### R17-R18 MenuBar i18n 与快捷键单一数据源
+- MenuBar 全部菜单名/菜单项/Toast/ShortcutsDialog 走 i18n（5 语言）
+- AboutDialog 快捷键链接复用 ShortcutsDialog 单一数据源
+- 菜单栏语言随 UI 语言切换同步更新
+
+---
+
+## [2.6.0] - 2026-07-30
+
+### 紧急缺陷修复（用户反馈 8 项 + P0 隐藏 bug）
+
+#### R1 多语言机制修复
+- `device` 命名空间 4 语言（en/ja/ko/zh-TW）补齐
+- `i18n/index.ts` 启动时从 `ui.store` 读取持久化 language，修复刷新后语言错位
+- 关键硬编码中文（SettingsPanel/FileExplorer 右键菜单/WorkspaceView 卡片）i18n 化
+
+#### R3 关于弹窗内容修正
+- 软件栈补充 Python 后端版本（11 项）
+- 快捷键链接改为打开本地弹窗（非跳转浏览器）
+- 版权信息动态年份、Logo 尺寸修正为 96px
+- 移除 `t()` 调用的第二参数回退文案
+
+#### R4 向导对话框滚动机制
+- CreateProjectWizardModal 模态添加 `overflow-hidden`
+- Header/步骤指示器/底部按钮栏加 `shrink-0`
+- 800px 屏幕下底部按钮始终可见
+
+#### R5 设备选型 IB/RoCE 联动
+- `migration.py` 存储交换机按 `protocol` 分流（IB → NVIDIA Quantum，RoCE → 华为 CE6881）
+- `WizardStepDevices.tsx` `STORAGE_DEFAULTS_BY_PROTOCOL` 区分协议
+- 协议切换联动纳入 `storage_leaf_switch`
+- 设备库补充 IB 存储交换机型号（NVIDIA SN5600/SN4700）
+
+#### R6 设备库数据纠正
+- 修正 `h3c_s6850_56hf.json`：从错误的 200G 存储交换机改为 25G 业务交换机（category/port_speed/port_type/description/tags 全字段修正，物理文件移目录）
+- 修正 `library_index.json` 中 `huawei_ce6860_48s6cq` 归属（switches_storage → switches_biz）
+- `device_library.py` 加载时加一致性校验（category 字段与目录一致）
+- 业务交换机默认选型从 10G 改为 25G，与 `biz_port_speed='25G'` 对齐
+
+#### R7 一键渲染修复
+- `handleQuickRender` 改为跳转工作台 + toast 提示（方案 A）
+- `OutputTab.tsx` 修复 `getFileBinary` 调用参数（从 useProjectStore 取 projectName，路径加 `output/` 前缀）
+
+#### R8 项目浏览器文件树展开
+- "全部项目" TreeItem 改为可展开，调 `project:getStructure` 拉取目录树递归渲染
+- 新增"输入文件" Section（network_config.ini / project_config.json / project.json）
+- 展开状态提升到 `explorer.store`，关闭侧栏再开状态保留
+
+#### R9-R11 P0 隐藏 bug 修复
+- preload 暴露 `dialog.openDirectory`（此前完全未实现）
+- `getFileBinary` 返回类型统一为 `Promise<string | null>`（base64）
+- `device-library:export` 返回类型对齐
+- `versions` 类型补 chromium 字段
+- `shell:openPath`/`showItemInFolder` 移除 `sanitizePath` 限制（修复导出 ZIP 打开目录被拦截）
+- 根目录 5 个重复 Python 文件清理
+
+### 测试验证
+- 前端 vitest：196/196 通过
+- 后端 pytest：299/299 通过
+
+---
+
+## [2.5.0] - 2026-07-30
+
+### V2.4 系列延续与质量验收
+
+- 完成 V2.4 PRD 验收与质量评估（完成度 65% → 验收通过）
+- Logo 设计规范文档化（[docs/v2.5/logo_specification.md](docs/v2.5/logo_specification.md)）
+- 启动加载动画优化（粒子背景 + 旋转环 + 进度条）
+- 更新机制完善：版本号动态化、首次启动自动检测更新并 toast 通知、Release Notes 折叠展示、下载进度条优化
+- 项目复制/重命名/导出导入 ZIP（含安全校验：路径遍历检测、文件白名单、名称冲突自动追加 _导入）
+- 批量项目导出（工具栏按钮）
+- 模板编辑功能（名称/描述/场景/标签/配置内容，内置模板不可编辑）
+- 模板导入导出 ZIP
+- 项目搜索筛选 + 收藏置顶（星标按钮，hover 显示）
+- 5 种语言 i18n 文案补齐
+
+### 测试验证
+- 后端 pytest：267/267 通过
+- TypeScript typecheck：无错误
+
+---
+
 ## [2.4.6] - 2026-07-30
 
 ### 补齐半成品功能（V2.4 PRD 完成度 48% → 65%）

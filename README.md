@@ -2,7 +2,7 @@
 
 **AI 智算中心网络规划与可视化工具 | AI Data Center Network Planning & Visualization**
 
-[![Version](https://img.shields.io/badge/version-2.4.1-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-2.6.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -18,7 +18,7 @@
 3. 渲染输出连接表、布线表、BOM、设备清单、拓扑图
 ```
 
-## V2.4 核心能力
+## V2.6 核心能力
 
 ### Rail-Optimized 拓扑设计
 - NVIDIA SuperPOD 8-Rail 架构自动计算
@@ -34,6 +34,13 @@
 - 节点拖拽、框选、缩放、小地图
 - 按网络类型过滤视图
 - 节点详情面板（类型、组、机柜、U位、连接数）
+- 暗色模式自适应（MutationObserver 追踪主题变化）
+
+### 拓扑数据按项目持久化（V2.6.2+）
+- 拓扑数据保存到项目根目录 `topology.json`
+- 机柜布局保存到项目根目录 `rack_layout.json`（防抖 500ms 自动保存）
+- 切换项目自动加载对应拓扑/机柜数据，无残留
+- 项目导出/导入 ZIP 完整保留拓扑与机柜数据
 
 ### PUE 与能耗估算
 - 支持风冷 / 冷板液冷 / 浸没式液冷三种散热方式
@@ -65,6 +72,7 @@
 - **通算服务器**：通用计算节点
 - **交换机**：参数面（NVIDIA Quantum/Spectrum、华为 CE16800、H3C S9820/S9850、锐捷 S6980/S9910）/ 存储 / 业务 / 带外
 - **光模块**：100G-1.6T 全速率覆盖
+- 加载时一致性校验（category 字段与目录归属匹配）
 - 分层分类浏览，设备详情含物理参数、端口配置、散热方式、Rail 兼容性
 
 ### 专业导出
@@ -72,21 +80,30 @@
 - 布线指导表（Excel）：含光模块型号、长度估算、成本
 - BOM 成本估算（Excel）：设备与光模块成本汇总
 - 设备清单（Excel）：设备汇总表
-- 报告视图（内置）：概览/架构/功耗/光模块/成本/校验
+- PDF 报告：6 章节（概览/架构/功耗/光模块/成本/校验）
+- 报告视图（内置）：可折叠按需查看
 
-### 国际化
+### 国际化与本地化
 - 5 种语言：简体中文 / English / 日本語 / 한국어 / 繁體中文
-- 关于对话框含快捷键速查表
-- 设置面板支持外观 / 语言 / 项目默认值 / 输出 / 快捷键 / 设备库 / 网络 / 数据管理
+- 启动时自动恢复上次语言选择
+- 菜单栏、Tab 标题、Toast 消息、对话框、错误边界全量 i18n
+- 本地用户指南（Markdown 渲染，离线可用）
+- 关于对话框含快捷键速查表与软件栈信息
+
+### 自动更新
+- 启动时自动检测新版本并 Toast 通知
+- Release Notes 折叠展示
+- 下载进度条 + 错误提示
+- 支持 Windows / macOS / Linux 三平台
 
 ## 快速开始
 
 ### 方式一：下载安装包（推荐）
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
-- **Windows**：`AutoLink-Setup-2.4.1-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-2.4.1-mac-x64.dmg` / `AutoLink-2.4.1-mac-arm64.dmg`
-- **Linux**：`AutoLink-2.4.1-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-2.6.3-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-2.6.3-mac-x64.dmg` / `AutoLink-2.6.3-mac-arm64.dmg`
+- **Linux**：`AutoLink-2.6.3-linux.AppImage` / `.deb`
 
 安装后首次启动会自动创建 3 个示例项目，内置 11 套场景模板和 109+ 款设备库。
 
@@ -115,9 +132,11 @@ npm run dist:linux  # Linux (AppImage + DEB)
 ### 运行测试
 
 ```bash
-npm test              # 前端测试
-npm run test:backend  # 后端测试 (209 cases)
+npm test              # 前端测试 (196 cases)
+npm run test:backend  # 后端测试 (299 cases)
 npm run test:all      # 全量测试
+npm run typecheck     # TypeScript 类型检查
+npm run lint          # ESLint 代码检查
 ```
 
 ## 项目结构
@@ -132,22 +151,25 @@ AutoLink/
 │   ├── estimation.py     #   PUE 估算与收敛比计算
 │   ├── validation.py     #   规则校验引擎
 │   ├── optical_selector.py # 光模块智能选型
-│   ├── exporter.py       #   Excel 导出（连接表/布线/BOM/报告）
-│   ├── device_library.py #   设备库加载器
+│   ├── exporter.py       #   Excel/PDF 导出（连接表/布线/BOM/报告）
+│   ├── device_library.py #   设备库加载器（含一致性校验）
 │   └── models.py         #   数据模型
 ├── electron/             # Electron 主进程
 │   ├── main.ts           #   应用入口
 │   ├── preload.ts        #   安全桥接
 │   ├── config.ts         #   路径与资源管理
-│   └── ipc/handlers.ts   #   IPC 处理器
+│   ├── ipc/handlers.ts   #   IPC 处理器
+│   └── services/update.service.ts # 自动更新服务
 ├── src/                  # React 前端
 │   ├── components/       #   UI 组件
+│   │   ├── ui/           #   通用组件（Button/Input/Select/Modal/ContextMenu/Toggle 等）
 │   │   ├── workspace/tabs/  # 拓扑/机柜/PUE/报告等 Tab
 │   │   ├── workbench/    #   工作台
 │   │   ├── device/       #   设备库
 │   │   └── wizard/       #   项目向导
 │   ├── stores/           #   Zustand 状态管理
 │   ├── i18n/             #   国际化（zh-CN/en/ja/ko/zh-TW）
+│   ├── constants/        #   常量（topology-colors 等）
 │   └── types/            #   TypeScript 类型定义
 ├── template/             # 设备库 + 项目模板
 │   ├── device_library/   #   109+ 设备 JSON
@@ -156,7 +178,7 @@ AutoLink/
 │   │   ├── switches/     #     交换机（参数/存储/业务/OOB）
 │   │   └── optical_modules/ # 光模块（30 款）
 │   └── */                #   11 套场景模板
-├── docs/                 # 产品文档 + 部署指南
+├── docs/                 # 产品文档 + 部署指南 + 用户指南
 └── tests/backend/        # Python 后端测试（pytest）
 ```
 
@@ -173,6 +195,7 @@ AutoLink/
 | 液冷-H100-256 | 液冷场景 | 256 台 GPU |
 | 大型-1024 | 大规模训练 | 1024 台 GPU |
 | 超大-2048 | 超大规模 | 2048 台 GPU |
+| 中型-512 | 中型训练 | 512 台 GPU |
 
 ## 键盘快捷键
 
@@ -189,21 +212,24 @@ AutoLink/
 | `Ctrl+S` | 保存配置 |
 | `Ctrl+W` | 关闭当前标签 |
 | `Ctrl+Shift+T` | 恢复关闭标签 |
+| `Ctrl+K` | 快捷键参考 |
 
 ## 技术栈
 
 - **前端**: React 18 + TypeScript + Zustand + Tailwind CSS + react-flow + ECharts
-- **桌面**: Electron 28 + contextBridge
-- **后端**: Python (pandas + openpyxl)
-- **测试**: Vitest + pytest (209 cases)
+- **桌面**: Electron 28 + contextBridge + electron-updater
+- **后端**: Python (pandas + openpyxl + reportlab)
+- **测试**: Vitest (196 cases) + pytest (299 cases)
 - **i18n**: react-i18next（5 种语言）
 - **CI/CD**: GitHub Actions（三平台矩阵构建）
 
 ## 文档
 
 - [部署指南](docs/deployment.md)
-- [V2.4 PRD](docs/PRD_V2.4.md)
-- [V2.4 开发计划](docs/开发计划_V2.4.md)
+- [用户指南](docs/user_guide/user_guide.md)（应用内「帮助 → 用户指南」可离线查看）
+- [V2.6 PRD](docs/v2.6/v2.6_PRD.md)
+- [V2.6 开发计划](docs/v2.6/v2.6_Development_Plan.md)
+- [V2.6.3 PRD 与开发计划](docs/v2.6/v2.6.3_PRD与开发计划.md)
 - [更新日志](CHANGELOG.md)
 - [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki)
 
