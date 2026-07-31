@@ -93,9 +93,15 @@ export function AboutDialog({ onClose }: Props) {
       await window.electron?.app?.downloadUpdate?.()
       setUpdateState('downloaded')
     } catch (err: any) {
+      // T2: 下载失败时保留错误信息,UI 会显示「手动下载」按钮作为降级方案
       setUpdateError(err?.message || String(err))
       setUpdateState('error')
     }
+  }
+
+  // T2: 手动下载降级方案 - 打开 GitHub Releases 页面
+  const handleManualDownload = () => {
+    window.electron?.app?.openReleasesPage?.()
   }
 
   const handleRestart = () => {
@@ -135,13 +141,13 @@ export function AboutDialog({ onClose }: Props) {
       open
       onClose={onClose}
       title={t('about.title')}
-      width={480}
+      width={520}
       maxHeight="90vh"
       closeOnEsc
       bodyClassName="p-0"
       footer={
         <div className="flex items-center justify-between gap-3">
-          <div className="text-2xs text-gray-400 dark:text-gray-500 shrink-0">
+          <div className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
             v{appVersion}{stack?.buildNumber ? ` · 构建 #${stack.buildNumber}` : ''}
           </div>
 
@@ -150,77 +156,86 @@ export function AboutDialog({ onClose }: Props) {
             {updateState === 'idle' && (
               <button
                 onClick={handleCheckUpdate}
-                className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
               >
-                <RefreshCw size={11} />
+                <RefreshCw size={12} />
                 {t('about.checkUpdate')}
               </button>
             )}
             {updateState === 'checking' && (
-              <span className="inline-flex items-center gap-1 text-2xs text-gray-500 dark:text-gray-400">
-                <Loader2 size={11} className="animate-spin" />
+              <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                <Loader2 size={12} className="animate-spin" />
                 {t('about.checking')}
               </span>
             )}
             {updateState === 'latest' && (
-              <span className="inline-flex items-center gap-1 text-2xs text-success-600 dark:text-success-400">
-                <CheckCircle size={11} />
+              <span className="inline-flex items-center gap-1 text-xs text-success-600 dark:text-success-400">
+                <CheckCircle size={12} />
                 {t('about.latest')}
               </span>
             )}
             {updateState === 'available' && (
               <div className="flex items-center gap-2">
-                <span className="text-2xs text-gray-600 dark:text-gray-300">
+                <span className="text-xs text-gray-600 dark:text-gray-300">
                   {t('about.foundUpdate')} v{updateVersion}
                 </span>
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
                 >
-                  <Download size={10} />
+                  <Download size={11} />
                   {t('about.downloadInstall')}
                 </button>
               </div>
             )}
             {updateState === 'downloading' && (
-              <div className="flex items-center gap-2 flex-1 max-w-[220px]">
+              <div className="flex items-center gap-2 flex-1 max-w-[240px]">
                 <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
                   <div
                     className="h-full bg-primary-500 transition-all"
                     style={{ width: `${downloadPercent}%` }}
                   />
                 </div>
-                <span className="text-2xs text-gray-500 dark:text-gray-400 shrink-0">
+                <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
                   {downloadPercent.toFixed(0)}% · {formatBytes(downloadTransferred)}/{formatBytes(downloadTotal)}
                 </span>
               </div>
             )}
             {updateState === 'downloaded' && (
               <div className="flex items-center gap-2">
-                <span className="text-2xs text-success-600 dark:text-success-400">
-                  <CheckCircle size={11} className="inline mr-1" />
+                <span className="text-xs text-success-600 dark:text-success-400">
+                  <CheckCircle size={12} className="inline mr-1" />
                   {t('about.downloaded')}
                 </span>
                 <button
                   onClick={handleRestart}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-success-600 hover:bg-success-700 text-white"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-success-600 hover:bg-success-700 text-white"
                 >
-                  <RotateCw size={10} />
+                  <RotateCw size={11} />
                   {t('about.restart')}
                 </button>
               </div>
             )}
             {updateState === 'error' && (
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-2xs text-error-500 dark:text-error-400 truncate" title={updateError}>
-                  <AlertCircle size={11} />
+                <span className="inline-flex items-center gap-1 text-xs text-error-500 dark:text-error-400 truncate max-w-[140px]" title={updateError}>
+                  <AlertCircle size={12} />
                   {t('about.updateFailed')}
                 </span>
+                {/* T2: 下载失败时提供「手动下载」降级按钮 */}
+                <button
+                  onClick={handleManualDownload}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-info-500 hover:bg-info-600 text-white"
+                  title={t('update.manualDownload')}
+                >
+                  <ExternalLink size={11} />
+                  {t('update.manualDownload')}
+                </button>
                 <button
                   onClick={handleCheckUpdate}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
                 >
-                  <RefreshCw size={10} />
+                  <RefreshCw size={11} />
                   {t('about.retry')}
                 </button>
               </div>
@@ -229,57 +244,59 @@ export function AboutDialog({ onClose }: Props) {
 
           <button
             onClick={onClose}
-            className="px-3 py-1 text-2xs rounded bg-gray-500 hover:bg-gray-600 text-white shrink-0"
+            className="px-3 py-1 text-xs rounded bg-gray-500 hover:bg-gray-600 text-white shrink-0"
           >
             {t('about.close')}
           </button>
         </div>
       }
     >
-      {/* 品牌区 */}
-      <div className="px-6 pt-6 pb-3 text-center shrink-0">
-        <div className="flex justify-center mb-2">
+      {/* 品牌区 - T4: 增大字号和间距 */}
+      <div className="px-6 pt-6 pb-4 text-center shrink-0">
+        <div className="flex justify-center mb-3">
           <img src="icons/logo.svg" alt="AutoLink" className="w-24 h-24" />
         </div>
-        <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">
           {t('app.title')}
         </h1>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
           {t('app.subtitle')}
         </p>
-        {/* T3: 产品简介 */}
-        <p className="text-2xs text-gray-400 dark:text-gray-500 mt-2 px-4 leading-relaxed">
+        {/* T4: 产品简介字号提升为 text-xs,增加行距和内边距 */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 px-6 leading-relaxed">
           {t('app.description')}
         </p>
       </div>
 
-      {/* 信息区：软件栈 + 快捷链接 */}
-      <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 overflow-y-auto">
-        <p className="text-2xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+      {/* 信息区：软件栈 + 快捷链接 - T4: 优化字号和布局层次 */}
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 overflow-y-auto">
+        {/* T4: 软件栈标题更醒目 */}
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
           {t('about.version')}
         </p>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-2xs">
+        {/* T4: 软件栈条目字号提升为 text-xs,增加行距 */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
           {stackEntries.length === 0 ? (
             <div className="col-span-2 text-gray-400">{appVersion}</div>
           ) : stackEntries.map(([name, ver]) => (
             <div key={name} className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400">{name}</span>
-              <span className="text-gray-600 dark:text-gray-300 font-mono">{ver || '-'}</span>
+              <span className="text-gray-700 dark:text-gray-300 font-mono">{ver || '-'}</span>
             </div>
           ))}
         </div>
 
-        {/* 快捷链接 */}
-        <div className="mt-4 flex items-center justify-center gap-4 text-2xs flex-wrap">
+        {/* 快捷链接 - T4: 字号提升为 text-xs */}
+        <div className="mt-5 flex items-center justify-center gap-4 text-xs flex-wrap">
           <a
             href="https://github.com/bangbang8000-cell/AutoLink"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
           >
-            <GitBranch size={12} />
+            <GitBranch size={13} />
             {t('about.repository')}
-            <ExternalLink size={9} />
+            <ExternalLink size={10} />
           </a>
           <span className="text-gray-300 dark:text-gray-600">·</span>
           <button
@@ -287,7 +304,7 @@ export function AboutDialog({ onClose }: Props) {
             onClick={() => setShowShortcutsDialog(true)}
             className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
           >
-            <Keyboard size={12} />
+            <Keyboard size={13} />
             {t('about.shortcuts.title')}
           </button>
           <span className="text-gray-300 dark:text-gray-600">·</span>
@@ -297,12 +314,12 @@ export function AboutDialog({ onClose }: Props) {
             title={t('about.logoSpec')}
             className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
           >
-            <Palette size={12} />
+            <Palette size={13} />
             {t('about.logoSpec')}
           </button>
         </div>
-        {/* 版权信息 */}
-        <p className="mt-3 text-center text-2xs text-gray-400 dark:text-gray-500">
+        {/* 版权信息 - T4: 字号提升为 text-xs */}
+        <p className="mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
           {t('about.copyright')}
         </p>
       </div>

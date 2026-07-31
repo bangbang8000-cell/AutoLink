@@ -202,20 +202,6 @@ export function MenuBar() {
     setShowShortcutsDialog(true)
   }, [setShowShortcutsDialog])
 
-  const handleCheckUpdate = useCallback(async () => {
-    try {
-      addToast('info', t('menu.toast.checkingUpdate'))
-      const result = await window.electron?.app?.checkUpdate?.()
-      if (result?.updateAvailable) {
-        addToast('info', t('menu.toast.newVersionFound', { version: result.version || '' }))
-      } else {
-        addToast('success', t('menu.toast.upToDate'))
-      }
-    } catch {
-      addToast('error', t('menu.toast.checkUpdateFailed'))
-    }
-  }, [addToast, t])
-
   const handleAbout = useCallback(() => {
     setShowAboutDialog(true)
   }, [setShowAboutDialog])
@@ -264,7 +250,6 @@ export function MenuBar() {
       { label: t('menu.help.userGuide'), action: handleUserGuide },
       { label: t('menu.help.keyboardShortcuts'), shortcut: 'Ctrl+K', action: handleKeyboardShortcuts },
       { separator: true },
-      { label: t('menu.help.checkUpdate'), action: handleCheckUpdate },
       { label: t('menu.help.about'), action: handleAbout },
     ],
   }

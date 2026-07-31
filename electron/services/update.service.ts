@@ -130,6 +130,10 @@ class UpdateService {
         // 主路径失败,尝试备用方案
         const fallback = await checkLatestYmlFallback()
         if (fallback.updateAvailable) {
+          // fallback 成功检测到新版本后,后台异步重试 electron-updater 的 checkForUpdates
+          // 目的:填充 electron-updater 内部的 updateInfo 缓存,使后续 downloadUpdate 可用
+          // 不阻塞返回,即使重试失败也不影响已检测到的版本信息
+          this.refillUpdaterInfoInBackground(updater)
           this.mainWindow?.webContents.send('update:available', {
             version: fallback.version,
             releaseNotes: '',
@@ -149,6 +153,37 @@ class UpdateService {
       })
     }
     return fallback
+  }
+
+  /**
+   * 后台异步重试 electron-updater 的 checkForUpdates,填充内部 updateInfo 缓存。
+   * 用于 fallback 通道检测到新版本后,为后续 downloadUpdate 做准备。
+   * 设置 20 秒超时,超时后放弃(用户可走手动下载)。
+   */
+  private refillUpdaterInfoInBackground(updater: typeof import('electron-updater').autoUpdater): void {
+    const originalAutoDownload = updater.autoDownload
+    updater.autoDownload = false
+    // 包装 Promise.race 添加超时,避免后台重试无限挂起
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('refill timeout')), 20000)
+    })
+    Promise.race([
+      updater.checkForUpdates(),
+      timeoutPromise,
+    ])
+      .then((result) => {
+        if (result?.updateInfo?.version) {
+          console.log('[UpdateService] Background refill succeeded, updateInfo cached:', result.updateInfo.version)
+        } else {
+          console.log('[UpdateService] Background refill completed but no updateInfo')
+        }
+      })
+      .catch((err) => {
+        console.warn('[UpdateService] Background refill failed (download may need manual fallback):', err.message)
+      })
+      .finally(() => {
+        updater.autoDownload = originalAutoDownload
+      })
   }
 
   async downloadUpdate(): Promise<void> {
