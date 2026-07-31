@@ -21,7 +21,19 @@ const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
   custom: 'custom',
 }
 import { updateService } from '../services/update.service.js'
-import type { FileTreeNode } from '../../src/types/file-tree.js'
+
+/**
+ * 文件树节点类型(electron 端内联定义,避免跨 rootDir 导入 src/types)
+ * 与 src/types/file-tree.ts 中的 FileTreeNode 保持同步
+ */
+interface FileTreeNode {
+  name: string
+  type: 'directory' | 'file'
+  path: string
+  size?: number
+  updatedAt?: string
+  children?: FileTreeNode[]
+}
 
 // ===== Security Helpers =====
 function sanitizePath(segments: string[]): string {
