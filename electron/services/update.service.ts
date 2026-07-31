@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, app } from 'electron'
 
 let autoUpdater: typeof import('electron-updater').autoUpdater | null = null
 
@@ -7,8 +7,14 @@ async function getAutoUpdater() {
     try {
       const updater = await import('electron-updater')
       autoUpdater = updater.autoUpdater
-    } catch {
-      // electron-updater not available (dev mode or missing dep)
+      // T1: dev 模式下启用 forceDevRunConfig,允许在开发环境测试更新流程
+      // 需要项目根目录存在 dev-app-update.yml
+      if (!app.isPackaged) {
+        autoUpdater.forceDevRunConfig = true
+      }
+    } catch (err) {
+      // electron-updater not available (missing dep)
+      console.error('[UpdateService] Failed to load electron-updater:', err)
       return null
     }
   }

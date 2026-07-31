@@ -272,19 +272,40 @@ export const useDesignStore = create<DesignState>()(
     set({ generating: true, error: null })
     try {
       if (window.electron?.project?.getFile) {
-        const jsonStr = await window.electron.project.getFile(projectName, 'topology_result.json')
+        // T6.2: 改读 topology.json(由 generate 保存);不再读 topology_result.json
+        const jsonStr = await window.electron.project.getFile(projectName, 'topology.json')
         if (jsonStr) {
           const data = JSON.parse(jsonStr)
           set({
             summary: data.summary ?? null,
             topology: data.topology ?? null,
             valid: data.valid ?? null,
+            validationIssues: data.validationIssues ?? [],
+            estimation: data.estimation ?? null,
+            projectName,
+          })
+        } else {
+          // T6.2: 无保存的拓扑时清空 store,避免残留上一个项目的数据
+          set({
+            summary: null,
+            topology: null,
+            valid: null,
+            validationIssues: [],
+            estimation: null,
             projectName,
           })
         }
       }
     } catch (err) {
       console.error('loadSavedTopology:', err)
+      // T6.2: 失败时也清空,避免残留
+      set({
+        summary: null,
+        topology: null,
+        valid: null,
+        validationIssues: [],
+        estimation: null,
+      })
     } finally {
       set({ generating: false })
     }
@@ -323,6 +344,27 @@ export const useDesignStore = create<DesignState>()(
         estimation: result.estimation ?? null,
         projectName,
       })
+
+      // T6.2: 生成成功后持久化到项目根目录 topology.json
+      // 失败不阻塞 UI(仅 console 报错),用户已看到生成结果
+      try {
+        if (window.electron?.project?.saveFile) {
+          const payload = {
+            schema_version: 1,
+            project_name: projectName,
+            generated_at: new Date().toISOString(),
+            config_snapshot: config,
+            summary: result.summary ?? null,
+            topology: result.topology ?? null,
+            valid: result.valid ?? null,
+            validationIssues: result.validationIssues ?? [],
+            estimation: result.estimation ?? null,
+          }
+          await window.electron.project.saveFile(projectName, 'topology.json', JSON.stringify(payload, null, 2))
+        }
+      } catch (saveErr) {
+        console.error('[design.store] save topology.json failed:', saveErr)
+      }
     } catch (err) {
       set({ error: (err as Error).message })
     } finally {
@@ -375,10 +417,10 @@ export const useDesignStore = create<DesignState>()(
   }),
   {
     name: 'autolink-design-state',
-    partialize: (state) => ({
-      config: state.config,
-      projectName: state.projectName,
-    }),
+    // T6.4: 移除 config/projectName 的 localStorage 持久化
+    // config 由项目文件 network_config.ini 持久化;topology 由 topology.json 持久化
+    // localStorage 全局持久化会导致跨项目数据污染(切换项目后看到上一个项目的配置)
+    partialize: () => ({}),
   },
 ),
 )

@@ -1,5 +1,5 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AI 資料中心網路規劃與可視化工具" },
+  "app": { "title": "AutoLink", "subtitle": "AI 資料中心網路規劃與可視化工具", "description": "面向 AI 智算中心的網路規劃與視覺化工具,支援 GPU 叢集、儲存、業務、帶外管理四網協同設計,提供拓撲自動生成、機櫃智能規劃、連接關係匯出等全流程能力。" },
   "search": "搜尋",
   "cancel": "取消",
   "confirm": "確認",
@@ -55,6 +55,13 @@
       "exit": "結束"
     },
     "edit": {
+      "undo": "復原",
+      "redo": "重做",
+      "cut": "剪下",
+      "copy": "複製",
+      "paste": "貼上",
+      "selectAll": "全選",
+      "find": "尋找",
       "preferences": "偏好設定"
     },
     "view": {

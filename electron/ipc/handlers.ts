@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, shell, dialog } from 'electron'
+import { BrowserWindow, ipcMain, shell, dialog, app } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { execSync } from 'child_process'
@@ -431,6 +431,28 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     fs.writeFileSync(path.join(projectDir, 'network_config.ini'), content, 'utf-8')
   }))
 
+  // T6.1: 通用项目文件保存(白名单限制,仅允许项目根目录下的特定文件)
+  // 用于拓扑数据、机柜布局等按项目持久化
+  const PROJECT_SAVE_FILE_WHITELIST = new Set([
+    'topology.json',
+    'rack_layout.json',
+  ])
+  ipcMain.handle('project:saveFile', wrapHandler(async (_event, name: string, relativePath: string, content: string) => {
+    sanitizeName(name)
+    // 仅允许白名单中的文件名,且必须是项目根目录下的直接文件(无子目录)
+    const baseName = path.basename(relativePath)
+    if (relativePath !== baseName || !PROJECT_SAVE_FILE_WHITELIST.has(baseName)) {
+      throw new Error(`不允许保存的文件路径: ${relativePath}`)
+    }
+    const projectDir = path.join(getWorkspacePath(), name)
+    if (!fs.existsSync(projectDir)) {
+      fs.mkdirSync(projectDir, { recursive: true })
+    }
+    const fullPath = sanitizePath([name, baseName])
+    fs.writeFileSync(fullPath, content, 'utf-8')
+    return fullPath
+  }))
+
   // ===== Design =====
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
     sanitizeName(projectName)
@@ -564,10 +586,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return ''
   })
 
+  // T2: 使用 app.getAppPath() 读取 package.json,确保打包后能正确读取 asar 内的 package.json
   ipcMain.handle('app:getVersion', () => {
-    // Read version dynamically from package.json
     try {
-      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'))
+      const pkgPath = path.join(app.getAppPath(), 'package.json')
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
       return pkg.version || 'unknown'
     } catch {
       return 'unknown'
@@ -575,38 +598,41 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   })
 
   // 返回产品软件栈关键依赖版本（供关于弹窗动态展示）
+  // T2: 修复路径(app.getAppPath) + 合并 devDependencies + Python 检测增强
   ipcMain.handle('app:getStackVersions', () => {
     try {
-      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'))
-      const deps = pkg.dependencies || {}
-      // Detect Python version (try python3 first, then python)
+      const pkgPath = path.join(app.getAppPath(), 'package.json')
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+      // T2: 合并 dependencies 和 devDependencies,确保 typescript/vite 等也能读到
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies }
+      // T2: Python 检测增强 — python → python3 → py (Windows launcher)
       let pythonVersion = ''
-      try {
-        pythonVersion = execSync('python --version', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().replace(/^Python\s+/i, '')
-      } catch {
+      const tryPython = (cmd: string) => {
         try {
-          pythonVersion = execSync('python3 --version', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().replace(/^Python\s+/i, '')
+          return execSync(`${cmd} --version`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().replace(/^Python\s+/i, '')
         } catch {
-          pythonVersion = ''
+          return ''
         }
       }
+      pythonVersion = tryPython('python') || tryPython('python3') || tryPython('py')
       return {
         app: pkg.version || 'unknown',
         electron: process.versions.electron,
         chrome: process.versions.chrome,
         node: process.versions.node,
-        react: deps['react'] || '',
-        reactDom: deps['react-dom'] || '',
-        typescript: deps['typescript'] || '',
-        vite: deps['vite'] || '',
-        echarts: deps['echarts'] || '',
-        xyflow: deps['@xyflow/react'] || '',
-        i18next: deps['i18next'] || '',
-        electronUpdater: deps['electron-updater'] || '',
+        react: allDeps['react'] || '',
+        reactDom: allDeps['react-dom'] || '',
+        typescript: allDeps['typescript'] || '',
+        vite: allDeps['vite'] || '',
+        echarts: allDeps['echarts'] || '',
+        xyflow: allDeps['@xyflow/react'] || '',
+        i18next: allDeps['i18next'] || '',
+        electronUpdater: allDeps['electron-updater'] || '',
         python: pythonVersion,
         buildNumber: process.env.BUILD_NUMBER || '',
       }
-    } catch {
+    } catch (err) {
+      console.error('[app:getStackVersions] failed:', err)
       return null
     }
   })

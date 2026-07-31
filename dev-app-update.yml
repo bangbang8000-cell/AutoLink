@@ -1,0 +1,5 @@
+# 开发环境更新测试配置(electron-updater forceDevRunConfig 使用)
+# 仅在开发模式(npm run dev:all)下生效,打包后使用 app-update.yml
+owner: bangbang8000-cell
+repo: AutoLink
+provider: github

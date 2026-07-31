@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "AutoLink",
-    "subtitle": "AI智算中心网络规划与可视化工具"
+    "subtitle": "AI智算中心网络规划与可视化工具",
+    "description": "面向 AI 智算中心的网络规划与可视化工具,支持 GPU 集群、存储、业务、带外管理四网协同设计,提供拓扑自动生成、机柜智能规划、连接关系导出等全流程能力。"
   },
   "search": "搜索",
   "cancel": "取消",
@@ -59,6 +60,13 @@
       "exit": "退出"
     },
     "edit": {
+      "undo": "撤销",
+      "redo": "重做",
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "find": "查找",
       "preferences": "首选项"
     },
     "view": {

@@ -22,6 +22,9 @@ const electronAPI = {
     getConfigFile: (name: string) => ipcRenderer.invoke('project:getConfigFile', name),
     saveConfigFile: (name: string, content: string) =>
       ipcRenderer.invoke('project:saveConfigFile', name, content),
+    // T6.1: 通用项目文件保存(白名单: topology.json, rack_layout.json)
+    saveFile: (name: string, relativePath: string, content: string) =>
+      ipcRenderer.invoke('project:saveFile', name, relativePath, content),
     getFile: (name: string, filePath: string) =>
       ipcRenderer.invoke('project:getFile', name, filePath),
     getFileBinary: (name: string, filePath: string) =>

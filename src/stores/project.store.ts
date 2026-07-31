@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ProjectConfig } from '@/types/project-config'
+import { useDesignStore } from '@/stores/design.store'
+import { useRackStore } from '@/stores/rack.store'
 
 export interface ProjectInfo {
   id: number
@@ -219,7 +221,19 @@ export const useProjectStore = create<ProjectState>()(
           selectedProject: project,
           selectedProjectName: project?.name ?? null,
         })
-        if (project) get().trackRecent(project.name)
+        if (project) {
+          get().trackRecent(project.name)
+          // T6.4: 统一加载入口 — 切换项目时预加载配置/拓扑/机柜数据
+          // 无论当前激活哪个 Tab,数据都提前加载,避免组件挂载时才加载导致闪烁
+          // 各组件(DesignTab/RackPanel)的 useEffect 会监听 selectedProjectName 变化,
+          // 若数据已加载则为幂等操作,不会重复请求后端
+          const name = project.name
+          const designStore = useDesignStore.getState()
+          designStore.loadConfig(name).then(() => designStore.loadSavedTopology(name))
+          useRackStore.getState().loadRackLayout(name).catch(() => {
+            // loadRackLayout 内部已有 fallback,此处仅防 unhandled rejection
+          })
+        }
       },
 
       toggleFavorite: (name) => {

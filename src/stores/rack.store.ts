@@ -211,16 +211,17 @@ export const useRackStore = create<RackState>()(
 
   saveRackLayout: async (projectName) => {
     try {
-      if (window.electron?.project?.saveConfigFile != null) {
+      // T6.3: 改用 project.saveFile 保存到项目根目录 rack_layout.json(白名单内)
+      // 之前用 export.saveFile 会写到 output/ 子目录,且 base64 编码,导致读取路径不一致
+      if (window.electron?.project?.saveFile) {
         const { cabinets } = get()
-        const data = { cabinets, updated_at: new Date().toISOString() }
-        // Use saveConfigFile to save rack_layout.json via the existing save mechanism
-        // Actually, we need a generic file save. Let's use the export:saveFile mechanism
-        const jsonStr = JSON.stringify(data, null, 2)
-        const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
-        if (window.electron?.export?.saveFile) {
-          await window.electron.export.saveFile(projectName, 'rack_layout.json', base64)
+        const data = {
+          schema_version: 1,
+          project_name: projectName,
+          updated_at: new Date().toISOString(),
+          cabinets,
         }
+        await window.electron.project.saveFile(projectName, 'rack_layout.json', JSON.stringify(data, null, 2))
       }
     } catch (err) {
       console.error('saveRackLayout:', err)
@@ -474,11 +475,9 @@ export const useRackStore = create<RackState>()(
   }),
   {
     name: 'autolink-rack-state',
-    partialize: (state) => ({
-      cabinets: state.cabinets,
-      unplacedDevices: state.unplacedDevices,
-      selectedCabinetId: state.selectedCabinetId,
-    }),
+    // T6.3: 移除 cabinets/unplacedDevices/selectedCabinetId 的 localStorage 持久化
+    // 改由项目文件 rack_layout.json 按项目持久化,避免跨项目数据污染
+    partialize: () => ({}),
   },
 ),
 )

@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "AutoLink",
-    "subtitle": "AI Data Center Network Planning & Visualization"
+    "subtitle": "AI Data Center Network Planning & Visualization",
+    "description": "A network planning and visualization tool for AI data centers. Supports collaborative design of GPU cluster, storage, business, and out-of-band management networks, with topology auto-generation, intelligent rack planning, and connection export."
   },
   "search": "Search",
   "cancel": "Cancel",
@@ -59,6 +60,13 @@
       "exit": "Exit"
     },
     "edit": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All",
+      "find": "Find",
       "preferences": "Preferences"
     },
     "view": {

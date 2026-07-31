@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Server, HardDrive, Plus, AlertTriangle, Loader2, Maximize2, Building2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
@@ -16,6 +16,7 @@ export function RackPanel() {
     cabinets, unplacedDevices, selectedCabinetId,
     loadRackLayout, addCabinet,
     initFromTopology, getPowerUsage,
+    saveRackLayout,
   } = useRackStore()
 
   const [initialized, setInitialized] = useState(false)
@@ -62,6 +63,22 @@ export function RackPanel() {
       initFromTopology(topology.nodes)
     }
   }, [initialized, topology, initFromTopology])
+
+  // T6.3: cabinets 变化时自动保存到项目根 rack_layout.json(防抖 500ms)
+  // 仅在初始化完成后触发,避免加载阶段触发回写
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!initialized || !selectedProjectName) return
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveRackLayout(selectedProjectName).catch((err) => {
+        console.error('[RackPanel] auto-save failed:', err)
+      })
+    }, 500)
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    }
+  }, [initialized, selectedProjectName, cabinets, saveRackLayout])
 
   const handleOpenWorkspace = useCallback((cabinetId?: number) => {
     openTab({

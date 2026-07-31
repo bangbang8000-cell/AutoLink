@@ -55,7 +55,9 @@ export function Header() {
       )}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        {/* T4: Logo 放到菜单栏左侧 */}
+        <img src="icons/logo.svg" alt="AutoLink" className="w-5 h-5 shrink-0 ml-1" draggable={false} />
         <MenuBar />
       </div>
 

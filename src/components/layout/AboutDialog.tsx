@@ -153,6 +153,10 @@ export function AboutDialog({ onClose }: Props) {
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             {t('app.subtitle')}
           </p>
+          {/* T3: 产品简介 */}
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 px-4 leading-relaxed">
+            {t('app.description')}
+          </p>
         </div>
 
         {/* 信息区：软件栈 + 快捷链接 */}

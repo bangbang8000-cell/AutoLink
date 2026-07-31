@@ -20,6 +20,8 @@ interface Window {
       getStructure: (name: string) => Promise<unknown[]>
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
+      // T6.1: 通用项目文件保存(白名单: topology.json, rack_layout.json)
+      saveFile: (name: string, relativePath: string, content: string) => Promise<string>
       getFile: (name: string, filePath: string) => Promise<string | null>
       getFileBinary: (name: string, filePath: string) => Promise<string | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>

@@ -10,6 +10,9 @@ const ALLOWED_TOP_LEVEL = new Set([
   'network_config.ini',
   'project_config.json',
   'template.json',
+  // T6.1: 拓扑/机柜数据按项目持久化,需纳入导入导出白名单
+  'topology.json',
+  'rack_layout.json',
   'output',
 ])
 

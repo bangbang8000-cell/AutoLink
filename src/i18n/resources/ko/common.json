@@ -1,5 +1,5 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AI 데이터센터 네트워크 계획 및 시각화 도구" },
+  "app": { "title": "AutoLink", "subtitle": "AI 데이터센터 네트워크 계획 및 시각화 도구", "description": "AI 데이터센터를 위한 네트워크 계획 및 시각화 도구. GPU 클러스터, 스토리지, 비즈니스, 대역외 관리 4개 네트워크 협업 설계를 지원하며, 토폴로지 자동 생성, 랙 스마트 계획, 연결 관계 내보내기 등 전체 프로세스 기능을 제공합니다." },
   "search": "검색",
   "cancel": "취소",
   "confirm": "확인",
@@ -55,6 +55,13 @@
       "exit": "종료"
     },
     "edit": {
+      "undo": "실행 취소",
+      "redo": "다시 실행",
+      "cut": "잘라내기",
+      "copy": "복사",
+      "paste": "붙여넣기",
+      "selectAll": "모두 선택",
+      "find": "찾기",
       "preferences": "환경설정"
     },
     "view": {

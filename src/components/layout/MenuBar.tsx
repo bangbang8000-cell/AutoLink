@@ -76,6 +76,36 @@ export function MenuBar() {
     setActiveActivity('settings')
   }, [setActiveActivity])
 
+  // T5: 编辑菜单功能实现(使用浏览器原生能力)
+  const handleUndo = useCallback(() => {
+    document.execCommand('undo')
+  }, [])
+  const handleRedo = useCallback(() => {
+    document.execCommand('redo')
+  }, [])
+  const handleCut = useCallback(() => {
+    document.execCommand('cut')
+  }, [])
+  const handleCopy = useCallback(() => {
+    document.execCommand('copy')
+  }, [])
+  const handlePaste = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      document.execCommand('insertText', false, text)
+    } catch {
+      document.execCommand('paste')
+    }
+  }, [])
+  const handleSelectAll = useCallback(() => {
+    document.execCommand('selectAll')
+  }, [])
+  const handleFind = useCallback(() => {
+    // 触发 Ctrl+F 事件,各组件如有监听则响应
+    const evt = new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true })
+    window.dispatchEvent(evt)
+  }, [])
+
   const handleToggleSidebar = useCallback(() => {
     toggleSidebar()
   }, [toggleSidebar])
@@ -201,6 +231,16 @@ export function MenuBar() {
       { label: t('menu.file.exit'), action: handleExit },
     ],
     [t('menu.topLevel.edit')]: [
+      { label: t('menu.edit.undo'), shortcut: 'Ctrl+Z', action: handleUndo },
+      { label: t('menu.edit.redo'), shortcut: 'Ctrl+Y', action: handleRedo },
+      { separator: true },
+      { label: t('menu.edit.cut'), shortcut: 'Ctrl+X', action: handleCut },
+      { label: t('menu.edit.copy'), shortcut: 'Ctrl+C', action: handleCopy },
+      { label: t('menu.edit.paste'), shortcut: 'Ctrl+V', action: handlePaste },
+      { separator: true },
+      { label: t('menu.edit.selectAll'), shortcut: 'Ctrl+A', action: handleSelectAll },
+      { label: t('menu.edit.find'), shortcut: 'Ctrl+F', action: handleFind },
+      { separator: true },
       { label: t('menu.edit.preferences'), shortcut: 'Ctrl+,', action: handlePreferences },
     ],
     [t('menu.topLevel.view')]: [
