@@ -9,8 +9,9 @@ async function getAutoUpdater() {
       autoUpdater = updater.autoUpdater
       // T1: dev 模式下启用 forceDevRunConfig,允许在开发环境测试更新流程
       // 需要项目根目录存在 dev-app-update.yml
+      // forceDevRunConfig 是 electron-updater 的非公开 API,类型定义中缺失,用类型断言绕过
       if (!app.isPackaged) {
-        autoUpdater.forceDevRunConfig = true
+        ;(autoUpdater as unknown as { forceDevRunConfig: boolean }).forceDevRunConfig = true
       }
     } catch (err) {
       // electron-updater not available (missing dep)
