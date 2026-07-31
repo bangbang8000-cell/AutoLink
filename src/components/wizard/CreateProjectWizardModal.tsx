@@ -43,9 +43,9 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             {t('project:createProject')}
           </h2>
@@ -58,7 +58,7 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
         </div>
 
         {/* Wizard */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col">
           <ProjectWizard
             onComplete={handleComplete}
             onCancel={handleCancel}

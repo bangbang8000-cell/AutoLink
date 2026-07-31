@@ -7,6 +7,7 @@ import {
 import { useDesignStore, type TopologyNode } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useToastStore } from '@/stores/toast.store'
 
 /* -------------------------------------------------- */
 /*  Props                                             */
@@ -81,6 +82,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
   const initFromTopology = useRackStore((s) => s.initFromTopology)
 
   const openTab = useWorkspaceStore((s) => s.openTab)
+  const addToast = useToastStore((s) => s.addToast)
 
   const [outputFiles, setOutputFiles] = useState<{ name: string; type: string }[]>([])
   const [loadingOutput, setLoadingOutput] = useState(false)
@@ -111,9 +113,11 @@ export function ProjectOverviewTab({ projectName }: Props) {
     openTab({ type: 'design', title: '设计', closable: false })
   }, [openTab])
 
+  // T10: 一键渲染方案 A — 跳转工作台 + toast 提示(真正渲染由工作台触发)
   const handleQuickRender = useCallback(() => {
-    openTab({ type: 'output', title: '输出结果', closable: true })
-  }, [openTab])
+    openTab({ type: 'workbench', title: '工作台', closable: false })
+    addToast('info', '请在工作台点击"一键渲染"开始渲染')
+  }, [openTab, addToast])
 
   // No project name
   if (!projectName) {

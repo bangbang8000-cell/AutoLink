@@ -46,14 +46,29 @@ const IB_DEFAULTS_FALLBACK: Record<string, string> = {
   param_core_switch: 'nvidia_mqm9700_64_400g_ib',
 }
 
-/** Defaults for storage and other networks */
-const STORAGE_DEFAULTS: Record<string, string> = {
-  storage_leaf_switch: 'h3c_s6850_56hf',
-  storage_spine_switch: 'h3c_s6850_56hf',
+/** T5: 存储交换机按协议分流 */
+const STORAGE_DEFAULTS_BY_PROTOCOL: Record<ParamProtocol, Record<string, string>> = {
+  // IB: 复用 Quantum HDR 交换机(IB 存储与参数面共用 Quantum 系列)
+  IB: {
+    storage_leaf_switch: 'nvidia_mqm8700_40_200g_ib',
+    storage_spine_switch: 'nvidia_mqm8700_40_200g_ib',
+  },
+  // RoCE: 专用存储接入交换机(ce6881,支持 RoCEv2/FC-NVMe)
+  RoCE: {
+    storage_leaf_switch: 'huawei_ce6881_48s6cq',
+    storage_spine_switch: 'huawei_ce6881_48s6cq',
+  },
 }
 
+/** 已知的存储默认设备 ID(用于判断用户是否手动改过) */
+const STORAGE_DEFAULT_IDS = new Set<string>([
+  ...Object.values(STORAGE_DEFAULTS_BY_PROTOCOL.IB),
+  ...Object.values(STORAGE_DEFAULTS_BY_PROTOCOL.RoCE),
+])
+
 const BIZ_DEFAULTS: Record<string, string> = {
-  biz_access_switch: 'h3c_s5560x_54s_ei',
+  // T9: 业务接入对齐 biz_port_speed=25G(原 h3c_s5560x_54s_ei 为 10G)
+  biz_access_switch: 'h3c_s6850_56hf',
   biz_agg_switch: 'h3c_s6520x_54qc_ei',
 }
 
@@ -141,8 +156,9 @@ function getDefaultRefs(protocol: ParamProtocol, gpuLibraryId?: string): Record<
     refs[key] = { library_id: deviceId }
   }
 
-  // Storage defaults
-  for (const [key, deviceId] of Object.entries(STORAGE_DEFAULTS)) {
+  // T5: Storage defaults by protocol
+  const storageDefaults = STORAGE_DEFAULTS_BY_PROTOCOL[protocol]
+  for (const [key, deviceId] of Object.entries(storageDefaults)) {
     refs[key] = { library_id: deviceId }
   }
 
@@ -188,7 +204,7 @@ export function WizardStepDevices() {
     setDefaultsApplied(true)
   }, [])
 
-  // Re-apply defaults if protocol changes (and user hasn't manually picked devices)
+  // T5: Re-apply defaults if protocol changes (and user hasn't manually picked devices)
   useEffect(() => {
     const protocol = config.topology.param_protocol
     const gpuId = config.device_refs.gpu_server?.library_id
@@ -202,7 +218,13 @@ export function WizardStepDevices() {
       || Object.values(IB_DEFAULTS_BY_GPU.gb300).includes(currentLeaf || '')
     const isRoCEDefault = Object.values(ROCE_DEFAULTS).includes(currentLeaf || '')
 
-    if ((isIBDefault || isRoCEDefault) && currentLeaf !== expectedLeaf) {
+    // T5: 也检查存储交换机是否需要联动切换
+    const expectedStorageLeaf = STORAGE_DEFAULTS_BY_PROTOCOL[protocol].storage_leaf_switch
+    const currentStorageLeaf = config.device_refs.storage_leaf_switch?.library_id
+    const storageNeedsSwitch = STORAGE_DEFAULT_IDS.has(currentStorageLeaf || '')
+      && currentStorageLeaf !== expectedStorageLeaf
+
+    if (((isIBDefault || isRoCEDefault) && currentLeaf !== expectedLeaf) || storageNeedsSwitch) {
       const defaults = getDefaultRefs(protocol, gpuId)
       updateDeviceRefs(defaults)
     }

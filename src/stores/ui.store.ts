@@ -21,6 +21,7 @@ interface UIState {
   explorerProjectListHeight: number
   showCreateProjectWizard: boolean
   showAboutDialog: boolean
+  showShortcutsDialog: boolean
 
   setActiveActivity: (activity: ActivityType) => void
   toggleSidebar: () => void
@@ -32,6 +33,7 @@ interface UIState {
   setExplorerProjectListHeight: (height: number) => void
   setShowCreateProjectWizard: (show: boolean) => void
   setShowAboutDialog: (show: boolean) => void
+  setShowShortcutsDialog: (show: boolean) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -46,6 +48,7 @@ export const useUIStore = create<UIState>()(
       explorerProjectListHeight: 300,
       showCreateProjectWizard: false,
       showAboutDialog: false,
+      showShortcutsDialog: false,
 
       setActiveActivity: (activity) => set({ activeActivity: activity }),
 
@@ -80,6 +83,8 @@ export const useUIStore = create<UIState>()(
       setShowCreateProjectWizard: (show) => set({ showCreateProjectWizard: show }),
 
       setShowAboutDialog: (show) => set({ showAboutDialog: show }),
+
+      setShowShortcutsDialog: (show) => set({ showShortcutsDialog: show }),
     }),
     {
       name: 'autolink-ui-state',

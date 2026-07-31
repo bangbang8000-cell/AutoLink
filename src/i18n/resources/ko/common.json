@@ -98,5 +98,207 @@
       "closeTab": "현재 탭 닫기",
       "restoreTab": "닫힌 탭 복원"
     }
+  },
+  "explorer": {
+    "allProjects": "모든 프로젝트",
+    "outputFiles": "출력 파일",
+    "templateCenter": "템플릿 센터",
+    "noTemplateFiles": "템플릿 파일 없음",
+    "noOutputBatches": "출력 배치 없음",
+    "openInExplorer": "파일 관리자에서 열기",
+    "close": "닫기",
+    "copySuffix": "_복사",
+    "contextMenu": {
+      "setAsCurrent": "현재 프로젝트로 설정",
+      "openInFileManager": "파일 관리자에서 열기",
+      "duplicateProject": "프로젝트 복제...",
+      "rename": "이름 변경...",
+      "exportZip": "ZIP으로 내보내기...",
+      "convertToTemplate": "템플릿으로 변환",
+      "unfavorite": "즐겨찾기 해제",
+      "favorite": "즐겨찾기 추가",
+      "deleteProject": "프로젝트 삭제",
+      "viewTemplateFiles": "템플릿 파일 보기",
+      "editTemplate": "템플릿 편집...",
+      "deleteTemplate": "템플릿 삭제"
+    },
+    "toast": {
+      "projectDeleted": "프로젝트 \"{{name}}\" 삭제됨",
+      "batchDeleted": "배치 \"{{name}}\" 삭제됨",
+      "fileDeleted": "파일 \"{{name}}\" 삭제됨",
+      "outputCleared": "프로젝트 \"{{name}}\" 출력이 삭제됨",
+      "builtinTemplateNotEditable": "내장 템플릿은 편집할 수 없습니다",
+      "templateUpdated": "템플릿 \"{{id}}\" 업데이트됨",
+      "templateExported": "템플릿 \"{{name}}\" 내보내기 완료:\n{{path}}",
+      "exportFailed": "내보내기 실패: {{error}}",
+      "templateImported": "템플릿 \"{{name}}\" 가져오기 완료",
+      "importFailed": "가져오기 실패: {{error}}",
+      "templateDeleted": "템플릿 \"{{name}}\" 삭제됨",
+      "projectConvertedToTemplate": "프로젝트 \"{{projectName}}\"를 템플릿 \"{{templateName}}\"로 변환했습니다",
+      "convertFailed": "변환 실패: {{error}}",
+      "projectDuplicated": "프로젝트를 \"{{name}}\"로 복제했습니다",
+      "projectRenamed": "프로젝트 이름을 \"{{name}}\"로 변경했습니다",
+      "projectExported": "프로젝트 \"{{name}}\" 내보내기 완료:\n{{path}}",
+      "projectImported": "프로젝트 \"{{name}}\" 가져오기 완료",
+      "noProjectsToExport": "내보낼 프로젝트가 없습니다",
+      "batchExportSuccess": "일괄 내보내기 완료: {{count}}개 성공\n저장 위치: {{dir}}",
+      "batchExportPartial": "일괄 내보내기 부분 완료: {{success}}개 성공, {{fail}}개 실패\n{{details}}",
+      "batchExportFailed": "일괄 내보내기 실패: {{error}}",
+      "templateNamePrompt": "템플릿 이름 입력:",
+      "projectOverviewTitle": "프로젝트 개요 - {{name}}"
+    },
+    "design": {
+      "title": "설계",
+      "openFullSize": "전체 크기로 열기",
+      "selectProject": "프로젝트를 선택하거나 생성하세요",
+      "fullMode": "전체 모드 (자동 계산)",
+      "customMode": "사용자 정의 모드",
+      "gpuServer": "GPU 서버",
+      "gpuCount": "GPU 수",
+      "paramPortsPerServer": "서버당 매개변수 NIC 수",
+      "switchParams": "스위치 매개변수",
+      "paramSwitchPorts": "매개변수 스위치 포트 수",
+      "paramNetworkSpeed": "매개변수 네트워크 속도",
+      "bizInbandMgmt": "업무/인밴드 관리",
+      "oobMgmt": "OOB 관리",
+      "generateTopology": "토폴로지 생성",
+      "validationPassed": "검증 통과",
+      "validationFailed": "검증 실패"
+    },
+    "workbench": {
+      "title": "워크벤치",
+      "openFullSize": "전체 크기로 열기",
+      "selectProject": "프로젝트를 선택하여 워크벤치 사용",
+      "topologyPassed": "통과",
+      "topologyFailed": "실패",
+      "topologyPending": "대기",
+      "rackPending": "미계획",
+      "rackReady": "준비 완료 ({{count}}대)",
+      "rackPartial": "{{placed}}/{{total}}대",
+      "outputTypes": "출력 유형",
+      "connectionTable": "연결 관계표",
+      "rackTable": "랙 테이블",
+      "topologyDiagram": "토폴로지 도면",
+      "deviceList": "장치 목록"
+    },
+    "visualization": {
+      "title": "시각화",
+      "openFullSize": "전체 크기로 열기",
+      "selectProject": "프로젝트를 선택하거나 생성하세요",
+      "noTopology": "토폴로지가 아직 생성되지 않음",
+      "generateInDesign": "설계에서 토폴로지를 생성하세요",
+      "topologyOverview": "토폴로지 개요",
+      "totalNodes": "총 노드 수",
+      "totalConnections": "총 연결 수",
+      "nodeTypeStats": "노드 유형 통계",
+      "noNodeData": "노드 데이터 없음",
+      "cabinetList": "캐비닛 목록"
+    },
+    "deviceLibrary": {
+      "title": "장치 라이브러리",
+      "deviceCount": "{{count}}대 장치",
+      "allDevices": "모든 장치",
+      "tabTitle": "장치-{{label}}",
+      "categories": {
+        "gpuServers": "GPU 서버",
+        "storageServers": "스토리지 서버",
+        "allFlash": "올 플래시",
+        "hybridFlash": "하이브리드 플래시",
+        "computeServers": "컴퓨트 서버",
+        "switches": "스위치",
+        "paramSwitches": "매개변수 스위치",
+        "storageSwitches": "스토리지 스위치",
+        "bizSwitches": "업무 스위치",
+        "oobSwitches": "OOB 스위치",
+        "custom": "사용자 정의"
+      }
+    },
+    "settings": {
+      "title": "설정",
+      "categories": {
+        "appearance": "외관",
+        "language": "언어",
+        "projectDefaults": "프로젝트 기본값",
+        "output": "출력",
+        "keyboard": "단축키",
+        "deviceLibrary": "장치 라이브러리",
+        "network": "네트워크",
+        "data": "데이터",
+        "about": "정보"
+      },
+      "appearance": {
+        "title": "외관 설정",
+        "themeMode": "테마 모드",
+        "light": "라이트",
+        "dark": "다크",
+        "system": "시스템",
+        "fontSize": "글꼴 크기",
+        "compactMode": "컴팩트 모드",
+        "animations": "애니메이션"
+      },
+      "languageTitle": "언어 / Language",
+      "projectDefaults": {
+        "title": "새 프로젝트 기본값",
+        "defaultRackType": "기본 랙 유형",
+        "defaultPowerLimit": "기본 전력 제한 (W)",
+        "defaultPortSpeed": "기본 포트 속도"
+      },
+      "output": {
+        "title": "출력 설정",
+        "defaultFormat": "기본 형식",
+        "formatExcel": "Excel (.xlsx)",
+        "formatCsv": "CSV (.csv)",
+        "formatPng": "PNG 이미지",
+        "outputDir": "출력 디렉토리",
+        "default": "기본",
+        "select": "선택...",
+        "autoSaveInterval": "자동 저장 간격 (분)"
+      },
+      "keyboard": {
+        "title": "키보드 단축키",
+        "projectExplorer": "프로젝트 탐색기",
+        "workbench": "워크벤치",
+        "topologyDesign": "토폴로지 설계",
+        "visualization": "시각화",
+        "settings": "설정",
+        "toggleSidebar": "사이드바 전환",
+        "togglePanel": "패널 전환",
+        "closeTab": "현재 탭 닫기",
+        "restoreTab": "닫은 탭 복원"
+      },
+      "deviceLibrary": {
+        "title": "장치 라이브러리 설정",
+        "dataDir": "데이터 디렉토리",
+        "autoUpdate": "장치 라이브러리 자동 업데이트",
+        "reuseTab": "장치 라이브러리 탭 재사용"
+      },
+      "network": {
+        "title": "네트워크 설정",
+        "autoCheckUpdate": "업데이트 자동 확인",
+        "proxyServer": "프록시 서버",
+        "host": "호스트",
+        "port": "포트"
+      },
+      "data": {
+        "title": "데이터 관리",
+        "exportAll": "모든 데이터 내보내기",
+        "importData": "데이터 가져오기",
+        "resetAll": "모든 설정 초기화",
+        "exportSuccess": "데이터 내보내기 성공",
+        "exportFailed": "내보내기 실패",
+        "importSuccess": "데이터 가져오기 성공. 페이지를 새로고침하세요",
+        "importFailed": "가져오기 실패. 파일 형식을 확인하세요",
+        "resetDone": "모든 설정이 초기화되었습니다"
+      },
+      "about": {
+        "title": "AutoLink 정보",
+        "version": "버전",
+        "license": "라이선스",
+        "lastCheckUpdate": "마지막 업데이트 확인",
+        "never": "없음",
+        "checkUpdate": "업데이트 확인",
+        "viewFullInfo": "전체 정보 및 서드파티 라이선스 보기"
+      }
+    }
   }
 }

@@ -21,7 +21,7 @@ interface Window {
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
       getFile: (name: string, filePath: string) => Promise<string | null>
-      getFileBinary: (name: string, filePath: string) => Promise<Uint8Array | null>
+      getFileBinary: (name: string, filePath: string) => Promise<string | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
       listOutputBatches: (projectName: string) => Promise<Array<{ name: string; files: Array<{ name: string; path: string }> }>>
       deleteOutputFile: (projectName: string, filePath: string) => Promise<void>
@@ -69,13 +69,15 @@ interface Window {
         xyflow: string
         i18next: string
         electronUpdater: string
+        python: string
+        buildNumber: string
       } | null>
       showBrandingAsset: (filename: string) => Promise<string>
       checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string }>
       downloadUpdate: () => Promise<void>
       quitAndInstall: () => void
       onUpdateAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => () => void
-      onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number }) => void) => () => void
+      onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => () => void
       onUpdateDownloaded: (callback: () => void) => () => void
       onUpdateError: (callback: (message: string) => void) => () => void
     }
@@ -91,7 +93,7 @@ interface Window {
       openPath: (path: string) => Promise<string>
       openExternal: (url: string) => Promise<void>
     }
-    dialog?: {
+    dialog: {
       openDirectory: () => Promise<string | null>
     }
     deviceLibrary: {
@@ -100,7 +102,7 @@ interface Window {
       save: (device: import('@/types/device-profile').LibraryDevice) => Promise<void>
       delete: (deviceId: string) => Promise<void>
       import: (devices: import('@/types/device-profile').LibraryDevice[]) => Promise<void>
-      export: (deviceIds: string[], format: 'json' | 'excel' | 'zip') => Promise<void>
+      export: (deviceIds: string[], format: 'json' | 'excel' | 'zip') => Promise<string | { devices: unknown[]; format: string }>
     }
     export: {
       saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>
@@ -109,6 +111,7 @@ interface Window {
     versions: {
       node: string
       electron: string
+      chromium: string
       platform: string
       arch: string
     }

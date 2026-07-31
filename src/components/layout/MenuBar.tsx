@@ -18,7 +18,6 @@ interface MenuItem {
 
 export function MenuBar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
-  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
@@ -27,6 +26,8 @@ export function MenuBar() {
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
   const showAboutDialog = useUIStore((s) => s.showAboutDialog)
   const setShowAboutDialog = useUIStore((s) => s.setShowAboutDialog)
+  const showShortcutsDialog = useUIStore((s) => s.showShortcutsDialog)
+  const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const addToast = useToastStore((s) => s.addToast)
   const openTab = useWorkspaceStore((s) => s.openTab)

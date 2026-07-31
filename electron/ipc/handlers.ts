@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
+import { execSync } from 'child_process'
 import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
 import { projectIOService } from '../services/project-io.service.js'
@@ -578,6 +579,17 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     try {
       const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'))
       const deps = pkg.dependencies || {}
+      // Detect Python version (try python3 first, then python)
+      let pythonVersion = ''
+      try {
+        pythonVersion = execSync('python --version', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().replace(/^Python\s+/i, '')
+      } catch {
+        try {
+          pythonVersion = execSync('python3 --version', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().replace(/^Python\s+/i, '')
+        } catch {
+          pythonVersion = ''
+        }
+      }
       return {
         app: pkg.version || 'unknown',
         electron: process.versions.electron,
@@ -591,6 +603,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         xyflow: deps['@xyflow/react'] || '',
         i18next: deps['i18next'] || '',
         electronUpdater: deps['electron-updater'] || '',
+        python: pythonVersion,
+        buildNumber: process.env.BUILD_NUMBER || '',
       }
     } catch {
       return null
@@ -609,13 +623,19 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   // ===== Shell =====
+  // 注:openPath/showItemInFolder 需支持打开 workspace 外的路径
+  // (导出 ZIP、branding 资产、guide 文档、用户自选目录),仅做 `..` 防御
   ipcMain.handle('shell:showItemInFolder', wrapHandler(async (_event, filePath: string) => {
-    sanitizePath([filePath])
+    if (!filePath || filePath.includes('..')) {
+      throw new Error(`无效路径: ${filePath}`)
+    }
     shell.showItemInFolder(filePath)
   }))
 
   ipcMain.handle('shell:openPath', wrapHandler(async (_event, filePath: string) => {
-    sanitizePath([filePath])
+    if (!filePath || filePath.includes('..')) {
+      throw new Error(`无效路径: ${filePath}`)
+    }
     return shell.openPath(filePath)
   }))
 
@@ -625,6 +645,18 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       throw new Error('仅允许打开 https 链接')
     }
     await shell.openExternal(url)
+  }))
+
+  // ===== Dialog =====
+  ipcMain.handle('dialog:openDirectory', wrapHandler(async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '选择目录',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
   }))
 
   // ===== Update =====

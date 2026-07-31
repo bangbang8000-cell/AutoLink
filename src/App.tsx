@@ -19,7 +19,7 @@ import { SwitchProfileForm } from '@/components/device/SwitchProfileForm'
 import { DeviceImportModal } from '@/components/device/DeviceImportModal'
 import { DeviceExportModal } from '@/components/device/DeviceExportModal'
 import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
-import '@/i18n'
+import i18n from '@/i18n'
 
 /** Map activity types to workspace tab config */
 const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary'; title: string; closable: boolean }> = {
@@ -40,6 +40,7 @@ export default function App() {
   const panelVisible = useUIStore((s) => s.panelVisible)
   const isDark = useUIStore((s) => s.isDark)
   const syncSystemTheme = useUIStore((s) => s.syncSystemTheme)
+  const language = useUIStore((s) => s.language)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const openTab = useWorkspaceStore((s) => s.openTab)
   const closeTab = useWorkspaceStore((s) => s.closeTab)
@@ -54,6 +55,13 @@ export default function App() {
     if (isDark) root.classList.add('dark')
     else root.classList.remove('dark')
   }, [isDark])
+
+  // Sync i18n language with persisted UI store language
+  useEffect(() => {
+    if (i18n.language !== language) {
+      i18n.changeLanguage(language)
+    }
+  }, [language])
 
   // Sync system theme
   useEffect(() => {

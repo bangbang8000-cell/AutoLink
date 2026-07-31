@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
+import { useProjectStore } from '@/stores/project.store'
 
 interface Props {
   fileName?: string | null
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export function OutputTab({ fileName, fileType }: Props) {
+  const projectName = useProjectStore((s) => s.selectedProjectName)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sheets, setSheets] = useState<Record<string, string[][]>>({})
@@ -16,9 +18,10 @@ export function OutputTab({ fileName, fileType }: Props) {
   useEffect(() => {
     if (!fileName) return
     loadFile()
-  }, [fileName])
+  }, [fileName, projectName])
 
   const loadFile = async () => {
+    if (!projectName || !fileName) return
     setLoading(true)
     setError(null)
     try {
@@ -28,8 +31,8 @@ export function OutputTab({ fileName, fileType }: Props) {
         fileName?.endsWith('.xlsx') ||
         fileName?.endsWith('.xls')
       ) {
-        // Get binary data via IPC
-        const base64 = await (window.electron as any)?.project?.getFileBinary?.(fileName)
+        // T10: getFileBinary 需要 (projectName, relPath) 两个参数
+        const base64 = await window.electron?.project?.getFileBinary(projectName, `output/${fileName}`)
         if (!base64) {
           setError('无法读取文件')
           return
@@ -49,7 +52,7 @@ export function OutputTab({ fileName, fileType }: Props) {
         fileName?.endsWith('.png') ||
         fileName?.endsWith('.jpg')
       ) {
-        const base64 = await (window.electron as any)?.project?.getFileBinary?.(fileName)
+        const base64 = await window.electron?.project?.getFileBinary(projectName, `output/${fileName}`)
         if (base64) {
           setImageSrc(`data:image/${fileType || 'png'};base64,${base64}`)
         }

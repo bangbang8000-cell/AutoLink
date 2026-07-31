@@ -106,8 +106,6 @@
       "name": "存储网络交换机",
       "description": "存储网络接入/汇聚交换机",
       "device_ids": [
-        "h3c_s6850_56hf",
-        "huawei_ce6860_48s6cq",
         "huawei_ce6881_48s6cq",
         "nvidia_sn4600c",
         "ruijie_rg_s6510_48vs8cq",
@@ -121,6 +119,8 @@
       "device_ids": [
         "h3c_s5560x_54s_ei",
         "h3c_s6520x_54qc_ei",
+        "h3c_s6850_56hf",
+        "huawei_ce6860_48s6cq",
         "huawei_s5735_l48p4x_a",
         "huawei_s6730_h48x6c",
         "huawei_s5731_h48t4xc",

@@ -98,5 +98,207 @@
       "closeTab": "關閉當前標籤",
       "restoreTab": "恢復關閉標籤"
     }
+  },
+  "explorer": {
+    "allProjects": "全部專案",
+    "outputFiles": "輸出檔案",
+    "templateCenter": "範本中心",
+    "noTemplateFiles": "無範本檔案",
+    "noOutputBatches": "暫無輸出批次",
+    "openInExplorer": "在檔案管理器中開啟",
+    "close": "關閉",
+    "copySuffix": "_副本",
+    "contextMenu": {
+      "setAsCurrent": "設為當前專案",
+      "openInFileManager": "在檔案管理器中開啟",
+      "duplicateProject": "複製專案...",
+      "rename": "重新命名...",
+      "exportZip": "匯出為 ZIP...",
+      "convertToTemplate": "轉為範本",
+      "unfavorite": "取消收藏",
+      "favorite": "收藏置頂",
+      "deleteProject": "刪除專案",
+      "viewTemplateFiles": "檢視範本檔案",
+      "editTemplate": "編輯範本...",
+      "deleteTemplate": "刪除範本"
+    },
+    "toast": {
+      "projectDeleted": "專案 \"{{name}}\" 已刪除",
+      "batchDeleted": "批次 \"{{name}}\" 已刪除",
+      "fileDeleted": "檔案 \"{{name}}\" 已刪除",
+      "outputCleared": "專案 \"{{name}}\" 的輸出已清空",
+      "builtinTemplateNotEditable": "內建範本不可編輯",
+      "templateUpdated": "範本 \"{{id}}\" 已更新",
+      "templateExported": "範本 \"{{name}}\" 已匯出到:\n{{path}}",
+      "exportFailed": "匯出失敗: {{error}}",
+      "templateImported": "範本 \"{{name}}\" 已匯入",
+      "importFailed": "匯入失敗: {{error}}",
+      "templateDeleted": "範本 \"{{name}}\" 已刪除",
+      "projectConvertedToTemplate": "專案 \"{{projectName}}\" 已轉為範本 \"{{templateName}}\"",
+      "convertFailed": "轉換失敗: {{error}}",
+      "projectDuplicated": "專案已複製為 \"{{name}}\"",
+      "projectRenamed": "專案已重新命名為 \"{{name}}\"",
+      "projectExported": "專案 \"{{name}}\" 已匯出到:\n{{path}}",
+      "projectImported": "專案 \"{{name}}\" 已匯入",
+      "noProjectsToExport": "沒有可匯出的專案",
+      "batchExportSuccess": "批量匯出完成：成功 {{count}} 個\n儲存到: {{dir}}",
+      "batchExportPartial": "批量匯出部分完成：成功 {{success}} 個，失敗 {{fail}} 個\n{{details}}",
+      "batchExportFailed": "批量匯出失敗: {{error}}",
+      "templateNamePrompt": "請輸入範本名稱：",
+      "projectOverviewTitle": "專案概覽 - {{name}}"
+    },
+    "design": {
+      "title": "設計",
+      "openFullSize": "全尺寸開啟",
+      "selectProject": "請在「專案」中選擇或建立專案",
+      "fullMode": "全模式（自動計算）",
+      "customMode": "自訂模式",
+      "gpuServer": "GPU伺服器",
+      "gpuCount": "GPU數量",
+      "paramPortsPerServer": "每台參數網卡數",
+      "switchParams": "交換機參數",
+      "paramSwitchPorts": "參數網連接埠數",
+      "paramNetworkSpeed": "參數網路速度",
+      "bizInbandMgmt": "業務/帶內管理",
+      "oobMgmt": "帶外管理OOB",
+      "generateTopology": "產生拓撲",
+      "validationPassed": "驗證通過",
+      "validationFailed": "驗證失敗"
+    },
+    "workbench": {
+      "title": "工作台",
+      "openFullSize": "全尺寸開啟",
+      "selectProject": "選擇專案後開始使用工作台",
+      "topologyPassed": "通過",
+      "topologyFailed": "失敗",
+      "topologyPending": "待產生",
+      "rackPending": "待規劃",
+      "rackReady": "就緒 ({{count}}台)",
+      "rackPartial": "{{placed}}/{{total}}台",
+      "outputTypes": "輸出類型",
+      "connectionTable": "連接關係表",
+      "rackTable": "上機表",
+      "topologyDiagram": "拓撲圖",
+      "deviceList": "設備清單"
+    },
+    "visualization": {
+      "title": "視覺化",
+      "openFullSize": "全尺寸開啟",
+      "selectProject": "請在「專案」中選擇或建立專案",
+      "noTopology": "尚未產生拓撲",
+      "generateInDesign": "請在「設計」中產生拓撲資料",
+      "topologyOverview": "拓撲概覽",
+      "totalNodes": "節點總數",
+      "totalConnections": "連接總數",
+      "nodeTypeStats": "節點類型統計",
+      "noNodeData": "無節點資料",
+      "cabinetList": "機柜清單"
+    },
+    "deviceLibrary": {
+      "title": "設備庫",
+      "deviceCount": "{{count}} 台設備",
+      "allDevices": "全部設備",
+      "tabTitle": "設備庫-{{label}}",
+      "categories": {
+        "gpuServers": "GPU伺服器",
+        "storageServers": "儲存伺服器",
+        "allFlash": "全快閃",
+        "hybridFlash": "混閃",
+        "computeServers": "通算伺服器",
+        "switches": "交換機",
+        "paramSwitches": "參數面交換機",
+        "storageSwitches": "儲存交換機",
+        "bizSwitches": "業務交換機",
+        "oobSwitches": "帶外交換機",
+        "custom": "自訂"
+      }
+    },
+    "settings": {
+      "title": "設定",
+      "categories": {
+        "appearance": "外觀",
+        "language": "語言",
+        "projectDefaults": "專案預設值",
+        "output": "輸出",
+        "keyboard": "快捷鍵",
+        "deviceLibrary": "設備庫",
+        "network": "網路",
+        "data": "資料",
+        "about": "關於"
+      },
+      "appearance": {
+        "title": "外觀設定",
+        "themeMode": "主題模式",
+        "light": "淺色",
+        "dark": "深色",
+        "system": "跟隨系統",
+        "fontSize": "字型大小",
+        "compactMode": "緊湊模式",
+        "animations": "動畫效果"
+      },
+      "languageTitle": "語言 / Language",
+      "projectDefaults": {
+        "title": "新建專案預設值",
+        "defaultRackType": "預設機柜類型",
+        "defaultPowerLimit": "預設功率上限 (W)",
+        "defaultPortSpeed": "預設連接埠速率"
+      },
+      "output": {
+        "title": "輸出設定",
+        "defaultFormat": "預設輸出格式",
+        "formatExcel": "Excel (.xlsx)",
+        "formatCsv": "CSV (.csv)",
+        "formatPng": "PNG 圖片",
+        "outputDir": "輸出目錄",
+        "default": "預設",
+        "select": "選擇...",
+        "autoSaveInterval": "自動儲存間隔 (分鐘)"
+      },
+      "keyboard": {
+        "title": "鍵盤快捷鍵",
+        "projectExplorer": "專案瀏覽器",
+        "workbench": "工作台",
+        "topologyDesign": "拓撲設計",
+        "visualization": "視覺化",
+        "settings": "設定",
+        "toggleSidebar": "顯示/隱藏側欄",
+        "togglePanel": "顯示/隱藏面板",
+        "closeTab": "關閉當前分頁",
+        "restoreTab": "恢復關閉分頁"
+      },
+      "deviceLibrary": {
+        "title": "設備庫設定",
+        "dataDir": "資料目錄",
+        "autoUpdate": "自動更新設備庫",
+        "reuseTab": "重複使用設備庫分頁"
+      },
+      "network": {
+        "title": "網路設定",
+        "autoCheckUpdate": "自動檢查更新",
+        "proxyServer": "代理伺服器",
+        "host": "主機",
+        "port": "連接埠"
+      },
+      "data": {
+        "title": "資料管理",
+        "exportAll": "匯出全部資料",
+        "importData": "匯入資料",
+        "resetAll": "重置所有設定",
+        "exportSuccess": "資料匯出成功",
+        "exportFailed": "匯出失敗",
+        "importSuccess": "資料匯入成功，請重新整理頁面載入新設定",
+        "importFailed": "匯入失敗，請檢查檔案格式",
+        "resetDone": "所有設定已重置"
+      },
+      "about": {
+        "title": "關於 AutoLink",
+        "version": "版本",
+        "license": "授權",
+        "lastCheckUpdate": "上次檢查更新",
+        "never": "從未",
+        "checkUpdate": "檢查更新",
+        "viewFullInfo": "檢視完整資訊 & 第三方授權"
+      }
+    }
   }
 }

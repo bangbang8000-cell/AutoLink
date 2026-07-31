@@ -86,8 +86,8 @@ const electronAPI = {
       ipcRenderer.on('update:available', handler)
       return () => ipcRenderer.removeListener('update:available', handler)
     },
-    onUpdateDownloadProgress: (callback: (data: { percent: number }) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, data: { percent: number }) => callback(data)
+    onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => callback(data)
       ipcRenderer.on('update:downloadProgress', handler)
       return () => ipcRenderer.removeListener('update:downloadProgress', handler)
     },
@@ -117,6 +117,9 @@ const electronAPI = {
     showItemInFolder: (path: string) => ipcRenderer.invoke('shell:showItemInFolder', path),
     openPath: (path: string) => ipcRenderer.invoke('shell:openPath', path),
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  },
+  dialog: {
+    openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
   },
   export: {
     saveFile: (projectName: string, fileName: string, base64Data: string) =>

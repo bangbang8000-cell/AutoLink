@@ -125,6 +125,17 @@ class DeviceLibrary:
                 if os.path.exists(device_file):
                     try:
                         device = self._load_device(device_file)
+                        # T8: 一致性校验 — category 字段须与索引分类一致
+                        if device.category and device.category != cat_id:
+                            print(f"[DeviceLibrary] WARN: {device_id} category='{device.category}' "
+                                  f"但索引分类='{cat_id}',以索引为准")
+                            device.category = cat_id
+                        # T8: 交换机须有 port_speed/port_type
+                        if device.is_switch() and not device.interface_models:
+                            if not device.port_speed:
+                                print(f"[DeviceLibrary] WARN: 交换机 {device_id} 缺少 port_speed")
+                            if not device.port_type:
+                                print(f"[DeviceLibrary] WARN: 交换机 {device_id} 缺少 port_type")
                         self.devices[device_id] = device
                         self.categories[cat_id].append(device_id)
                     except Exception as e:

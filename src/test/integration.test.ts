@@ -157,7 +157,7 @@ describe('DeviceLibrary ↔ ProjectConfig 集成', () => {
       device_refs: {
         gpu_server: { library_id: 'nvidia_dgx_h100', overrides: { power_watts: 10000 } },
         param_leaf_switch: { library_id: 'nvidia_sn5600_64_400g' },
-        storage_leaf_switch: { library_id: 'h3c_s6850_56hf' },
+        storage_leaf_switch: { library_id: 'huawei_ce6881_48s6cq' },
       },
     }
 

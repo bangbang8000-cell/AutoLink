@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, GitBranch, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Download, RotateCw, Loader2, BookOpen, Palette } from 'lucide-react'
+import { X, GitBranch, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Download, RotateCw, Loader2, Palette, Keyboard } from 'lucide-react'
+import { useUIStore } from '@/stores/ui.store'
 
 interface Props {
   onClose: () => void
@@ -20,6 +21,8 @@ interface StackVersions {
   xyflow: string
   i18next: string
   electronUpdater: string
+  python: string
+  buildNumber: string
 }
 
 // 清理依赖版本号前缀（^/~/>=）
@@ -36,6 +39,7 @@ export function AboutDialog({ onClose }: Props) {
   const [downloadTransferred, setDownloadTransferred] = useState(0)
   const [downloadTotal, setDownloadTotal] = useState(0)
   const latestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
 
   // 加载版本信息
   useEffect(() => {
@@ -120,6 +124,7 @@ export function AboutDialog({ onClose }: Props) {
         ['ECharts', cleanVer(stack.echarts)],
         ['@xyflow/react', cleanVer(stack.xyflow)],
         ['i18next', cleanVer(stack.i18next)],
+        ['Python', stack.python],
       ]
     : []
 
@@ -139,7 +144,7 @@ export function AboutDialog({ onClose }: Props) {
         {/* 品牌区 */}
         <div className="px-6 pt-6 pb-3 text-center shrink-0">
           <div className="flex justify-center mb-2">
-            <img src="icons/logo.svg" alt="AutoLink" className="w-20 h-20" />
+            <img src="icons/logo.svg" alt="AutoLink" className="w-24 h-24" />
           </div>
           <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
             {t('app.title')}
@@ -178,15 +183,14 @@ export function AboutDialog({ onClose }: Props) {
               <ExternalLink size={9} />
             </a>
             <span className="text-gray-300 dark:text-gray-600">·</span>
-            <a
-              href="https://github.com/bangbang8000-cell/AutoLink/wiki"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => setShowShortcutsDialog(true)}
               className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
             >
-              <BookOpen size={12} />
+              <Keyboard size={12} />
               {t('about.shortcuts.title')}
-            </a>
+            </button>
             <span className="text-gray-300 dark:text-gray-600">·</span>
             <button
               type="button"
@@ -198,12 +202,16 @@ export function AboutDialog({ onClose }: Props) {
               {t('about.logoSpec')}
             </button>
           </div>
+          {/* 版权信息 */}
+          <p className="mt-3 text-center text-[10px] text-gray-400 dark:text-gray-500">
+            © {new Date().getFullYear()} AutoLink Team. MIT License.
+          </p>
         </div>
 
         {/* 底部状态栏：版本号 + 检查更新 + 关闭 */}
         <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shrink-0 bg-gray-50 dark:bg-gray-900/30">
           <div className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
-            v{appVersion}
+            v{appVersion}{stack?.buildNumber ? ` · 构建 #${stack.buildNumber}` : ''}
           </div>
 
           {/* 检查更新状态区 */}
@@ -220,26 +228,26 @@ export function AboutDialog({ onClose }: Props) {
             {updateState === 'checking' && (
               <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
                 <Loader2 size={11} className="animate-spin" />
-                {t('about.checking', '检查中…')}
+                {t('about.checking')}
               </span>
             )}
             {updateState === 'latest' && (
               <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
                 <CheckCircle size={11} />
-                {t('about.latest', '已是最新版本')}
+                {t('about.latest')}
               </span>
             )}
             {updateState === 'available' && (
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-gray-600 dark:text-gray-300">
-                  {t('about.foundUpdate', '发现新版本')} v{updateVersion}
+                  {t('about.foundUpdate')} v{updateVersion}
                 </span>
                 <button
                   onClick={handleDownload}
                   className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-primary-500 hover:bg-primary-600 text-white"
                 >
                   <Download size={10} />
-                  {t('about.downloadInstall', '下载并安装')}
+                  {t('about.downloadInstall')}
                 </button>
               </div>
             )}
@@ -260,14 +268,14 @@ export function AboutDialog({ onClose }: Props) {
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-green-600 dark:text-green-400">
                   <CheckCircle size={11} className="inline mr-1" />
-                  {t('about.downloaded', '下载完成')}
+                  {t('about.downloaded')}
                 </span>
                 <button
                   onClick={handleRestart}
                   className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-green-600 hover:bg-green-700 text-white"
                 >
                   <RotateCw size={10} />
-                  {t('about.restart', '立即重启')}
+                  {t('about.restart')}
                 </button>
               </div>
             )}
@@ -275,14 +283,14 @@ export function AboutDialog({ onClose }: Props) {
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 text-[11px] text-red-500 dark:text-red-400 truncate" title={updateError}>
                   <AlertCircle size={11} />
-                  {t('about.updateFailed', '更新失败')}
+                  {t('about.updateFailed')}
                 </span>
                 <button
                   onClick={handleCheckUpdate}
                   className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
                 >
                   <RefreshCw size={10} />
-                  {t('about.retry', '重试')}
+                  {t('about.retry')}
                 </button>
               </div>
             )}

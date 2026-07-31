@@ -37,7 +37,12 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
           if (firstSlash > 0) {
             const projectName = filePath.substring(0, firstSlash)
             const relPath = filePath.substring(firstSlash + 1)
-            buffer = await window.electron.project.getFileBinary(projectName, relPath)
+            const base64 = await window.electron.project.getFileBinary(projectName, relPath)
+            if (base64) {
+              const binary = atob(base64)
+              buffer = new Uint8Array(binary.length)
+              for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i)
+            }
           }
         }
         if (buffer) {
@@ -100,8 +105,11 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
         if (firstSlash > 0) {
           const projectName = filePath.substring(0, firstSlash)
           const relPath = filePath.substring(firstSlash + 1)
-          const buffer = await window.electron.project.getFileBinary(projectName, relPath)
-          if (buffer) {
+          const base64 = await window.electron.project.getFileBinary(projectName, relPath)
+          if (base64) {
+            const binary = atob(base64)
+            const buffer = new Uint8Array(binary.length)
+            for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i)
             const wb = XLSX.read(buffer, { type: 'array' })
             const ws = wb.Sheets[name]
             const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })

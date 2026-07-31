@@ -4,4 +4,5 @@ import project from './project.json'
 import rack from './rack.json'
 import topology from './topology.json'
 import workbench from './workbench.json'
-export default { common, design, project, rack, topology, workbench }
+import device from './device.json'
+export default { common, design, project, rack, topology, workbench, device }

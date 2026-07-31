@@ -112,5 +112,207 @@
       "closeTab": "关闭当前标签",
       "restoreTab": "恢复关闭标签"
     }
+  },
+  "explorer": {
+    "allProjects": "全部项目",
+    "outputFiles": "输出文件",
+    "templateCenter": "模板中心",
+    "noTemplateFiles": "无模板文件",
+    "noOutputBatches": "暂无输出批次",
+    "openInExplorer": "在文件管理器中打开",
+    "close": "关闭",
+    "copySuffix": "_副本",
+    "contextMenu": {
+      "setAsCurrent": "设为当前项目",
+      "openInFileManager": "在文件管理器中打开",
+      "duplicateProject": "复制项目...",
+      "rename": "重命名...",
+      "exportZip": "导出为 ZIP...",
+      "convertToTemplate": "转为模板",
+      "unfavorite": "取消收藏",
+      "favorite": "收藏置顶",
+      "deleteProject": "删除项目",
+      "viewTemplateFiles": "查看模板文件",
+      "editTemplate": "编辑模板...",
+      "deleteTemplate": "删除模板"
+    },
+    "toast": {
+      "projectDeleted": "项目 \"{{name}}\" 已删除",
+      "batchDeleted": "批次 \"{{name}}\" 已删除",
+      "fileDeleted": "文件 \"{{name}}\" 已删除",
+      "outputCleared": "项目 \"{{name}}\" 的输出已清空",
+      "builtinTemplateNotEditable": "内置模板不可编辑",
+      "templateUpdated": "模板 \"{{id}}\" 已更新",
+      "templateExported": "模板 \"{{name}}\" 已导出到:\n{{path}}",
+      "exportFailed": "导出失败: {{error}}",
+      "templateImported": "模板 \"{{name}}\" 已导入",
+      "importFailed": "导入失败: {{error}}",
+      "templateDeleted": "模板 \"{{name}}\" 已删除",
+      "projectConvertedToTemplate": "项目 \"{{projectName}}\" 已转为模板 \"{{templateName}}\"",
+      "convertFailed": "转换失败: {{error}}",
+      "projectDuplicated": "项目已复制为 \"{{name}}\"",
+      "projectRenamed": "项目已重命名为 \"{{name}}\"",
+      "projectExported": "项目 \"{{name}}\" 已导出到:\n{{path}}",
+      "projectImported": "项目 \"{{name}}\" 已导入",
+      "noProjectsToExport": "没有可导出的项目",
+      "batchExportSuccess": "批量导出完成：成功 {{count}} 个\n保存到: {{dir}}",
+      "batchExportPartial": "批量导出部分完成：成功 {{success}} 个，失败 {{fail}} 个\n{{details}}",
+      "batchExportFailed": "批量导出失败: {{error}}",
+      "templateNamePrompt": "请输入模板名称：",
+      "projectOverviewTitle": "项目概览 - {{name}}"
+    },
+    "design": {
+      "title": "设计",
+      "openFullSize": "全尺寸打开",
+      "selectProject": "请在「项目」中选择或创建项目",
+      "fullMode": "全模式（自动计算）",
+      "customMode": "自定义模式",
+      "gpuServer": "GPU服务器",
+      "gpuCount": "GPU数量",
+      "paramPortsPerServer": "每台参数网卡数",
+      "switchParams": "交换机参数",
+      "paramSwitchPorts": "参数网端口数",
+      "paramNetworkSpeed": "参数网络速度",
+      "bizInbandMgmt": "业务/带内管理",
+      "oobMgmt": "带外管理OOB",
+      "generateTopology": "生成拓扑",
+      "validationPassed": "验证通过",
+      "validationFailed": "验证失败"
+    },
+    "workbench": {
+      "title": "工作台",
+      "openFullSize": "全尺寸打开",
+      "selectProject": "选择项目后开始使用工作台",
+      "topologyPassed": "通过",
+      "topologyFailed": "失败",
+      "topologyPending": "待生成",
+      "rackPending": "待规划",
+      "rackReady": "就绪 ({{count}}台)",
+      "rackPartial": "{{placed}}/{{total}}台",
+      "outputTypes": "输出类型",
+      "connectionTable": "连接关系表",
+      "rackTable": "上机表",
+      "topologyDiagram": "拓扑图",
+      "deviceList": "设备清单"
+    },
+    "visualization": {
+      "title": "可视化",
+      "openFullSize": "全尺寸打开",
+      "selectProject": "请在「项目」中选择或创建项目",
+      "noTopology": "尚未生成拓扑",
+      "generateInDesign": "请在「设计」中生成拓扑数据",
+      "topologyOverview": "拓扑概览",
+      "totalNodes": "节点总数",
+      "totalConnections": "连接总数",
+      "nodeTypeStats": "节点类型统计",
+      "noNodeData": "无节点数据",
+      "cabinetList": "机柜列表"
+    },
+    "deviceLibrary": {
+      "title": "设备库",
+      "deviceCount": "{{count}} 台设备",
+      "allDevices": "全部设备",
+      "tabTitle": "设备库-{{label}}",
+      "categories": {
+        "gpuServers": "GPU服务器",
+        "storageServers": "存储服务器",
+        "allFlash": "全闪",
+        "hybridFlash": "混闪",
+        "computeServers": "通算服务器",
+        "switches": "交换机",
+        "paramSwitches": "参数面交换机",
+        "storageSwitches": "存储交换机",
+        "bizSwitches": "业务交换机",
+        "oobSwitches": "带外交换机",
+        "custom": "自定义"
+      }
+    },
+    "settings": {
+      "title": "设置",
+      "categories": {
+        "appearance": "外观",
+        "language": "语言",
+        "projectDefaults": "项目默认值",
+        "output": "输出",
+        "keyboard": "快捷键",
+        "deviceLibrary": "设备库",
+        "network": "网络",
+        "data": "数据",
+        "about": "关于"
+      },
+      "appearance": {
+        "title": "外观设置",
+        "themeMode": "主题模式",
+        "light": "浅色",
+        "dark": "深色",
+        "system": "跟随系统",
+        "fontSize": "字体大小",
+        "compactMode": "紧凑模式",
+        "animations": "动画效果"
+      },
+      "languageTitle": "语言 / Language",
+      "projectDefaults": {
+        "title": "新建项目默认值",
+        "defaultRackType": "默认机柜类型",
+        "defaultPowerLimit": "默认功率上限 (W)",
+        "defaultPortSpeed": "默认端口速率"
+      },
+      "output": {
+        "title": "输出设置",
+        "defaultFormat": "默认输出格式",
+        "formatExcel": "Excel (.xlsx)",
+        "formatCsv": "CSV (.csv)",
+        "formatPng": "PNG 图片",
+        "outputDir": "输出目录",
+        "default": "默认",
+        "select": "选择...",
+        "autoSaveInterval": "自动保存间隔 (分钟)"
+      },
+      "keyboard": {
+        "title": "键盘快捷键",
+        "projectExplorer": "项目浏览器",
+        "workbench": "工作台",
+        "topologyDesign": "拓扑设计",
+        "visualization": "可视化",
+        "settings": "设置",
+        "toggleSidebar": "显示/隐藏侧栏",
+        "togglePanel": "显示/隐藏面板",
+        "closeTab": "关闭当前标签",
+        "restoreTab": "恢复关闭标签"
+      },
+      "deviceLibrary": {
+        "title": "设备库设置",
+        "dataDir": "数据目录",
+        "autoUpdate": "自动更新设备库",
+        "reuseTab": "复用设备库页签"
+      },
+      "network": {
+        "title": "网络设置",
+        "autoCheckUpdate": "自动检查更新",
+        "proxyServer": "代理服务器",
+        "host": "主机",
+        "port": "端口"
+      },
+      "data": {
+        "title": "数据管理",
+        "exportAll": "导出全部数据",
+        "importData": "导入数据",
+        "resetAll": "重置所有设置",
+        "exportSuccess": "数据导出成功",
+        "exportFailed": "导出失败",
+        "importSuccess": "数据导入成功，请刷新页面加载新配置",
+        "importFailed": "导入失败，请检查文件格式",
+        "resetDone": "所有设置已重置"
+      },
+      "about": {
+        "title": "关于 AutoLink",
+        "version": "版本",
+        "license": "许可证",
+        "lastCheckUpdate": "上次检查更新",
+        "never": "从未",
+        "checkUpdate": "检查更新",
+        "viewFullInfo": "查看完整信息 & 第三方许可"
+      }
+    }
   }
 }

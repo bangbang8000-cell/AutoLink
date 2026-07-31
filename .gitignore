@@ -32,3 +32,6 @@ output/
 # Workspace (runtime-generated project files)
 /workspace/
 !/workspace/.gitkeep
+
+# Design drafts (process files, not source of truth)
+design/

@@ -112,5 +112,207 @@
       "closeTab": "Close Current Tab",
       "restoreTab": "Restore Closed Tab"
     }
+  },
+  "explorer": {
+    "allProjects": "All Projects",
+    "outputFiles": "Output Files",
+    "templateCenter": "Templates",
+    "noTemplateFiles": "No template files",
+    "noOutputBatches": "No output batches",
+    "openInExplorer": "Open in File Manager",
+    "close": "Close",
+    "copySuffix": "_copy",
+    "contextMenu": {
+      "setAsCurrent": "Set as Current Project",
+      "openInFileManager": "Open in File Manager",
+      "duplicateProject": "Duplicate Project...",
+      "rename": "Rename...",
+      "exportZip": "Export as ZIP...",
+      "convertToTemplate": "Convert to Template",
+      "unfavorite": "Unfavorite",
+      "favorite": "Favorite",
+      "deleteProject": "Delete Project",
+      "viewTemplateFiles": "View Template Files",
+      "editTemplate": "Edit Template...",
+      "deleteTemplate": "Delete Template"
+    },
+    "toast": {
+      "projectDeleted": "Project \"{{name}}\" deleted",
+      "batchDeleted": "Batch \"{{name}}\" deleted",
+      "fileDeleted": "File \"{{name}}\" deleted",
+      "outputCleared": "Output cleared for project \"{{name}}\"",
+      "builtinTemplateNotEditable": "Built-in templates are not editable",
+      "templateUpdated": "Template \"{{id}}\" updated",
+      "templateExported": "Template \"{{name}}\" exported to:\n{{path}}",
+      "exportFailed": "Export failed: {{error}}",
+      "templateImported": "Template \"{{name}}\" imported",
+      "importFailed": "Import failed: {{error}}",
+      "templateDeleted": "Template \"{{name}}\" deleted",
+      "projectConvertedToTemplate": "Project \"{{projectName}}\" converted to template \"{{templateName}}\"",
+      "convertFailed": "Conversion failed: {{error}}",
+      "projectDuplicated": "Project duplicated as \"{{name}}\"",
+      "projectRenamed": "Project renamed to \"{{name}}\"",
+      "projectExported": "Project \"{{name}}\" exported to:\n{{path}}",
+      "projectImported": "Project \"{{name}}\" imported",
+      "noProjectsToExport": "No projects to export",
+      "batchExportSuccess": "Batch export complete: {{count}} succeeded\nSaved to: {{dir}}",
+      "batchExportPartial": "Batch export partial: {{success}} succeeded, {{fail}} failed\n{{details}}",
+      "batchExportFailed": "Batch export failed: {{error}}",
+      "templateNamePrompt": "Enter template name:",
+      "projectOverviewTitle": "Project Overview - {{name}}"
+    },
+    "design": {
+      "title": "Design",
+      "openFullSize": "Open Full Size",
+      "selectProject": "Please select or create a project",
+      "fullMode": "Full Mode (Auto)",
+      "customMode": "Custom Mode",
+      "gpuServer": "GPU Server",
+      "gpuCount": "GPU Count",
+      "paramPortsPerServer": "Param NICs per Server",
+      "switchParams": "Switch Parameters",
+      "paramSwitchPorts": "Param Switch Ports",
+      "paramNetworkSpeed": "Param Network Speed",
+      "bizInbandMgmt": "Biz/In-band Mgmt",
+      "oobMgmt": "OOB Management",
+      "generateTopology": "Generate Topology",
+      "validationPassed": "Validation Passed",
+      "validationFailed": "Validation Failed"
+    },
+    "workbench": {
+      "title": "Workbench",
+      "openFullSize": "Open Full Size",
+      "selectProject": "Select a project to use the workbench",
+      "topologyPassed": "Passed",
+      "topologyFailed": "Failed",
+      "topologyPending": "Pending",
+      "rackPending": "Not Planned",
+      "rackReady": "Ready ({{count}})",
+      "rackPartial": "{{placed}}/{{total}}",
+      "outputTypes": "Output Types",
+      "connectionTable": "Connection Table",
+      "rackTable": "Rack Table",
+      "topologyDiagram": "Topology Diagram",
+      "deviceList": "Device List"
+    },
+    "visualization": {
+      "title": "Visualization",
+      "openFullSize": "Open Full Size",
+      "selectProject": "Please select or create a project",
+      "noTopology": "No topology generated yet",
+      "generateInDesign": "Please generate topology in Design",
+      "topologyOverview": "Topology Overview",
+      "totalNodes": "Total Nodes",
+      "totalConnections": "Total Connections",
+      "nodeTypeStats": "Node Type Stats",
+      "noNodeData": "No node data",
+      "cabinetList": "Cabinet List"
+    },
+    "deviceLibrary": {
+      "title": "Device Library",
+      "deviceCount": "{{count}} devices",
+      "allDevices": "All Devices",
+      "tabTitle": "Devices-{{label}}",
+      "categories": {
+        "gpuServers": "GPU Servers",
+        "storageServers": "Storage Servers",
+        "allFlash": "All-Flash",
+        "hybridFlash": "Hybrid Flash",
+        "computeServers": "Compute Servers",
+        "switches": "Switches",
+        "paramSwitches": "Param Switches",
+        "storageSwitches": "Storage Switches",
+        "bizSwitches": "Biz Switches",
+        "oobSwitches": "OOB Switches",
+        "custom": "Custom"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "categories": {
+        "appearance": "Appearance",
+        "language": "Language",
+        "projectDefaults": "Project Defaults",
+        "output": "Output",
+        "keyboard": "Shortcuts",
+        "deviceLibrary": "Device Library",
+        "network": "Network",
+        "data": "Data",
+        "about": "About"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "themeMode": "Theme Mode",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System",
+        "fontSize": "Font Size",
+        "compactMode": "Compact Mode",
+        "animations": "Animations"
+      },
+      "languageTitle": "Language / 語言",
+      "projectDefaults": {
+        "title": "New Project Defaults",
+        "defaultRackType": "Default Rack Type",
+        "defaultPowerLimit": "Default Power Limit (W)",
+        "defaultPortSpeed": "Default Port Speed"
+      },
+      "output": {
+        "title": "Output Settings",
+        "defaultFormat": "Default Format",
+        "formatExcel": "Excel (.xlsx)",
+        "formatCsv": "CSV (.csv)",
+        "formatPng": "PNG Image",
+        "outputDir": "Output Directory",
+        "default": "Default",
+        "select": "Browse...",
+        "autoSaveInterval": "Auto-save Interval (min)"
+      },
+      "keyboard": {
+        "title": "Keyboard Shortcuts",
+        "projectExplorer": "Project Explorer",
+        "workbench": "Workbench",
+        "topologyDesign": "Topology Design",
+        "visualization": "Visualization",
+        "settings": "Settings",
+        "toggleSidebar": "Toggle Sidebar",
+        "togglePanel": "Toggle Panel",
+        "closeTab": "Close Current Tab",
+        "restoreTab": "Restore Closed Tab"
+      },
+      "deviceLibrary": {
+        "title": "Device Library Settings",
+        "dataDir": "Data Directory",
+        "autoUpdate": "Auto-update Device Library",
+        "reuseTab": "Reuse Device Library Tab"
+      },
+      "network": {
+        "title": "Network Settings",
+        "autoCheckUpdate": "Auto-check Updates",
+        "proxyServer": "Proxy Server",
+        "host": "Host",
+        "port": "Port"
+      },
+      "data": {
+        "title": "Data Management",
+        "exportAll": "Export All Data",
+        "importData": "Import Data",
+        "resetAll": "Reset All Settings",
+        "exportSuccess": "Data exported successfully",
+        "exportFailed": "Export failed",
+        "importSuccess": "Data imported. Please refresh to load new config",
+        "importFailed": "Import failed. Please check file format",
+        "resetDone": "All settings have been reset"
+      },
+      "about": {
+        "title": "About AutoLink",
+        "version": "Version",
+        "license": "License",
+        "lastCheckUpdate": "Last Update Check",
+        "never": "Never",
+        "checkUpdate": "Check for Updates",
+        "viewFullInfo": "View Full Info & Third-party Licenses"
+      }
+    }
   }
 }

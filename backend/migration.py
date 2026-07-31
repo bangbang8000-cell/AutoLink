@@ -181,13 +181,21 @@ def _get_default_device_refs(config: dict) -> dict:
             refs['param_core_switch'] = {'library_id': 'h3c_s9820_8c'}
 
     if networks.get('storage_network'):
-        refs['storage_leaf_switch'] = {'library_id': 'h3c_s6850_56hf'}
-        refs['storage_spine_switch'] = {'library_id': 'h3c_s6850_56hf'}
+        # T5: 存储交换机按协议分流
+        # IB: 复用 Quantum HDR 交换机(IB 存储与参数面共用 Quantum 系列)
+        # RoCE: 专用存储接入交换机(ce6881,支持 RoCEv2/FC-NVMe)
+        if protocol == 'IB':
+            refs['storage_leaf_switch'] = {'library_id': 'nvidia_mqm8700_40_200g_ib'}
+            refs['storage_spine_switch'] = {'library_id': 'nvidia_mqm8700_40_200g_ib'}
+        else:
+            refs['storage_leaf_switch'] = {'library_id': 'huawei_ce6881_48s6cq'}
+            refs['storage_spine_switch'] = {'library_id': 'huawei_ce6881_48s6cq'}
         refs['all_flash_storage_server'] = {'library_id': 'generic_all_flash'}
         refs['hybrid_flash_storage_server'] = {'library_id': 'generic_hybrid_flash'}
 
     if networks.get('biz_network'):
-        refs['biz_access_switch'] = {'library_id': 'h3c_s5560x_54s_ei'}
+        # T9: 业务接入交换机对齐 biz_port_speed=25G(原 h3c_s5560x_54s_ei 为 10G)
+        refs['biz_access_switch'] = {'library_id': 'h3c_s6850_56hf'}
         refs['biz_agg_switch'] = {'library_id': 'h3c_s6520x_54qc_ei'}
         refs['compute_server'] = {'library_id': 'generic_2u_compute'}
 

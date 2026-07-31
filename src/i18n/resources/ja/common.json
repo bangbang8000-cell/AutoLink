@@ -98,5 +98,207 @@
       "closeTab": "現在のタブを閉じる",
       "restoreTab": "閉じたタブを復元"
     }
+  },
+  "explorer": {
+    "allProjects": "すべてのプロジェクト",
+    "outputFiles": "出力ファイル",
+    "templateCenter": "テンプレートセンター",
+    "noTemplateFiles": "テンプレートファイルなし",
+    "noOutputBatches": "出力バッチなし",
+    "openInExplorer": "ファイルマネージャーで開く",
+    "close": "閉じる",
+    "copySuffix": "_コピー",
+    "contextMenu": {
+      "setAsCurrent": "現在のプロジェクトに設定",
+      "openInFileManager": "ファイルマネージャーで開く",
+      "duplicateProject": "プロジェクトを複製...",
+      "rename": "名前変更...",
+      "exportZip": "ZIPとしてエクスポート...",
+      "convertToTemplate": "テンプレートに変換",
+      "unfavorite": "お気に入り解除",
+      "favorite": "お気に入りに追加",
+      "deleteProject": "プロジェクトを削除",
+      "viewTemplateFiles": "テンプレートファイルを表示",
+      "editTemplate": "テンプレートを編集...",
+      "deleteTemplate": "テンプレートを削除"
+    },
+    "toast": {
+      "projectDeleted": "プロジェクト \"{{name}}\" が削除されました",
+      "batchDeleted": "バッチ \"{{name}}\" が削除されました",
+      "fileDeleted": "ファイル \"{{name}}\" が削除されました",
+      "outputCleared": "プロジェクト \"{{name}}\" の出力がクリアされました",
+      "builtinTemplateNotEditable": "組み込みテンプレートは編集できません",
+      "templateUpdated": "テンプレート \"{{id}}\" が更新されました",
+      "templateExported": "テンプレート \"{{name}}\" がエクスポートされました:\n{{path}}",
+      "exportFailed": "エクスポート失敗: {{error}}",
+      "templateImported": "テンプレート \"{{name}}\" がインポートされました",
+      "importFailed": "インポート失敗: {{error}}",
+      "templateDeleted": "テンプレート \"{{name}}\" が削除されました",
+      "projectConvertedToTemplate": "プロジェクト \"{{projectName}}\" をテンプレート \"{{templateName}}\" に変換しました",
+      "convertFailed": "変換失敗: {{error}}",
+      "projectDuplicated": "プロジェクトを \"{{name}}\" として複製しました",
+      "projectRenamed": "プロジェクト名を \"{{name}}\" に変更しました",
+      "projectExported": "プロジェクト \"{{name}}\" をエクスポートしました:\n{{path}}",
+      "projectImported": "プロジェクト \"{{name}}\" をインポートしました",
+      "noProjectsToExport": "エクスポート可能なプロジェクトがありません",
+      "batchExportSuccess": "一括エクスポート完了: {{count}}件成功\n保存先: {{dir}}",
+      "batchExportPartial": "一括エクスポート一部完了: {{success}}件成功、{{fail}}件失敗\n{{details}}",
+      "batchExportFailed": "一括エクスポート失敗: {{error}}",
+      "templateNamePrompt": "テンプレート名を入力：",
+      "projectOverviewTitle": "プロジェクト概要 - {{name}}"
+    },
+    "design": {
+      "title": "設計",
+      "openFullSize": "フルサイズで開く",
+      "selectProject": "プロジェクトを選択または作成してください",
+      "fullMode": "フルモード（自動計算）",
+      "customMode": "カスタムモード",
+      "gpuServer": "GPUサーバー",
+      "gpuCount": "GPU数",
+      "paramPortsPerServer": "サーバーあたりのパラメータNIC数",
+      "switchParams": "スイッチパラメータ",
+      "paramSwitchPorts": "パラメータスイッチポート数",
+      "paramNetworkSpeed": "パラメータネットワーク速度",
+      "bizInbandMgmt": "業務/インバンド管理",
+      "oobMgmt": "OOB管理",
+      "generateTopology": "トポロジー生成",
+      "validationPassed": "検証合格",
+      "validationFailed": "検証失敗"
+    },
+    "workbench": {
+      "title": "ワークベンチ",
+      "openFullSize": "フルサイズで開く",
+      "selectProject": "プロジェクトを選択してワークベンチを使用",
+      "topologyPassed": "合格",
+      "topologyFailed": "失敗",
+      "topologyPending": "未生成",
+      "rackPending": "未計画",
+      "rackReady": "準備完了 ({{count}}台)",
+      "rackPartial": "{{placed}}/{{total}}台",
+      "outputTypes": "出力タイプ",
+      "connectionTable": "接続関係表",
+      "rackTable": "ラック表",
+      "topologyDiagram": "トポロジー図",
+      "deviceList": "デバイスリスト"
+    },
+    "visualization": {
+      "title": "可視化",
+      "openFullSize": "フルサイズで開く",
+      "selectProject": "プロジェクトを選択または作成してください",
+      "noTopology": "トポロジーがまだ生成されていません",
+      "generateInDesign": "設計でトポロジーを生成してください",
+      "topologyOverview": "トポロジー概要",
+      "totalNodes": "総ノード数",
+      "totalConnections": "総接続数",
+      "nodeTypeStats": "ノードタイプ統計",
+      "noNodeData": "ノードデータなし",
+      "cabinetList": "キャビネットリスト"
+    },
+    "deviceLibrary": {
+      "title": "デバイスライブラリ",
+      "deviceCount": "{{count}} 台デバイス",
+      "allDevices": "すべてのデバイス",
+      "tabTitle": "デバイス-{{label}}",
+      "categories": {
+        "gpuServers": "GPUサーバー",
+        "storageServers": "ストレージサーバー",
+        "allFlash": "オールフラッシュ",
+        "hybridFlash": "ハイブリッドフラッシュ",
+        "computeServers": "コンピュートサーバー",
+        "switches": "スイッチ",
+        "paramSwitches": "パラメータスイッチ",
+        "storageSwitches": "ストレージスイッチ",
+        "bizSwitches": "業務スイッチ",
+        "oobSwitches": "OOBスイッチ",
+        "custom": "カスタム"
+      }
+    },
+    "settings": {
+      "title": "設定",
+      "categories": {
+        "appearance": "外観",
+        "language": "言語",
+        "projectDefaults": "プロジェクトデフォルト",
+        "output": "出力",
+        "keyboard": "ショートカット",
+        "deviceLibrary": "デバイスライブラリ",
+        "network": "ネットワーク",
+        "data": "データ",
+        "about": "について"
+      },
+      "appearance": {
+        "title": "外観設定",
+        "themeMode": "テーマモード",
+        "light": "ライト",
+        "dark": "ダーク",
+        "system": "システム",
+        "fontSize": "フォントサイズ",
+        "compactMode": "コンパクトモード",
+        "animations": "アニメーション"
+      },
+      "languageTitle": "言語 / Language",
+      "projectDefaults": {
+        "title": "新規プロジェクトデフォルト",
+        "defaultRackType": "デフォルトラックタイプ",
+        "defaultPowerLimit": "デフォルト電力制限 (W)",
+        "defaultPortSpeed": "デフォルトポート速度"
+      },
+      "output": {
+        "title": "出力設定",
+        "defaultFormat": "デフォルトフォーマット",
+        "formatExcel": "Excel (.xlsx)",
+        "formatCsv": "CSV (.csv)",
+        "formatPng": "PNG 画像",
+        "outputDir": "出力ディレクトリ",
+        "default": "デフォルト",
+        "select": "選択...",
+        "autoSaveInterval": "自動保存間隔 (分)"
+      },
+      "keyboard": {
+        "title": "キーボードショートカット",
+        "projectExplorer": "プロジェクトエクスプローラー",
+        "workbench": "ワークベンチ",
+        "topologyDesign": "トポロジー設計",
+        "visualization": "可視化",
+        "settings": "設定",
+        "toggleSidebar": "サイドバー切替",
+        "togglePanel": "パネル切替",
+        "closeTab": "現在のタブを閉じる",
+        "restoreTab": "閉じたタブを復元"
+      },
+      "deviceLibrary": {
+        "title": "デバイスライブラリ設定",
+        "dataDir": "データディレクトリ",
+        "autoUpdate": "デバイスライブラリ自動更新",
+        "reuseTab": "デバイスライブラリタブ再利用"
+      },
+      "network": {
+        "title": "ネットワーク設定",
+        "autoCheckUpdate": "更新を自動確認",
+        "proxyServer": "プロキシサーバー",
+        "host": "ホスト",
+        "port": "ポート"
+      },
+      "data": {
+        "title": "データ管理",
+        "exportAll": "すべてのデータをエクスポート",
+        "importData": "データをインポート",
+        "resetAll": "すべての設定をリセット",
+        "exportSuccess": "データエクスポート成功",
+        "exportFailed": "エクスポート失敗",
+        "importSuccess": "データインポート成功。ページを更新してください",
+        "importFailed": "インポート失敗。ファイル形式を確認してください",
+        "resetDone": "すべての設定がリセットされました"
+      },
+      "about": {
+        "title": "AutoLinkについて",
+        "version": "バージョン",
+        "license": "ライセンス",
+        "lastCheckUpdate": "最終更新確認",
+        "never": "なし",
+        "checkUpdate": "更新を確認",
+        "viewFullInfo": "完全な情報とサードパーティライセンスを表示"
+      }
+    }
   }
 }
