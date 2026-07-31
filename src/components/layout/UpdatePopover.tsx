@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, CheckCircle, AlertTriangle, Loader2, ArrowUpCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Download, CheckCircle, AlertTriangle, Loader2, ArrowUpCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useToastStore } from '@/stores/toast.store'
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
@@ -44,6 +44,10 @@ export function UpdatePopover() {
       if (result?.updateAvailable) {
         setStatus('available')
         setUpdateVersion(result.version || '')
+      } else if (result?.error) {
+        // 检查失败(网络问题等),与"无更新"区分
+        setStatus('error')
+        setErrorMessage(t('common:update.checkFailed'))
       } else {
         setStatus('idle')
         addToast('info', t('common:update.upToDate'), 3000)
@@ -220,12 +224,21 @@ export function UpdatePopover() {
                     <AlertTriangle size={13} />
                     {errorMessage || t('common:update.error')}
                   </p>
-                  <button
-                    onClick={handleCheckUpdate}
-                    className="w-full px-3 py-1.5 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors"
-                  >
-                    {t('common:update.retry')}
-                  </button>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleCheckUpdate}
+                      className="flex-1 px-3 py-1.5 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors"
+                    >
+                      {t('common:update.retry')}
+                    </button>
+                    <button
+                      onClick={() => window.electron?.app?.openReleasesPage()}
+                      className="flex-1 px-3 py-1.5 text-xs bg-info-500 hover:bg-info-600 text-white rounded transition-colors flex items-center justify-center gap-1"
+                    >
+                      <ExternalLink size={12} />
+                      {t('common:update.manualDownload')}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

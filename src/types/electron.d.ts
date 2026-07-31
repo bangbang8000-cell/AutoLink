@@ -76,9 +76,10 @@ interface Window {
       } | null>
       showBrandingAsset: (filename: string) => Promise<string>
       readDocFile: (filename: string) => Promise<string | null>
-      checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string }>
+      checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string; error?: string }>
       downloadUpdate: () => Promise<void>
       quitAndInstall: () => void
+      openReleasesPage: () => Promise<void>
       onUpdateAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => () => void
       onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => () => void
       onUpdateDownloaded: (callback: () => void) => () => void

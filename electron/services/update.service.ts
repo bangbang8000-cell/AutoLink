@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow, app, net } from 'electron'
 
 let autoUpdater: typeof import('electron-updater').autoUpdater | null = null
 
@@ -22,6 +22,80 @@ async function getAutoUpdater() {
   return autoUpdater
 }
 
+const PUBLISH_OWNER = 'bangbang8000-cell'
+const PUBLISH_REPO = 'AutoLink'
+const LATEST_YML_URL = `https://github.com/${PUBLISH_OWNER}/${PUBLISH_REPO}/releases/latest/download/latest.yml`
+const RELEASES_PAGE_URL = `https://github.com/${PUBLISH_OWNER}/${PUBLISH_REPO}/releases/latest`
+
+interface CheckResult {
+  updateAvailable: boolean
+  version?: string
+  releaseNotes?: string | unknown
+  error?: string
+}
+
+/**
+ * 备用更新检查:直接用 Electron net 模块请求 latest.yml 并解析版本号。
+ * 当 electron-updater 模块加载失败或 checkForUpdates 网络异常时启用。
+ * 相比 electron-updater,net 模块走 Chromium 网络栈,对国内网络更友好。
+ */
+async function checkLatestYmlFallback(timeoutMs = 15000): Promise<CheckResult> {
+  return new Promise((resolve) => {
+    const request = net.request(LATEST_YML_URL)
+    const timeout = setTimeout(() => {
+      request.abort()
+      resolve({ updateAvailable: false, error: 'Request timeout' })
+    }, timeoutMs)
+
+    request.on('response', (response) => {
+      let body = ''
+      response.on('data', (chunk: Buffer) => { body += chunk.toString() })
+      response.on('end', () => {
+        clearTimeout(timeout)
+        if (response.statusCode !== 200) {
+          resolve({ updateAvailable: false, error: `HTTP ${response.statusCode}` })
+          return
+        }
+        // 解析 latest.yml 中的 version 字段
+        const match = body.match(/^version:\s*(.+)$/m)
+        if (!match) {
+          resolve({ updateAvailable: false, error: 'Failed to parse latest.yml' })
+          return
+        }
+        const latestVersion = match[1].trim()
+        const currentVersion = app.getVersion()
+        const isNewer = compareVersions(latestVersion, currentVersion) > 0
+        console.log(`[UpdateService] Fallback check: latest=${latestVersion}, current=${currentVersion}, newer=${isNewer}`)
+        resolve({
+          updateAvailable: isNewer,
+          version: isNewer ? latestVersion : undefined,
+        })
+      })
+    })
+
+    request.on('error', (err) => {
+      clearTimeout(timeout)
+      console.error('[UpdateService] Fallback request error:', err.message)
+      resolve({ updateAvailable: false, error: err.message })
+    })
+
+    request.end()
+  })
+}
+
+/** 简单的 semver 比较:返回 -1/0/1 */
+function compareVersions(a: string, b: string): number {
+  const pa = a.replace(/^v/, '').split('.').map(Number)
+  const pb = b.replace(/^v/, '').split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const va = pa[i] || 0
+    const vb = pb[i] || 0
+    if (va > vb) return 1
+    if (va < vb) return -1
+  }
+  return 0
+}
+
 class UpdateService {
   private mainWindow: BrowserWindow | null = null
 
@@ -29,30 +103,52 @@ class UpdateService {
     this.mainWindow = win
   }
 
-  async checkForUpdates(): Promise<{ updateAvailable: boolean; version?: string }> {
+  async checkForUpdates(): Promise<CheckResult> {
     const updater = await getAutoUpdater()
-    if (!updater) {
-      console.log('[UpdateService] electron-updater not available, skipping check')
-      return { updateAvailable: false }
-    }
 
-    try {
-      updater.autoDownload = false
-      updater.autoInstallOnAppQuit = true
+    // 主路径:使用 electron-updater
+    if (updater) {
+      try {
+        updater.autoDownload = false
+        updater.autoInstallOnAppQuit = true
 
-      const result = await updater.checkForUpdates()
-      if (result?.updateInfo?.version) {
-        this.mainWindow?.webContents.send('update:available', {
-          version: result.updateInfo.version,
-          releaseNotes: result.updateInfo.releaseNotes,
-        })
-        return { updateAvailable: true, version: result.updateInfo.version }
+        const result = await updater.checkForUpdates()
+        if (result?.updateInfo?.version) {
+          const isNewer = compareVersions(result.updateInfo.version, app.getVersion()) > 0
+          if (isNewer) {
+            this.mainWindow?.webContents.send('update:available', {
+              version: result.updateInfo.version,
+              releaseNotes: result.updateInfo.releaseNotes,
+            })
+            return { updateAvailable: true, version: result.updateInfo.version, releaseNotes: result.updateInfo.releaseNotes }
+          }
+          return { updateAvailable: false }
+        }
+        return { updateAvailable: false }
+      } catch (err) {
+        console.error('[UpdateService] electron-updater checkForUpdates failed, trying fallback:', err)
+        // 主路径失败,尝试备用方案
+        const fallback = await checkLatestYmlFallback()
+        if (fallback.updateAvailable) {
+          this.mainWindow?.webContents.send('update:available', {
+            version: fallback.version,
+            releaseNotes: '',
+          })
+        }
+        return fallback
       }
-      return { updateAvailable: false }
-    } catch (err) {
-      console.error('[UpdateService] checkForUpdates failed:', err)
-      return { updateAvailable: false }
     }
+
+    // electron-updater 模块不可用,直接用备用方案
+    console.log('[UpdateService] electron-updater not available, using fallback')
+    const fallback = await checkLatestYmlFallback()
+    if (fallback.updateAvailable) {
+      this.mainWindow?.webContents.send('update:available', {
+        version: fallback.version,
+        releaseNotes: '',
+      })
+    }
+    return fallback
   }
 
   async downloadUpdate(): Promise<void> {
@@ -87,6 +183,13 @@ class UpdateService {
       })
 
       updater.downloadUpdate().catch(reject)
+    })
+  }
+
+  /** 打开 GitHub Releases 页面(用于手动下载) */
+  openReleasesPage(): void {
+    import('electron').then(({ shell }) => {
+      shell.openExternal(RELEASES_PAGE_URL)
     })
   }
 

@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## [2.6.5] - 2026-07-31
+
+### 更新检查机制修复
+
+#### 问题根因
+v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 模块异常时,catch 吞掉错误并返回 `{ updateAvailable: false }`,前端显示"已是最新版本",误导用户以为没有新版本,实际是检查失败(国内 GitHub Releases 访问超时)。
+
+#### 修复方案
+- **备用更新检查通道**:新增 `checkLatestYmlFallback`,使用 Electron `net` 模块(走 Chromium 网络栈)直接请求 `releases/latest/download/latest.yml` 并解析版本号。当 electron-updater 主路径失败时自动启用
+- **错误信息透传**:`checkForUpdates` 返回类型增加 `error?: string` 字段,前端可区分"无更新"与"检查失败"
+- **15 秒超时**:备用通道设置 15 秒超时,避免长时间挂起
+- **版本比较修正**:主路径增加 `compareVersions` 比较,避免 electron-updater 在 dev 模式下误报
+- **手动下载入口**:检查失败时 UI 显示"手动下载"按钮,一键打开 GitHub Releases 页面
+- **新增 IPC**:`app:open-releases-page` 打开浏览器跳转 Releases
+- **5 语言 i18n**:新增 `update.manualDownload` key(手动下载/Manual Download/手動ダウンロード/수동 다운로드/手動下載)
+
+#### 涉及文件
+- `electron/services/update.service.ts`:新增备用检查通道 + 错误透传 + openReleasesPage
+- `electron/ipc/handlers.ts`:新增 `app:open-releases-page` IPC
+- `electron/preload.ts`:暴露 `openReleasesPage` API
+- `src/types/electron.d.ts`:更新 checkUpdate 返回类型
+- `src/components/layout/UpdatePopover.tsx`:区分"无更新"与"检查失败",添加手动下载按钮
+- `src/i18n/resources/*/common.json`:5 语言补充 manualDownload
+
+### 回归测试
+- TypeScript typecheck:0 errors
+- 前端 vitest:196/196 通过
+
+---
+
 ## [2.6.4] - 2026-07-31
 
 ### v2.6.3 收尾:文档补齐与 U3 组件抽取

@@ -185,7 +185,8 @@
     "downloaded": "ダウンロード完了",
     "restartToInstall": "再起動してインストール",
     "error": "更新エラー",
-    "retry": "再試行"
+    "retry": "再試行",
+    "manualDownload": "手動ダウンロード"
   },
   "about": {
     "title": "AutoLink について",

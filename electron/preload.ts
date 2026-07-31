@@ -85,6 +85,7 @@ const electronAPI = {
     checkUpdate: () => ipcRenderer.invoke('app:check-update'),
     downloadUpdate: () => ipcRenderer.invoke('app:download-update'),
     quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install'),
+    openReleasesPage: () => ipcRenderer.invoke('app:open-releases-page'),
     onUpdateAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { version: string; releaseNotes?: string }) => callback(data)
       ipcRenderer.on('update:available', handler)

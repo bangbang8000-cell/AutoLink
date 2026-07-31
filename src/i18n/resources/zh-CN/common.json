@@ -199,6 +199,7 @@
     "restartToInstall": "重启安装",
     "error": "更新出错",
     "retry": "重试",
+    "manualDownload": "手动下载",
     "releaseNotes": "更新日志",
     "newVersionAvailable": "发现新版本 v{{version}}，点击右上角图标查看"
   },

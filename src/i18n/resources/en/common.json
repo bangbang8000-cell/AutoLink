@@ -199,6 +199,7 @@
     "restartToInstall": "Restart to install",
     "error": "Update error",
     "retry": "Retry",
+    "manualDownload": "Manual Download",
     "releaseNotes": "Release Notes",
     "newVersionAvailable": "New version v{{version}} available. Click the icon in the top right to view."
   },

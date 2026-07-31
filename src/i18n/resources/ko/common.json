@@ -185,7 +185,8 @@
     "downloaded": "다운로드 완료",
     "restartToInstall": "재시작하여 설치",
     "error": "업데이트 오류",
-    "retry": "재시도"
+    "retry": "재시도",
+    "manualDownload": "수동 다운로드"
   },
   "about": {
     "title": "AutoLink 정보",

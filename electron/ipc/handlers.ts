@@ -758,6 +758,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     updateService.quitAndInstall()
   })
 
+  ipcMain.handle('app:open-releases-page', () => {
+    updateService.openReleasesPage()
+  })
+
   // ===== Device Library =====
   ipcMain.handle('device-library:list', wrapHandler(async () => {
     return loadDeviceLibrary()
