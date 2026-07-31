@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [2.6.4] - 2026-07-31
+
+### v2.6.3 收尾:文档补齐与 U3 组件抽取
+
+- **U3 收尾**:抽取 `ui/Toggle.tsx` 和 `ui/SettingsRow.tsx` 通用组件,迁移 FileExplorer 内联定义(`Toggle`/`ToggleMini`/`SettingsSection`/`SettingsRow`/`INPUT_CLASS`)
+- **CHANGELOG**:补齐 v2.5.0-v2.6.3 全部变更记录
+- **README**:更新至 V2.6 功能说明(拓扑持久化/自动更新/本地用户指南/PDF 报告/设备库一致性校验)
+- **deployment.md**:重写为 V2.6 版本(自动更新机制/数据持久化/reportlab 依赖/V2.6 常见问题)
+- **user_guide.md**:新增第 11 章「自动更新」,项目结构补充 topology.json/rack_layout.json,输出类型补充 PDF 报告,设置补充「重置工作区」,常见问题补充 Q8-Q10
+- **v2.6.3 PRD**:状态更新为已完成,验收清单全部勾选
+
+### 回归测试
+- TypeScript typecheck:0 errors
+- ESLint:0 errors(78 warnings 为历史遗留)
+- 前端 vitest:196/196 通过
+- 后端 pytest:299/299 通过
+
+---
+
 ## [2.6.3] - 2026-07-31
 
 ### UI 系统优化（U1-U9 全部完成）
