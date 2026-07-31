@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function OutputTab({ fileName, fileType }: Props) {
+  const { t } = useTranslation('common')
   const projectName = useProjectStore((s) => s.selectedProjectName)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +36,7 @@ export function OutputTab({ fileName, fileType }: Props) {
         // T10: getFileBinary 需要 (projectName, relPath) 两个参数
         const base64 = await window.electron?.project?.getFileBinary(projectName, `output/${fileName}`)
         if (!base64) {
-          setError('无法读取文件')
+          setError(t('common:fileViewer.cannotRead'))
           return
         }
         const wb = XLSX.read(base64, { type: 'base64' })
@@ -57,7 +59,7 @@ export function OutputTab({ fileName, fileType }: Props) {
           setImageSrc(`data:image/${fileType || 'png'};base64,${base64}`)
         }
       } else {
-        setError(`不支持的文件类型: ${fileType}`)
+        setError(t('common:fileViewer.unsupportedType', { type: fileType || '' }))
       }
     } catch (err) {
       setError((err as Error).message)
@@ -69,7 +71,7 @@ export function OutputTab({ fileName, fileType }: Props) {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-        加载中...
+        {t('common:loading')}
       </div>
     )
   }
@@ -101,7 +103,7 @@ export function OutputTab({ fileName, fileType }: Props) {
     if (!data || data.length === 0) {
       return (
         <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-          空表格
+          {t('common:fileViewer.emptyTable')}
         </div>
       )
     }
@@ -169,7 +171,7 @@ export function OutputTab({ fileName, fileType }: Props) {
 
   return (
     <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-      无法预览此文件
+      {t('common:fileViewer.cannotPreview')}
     </div>
   )
 }

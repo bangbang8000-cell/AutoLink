@@ -40,7 +40,81 @@
     "redo": "重做",
     "copy": "複製",
     "paste": "貼上",
-    "cheatsheet": "快捷鍵列表"
+    "cheatsheet": "快捷鍵列表",
+    "topLevel": {
+      "file": "檔案",
+      "edit": "編輯",
+      "view": "檢視",
+      "project": "專案",
+      "help": "說明"
+    },
+    "file": {
+      "newProject": "新建專案",
+      "showInExplorer": "在檔案管理器中開啟",
+      "saveConfig": "儲存設定",
+      "exit": "結束"
+    },
+    "edit": {
+      "preferences": "偏好設定"
+    },
+    "view": {
+      "fileBrowser": "檔案瀏覽器",
+      "logPanel": "日誌面板",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "fullscreen": "全螢幕"
+    },
+    "project": {
+      "projectSettings": "專案設定",
+      "validateTopology": "驗證拓撲",
+      "renderOutput": "渲染輸出",
+      "exportRackTable": "匯出上機表",
+      "exportDeviceList": "匯出設備清單"
+    },
+    "help": {
+      "userGuide": "使用者指南",
+      "keyboardShortcuts": "快捷鍵參考",
+      "checkUpdate": "檢查更新",
+      "about": "關於 AutoLink"
+    },
+    "shortcuts": {
+      "title": "快捷鍵參考",
+      "general": "一般",
+      "view": "檢視",
+      "workspace": "工作區",
+      "newProject": "新建專案",
+      "saveConfig": "儲存設定",
+      "preferences": "開啟偏好設定",
+      "toggleFileBrowser": "切換檔案瀏覽器",
+      "toggleLogPanel": "切換日誌面板",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "fullscreen": "全螢幕",
+      "designView": "設計檢視",
+      "deviceView": "設備檢視",
+      "wiringView": "布線檢視",
+      "visualizationView": "視覺化檢視",
+      "shortcutsRef": "快捷鍵參考"
+    },
+    "toast": {
+      "selectProjectFirst": "請先選擇一個專案",
+      "configSaved": "設定已儲存",
+      "saveFailed": "儲存失敗: {{error}}",
+      "validating": "正在驗證拓撲...",
+      "validatePassed": "拓撲驗證通過",
+      "validateFailed": "驗證失敗: {{error}}",
+      "renderHint": "請在工作台中點擊「一鍵渲染」開始渲染",
+      "exportingRackTable": "正在匯出上機表...",
+      "rackTableExported": "上機表已匯出: {{path}}",
+      "exportFailed": "匯出失敗: {{error}}",
+      "exportingDeviceList": "正在匯出設備清單...",
+      "deviceListExported": "設備清單已匯出",
+      "checkingUpdate": "正在檢查更新...",
+      "newVersionFound": "發現新版本: {{version}}",
+      "upToDate": "已是最新版本",
+      "checkUpdateFailed": "檢查更新失敗",
+      "guideLoadFailed": "無法載入使用者指南"
+    }
   },
   "theme": { "light": "亮色", "dark": "暗色", "system": "跟隨系統" },
   "language": {
@@ -300,5 +374,42 @@
         "viewFullInfo": "檢視完整資訊 & 第三方授權"
       }
     }
+  },
+  "welcome": {
+    "currentProject": "當前專案：{{name}}",
+    "openFromSidebar": "從左側活動欄開啟功能面板",
+    "title": "歡迎使用 AutoLink",
+    "subtitle": "AI 智算中心網路規劃與可視化工具",
+    "newProject": "新建專案",
+    "newProjectDesc": "從空白開始",
+    "fromTemplate": "從範本建立",
+    "fromTemplateDesc": "選擇情境範本",
+    "openProject": "開啟專案",
+    "openProjectDesc": "選擇已有專案",
+    "importProject": "匯入專案",
+    "importProjectDesc": "從 ZIP 匯入",
+    "openWorkbench": "開啟工作台",
+    "openWorkbenchDesc": "體驗範例專案",
+    "userGuide": "使用指南",
+    "userGuideDesc": "檢視文件",
+    "shortcutNewProject": "新建專案",
+    "shortcutWorkbench": "工作台",
+    "closeTab": "關閉",
+    "closeOthers": "關閉其他",
+    "closeRight": "關閉右側",
+    "closeAll": "關閉全部"
+  },
+  "guide": {
+    "title": "使用者指南",
+    "loading": "正在載入使用者指南...",
+    "loadFailed": "使用者指南載入失敗",
+    "notFound": "使用者指南文件不存在",
+    "toc": "目錄"
+  },
+  "fileViewer": {
+    "cannotRead": "無法讀取檔案",
+    "unsupportedType": "不支援的檔案類型: {{type}}",
+    "emptyTable": "空表格",
+    "cannotPreview": "無法預覽此檔案"
   }
 }

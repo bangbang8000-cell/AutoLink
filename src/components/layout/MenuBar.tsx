@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { X } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
@@ -17,6 +18,7 @@ interface MenuItem {
 }
 
 export function MenuBar() {
+  const { t } = useTranslation('common')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -37,21 +39,11 @@ export function MenuBar() {
     setShowCreateProjectWizard(true)
   }, [setShowCreateProjectWizard])
 
-  const handleOpenProjectDirectory = useCallback(async () => {
-    try {
-      if (selectedProjectName) {
-        const wsp = await window.electron?.app?.getPath?.('workspace')
-        if (wsp) {
-          const folderPath = `${wsp}\\${selectedProjectName}`
-          window.electron?.shell?.showItemInFolder?.(folderPath)
-        }
-      }
-    } catch { /* silently ignore */ }
-  }, [selectedProjectName])
+  // P4: 合并重复菜单项 — 删除 handleOpenProjectDirectory,仅保留 handleShowInExplorer(带 toast 提示)
 
   const handleShowInExplorer = useCallback(async () => {
     if (!selectedProjectName) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('menu.toast.selectProjectFirst'))
       return
     }
     try {
@@ -61,20 +53,20 @@ export function MenuBar() {
         window.electron?.shell?.showItemInFolder?.(folderPath)
       }
     } catch { /* silently ignore */ }
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, addToast, t])
 
   const handleSaveConfig = useCallback(async () => {
     if (!selectedProjectName) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('menu.toast.selectProjectFirst'))
       return
     }
     try {
       await useDesignStore.getState().saveConfig(selectedProjectName)
-      addToast('success', '配置已保存')
+      addToast('success', t('menu.toast.configSaved'))
     } catch (e: any) {
-      addToast('error', `保存失败: ${e?.message || e}`)
+      addToast('error', t('menu.toast.saveFailed', { error: e?.message || String(e) }))
     }
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, addToast, t])
 
   const handleExit = useCallback(() => {
     window.electron?.window?.close()
@@ -115,130 +107,125 @@ export function MenuBar() {
 
   const handleValidateTopology = useCallback(async () => {
     if (!selectedProjectName) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('menu.toast.selectProjectFirst'))
       return
     }
     try {
-      addToast('info', '正在验证拓扑...')
+      addToast('info', t('menu.toast.validating'))
       await useDesignStore.getState().validate(selectedProjectName)
-      addToast('success', '拓扑验证通过')
+      addToast('success', t('menu.toast.validatePassed'))
     } catch (e: any) {
-      addToast('error', `验证失败: ${e?.message || e}`)
+      addToast('error', t('menu.toast.validateFailed', { error: e?.message || String(e) }))
     }
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, addToast, t])
 
   const handleRender = useCallback(() => {
     if (!selectedProjectName) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('menu.toast.selectProjectFirst'))
       return
     }
     // Switch to workbench and trigger render
     setActiveActivity('workbench')
-    openTab({ type: 'workbench', title: '工作台', closable: false })
-    addToast('info', '请在工作台中点击"一键渲染"开始渲染')
-  }, [selectedProjectName, addToast, setActiveActivity, openTab])
+    openTab({ type: 'workbench', title: t('menu.workbench'), closable: false })
+    addToast('info', t('menu.toast.renderHint'))
+  }, [selectedProjectName, addToast, setActiveActivity, openTab, t])
 
   const handleExportRackTable = useCallback(async () => {
     if (!selectedProjectName) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('menu.toast.selectProjectFirst'))
       return
     }
     try {
-      addToast('info', '正在导出上机表...')
+      addToast('info', t('menu.toast.exportingRackTable'))
       const filePath = await useRackStore.getState().exportToExcel(selectedProjectName)
-      addToast('success', `上机表已导出: ${filePath}`)
+      addToast('success', t('menu.toast.rackTableExported', { path: filePath }))
     } catch (e: any) {
-      addToast('error', `导出失败: ${e?.message || e}`)
+      addToast('error', t('menu.toast.exportFailed', { error: e?.message || String(e) }))
     }
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, addToast, t])
 
   const handleExportDeviceList = useCallback(async () => {
     if (!selectedProjectName) {
-      addToast('warning', '请先选择一个项目')
+      addToast('warning', t('menu.toast.selectProjectFirst'))
       return
     }
     try {
-      addToast('info', '正在导出设备清单...')
+      addToast('info', t('menu.toast.exportingDeviceList'))
       if (window.electron?.render?.exportConnections) {
         await window.electron.render.exportConnections(selectedProjectName, ['deviceList'])
-        addToast('success', '设备清单已导出')
+        addToast('success', t('menu.toast.deviceListExported'))
         // Refresh projects to show new files
         useProjectStore.getState().fetchProjects()
       }
     } catch (e: any) {
-      addToast('error', `导出失败: ${e?.message || e}`)
+      addToast('error', t('menu.toast.exportFailed', { error: e?.message || String(e) }))
     }
-  }, [selectedProjectName, addToast])
+  }, [selectedProjectName, addToast, t])
 
-  const handleUserGuide = useCallback(async () => {
-    // V2.4.4: 通过 shell.openExternal 打开 GitHub Wiki 用户指南
-    try {
-      await window.electron?.shell?.openExternal?.('https://github.com/bangbang8000-cell/AutoLink/wiki')
-    } catch {
-      addToast('error', '无法打开用户指南，请检查网络连接')
-    }
-  }, [addToast])
+  // P2: 用户指南改为本地加载(工作区标签页),不再跳转 GitHub
+  const handleUserGuide = useCallback(() => {
+    openTab({ type: 'guide', title: t('guide.title'), closable: true })
+  }, [openTab, t])
 
   const handleKeyboardShortcuts = useCallback(() => {
     // V2.4.4: 弹出独立快捷键对话框（替代原来的 toast 提示）
     setShowShortcutsDialog(true)
-  }, [])
+  }, [setShowShortcutsDialog])
 
   const handleCheckUpdate = useCallback(async () => {
     try {
-      addToast('info', '正在检查更新...')
+      addToast('info', t('menu.toast.checkingUpdate'))
       const result = await window.electron?.app?.checkUpdate?.()
       if (result?.updateAvailable) {
-        addToast('info', `发现新版本: ${result.version}`)
+        addToast('info', t('menu.toast.newVersionFound', { version: result.version || '' }))
       } else {
-        addToast('success', '已是最新版本')
+        addToast('success', t('menu.toast.upToDate'))
       }
     } catch {
-      addToast('error', '检查更新失败')
+      addToast('error', t('menu.toast.checkUpdateFailed'))
     }
-  }, [addToast])
+  }, [addToast, t])
 
   const handleAbout = useCallback(() => {
     setShowAboutDialog(true)
   }, [setShowAboutDialog])
 
   // --- Menu definitions ---
+  // P3: 全部菜单项 i18n 化;P4: 删除重复的「打开项目目录」
   const MENUS: Record<string, MenuItem[]> = {
-    '文件': [
-      { label: '新建项目', shortcut: 'Ctrl+N', action: handleNewProject },
-      { label: '打开项目目录', action: handleOpenProjectDirectory },
+    [t('menu.topLevel.file')]: [
+      { label: t('menu.file.newProject'), shortcut: 'Ctrl+N', action: handleNewProject },
+      { label: t('menu.file.showInExplorer'), action: handleShowInExplorer },
       { separator: true },
-      { label: '在文件管理器中打开项目', action: handleShowInExplorer },
-      { separator: true },
-      { label: '保存配置', shortcut: 'Ctrl+S', action: handleSaveConfig },
-      { label: '退出', action: handleExit },
+      { label: t('menu.file.saveConfig'), shortcut: 'Ctrl+S', action: handleSaveConfig },
+      { label: t('menu.file.exit'), action: handleExit },
     ],
-    '编辑': [
-      { label: '首选项', shortcut: 'Ctrl+,', action: handlePreferences },
+    [t('menu.topLevel.edit')]: [
+      { label: t('menu.edit.preferences'), shortcut: 'Ctrl+,', action: handlePreferences },
     ],
-    '视图': [
-      { label: '文件浏览器', shortcut: 'Ctrl+B', action: handleToggleSidebar },
-      { label: '日志面板', shortcut: 'Ctrl+J', action: handleTogglePanel },
+    [t('menu.topLevel.view')]: [
+      { label: t('menu.view.fileBrowser'), shortcut: 'Ctrl+B', action: handleToggleSidebar },
+      { label: t('menu.view.logPanel'), shortcut: 'Ctrl+J', action: handleTogglePanel },
       { separator: true },
-      { label: '放大', shortcut: 'Ctrl+=', action: handleZoomIn },
-      { label: '缩小', shortcut: 'Ctrl+-', action: handleZoomOut },
+      { label: t('menu.view.zoomIn'), shortcut: 'Ctrl+=', action: handleZoomIn },
+      { label: t('menu.view.zoomOut'), shortcut: 'Ctrl+-', action: handleZoomOut },
       { separator: true },
-      { label: '全屏', shortcut: 'F11', action: handleFullscreen },
+      { label: t('menu.view.fullscreen'), shortcut: 'F11', action: handleFullscreen },
     ],
-    '项目': [
-      { label: '项目设置', action: handleProjectSettings },
-      { label: '验证拓扑', action: handleValidateTopology },
-      { label: '渲染输出', action: handleRender },
+    [t('menu.topLevel.project')]: [
+      { label: t('menu.project.projectSettings'), action: handleProjectSettings },
+      { label: t('menu.project.validateTopology'), action: handleValidateTopology },
+      { label: t('menu.project.renderOutput'), action: handleRender },
       { separator: true },
-      { label: '导出上机表', action: handleExportRackTable },
-      { label: '导出设备清单', action: handleExportDeviceList },
+      { label: t('menu.project.exportRackTable'), action: handleExportRackTable },
+      { label: t('menu.project.exportDeviceList'), action: handleExportDeviceList },
     ],
-    '帮助': [
-      { label: '用户指南', action: handleUserGuide },
-      { label: '快捷键参考', shortcut: 'Ctrl+K', action: handleKeyboardShortcuts },
+    [t('menu.topLevel.help')]: [
+      { label: t('menu.help.userGuide'), action: handleUserGuide },
+      { label: t('menu.help.keyboardShortcuts'), shortcut: 'Ctrl+K', action: handleKeyboardShortcuts },
       { separator: true },
-      { label: '检查更新', action: handleCheckUpdate },
-      { label: '关于 AutoLink', action: handleAbout },
+      { label: t('menu.help.checkUpdate'), action: handleCheckUpdate },
+      { label: t('menu.help.about'), action: handleAbout },
     ],
   }
 
@@ -312,38 +299,40 @@ export function MenuBar() {
 
 /* ---------- V2.4.4: 快捷键参考对话框 ---------- */
 
-const SHORTCUTS: { category: string; items: { keys: string; desc: string }[] }[] = [
-  {
-    category: '通用',
-    items: [
-      { keys: 'Ctrl+N', desc: '新建项目' },
-      { keys: 'Ctrl+S', desc: '保存配置' },
-      { keys: 'Ctrl+,', desc: '打开首选项' },
-    ],
-  },
-  {
-    category: '视图',
-    items: [
-      { keys: 'Ctrl+B', desc: '切换文件浏览器' },
-      { keys: 'Ctrl+J', desc: '切换日志面板' },
-      { keys: 'Ctrl+=', desc: '放大' },
-      { keys: 'Ctrl+-', desc: '缩小' },
-      { keys: 'F11', desc: '全屏' },
-    ],
-  },
-  {
-    category: '工作区',
-    items: [
-      { keys: 'Ctrl+Shift+E', desc: '设计视图' },
-      { keys: 'Ctrl+Shift+D', desc: '设备视图' },
-      { keys: 'Ctrl+Shift+W', desc: '布线视图' },
-      { keys: 'Ctrl+Shift+V', desc: '可视化视图' },
-      { keys: 'Ctrl+K', desc: '快捷键参考' },
-    ],
-  },
-]
-
+// P3: ShortcutsDialog i18n 化(由组件内部 useTranslation 驱动)
 function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation('common')
+  const SHORTCUTS: { category: string; items: { keys: string; desc: string }[] }[] = [
+    {
+      category: t('menu.shortcuts.general'),
+      items: [
+        { keys: 'Ctrl+N', desc: t('menu.shortcuts.newProject') },
+        { keys: 'Ctrl+S', desc: t('menu.shortcuts.saveConfig') },
+        { keys: 'Ctrl+,', desc: t('menu.shortcuts.preferences') },
+      ],
+    },
+    {
+      category: t('menu.shortcuts.view'),
+      items: [
+        { keys: 'Ctrl+B', desc: t('menu.shortcuts.toggleFileBrowser') },
+        { keys: 'Ctrl+J', desc: t('menu.shortcuts.toggleLogPanel') },
+        { keys: 'Ctrl+=', desc: t('menu.shortcuts.zoomIn') },
+        { keys: 'Ctrl+-', desc: t('menu.shortcuts.zoomOut') },
+        { keys: 'F11', desc: t('menu.shortcuts.fullscreen') },
+      ],
+    },
+    {
+      category: t('menu.shortcuts.workspace'),
+      items: [
+        { keys: 'Ctrl+Shift+E', desc: t('menu.shortcuts.designView') },
+        { keys: 'Ctrl+Shift+D', desc: t('menu.shortcuts.deviceView') },
+        { keys: 'Ctrl+Shift+W', desc: t('menu.shortcuts.wiringView') },
+        { keys: 'Ctrl+Shift+V', desc: t('menu.shortcuts.visualizationView') },
+        { keys: 'Ctrl+K', desc: t('menu.shortcuts.shortcutsRef') },
+      ],
+    },
+  ]
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
@@ -351,7 +340,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">快捷键参考</h2>
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('menu.shortcuts.title')}</h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400">
             <X size={16} />
           </button>

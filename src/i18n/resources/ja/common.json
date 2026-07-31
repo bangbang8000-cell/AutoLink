@@ -40,7 +40,81 @@
     "redo": "やり直す",
     "copy": "コピー",
     "paste": "貼り付け",
-    "cheatsheet": "ショートカット一覧"
+    "cheatsheet": "ショートカット一覧",
+    "topLevel": {
+      "file": "ファイル",
+      "edit": "編集",
+      "view": "表示",
+      "project": "プロジェクト",
+      "help": "ヘルプ"
+    },
+    "file": {
+      "newProject": "新規プロジェクト",
+      "showInExplorer": "ファイルマネージャーで開く",
+      "saveConfig": "設定を保存",
+      "exit": "終了"
+    },
+    "edit": {
+      "preferences": "環境設定"
+    },
+    "view": {
+      "fileBrowser": "ファイルブラウザ",
+      "logPanel": "ログパネル",
+      "zoomIn": "拡大",
+      "zoomOut": "縮小",
+      "fullscreen": "フルスクリーン"
+    },
+    "project": {
+      "projectSettings": "プロジェクト設定",
+      "validateTopology": "トポロジーを検証",
+      "renderOutput": "出力をレンダリング",
+      "exportRackTable": "ラック表をエクスポート",
+      "exportDeviceList": "デバイスリストをエクスポート"
+    },
+    "help": {
+      "userGuide": "ユーザーガイド",
+      "keyboardShortcuts": "ショートカットキー",
+      "checkUpdate": "更新を確認",
+      "about": "AutoLink について"
+    },
+    "shortcuts": {
+      "title": "ショートカットキー",
+      "general": "一般",
+      "view": "表示",
+      "workspace": "ワークスペース",
+      "newProject": "新規プロジェクト",
+      "saveConfig": "設定を保存",
+      "preferences": "環境設定を開く",
+      "toggleFileBrowser": "ファイルブラウザの切替",
+      "toggleLogPanel": "ログパネルの切替",
+      "zoomIn": "拡大",
+      "zoomOut": "縮小",
+      "fullscreen": "フルスクリーン",
+      "designView": "設計ビュー",
+      "deviceView": "デバイスビュー",
+      "wiringView": "配線ビュー",
+      "visualizationView": "可視化ビュー",
+      "shortcutsRef": "ショートカットキー"
+    },
+    "toast": {
+      "selectProjectFirst": "最初にプロジェクトを選択してください",
+      "configSaved": "設定を保存しました",
+      "saveFailed": "保存に失敗しました: {{error}}",
+      "validating": "トポロジーを検証中...",
+      "validatePassed": "トポロジーの検証に合格しました",
+      "validateFailed": "検証に失敗しました: {{error}}",
+      "renderHint": "ワークベンチで「ワンクリックレンダリング」をクリックしてレンダリングを開始してください",
+      "exportingRackTable": "ラック表をエクスポート中...",
+      "rackTableExported": "ラック表をエクスポートしました: {{path}}",
+      "exportFailed": "エクスポートに失敗しました: {{error}}",
+      "exportingDeviceList": "デバイスリストをエクスポート中...",
+      "deviceListExported": "デバイスリストをエクスポートしました",
+      "checkingUpdate": "更新を確認中...",
+      "newVersionFound": "新しいバージョンが見つかりました: {{version}}",
+      "upToDate": "最新バージョンです",
+      "checkUpdateFailed": "更新の確認に失敗しました",
+      "guideLoadFailed": "ユーザーガイドを読み込めませんでした"
+    }
   },
   "theme": { "light": "ライト", "dark": "ダーク", "system": "システム" },
   "language": {
@@ -300,5 +374,42 @@
         "viewFullInfo": "完全な情報とサードパーティライセンスを表示"
       }
     }
+  },
+  "welcome": {
+    "currentProject": "現在のプロジェクト：{{name}}",
+    "openFromSidebar": "左側のアクティビティバーから機能パネルを開いてください",
+    "title": "AutoLink へようこそ",
+    "subtitle": "AI データセンターネットワーク計画・可視化ツール",
+    "newProject": "新規プロジェクト",
+    "newProjectDesc": "空白から開始",
+    "fromTemplate": "テンプレートから作成",
+    "fromTemplateDesc": "シナリオテンプレートを選択",
+    "openProject": "プロジェクトを開く",
+    "openProjectDesc": "既存のプロジェクトを選択",
+    "importProject": "プロジェクトをインポート",
+    "importProjectDesc": "ZIP からインポート",
+    "openWorkbench": "ワークベンチを開く",
+    "openWorkbenchDesc": "サンプルプロジェクトを試す",
+    "userGuide": "ユーザーガイド",
+    "userGuideDesc": "ドキュメントを表示",
+    "shortcutNewProject": "新規プロジェクト",
+    "shortcutWorkbench": "ワークベンチ",
+    "closeTab": "閉じる",
+    "closeOthers": "他を閉じる",
+    "closeRight": "右側を閉じる",
+    "closeAll": "すべて閉じる"
+  },
+  "guide": {
+    "title": "ユーザーガイド",
+    "loading": "ユーザーガイドを読み込み中...",
+    "loadFailed": "ユーザーガイドの読み込みに失敗しました",
+    "notFound": "ユーザーガイドのドキュメントが見つかりません",
+    "toc": "目次"
+  },
+  "fileViewer": {
+    "cannotRead": "ファイルを読み込めません",
+    "unsupportedType": "サポートされていないファイル形式です: {{type}}",
+    "emptyTable": "空のテーブル",
+    "cannotPreview": "このファイルはプレビューできません"
   }
 }

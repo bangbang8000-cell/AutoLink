@@ -29,7 +29,8 @@ interface StackVersions {
 const cleanVer = (v: string) => (v || '').replace(/^[\^~>=]+/, '')
 
 export function AboutDialog({ onClose }: Props) {
-  const { t } = useTranslation()
+  // 显式指定 'common' 命名空间(双保险,即使全局 defaultNS 配置变更也不受影响)
+  const { t } = useTranslation('common')
   const [appVersion, setAppVersion] = useState('...')
   const [stack, setStack] = useState<StackVersions | null>(null)
   const [updateState, setUpdateState] = useState<UpdateState>('idle')

@@ -73,6 +73,7 @@ interface Window {
         buildNumber: string
       } | null>
       showBrandingAsset: (filename: string) => Promise<string>
+      readDocFile: (filename: string) => Promise<string | null>
       checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string }>
       downloadUpdate: () => Promise<void>
       quitAndInstall: () => void

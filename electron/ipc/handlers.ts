@@ -2,7 +2,7 @@ import { BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { execSync } from 'child_process'
-import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath } from '../config.js'
+import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath, getDocPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
 import { projectIOService } from '../services/project-io.service.js'
 
@@ -620,6 +620,18 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
     shell.showItemInFolder(filePath)
     return filePath
+  }))
+
+  // 读取应用内置文档（用户指南等）。
+  // 打包后文档随 extraResources 复制到 resourcesPath/docs（只读）；
+  // 开发时从 docs/user_guide/ 读取。
+  ipcMain.handle('app:readDocFile', wrapHandler(async (_event, filename: string) => {
+    const safeName = path.basename(filename)
+    const filePath = getDocPath(safeName)
+    if (!filePath || !fs.existsSync(filePath)) {
+      return null
+    }
+    return fs.readFileSync(filePath, 'utf-8')
   }))
 
   // ===== Shell =====

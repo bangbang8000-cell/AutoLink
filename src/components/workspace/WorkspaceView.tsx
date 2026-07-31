@@ -1,4 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -13,6 +14,7 @@ import { DesignTab } from './tabs/DesignTab'
 import { DeviceLibraryTab } from './tabs/DeviceLibraryTab'
 import { FileViewerTab } from './tabs/FileViewerTab'
 import { DataCenterTab } from './tabs/DataCenterTab'
+import { GuideTab } from './tabs/GuideTab'
 
 const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
   workbench: LayoutDashboard,
@@ -25,9 +27,11 @@ const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?
   projectOverview: FolderOpen,
   fileViewer: Monitor,
   datacenter: Building2,
+  guide: BookOpen,
 }
 
 export function WorkspaceView() {
+  const { t } = useTranslation('common')
   const tabs = useWorkspaceStore((s) => s.tabs)
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab)
@@ -88,6 +92,7 @@ export function WorkspaceView() {
         )
       }
       case 'datacenter': return <DataCenterTab />
+      case 'guide': return <GuideTab />
     }
   }, [activeTab])
 
@@ -139,26 +144,26 @@ export function WorkspaceView() {
             onClick={() => { closeTab(contextMenu.tabId); setContextMenu(null) }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            关闭
+            {t('welcome.closeTab')}
           </button>
           <button
             onClick={() => { closeOtherTabs(contextMenu.tabId); setContextMenu(null) }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            关闭其他
+            {t('welcome.closeOthers')}
           </button>
           <button
             onClick={() => { closeTabsToRight(contextMenu.tabId); setContextMenu(null) }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            关闭右侧
+            {t('welcome.closeRight')}
           </button>
           <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
           <button
             onClick={() => { closeAllTabs(); setContextMenu(null) }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            关闭全部
+            {t('welcome.closeAll')}
           </button>
         </div>
       )}
@@ -172,13 +177,13 @@ export function WorkspaceView() {
             <Monitor size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
             {selectedProjectName ? (
               <>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">当前项目：{selectedProjectName}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">从左侧活动栏打开功能面板</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('welcome.currentProject', { name: selectedProjectName })}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{t('welcome.openFromSidebar')}</p>
               </>
             ) : (
               <>
-                <p className="text-lg font-bold text-gray-600 dark:text-gray-300 mb-1">欢迎使用 AutoLink</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">AI 智算中心网络规划与可视化工具</p>
+                <p className="text-lg font-bold text-gray-600 dark:text-gray-300 mb-1">{t('welcome.title')}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">{t('welcome.subtitle')}</p>
                 <div className="grid grid-cols-3 gap-3 max-w-2xl">
                   <button
                     onClick={() => setShowCreateProjectWizard(true)}
@@ -186,8 +191,8 @@ export function WorkspaceView() {
                   >
                     <Sparkles size={22} className="text-primary-500" />
                     <div>
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">新建项目</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">从空白开始</div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.newProject')}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.newProjectDesc')}</div>
                     </div>
                   </button>
                   <button
@@ -196,8 +201,8 @@ export function WorkspaceView() {
                   >
                     <LayoutTemplate size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">从模板创建</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">选择场景模板</div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.fromTemplate')}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.fromTemplateDesc')}</div>
                     </div>
                   </button>
                   <button
@@ -206,8 +211,8 @@ export function WorkspaceView() {
                   >
                     <FolderOpen size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">打开项目</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">选择已有项目</div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.openProject')}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.openProjectDesc')}</div>
                     </div>
                   </button>
                   <button
@@ -223,37 +228,38 @@ export function WorkspaceView() {
                   >
                     <Upload size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">导入项目</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">从 ZIP 导入</div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.importProject')}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.importProjectDesc')}</div>
                     </div>
                   </button>
                   <button
                     onClick={() => {
                       setActiveActivity('workbench')
-                      openTab({ type: 'workbench', title: '工作台', closable: false })
+                      openTab({ type: 'workbench', title: t('menu.workbench'), closable: false })
                     }}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                   >
                     <Play size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">打开工作台</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">体验示例项目</div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.openWorkbench')}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.openWorkbenchDesc')}</div>
                     </div>
                   </button>
                   <button
-                    onClick={() => window.electron?.shell?.openExternal?.('https://github.com/bangbang8000-cell/AutoLink')}
+                    // P2: 使用指南改为本地加载(工作区标签页),不再跳转 GitHub
+                    onClick={() => openTab({ type: 'guide', title: t('guide.title'), closable: true })}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                   >
                     <BookOpen size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">使用指南</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">查看文档</div>
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('welcome.userGuide')}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{t('welcome.userGuideDesc')}</div>
                     </div>
                   </button>
                 </div>
                 <div className="mt-6 text-[11px] text-gray-400 dark:text-gray-500 space-y-0.5">
-                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+N</kbd> 新建项目</p>
-                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+Shift+W</kbd> 工作台</p>
+                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+N</kbd> {t('welcome.shortcutNewProject')}</p>
+                  <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px]">Ctrl+Shift+W</kbd> {t('welcome.shortcutWorkbench')}</p>
                 </div>
               </>
             )}

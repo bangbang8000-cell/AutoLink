@@ -44,7 +44,81 @@
     "redo": "Redo",
     "copy": "Copy",
     "paste": "Paste",
-    "cheatsheet": "Keyboard Shortcuts"
+    "cheatsheet": "Keyboard Shortcuts",
+    "topLevel": {
+      "file": "File",
+      "edit": "Edit",
+      "view": "View",
+      "project": "Project",
+      "help": "Help"
+    },
+    "file": {
+      "newProject": "New Project",
+      "showInExplorer": "Show in File Manager",
+      "saveConfig": "Save Config",
+      "exit": "Exit"
+    },
+    "edit": {
+      "preferences": "Preferences"
+    },
+    "view": {
+      "fileBrowser": "File Browser",
+      "logPanel": "Log Panel",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "fullscreen": "Fullscreen"
+    },
+    "project": {
+      "projectSettings": "Project Settings",
+      "validateTopology": "Validate Topology",
+      "renderOutput": "Render Output",
+      "exportRackTable": "Export Rack Table",
+      "exportDeviceList": "Export Device List"
+    },
+    "help": {
+      "userGuide": "User Guide",
+      "keyboardShortcuts": "Keyboard Shortcuts",
+      "checkUpdate": "Check for Updates",
+      "about": "About AutoLink"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "general": "General",
+      "view": "View",
+      "workspace": "Workspace",
+      "newProject": "New Project",
+      "saveConfig": "Save Config",
+      "preferences": "Open Preferences",
+      "toggleFileBrowser": "Toggle File Browser",
+      "toggleLogPanel": "Toggle Log Panel",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "fullscreen": "Fullscreen",
+      "designView": "Design View",
+      "deviceView": "Device View",
+      "wiringView": "Wiring View",
+      "visualizationView": "Visualization View",
+      "shortcutsRef": "Keyboard Shortcuts"
+    },
+    "toast": {
+      "selectProjectFirst": "Please select a project first",
+      "configSaved": "Configuration saved",
+      "saveFailed": "Save failed: {{error}}",
+      "validating": "Validating topology...",
+      "validatePassed": "Topology validation passed",
+      "validateFailed": "Validation failed: {{error}}",
+      "renderHint": "Click \"One-Click Render\" in the workbench to start rendering",
+      "exportingRackTable": "Exporting rack table...",
+      "rackTableExported": "Rack table exported: {{path}}",
+      "exportFailed": "Export failed: {{error}}",
+      "exportingDeviceList": "Exporting device list...",
+      "deviceListExported": "Device list exported",
+      "checkingUpdate": "Checking for updates...",
+      "newVersionFound": "New version found: {{version}}",
+      "upToDate": "Up to date",
+      "checkUpdateFailed": "Update check failed",
+      "guideLoadFailed": "Failed to load user guide"
+    }
   },
   "theme": {
     "light": "Light",
@@ -314,5 +388,42 @@
         "viewFullInfo": "View Full Info & Third-party Licenses"
       }
     }
+  },
+  "welcome": {
+    "currentProject": "Current project: {{name}}",
+    "openFromSidebar": "Open panels from the activity bar on the left",
+    "title": "Welcome to AutoLink",
+    "subtitle": "AI Data Center Network Planning & Visualization",
+    "newProject": "New Project",
+    "newProjectDesc": "Start from scratch",
+    "fromTemplate": "From Template",
+    "fromTemplateDesc": "Choose a scenario template",
+    "openProject": "Open Project",
+    "openProjectDesc": "Select an existing project",
+    "importProject": "Import Project",
+    "importProjectDesc": "Import from ZIP",
+    "openWorkbench": "Open Workbench",
+    "openWorkbenchDesc": "Try a sample project",
+    "userGuide": "User Guide",
+    "userGuideDesc": "View documentation",
+    "shortcutNewProject": "New Project",
+    "shortcutWorkbench": "Workbench",
+    "closeTab": "Close",
+    "closeOthers": "Close Others",
+    "closeRight": "Close to the Right",
+    "closeAll": "Close All"
+  },
+  "guide": {
+    "title": "User Guide",
+    "loading": "Loading user guide...",
+    "loadFailed": "Failed to load user guide",
+    "notFound": "User guide document not found",
+    "toc": "Table of Contents"
+  },
+  "fileViewer": {
+    "cannotRead": "Cannot read file",
+    "unsupportedType": "Unsupported file type: {{type}}",
+    "emptyTable": "Empty table",
+    "cannotPreview": "Cannot preview this file"
   }
 }

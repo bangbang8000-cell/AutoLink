@@ -78,6 +78,7 @@ const electronAPI = {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getStackVersions: () => ipcRenderer.invoke('app:getStackVersions'),
     showBrandingAsset: (filename: string) => ipcRenderer.invoke('app:showBrandingAsset', filename),
+    readDocFile: (filename: string) => ipcRenderer.invoke('app:readDocFile', filename),
     checkUpdate: () => ipcRenderer.invoke('app:check-update'),
     downloadUpdate: () => ipcRenderer.invoke('app:download-update'),
     quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install'),

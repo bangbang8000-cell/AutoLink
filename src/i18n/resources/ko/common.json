@@ -40,7 +40,81 @@
     "redo": "다시 실행",
     "copy": "복사",
     "paste": "붙여넣기",
-    "cheatsheet": "단축키 목록"
+    "cheatsheet": "단축키 목록",
+    "topLevel": {
+      "file": "파일",
+      "edit": "편집",
+      "view": "보기",
+      "project": "프로젝트",
+      "help": "도움말"
+    },
+    "file": {
+      "newProject": "새 프로젝트",
+      "showInExplorer": "파일 관리자에서 열기",
+      "saveConfig": "설정 저장",
+      "exit": "종료"
+    },
+    "edit": {
+      "preferences": "환경설정"
+    },
+    "view": {
+      "fileBrowser": "파일 브라우저",
+      "logPanel": "로그 패널",
+      "zoomIn": "확대",
+      "zoomOut": "축소",
+      "fullscreen": "전체 화면"
+    },
+    "project": {
+      "projectSettings": "프로젝트 설정",
+      "validateTopology": "토폴로지 검증",
+      "renderOutput": "출력 렌더링",
+      "exportRackTable": "랙 테이블 내보내기",
+      "exportDeviceList": "장치 목록 내보내기"
+    },
+    "help": {
+      "userGuide": "사용자 가이드",
+      "keyboardShortcuts": "단축키",
+      "checkUpdate": "업데이트 확인",
+      "about": "AutoLink 정보"
+    },
+    "shortcuts": {
+      "title": "단축키",
+      "general": "일반",
+      "view": "보기",
+      "workspace": "작업 공간",
+      "newProject": "새 프로젝트",
+      "saveConfig": "설정 저장",
+      "preferences": "환경설정 열기",
+      "toggleFileBrowser": "파일 브라우저 전환",
+      "toggleLogPanel": "로그 패널 전환",
+      "zoomIn": "확대",
+      "zoomOut": "축소",
+      "fullscreen": "전체 화면",
+      "designView": "설계 보기",
+      "deviceView": "장치 보기",
+      "wiringView": "배선 보기",
+      "visualizationView": "시각화 보기",
+      "shortcutsRef": "단축키"
+    },
+    "toast": {
+      "selectProjectFirst": "먼저 프로젝트를 선택하세요",
+      "configSaved": "설정이 저장되었습니다",
+      "saveFailed": "저장 실패: {{error}}",
+      "validating": "토폴로지 검증 중...",
+      "validatePassed": "토폴로지 검증 통과",
+      "validateFailed": "검증 실패: {{error}}",
+      "renderHint": "워크벤치에서 \"원클릭 렌더링\"을 클릭하여 렌더링을 시작하세요",
+      "exportingRackTable": "랙 테이블 내보내는 중...",
+      "rackTableExported": "랙 테이블을 내보냈습니다: {{path}}",
+      "exportFailed": "내보내기 실패: {{error}}",
+      "exportingDeviceList": "장치 목록 내보내는 중...",
+      "deviceListExported": "장치 목록을 내보냈습니다",
+      "checkingUpdate": "업데이트 확인 중...",
+      "newVersionFound": "새 버전이 발견되었습니다: {{version}}",
+      "upToDate": "최신 버전입니다",
+      "checkUpdateFailed": "업데이트 확인 실패",
+      "guideLoadFailed": "사용자 가이드를 불러올 수 없습니다"
+    }
   },
   "theme": { "light": "라이트", "dark": "다크", "system": "시스템" },
   "language": {
@@ -300,5 +374,42 @@
         "viewFullInfo": "전체 정보 및 서드파티 라이선스 보기"
       }
     }
+  },
+  "welcome": {
+    "currentProject": "현재 프로젝트: {{name}}",
+    "openFromSidebar": "왼쪽 활동 표시줄에서 기능 패널을 여세요",
+    "title": "AutoLink에 오신 것을 환영합니다",
+    "subtitle": "AI 데이터센터 네트워크 계획 및 시각화 도구",
+    "newProject": "새 프로젝트",
+    "newProjectDesc": "빈 화면에서 시작",
+    "fromTemplate": "템플릿에서 생성",
+    "fromTemplateDesc": "시나리오 템플릿 선택",
+    "openProject": "프로젝트 열기",
+    "openProjectDesc": "기존 프로젝트 선택",
+    "importProject": "프로젝트 가져오기",
+    "importProjectDesc": "ZIP에서 가져오기",
+    "openWorkbench": "워크벤치 열기",
+    "openWorkbenchDesc": "샘플 프로젝트 체험",
+    "userGuide": "사용자 가이드",
+    "userGuideDesc": "문서 보기",
+    "shortcutNewProject": "새 프로젝트",
+    "shortcutWorkbench": "워크벤치",
+    "closeTab": "닫기",
+    "closeOthers": "다른 탭 닫기",
+    "closeRight": "오른쪽 탭 닫기",
+    "closeAll": "모두 닫기"
+  },
+  "guide": {
+    "title": "사용자 가이드",
+    "loading": "사용자 가이드 로딩 중...",
+    "loadFailed": "사용자 가이드 로딩 실패",
+    "notFound": "사용자 가이드 문서를 찾을 수 없습니다",
+    "toc": "목차"
+  },
+  "fileViewer": {
+    "cannotRead": "파일을 읽을 수 없습니다",
+    "unsupportedType": "지원되지 않는 파일 형식: {{type}}",
+    "emptyTable": "빈 테이블",
+    "cannotPreview": "이 파일을 미리 볼 수 없습니다"
   }
 }

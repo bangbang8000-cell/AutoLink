@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type TabType = 'workbench' | 'design' | 'visualization' | 'rack' | 'topology' | 'output' | 'deviceLibrary' | 'projectOverview' | 'fileViewer' | 'datacenter'
+export type TabType = 'workbench' | 'design' | 'visualization' | 'rack' | 'topology' | 'output' | 'deviceLibrary' | 'projectOverview' | 'fileViewer' | 'datacenter' | 'guide'
 
 export interface WorkspaceTab {
   id: string

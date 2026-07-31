@@ -33,6 +33,10 @@ i18n.use(initReactI18next).init({
   },
   lng: getPersistedLanguage(),
   fallbackLng: 'zh-CN',
+  // 显式声明命名空间,并将默认命名空间设为 'common'
+  // 这样 useTranslation() 不带参数时,t('about.title') 会正确解析到 common.about.title
+  ns: ['common', 'design', 'project', 'rack', 'topology', 'workbench', 'device'],
+  defaultNS: 'common',
   interpolation: {
     escapeValue: false,
   },

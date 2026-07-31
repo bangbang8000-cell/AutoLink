@@ -44,7 +44,81 @@
     "redo": "重做",
     "copy": "复制",
     "paste": "粘贴",
-    "cheatsheet": "快捷键列表"
+    "cheatsheet": "快捷键列表",
+    "topLevel": {
+      "file": "文件",
+      "edit": "编辑",
+      "view": "视图",
+      "project": "项目",
+      "help": "帮助"
+    },
+    "file": {
+      "newProject": "新建项目",
+      "showInExplorer": "在文件管理器中打开项目",
+      "saveConfig": "保存配置",
+      "exit": "退出"
+    },
+    "edit": {
+      "preferences": "首选项"
+    },
+    "view": {
+      "fileBrowser": "文件浏览器",
+      "logPanel": "日志面板",
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "fullscreen": "全屏"
+    },
+    "project": {
+      "projectSettings": "项目设置",
+      "validateTopology": "验证拓扑",
+      "renderOutput": "渲染输出",
+      "exportRackTable": "导出上机表",
+      "exportDeviceList": "导出设备清单"
+    },
+    "help": {
+      "userGuide": "用户指南",
+      "keyboardShortcuts": "快捷键参考",
+      "checkUpdate": "检查更新",
+      "about": "关于 AutoLink"
+    },
+    "shortcuts": {
+      "title": "快捷键参考",
+      "general": "通用",
+      "view": "视图",
+      "workspace": "工作区",
+      "newProject": "新建项目",
+      "saveConfig": "保存配置",
+      "preferences": "打开首选项",
+      "toggleFileBrowser": "切换文件浏览器",
+      "toggleLogPanel": "切换日志面板",
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "fullscreen": "全屏",
+      "designView": "设计视图",
+      "deviceView": "设备视图",
+      "wiringView": "布线视图",
+      "visualizationView": "可视化视图",
+      "shortcutsRef": "快捷键参考"
+    },
+    "toast": {
+      "selectProjectFirst": "请先选择一个项目",
+      "configSaved": "配置已保存",
+      "saveFailed": "保存失败: {{error}}",
+      "validating": "正在验证拓扑...",
+      "validatePassed": "拓扑验证通过",
+      "validateFailed": "验证失败: {{error}}",
+      "renderHint": "请在工作台中点击\"一键渲染\"开始渲染",
+      "exportingRackTable": "正在导出上机表...",
+      "rackTableExported": "上机表已导出: {{path}}",
+      "exportFailed": "导出失败: {{error}}",
+      "exportingDeviceList": "正在导出设备清单...",
+      "deviceListExported": "设备清单已导出",
+      "checkingUpdate": "正在检查更新...",
+      "newVersionFound": "发现新版本: {{version}}",
+      "upToDate": "已是最新版本",
+      "checkUpdateFailed": "检查更新失败",
+      "guideLoadFailed": "无法加载用户指南"
+    }
   },
   "theme": {
     "light": "亮色",
@@ -314,5 +388,42 @@
         "viewFullInfo": "查看完整信息 & 第三方许可"
       }
     }
+  },
+  "welcome": {
+    "currentProject": "当前项目：{{name}}",
+    "openFromSidebar": "从左侧活动栏打开功能面板",
+    "title": "欢迎使用 AutoLink",
+    "subtitle": "AI 智算中心网络规划与可视化工具",
+    "newProject": "新建项目",
+    "newProjectDesc": "从空白开始",
+    "fromTemplate": "从模板创建",
+    "fromTemplateDesc": "选择场景模板",
+    "openProject": "打开项目",
+    "openProjectDesc": "选择已有项目",
+    "importProject": "导入项目",
+    "importProjectDesc": "从 ZIP 导入",
+    "openWorkbench": "打开工作台",
+    "openWorkbenchDesc": "体验示例项目",
+    "userGuide": "使用指南",
+    "userGuideDesc": "查看文档",
+    "shortcutNewProject": "新建项目",
+    "shortcutWorkbench": "工作台",
+    "closeTab": "关闭",
+    "closeOthers": "关闭其他",
+    "closeRight": "关闭右侧",
+    "closeAll": "关闭全部"
+  },
+  "guide": {
+    "title": "用户指南",
+    "loading": "正在加载用户指南...",
+    "loadFailed": "用户指南加载失败",
+    "notFound": "用户指南文档不存在",
+    "toc": "目录"
+  },
+  "fileViewer": {
+    "cannotRead": "无法读取文件",
+    "unsupportedType": "不支持的文件类型: {{type}}",
+    "emptyTable": "空表格",
+    "cannotPreview": "无法预览此文件"
   }
 }

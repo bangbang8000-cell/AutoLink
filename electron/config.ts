@@ -75,6 +75,22 @@ export function getBrandingAssetPath(filename: string): string {
   return path.join(process.resourcesPath, 'branding', safeName)
 }
 
+/**
+ * 用户指南文档路径。
+ * - 打包后：resourcesPath/docs/<filename>（由 extraResources 复制）
+ * - 开发时：docs/user_guide/<filename>
+ *
+ * @param filename 文档文件名（如 user_guide.md）
+ * @returns 完整路径；开发模式下若文件不存在返回空字符串
+ */
+export function getDocPath(filename: string): string {
+  const safeName = path.basename(filename)
+  if (isDev) {
+    return path.join(process.cwd(), 'docs', 'user_guide', safeName)
+  }
+  return path.join(process.resourcesPath, 'docs', safeName)
+}
+
 export function getDemoDataPath(): string {
   return getAppPath('demo_data')
 }
