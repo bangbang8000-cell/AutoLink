@@ -241,7 +241,20 @@
       "deleteProject": "プロジェクトを削除",
       "viewTemplateFiles": "テンプレートファイルを表示",
       "editTemplate": "テンプレートを編集...",
-      "deleteTemplate": "テンプレートを削除"
+      "deleteTemplate": "テンプレートを削除",
+      "openFile": "開く",
+      "showInFileManager": "ファイルマネージャーで表示",
+      "copyFilePath": "ファイルパスをコピー",
+      "deleteFile": "ファイルを削除",
+      "deleteBatch": "バッチを削除",
+      "expandAll": "すべて展開",
+      "collapseAll": "すべて折りたたむ"
+    },
+    "group": {
+      "input": "入力設定",
+      "output": "出力ファイル",
+      "topology": "トポロジーデータ",
+      "other": "その他のファイル"
     },
     "toast": {
       "projectDeleted": "プロジェクト \"{{name}}\" が削除されました",
@@ -344,6 +357,7 @@
         "keyboard": "ショートカット",
         "deviceLibrary": "デバイスライブラリ",
         "network": "ネットワーク",
+        "explorer": "エクスプローラー",
         "data": "データ",
         "about": "について"
       },
@@ -409,7 +423,17 @@
         "exportFailed": "エクスポート失敗",
         "importSuccess": "データインポート成功。ページを更新してください",
         "importFailed": "インポート失敗。ファイル形式を確認してください",
-        "resetDone": "すべての設定がリセットされました"
+        "resetDone": "すべての設定がリセットされました",
+        "resetExplorerState": "エクスプローラー展開状態をリセット",
+        "resetExplorerStateDone": "エクスプローラー展開状態がリセットされました"
+      },
+      "explorer": {
+        "title": "プロジェクトエクスプローラー",
+        "groupMode": "グループモード",
+        "smartGroup": "スマートグループ",
+        "smartGroupDesc": "ファイル用途別に仮想グループ化(入力/出力/トポロジー)",
+        "rawGroup": "リアルグループ",
+        "rawGroupDesc": "ファイルシステムの実際のディレクトリで表示"
       },
       "about": {
         "title": "AutoLinkについて",

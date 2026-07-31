@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { ProjectConfig } from '@/types/project-config'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
+import { useExplorerStore } from '@/stores/explorer.store'
 
 export interface ProjectInfo {
   id: number
@@ -153,6 +154,11 @@ export const useProjectStore = create<ProjectState>()(
           selectedProject: selected,
           selectedProjectName: selected?.name ?? null,
         })
+        // T14: 清理已删除项目的浏览器展开状态
+        const cleanupProject = useExplorerStore.getState().cleanupProject
+        for (const name of names) {
+          cleanupProject(name)
+        }
       },
 
       duplicateProject: async (sourceName, targetName) => {
@@ -177,6 +183,8 @@ export const useProjectStore = create<ProjectState>()(
         if (renamed) {
           get().selectProject(renamed)
         }
+        // T14: 清理旧名称的浏览器展开状态(新名称首次展开时会重新拉取)
+        useExplorerStore.getState().cleanupProject(oldName)
       },
 
       exportProject: async (projectName) => {
@@ -269,6 +277,8 @@ export const useProjectStore = create<ProjectState>()(
         ensureIPC()
         await window.electron.template.delete(name)
         await get().fetchTemplates()
+        // 清理已删除模板的浏览器展开状态
+        useExplorerStore.getState().cleanupTemplate(name)
       },
 
       convertToTemplate: async (projectName, meta) => {

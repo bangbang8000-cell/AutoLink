@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useUIStore, type ThemeMode } from '@/stores/ui.store'
+import { useUIStore, type ThemeMode, type ExplorerGroupMode } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
+import { useExplorerStore } from '@/stores/explorer.store'
 import {
   FolderOpen, Folder, Search, ChevronRight, ChevronDown,
   Sun, Moon, Monitor, Globe, Keyboard, Info, Palette, FileOutput,
@@ -14,8 +15,8 @@ import {
   Upload, RotateCcw, ExternalLink, Check,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
-  Star, Plus,
-  FileText, Image as ImageIcon, FileCode, File as FileIcon, LayoutTemplate,
+  Star, Plus, FolderTree,
+  FileText, Image as ImageIcon, FileCode, File as FileIcon, LayoutTemplate, FileInput,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -24,7 +25,11 @@ import { useToastStore } from '@/stores/toast.store'
 import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
 import { RenameProjectModal } from '@/components/layout/RenameProjectModal'
 import { EditTemplateModal } from '@/components/layout/EditTemplateModal'
-import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
+import type { ContextMenuItem } from '@/components/ui/ContextMenu'
+import { TreeNode } from '@/components/layout/TreeNode'
+import type { FileTreeNode, GroupKey, GroupedNode, OutputBatch, OutputBatchFile } from '@/types/file-tree'
+import { groupProjectFiles, groupTemplateFiles } from '@/utils/file-grouping'
+import i18next from 'i18next'
 import { Toggle } from '@/components/ui/Toggle'
 import { SettingsSection, SettingsRow, INPUT_CLASS } from '@/components/ui/SettingsRow'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
@@ -49,16 +54,26 @@ function ProjectExplorer() {
   const openTab = useWorkspaceStore((s) => s.openTab)
   const addToast = useToastStore((s) => s.addToast)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
+  const explorerGroupMode = useUIStore((s) => s.explorerGroupMode)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [renameModal, setRenameModal] = useState<{ type: 'rename' | 'duplicate'; projectName: string } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [batchExporting, setBatchExporting] = useState(false)
-  // T11: 项目文件树展开状态
-  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
-  const [projectStructureMap, setProjectStructureMap] = useState<Record<string, Array<{ name: string; type: string; children?: unknown[] }>>>({})
-  const [expandedProjectDirs, setExpandedProjectDirs] = useState<Record<string, boolean>>({})
+  // T9: 项目展开状态改用 explorer.store
+  const expandedProjects = useExplorerStore((s) => s.expandedProjects)
+  const projectStructures = useExplorerStore((s) => s.projectStructures)
+  const expandedGroups = useExplorerStore((s) => s.expandedGroups)
+  const expandedDirs = useExplorerStore((s) => s.expandedDirs)
+  const expandedBatches = useExplorerStore((s) => s.expandedBatches)
+  const outputBatches = useExplorerStore((s) => s.outputBatches)
+  const toggleProject = useExplorerStore((s) => s.toggleProject)
+  const toggleGroup = useExplorerStore((s) => s.toggleGroup)
+  const toggleDir = useExplorerStore((s) => s.toggleDir)
+  const toggleBatch = useExplorerStore((s) => s.toggleBatch)
+  const setProjectStructure = useExplorerStore((s) => s.setProjectStructure)
+  const setOutputBatches = useExplorerStore((s) => s.setOutputBatches)
 
   const handleOpenProject = useCallback((name: string) => {
     const project = projects.find((p) => p.name === name)
@@ -73,66 +88,56 @@ function ProjectExplorer() {
     }
   }, [projects, selectProject, openTab])
 
-  // T11: 项目文件树展开/折叠
+  // T9: 项目文件树展开/折叠 — 首次展开拉取结构 + 输出批次并缓存到 store
   const toggleProjectExpand = useCallback(async (projectName: string) => {
     const currently = expandedProjects[projectName]
-    if (!currently) {
+    if (!currently && !projectStructures[projectName]) {
       try {
-        const structure = await window.electron?.project?.getStructure(projectName)
-        setProjectStructureMap((prev) => ({ ...prev, [projectName]: structure as Array<{ name: string; type: string; children?: unknown[] }> || [] }))
+        const [structure, batches] = await Promise.all([
+          window.electron?.project?.getStructure(projectName),
+          window.electron?.project?.listOutputBatches(projectName),
+        ])
+        setProjectStructure(projectName, (structure as FileTreeNode[]) || [])
+        setOutputBatches(projectName, (batches as OutputBatch[]) || [])
       } catch {
-        setProjectStructureMap((prev) => ({ ...prev, [projectName]: [] }))
+        setProjectStructure(projectName, [])
+        setOutputBatches(projectName, [])
       }
     }
-    setExpandedProjects((prev) => ({ ...prev, [projectName]: !currently }))
-  }, [expandedProjects])
+    toggleProject(projectName)
+  }, [expandedProjects, projectStructures, toggleProject, setProjectStructure, setOutputBatches])
 
-  const toggleProjectDir = useCallback((dirKey: string) => {
-    setExpandedProjectDirs((prev) => ({ ...prev, [dirKey]: !prev[dirKey] }))
-  }, [])
+  // T9: 删除文件/批次后刷新项目结构 + 批次缓存
+  const refreshProjectStructure = useCallback(async (projectName: string) => {
+    try {
+      const [structure, batches] = await Promise.all([
+        window.electron?.project?.getStructure(projectName),
+        window.electron?.project?.listOutputBatches(projectName),
+      ])
+      setProjectStructure(projectName, (structure as FileTreeNode[]) || [])
+      setOutputBatches(projectName, (batches as OutputBatch[]) || [])
+    } catch { /* ignore */ }
+  }, [setProjectStructure, setOutputBatches])
 
-  // T11: 点击项目内文件 → 打开 fileViewer
-  const handleProjectFileClick = useCallback((projectName: string, filePath: string, fileName: string) => {
+  // T6: 点击项目内文件 → 打开 fileViewer (filePath 用 node.path 相对项目根)
+  const handleProjectFileClick = useCallback((projectName: string, node: FileTreeNode) => {
     openTab({
       type: 'fileViewer',
-      title: fileName,
+      title: node.name,
       closable: true,
-      state: { filePath: `${projectName}/${filePath}`, isTemplate: false },
+      state: { filePath: node.path, projectName, isTemplate: false },
     })
   }, [openTab])
 
-  // T11: 递归渲染项目文件树
-  const renderProjectStructure = (items: Array<{ name: string; type: string; children?: unknown[] }>, projectName: string, basePath: string, depth: number) => {
-    return items.map((item) => {
-      const itemPath = basePath ? `${basePath}/${item.name}` : item.name
-      const dirKey = `${projectName}/${itemPath}`
-
-      if (item.type === 'directory') {
-        const isDirExpanded = expandedProjectDirs[dirKey]
-        return (
-          <div key={dirKey}>
-            <ExpandableTreeItem
-              label={item.name}
-              depth={depth}
-              onClick={() => toggleProjectDir(dirKey)}
-            />
-            {isDirExpanded && item.children && Array.isArray(item.children) && (
-              renderProjectStructure(item.children as Array<{ name: string; type: string; children?: unknown[] }>, projectName, itemPath, depth + 1)
-            )}
-          </div>
-        )
-      }
-
-      return (
-        <ExpandableTreeItem
-          key={dirKey}
-          label={item.name}
-          depth={depth}
-          onClick={() => handleProjectFileClick(projectName, itemPath, item.name)}
-        />
-      )
+  // T9: 点击批次内文件 → 打开 fileViewer (filePath 用 workspace 相对路径)
+  const handleBatchFileClick = useCallback((_projectName: string, _batch: OutputBatch, file: OutputBatchFile) => {
+    openTab({
+      type: 'fileViewer',
+      title: file.name,
+      closable: true,
+      state: { filePath: file.path, isTemplate: false },
     })
-  }
+  }, [openTab])
 
   const handleOpenInExplorer = useCallback(async (projectName: string) => {
     const wsp = await window.electron?.app?.getPath('workspace')
@@ -213,11 +218,6 @@ function ProjectExplorer() {
     return aFav - bFav
   })
 
-  const handleToggleFavorite = useCallback((e: React.MouseEvent, projectName: string) => {
-    e.stopPropagation()
-    toggleFavorite(projectName)
-  }, [toggleFavorite])
-
   const handleBatchExport = useCallback(async () => {
     if (batchExporting) return
     if (sortedProjects.length === 0) {
@@ -246,6 +246,157 @@ function ProjectExplorer() {
       setBatchExporting(false)
     }
   }, [batchExporting, batchExportProjects, sortedProjects, addToast, t])
+
+  // T10: 项目文件右键菜单(openFile/showInFileManager/copyFilePath/deleteFile[仅输出文件])
+  const buildProjectFileContextMenu = (projectName: string, node: FileTreeNode): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = [
+      { label: t('common:explorer.contextMenu.openFile'), action: () => handleProjectFileClick(projectName, node) },
+      {
+        label: t('common:explorer.contextMenu.showInFileManager'),
+        action: async () => {
+          const wsp = await window.electron?.app?.getPath('workspace')
+          window.electron?.shell?.showItemInFolder(`${wsp}/${projectName}/${node.path}`)
+        },
+      },
+      {
+        label: t('common:explorer.contextMenu.copyFilePath'),
+        action: async () => {
+          const wsp = await window.electron?.app?.getPath('workspace')
+          await navigator.clipboard.writeText(`${wsp}/${projectName}/${node.path}`)
+          addToast('success', t('common:explorer.toast.filePathCopied', '已复制文件路径'))
+        },
+      },
+    ]
+    if (node.path.startsWith('output/')) {
+      items.push({
+        label: t('common:explorer.contextMenu.deleteFile'),
+        danger: true,
+        action: async () => {
+          const relPath = node.path.substring('output/'.length)
+          try {
+            await window.electron?.project?.deleteOutputFile(projectName, relPath)
+            addToast('success', t('common:explorer.toast.fileDeleted', { name: node.name }))
+            await refreshProjectStructure(projectName)
+          } catch (err) {
+            addToast('error', err instanceof Error ? err.message : String(err))
+          }
+        },
+      })
+    }
+    return items
+  }
+
+  // T10: 真实目录右键菜单(raw 模式,1 项)
+  const buildProjectDirContextMenu = (projectName: string, node: FileTreeNode): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.openInFileManager'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        window.electron?.shell?.showItemInFolder(`${wsp}/${projectName}/${node.path}`)
+      },
+    },
+  ]
+
+  // T10: 智能分组右键菜单(expandAll/collapseAll)
+  const buildProjectGroupContextMenu = (projectName: string, groupKey: GroupKey, nodes: FileTreeNode[], batches: OutputBatch[]): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.expandAll'),
+      action: () => {
+        const dirPaths = collectAllDirPaths(nodes)
+        if (dirPaths.length > 0) {
+          useExplorerStore.setState((s) => {
+            const next = { ...s.expandedDirs }
+            for (const p of dirPaths) next[`dir:project:${projectName}/${p}`] = true
+            return { expandedDirs: next }
+          })
+        }
+        if (groupKey === 'output' && batches.length > 0) {
+          useExplorerStore.setState((s) => {
+            const next = { ...s.expandedBatches }
+            for (const b of batches) next[`batch:${projectName}/${b.name}`] = true
+            return { expandedBatches: next }
+          })
+        }
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.collapseAll'),
+      action: () => {
+        const dirPaths = collectAllDirPaths(nodes)
+        if (dirPaths.length > 0) {
+          useExplorerStore.setState((s) => {
+            const next = { ...s.expandedDirs }
+            for (const p of dirPaths) next[`dir:project:${projectName}/${p}`] = false
+            return { expandedDirs: next }
+          })
+        }
+        if (groupKey === 'output' && batches.length > 0) {
+          useExplorerStore.setState((s) => {
+            const next = { ...s.expandedBatches }
+            for (const b of batches) next[`batch:${projectName}/${b.name}`] = false
+            return { expandedBatches: next }
+          })
+        }
+      },
+    },
+  ]
+
+  // T10: 批次节点右键菜单(openInFileManager/deleteBatch)
+  const buildBatchContextMenu = (projectName: string, batch: OutputBatch): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.openInFileManager'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        window.electron?.shell?.showItemInFolder(`${wsp}/${projectName}/output/${batch.name}`)
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.deleteBatch'),
+      danger: true,
+      action: async () => {
+        try {
+          await window.electron?.project?.deleteOutputBatch(projectName, batch.name)
+          addToast('success', t('common:explorer.toast.batchDeleted', { name: batch.name }))
+          await refreshProjectStructure(projectName)
+        } catch (err) {
+          addToast('error', err instanceof Error ? err.message : String(err))
+        }
+      },
+    },
+  ]
+
+  // T10: 批次内文件右键菜单(4 项)
+  const buildBatchFileContextMenu = (projectName: string, batch: OutputBatch, file: OutputBatchFile): ContextMenuItem[] => [
+    { label: t('common:explorer.contextMenu.openFile'), action: () => handleBatchFileClick(projectName, batch, file) },
+    {
+      label: t('common:explorer.contextMenu.showInFileManager'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        window.electron?.shell?.showItemInFolder(`${wsp}/${file.path}`)
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.copyFilePath'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        await navigator.clipboard.writeText(`${wsp}/${file.path}`)
+        addToast('success', t('common:explorer.toast.filePathCopied', '已复制文件路径'))
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.deleteFile'),
+      danger: true,
+      action: async () => {
+        try {
+          await window.electron?.project?.deleteOutputFile(projectName, `${batch.name}/${file.name}`)
+          addToast('success', t('common:explorer.toast.fileDeleted', { name: file.name }))
+          await refreshProjectStructure(projectName)
+        } catch (err) {
+          addToast('error', err instanceof Error ? err.message : String(err))
+        }
+      },
+    },
+  ]
 
   return (
     <div className="h-full flex flex-col">
@@ -300,30 +451,32 @@ function ProjectExplorer() {
       {/* Content */}
       <div className="flex-1 overflow-auto py-1">
         {/* Projects section */}
-        <Section title={t('common:explorer.allProjects')} icon={<Folder size={14} />}>
+        <Section title={t('common:explorer.allProjects')} icon={<Folder size={14} />} sectionKey="projects">
           {sortedProjects.map((p) => {
             const isFavorite = favoriteSet.has(p.name)
             const isExpanded = expandedProjects[p.name]
-            const structure = projectStructureMap[p.name] || []
+            const structure = projectStructures[p.name] || []
+            const batches = outputBatches[p.name] || []
             return (
               <div key={p.name}>
-                <TreeItem
+                <TreeNode
                   label={p.name}
-                  active={p.name === selectedProjectName}
-                  onClick={() => toggleProjectExpand(p.name)}
-                  onDoubleClick={() => handleOpenProject(p.name)}
+                  depth={0}
+                  isActive={p.name === selectedProjectName}
                   leading={
-                    <span
-                      className={clsx('w-1.5 h-1.5 rounded-full', getStatusDotClass(p.status))}
-                      title={p.status || 'ready'}
-                    />
+                    isFavorite
+                      ? <Star size={12} className="text-warning-400" fill="currentColor" />
+                      : p.name === selectedProjectName
+                        ? <FolderOpen size={12} className="text-gray-400" />
+                        : <Folder size={12} className="text-gray-400" />
                   }
-                  meta={
-                    <span className="flex items-center gap-1.5">
-                      {p.fileCount != null && <span>{p.fileCount} 文件</span>}
-                      {p.updatedAt && <span>{formatRelativeTime(p.updatedAt)}</span>}
-                    </span>
-                  }
+                  trailing={p.fileCount != null ? (
+                    <span className="text-2xs text-gray-400 dark:text-gray-500">{p.fileCount}</span>
+                  ) : undefined}
+                  onClick={() => handleOpenProject(p.name)}
+                  onArrowClick={() => toggleProjectExpand(p.name)}
+                  isExpanded={isExpanded}
+                  hasChildren={(p.fileCount ?? 0) > 0 || structure.length > 0}
                   contextMenu={[
                     { label: t('common:explorer.contextMenu.setAsCurrent'), action: () => handleOpenProject(p.name) },
                     { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(p.name) },
@@ -332,28 +485,26 @@ function ProjectExplorer() {
                     { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExport(p.name) },
                     { label: t('common:explorer.contextMenu.convertToTemplate'), action: () => handleConvertToTemplate(p.name) },
                     { label: isFavorite ? t('common:explorer.contextMenu.unfavorite') : t('common:explorer.contextMenu.favorite'), action: () => toggleFavorite(p.name) },
-                    { label: t('common:explorer.contextMenu.deleteProject'), action: () => handleDeleteProject(p) },
+                    { label: t('common:explorer.contextMenu.deleteProject'), danger: true, action: () => handleDeleteProject(p) },
                   ]}
-                  trailing={
-                    <div className="flex items-center">
-                      <span className="text-gray-400 dark:text-gray-500 mr-0.5">
-                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                      </span>
-                      <button
-                        onClick={(e) => handleToggleFavorite(e, p.name)}
-                        className={clsx(
-                          'p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700',
-                          isFavorite ? 'text-warning-400' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500'
-                        )}
-                        title={isFavorite ? t('common:explorer.contextMenu.unfavorite') : t('common:explorer.contextMenu.favorite')}
-                      >
-                        <Star size={12} fill={isFavorite ? 'currentColor' : 'none'} />
-                      </button>
-                    </div>
-                  }
                 />
                 {isExpanded && structure.length > 0 && (
-                  renderProjectStructure(structure, p.name, '', 1)
+                  renderProjectChildren(p.name, structure, 1, explorerGroupMode, {
+                    onFileClick: (node) => handleProjectFileClick(p.name, node),
+                    onDirToggle: (scope, relativePath) => toggleDir(scope, relativePath),
+                    isDirExpanded: (scope, relativePath) => !!expandedDirs[`dir:${scope}/${relativePath}`],
+                    isGroupExpanded: (pn, gk) => !!expandedGroups[`group:${pn}/${gk}`],
+                    onGroupToggle: (pn, gk) => toggleGroup(pn, gk),
+                    batches,
+                    isBatchExpanded: (pn, bn) => !!expandedBatches[`batch:${pn}/${bn}`],
+                    onBatchToggle: (pn, bn) => toggleBatch(pn, bn),
+                    onBatchFileClick: (pn, batch, file) => handleBatchFileClick(pn, batch, file),
+                    fileContextMenuBuilder: (node) => buildProjectFileContextMenu(p.name, node),
+                    dirContextMenuBuilder: (node) => buildProjectDirContextMenu(p.name, node),
+                    groupContextMenuBuilder: (gk, nodes) => buildProjectGroupContextMenu(p.name, gk, nodes, batches),
+                    batchContextMenuBuilder: (batch) => buildBatchContextMenu(p.name, batch),
+                    batchFileContextMenuBuilder: (batch, file) => buildBatchFileContextMenu(p.name, batch, file),
+                  })
                 )}
               </div>
             )
@@ -397,13 +548,21 @@ function ProjectExplorer() {
 }
 
 // Simple tree section component
-function Section({ title, icon, children, actions }: { title: string; icon: React.ReactNode; children: React.ReactNode; actions?: React.ReactNode }) {
-  const [expanded, setExpanded] = React.useState(true)
+function Section({ title, icon, children, actions, sectionKey }: { title: string; icon: React.ReactNode; children: React.ReactNode; actions?: React.ReactNode; sectionKey?: string }) {
+  // sectionKey 提供时使用 explorer.store 持久化折叠状态,否则使用局部 state
+  const storeCollapsed = useExplorerStore((s) => (sectionKey ? !!s.collapsedSections[sectionKey] : false))
+  const toggleSection = useExplorerStore((s) => s.toggleSection)
+  const [localExpanded, setLocalExpanded] = React.useState(true)
+  const expanded = sectionKey ? !storeCollapsed : localExpanded
+  const toggle = () => {
+    if (sectionKey) toggleSection(sectionKey)
+    else setLocalExpanded(!localExpanded)
+  }
   return (
     <div>
       <div className="flex items-center group">
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={toggle}
           className="flex-1 flex items-center gap-1.5 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -419,35 +578,6 @@ function Section({ title, icon, children, actions }: { title: string; icon: Reac
       {expanded && <div className="pl-1">{children}</div>}
     </div>
   )
-}
-
-// U1: 项目状态点颜色
-function getStatusDotClass(status?: string): string {
-  switch (status) {
-    case 'layouted':   return 'bg-success-500'
-    case 'designed':   return 'bg-primary-500'
-    case 'configured': return 'bg-info-500'
-    default:           return 'bg-gray-300 dark:bg-gray-600'
-  }
-}
-
-// U1: 相对时间格式化
-function formatRelativeTime(dateString?: string): string {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return ''
-  const now = Date.now()
-  const diff = now - date.getTime()
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
-  const week = 7 * day
-  if (diff < minute) return '刚刚'
-  if (diff < hour) return `${Math.floor(diff / minute)}分钟前`
-  if (diff < day) return `${Math.floor(diff / hour)}小时前`
-  if (diff < week) return `${Math.floor(diff / day)}天前`
-  if (diff < 4 * week) return `${Math.floor(diff / week)}周前`
-  return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
 // U1: 输出文件图标
@@ -473,79 +603,337 @@ function getFileIcon(fileName: string): { Icon: React.ComponentType<{ size?: num
   }
 }
 
-// Simple tree item
-function TreeItem({ label, active, onClick, onDoubleClick, contextMenu, trailing, leading, meta }: {
-  label: React.ReactNode
-  active?: boolean
-  onClick?: () => void
-  onDoubleClick?: () => void
-  contextMenu?: ContextMenuItem[]
-  trailing?: React.ReactNode
-  leading?: React.ReactNode
-  meta?: React.ReactNode
-}) {
-  const [showContext, setShowContext] = React.useState(false)
-  const [pos, setPos] = React.useState({ x: 0, y: 0 })
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setPos({ x: e.clientX, y: e.clientY })
-    setShowContext(true)
+// T8: 文件类型图标映射(两种模式通用)
+function getFileTypeIcon(fileName: string): { Icon: React.ComponentType<{ size?: number; className?: string }>; color: string } {
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'json':
+    case 'ini':
+      return { Icon: FileCode, color: 'text-gray-400' }
+    case 'xlsx':
+    case 'csv':
+      return { Icon: FileSpreadsheet, color: 'text-success-500' }
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+      return { Icon: ImageIcon, color: 'text-info-500' }
+    case 'txt':
+    case 'md':
+      return { Icon: FileText, color: 'text-gray-400' }
+    default:
+      return { Icon: FileIcon, color: 'text-gray-400' }
   }
-
-  return (
-    <>
-      <div
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
-        onContextMenu={handleContextMenu}
-        className={clsx(
-          'group flex items-center gap-1.5 px-3 pl-6 py-1 text-xs cursor-pointer select-none transition-colors',
-          active
-            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent'
-        )}
-      >
-        {leading && <span className="shrink-0">{leading}</span>}
-        <span className="truncate flex-1">{label}</span>
-        {meta && <span className="shrink-0 text-2xs text-gray-400 dark:text-gray-500">{meta}</span>}
-        {trailing && (
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            {trailing}
-          </span>
-        )}
-      </div>
-      {showContext && contextMenu && (
-        <ContextMenu
-          items={contextMenu}
-          x={pos.x}
-          y={pos.y}
-          onClose={() => setShowContext(false)}
-        />
-      )}
-    </>
-  )
 }
 
-// Expandable tree item for nested structures (output batches, template files)
-function ExpandableTreeItem({ label, depth = 6, onClick, onContextMenu, icon }: {
-  label: string
-  depth?: number
-  onClick?: () => void
-  onContextMenu?: React.MouseEventHandler
-  icon?: React.ReactNode
-}) {
-  return (
-    <div
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      className="flex items-center gap-1.5 px-3 py-0.5 text-2xs cursor-pointer select-none text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent"
-      style={{ paddingLeft: `${depth * 4 + 4}px` }}
-    >
-      {icon && <span className="shrink-0">{icon}</span>}
-      <span className="truncate">{label}</span>
-    </div>
-  )
+// T8: 智能分组图标映射
+const GROUP_ICON_MAP: Record<GroupKey, React.ComponentType<{ size?: number; className?: string }>> = {
+  input: FileInput,
+  output: FileOutput,
+  topology: Network,
+  other: FileIcon,
+}
+
+// T10: 递归收集所有目录节点路径(用于分组全部展开/折叠)
+function collectAllDirPaths(nodes: FileTreeNode[]): string[] {
+  const paths: string[] = []
+  const walk = (list: FileTreeNode[]) => {
+    for (const n of list) {
+      if (n.type === 'directory') {
+        paths.push(n.path)
+        if (n.children) walk(n.children)
+      }
+    }
+  }
+  walk(nodes)
+  return paths
+}
+
+// T8: renderTreeNodes 的 handlers 接口
+interface TreeHandlers {
+  onFileClick: (node: FileTreeNode) => void
+  onDirToggle: (scope: string, relativePath: string) => void
+  isDirExpanded: (scope: string, relativePath: string) => boolean
+  scope: string
+  contextMenuBuilder?: (node: FileTreeNode) => ContextMenuItem[]
+}
+
+// T8: 统一递归树渲染器(替代 renderProjectStructure 和 renderStructure)
+function renderTreeNodes(
+  nodes: FileTreeNode[],
+  depth: number,
+  handlers: TreeHandlers,
+): React.ReactNode {
+  return nodes.map((node) => {
+    if (node.type === 'directory') {
+      const isExpanded = handlers.isDirExpanded(handlers.scope, node.path)
+      const hasChildren = !!(node.children && node.children.length > 0)
+      return (
+        <div key={node.path}>
+          <TreeNode
+            label={node.name}
+            depth={depth}
+            leading={
+              isExpanded
+                ? <FolderOpen size={12} className="text-gray-400" />
+                : <Folder size={12} className="text-gray-400" />
+            }
+            onClick={() => handlers.onDirToggle(handlers.scope, node.path)}
+            onArrowClick={() => handlers.onDirToggle(handlers.scope, node.path)}
+            isExpanded={isExpanded}
+            hasChildren={hasChildren}
+            contextMenu={handlers.contextMenuBuilder?.(node)}
+          />
+          {isExpanded && node.children && node.children.length > 0 && (
+            renderTreeNodes(node.children, depth + 1, handlers)
+          )}
+        </div>
+      )
+    }
+
+    // 文件节点
+    const { Icon, color } = getFileTypeIcon(node.name)
+    return (
+      <TreeNode
+        key={node.path}
+        label={node.name}
+        depth={depth}
+        leading={<Icon size={12} className={color} />}
+        onClick={() => handlers.onFileClick(node)}
+        contextMenu={handlers.contextMenuBuilder?.(node)}
+      />
+    )
+  })
+}
+
+// T9: renderProjectChildren 的 handlers 接口(explorer.store 接入 + 批次 + 右键菜单)
+interface ProjectChildrenHandlers {
+  onFileClick: (node: FileTreeNode) => void
+  onDirToggle: (scope: string, relativePath: string) => void
+  isDirExpanded: (scope: string, relativePath: string) => boolean
+  isGroupExpanded?: (projectName: string, groupKey: string) => boolean
+  onGroupToggle?: (projectName: string, groupKey: string) => void
+  // T9: output 批次(smart 模式优先使用 batches 数据)
+  batches?: OutputBatch[]
+  isBatchExpanded?: (projectName: string, batchName: string) => boolean
+  onBatchToggle?: (projectName: string, batchName: string) => void
+  onBatchFileClick?: (projectName: string, batch: OutputBatch, file: OutputBatchFile) => void
+  // T10: 右键菜单构建器
+  fileContextMenuBuilder?: (node: FileTreeNode) => ContextMenuItem[]
+  dirContextMenuBuilder?: (node: FileTreeNode) => ContextMenuItem[]
+  groupContextMenuBuilder?: (groupKey: GroupKey, nodes: FileTreeNode[]) => ContextMenuItem[]
+  batchContextMenuBuilder?: (batch: OutputBatch) => ContextMenuItem[]
+  batchFileContextMenuBuilder?: (batch: OutputBatch, file: OutputBatchFile) => ContextMenuItem[]
+}
+
+// T9: 项目子节点渲染(双模式:smart/raw)
+function renderProjectChildren(
+  projectName: string,
+  structure: FileTreeNode[],
+  depth: number,
+  groupMode: ExplorerGroupMode,
+  handlers: ProjectChildrenHandlers,
+): React.ReactNode {
+  const treeHandlers: TreeHandlers = {
+    onFileClick: handlers.onFileClick,
+    onDirToggle: handlers.onDirToggle,
+    isDirExpanded: handlers.isDirExpanded,
+    scope: `project:${projectName}`,
+    contextMenuBuilder: (node) => node.type === 'directory'
+      ? (handlers.dirContextMenuBuilder?.(node) ?? [])
+      : (handlers.fileContextMenuBuilder?.(node) ?? []),
+  }
+
+  if (groupMode === 'raw') {
+    // raw 模式:直接递归渲染真实目录树
+    return renderTreeNodes(structure, depth, treeHandlers)
+  }
+
+  // smart 模式:按文件用途智能分组
+  const groups: GroupedNode[] = groupProjectFiles(structure)
+
+  return groups.map((group) => {
+    const groupKey = group.group
+    const isExpanded = handlers.isGroupExpanded?.(projectName, groupKey) ?? false
+    const GroupIcon = GROUP_ICON_MAP[groupKey]
+    const hasChildren = group.nodes.length > 0
+
+    return (
+      <div key={`group:${projectName}/${groupKey}`}>
+        <TreeNode
+          label={i18next.t(`common:explorer.group.${groupKey}`)}
+          depth={depth}
+          leading={<GroupIcon size={12} className="text-gray-400" />}
+          onClick={() => handlers.onGroupToggle?.(projectName, groupKey)}
+          onArrowClick={() => handlers.onGroupToggle?.(projectName, groupKey)}
+          isExpanded={isExpanded}
+          hasChildren={hasChildren}
+          contextMenu={handlers.groupContextMenuBuilder?.(groupKey, group.nodes)}
+        />
+        {isExpanded && hasChildren && (
+          groupKey === 'output'
+            ? renderOutputGroup(group.nodes, depth + 1, treeHandlers, projectName, handlers)
+            : renderTreeNodes(group.nodes, depth + 1, treeHandlers)
+        )}
+      </div>
+    )
+  })
+}
+
+// T9: output 分组特殊处理 — 优先使用 batches 数据渲染批次节点,回退到目录结构
+function renderOutputGroup(
+  nodes: FileTreeNode[],
+  depth: number,
+  treeHandlers: TreeHandlers,
+  projectName: string,
+  handlers: ProjectChildrenHandlers,
+): React.ReactNode {
+  // 优先使用 batches(smart 模式下由 listOutputBatches 提供)
+  if (handlers.batches && handlers.batches.length > 0) {
+    return handlers.batches.map((batch) => {
+      const isExpanded = handlers.isBatchExpanded?.(projectName, batch.name) ?? false
+      const hasChildren = batch.files.length > 0
+      return (
+        <div key={`batch:${projectName}/${batch.name}`}>
+          <TreeNode
+            label={batch.name}
+            depth={depth}
+            leading={
+              isExpanded
+                ? <FolderOpen size={12} className="text-gray-400" />
+                : <Folder size={12} className="text-gray-400" />
+            }
+            onClick={() => handlers.onBatchToggle?.(projectName, batch.name)}
+            onArrowClick={() => handlers.onBatchToggle?.(projectName, batch.name)}
+            isExpanded={isExpanded}
+            hasChildren={hasChildren}
+            contextMenu={handlers.batchContextMenuBuilder?.(batch)}
+          />
+          {isExpanded && batch.files.map((f) => {
+            const { Icon, color } = getFileTypeIcon(f.name)
+            return (
+              <TreeNode
+                key={f.path}
+                label={f.name}
+                depth={depth + 1}
+                leading={<Icon size={12} className={color} />}
+                onClick={() => handlers.onBatchFileClick?.(projectName, batch, f)}
+                contextMenu={handlers.batchFileContextMenuBuilder?.(batch, f)}
+              />
+            )
+          })}
+        </div>
+      )
+    })
+  }
+
+  // 回退:从目录结构渲染批次(output/ 目录下的子目录)
+  const outputDir = nodes.find((n) => n.type === 'directory' && n.name === 'output')
+  const batchDirs = outputDir?.children ?? nodes
+
+  return batchDirs.map((batch) => {
+    if (batch.type !== 'directory') {
+      // output 根目录下的散落文件,直接渲染
+      const { Icon, color } = getFileTypeIcon(batch.name)
+      return (
+        <TreeNode
+          key={batch.path}
+          label={batch.name}
+          depth={depth}
+          leading={<Icon size={12} className={color} />}
+          onClick={() => handlers.onFileClick(batch)}
+          contextMenu={handlers.fileContextMenuBuilder?.(batch)}
+        />
+      )
+    }
+
+    // 批次目录节点
+    const batchPath = batch.path
+    const isExpanded = treeHandlers.isDirExpanded(treeHandlers.scope, batchPath)
+    const hasChildren = !!(batch.children && batch.children.length > 0)
+
+    return (
+      <div key={batchPath}>
+        <TreeNode
+          label={batch.name}
+          depth={depth}
+          leading={
+            isExpanded
+              ? <FolderOpen size={12} className="text-gray-400" />
+              : <Folder size={12} className="text-gray-400" />
+          }
+          onClick={() => treeHandlers.onDirToggle(treeHandlers.scope, batchPath)}
+          onArrowClick={() => treeHandlers.onDirToggle(treeHandlers.scope, batchPath)}
+          isExpanded={isExpanded}
+          hasChildren={hasChildren}
+          contextMenu={handlers.dirContextMenuBuilder?.(batch)}
+        />
+        {isExpanded && batch.children && batch.children.length > 0 && (
+          renderTreeNodes(batch.children, depth + 1, treeHandlers)
+        )}
+      </div>
+    )
+  })
+}
+
+// T11: renderTemplateChildren 的 handlers 接口
+interface TemplateChildrenHandlers {
+  onFileClick: (node: FileTreeNode) => void
+  onDirToggle: (scope: string, relativePath: string) => void
+  isDirExpanded: (scope: string, relativePath: string) => boolean
+  isGroupExpanded?: (templateName: string, groupKey: string) => boolean
+  onGroupToggle?: (templateName: string, groupKey: string) => void
+  fileContextMenuBuilder?: (node: FileTreeNode) => ContextMenuItem[]
+  dirContextMenuBuilder?: (node: FileTreeNode) => ContextMenuItem[]
+  groupContextMenuBuilder?: (groupKey: GroupKey, nodes: FileTreeNode[]) => ContextMenuItem[]
+}
+
+// T11: 模板子节点渲染(双模式:smart/raw,无 output 批次处理)
+function renderTemplateChildren(
+  templateName: string,
+  structure: FileTreeNode[],
+  depth: number,
+  groupMode: ExplorerGroupMode,
+  handlers: TemplateChildrenHandlers,
+): React.ReactNode {
+  const treeHandlers: TreeHandlers = {
+    onFileClick: handlers.onFileClick,
+    onDirToggle: handlers.onDirToggle,
+    isDirExpanded: handlers.isDirExpanded,
+    scope: `template:${templateName}`,
+    contextMenuBuilder: (node) => node.type === 'directory'
+      ? (handlers.dirContextMenuBuilder?.(node) ?? [])
+      : (handlers.fileContextMenuBuilder?.(node) ?? []),
+  }
+
+  if (groupMode === 'raw') {
+    return renderTreeNodes(structure, depth, treeHandlers)
+  }
+
+  // smart 模式:配置文件/其他文件
+  const groups: GroupedNode[] = groupTemplateFiles(structure)
+  return groups.map((group) => {
+    const groupKey = group.group
+    const isExpanded = handlers.isGroupExpanded?.(templateName, groupKey) ?? false
+    const GroupIcon = GROUP_ICON_MAP[groupKey]
+    const hasChildren = group.nodes.length > 0
+    return (
+      <div key={`group:template:${templateName}/${groupKey}`}>
+        <TreeNode
+          label={i18next.t(`common:explorer.group.${groupKey}`)}
+          depth={depth}
+          leading={<GroupIcon size={12} className="text-gray-400" />}
+          onClick={() => handlers.onGroupToggle?.(templateName, groupKey)}
+          onArrowClick={() => handlers.onGroupToggle?.(templateName, groupKey)}
+          isExpanded={isExpanded}
+          hasChildren={hasChildren}
+          contextMenu={handlers.groupContextMenuBuilder?.(groupKey, group.nodes)}
+        />
+        {isExpanded && hasChildren && (
+          renderTreeNodes(group.nodes, depth + 1, treeHandlers)
+        )}
+      </div>
+    )
+  })
 }
 
 // Output section: lists output batches per project
@@ -554,43 +942,48 @@ function OutputSection({ projects, openTab }: {
   openTab: (tab: Omit<import('@/stores/workspace.store').WorkspaceTab, 'id'>) => string
 }) {
   const { t } = useTranslation()
-  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
-  const [batchesMap, setBatchesMap] = useState<Record<string, Array<{ name: string; files: Array<{ name: string; path: string }> }>>>({})
-  const [expandedBatches, setExpandedBatches] = useState<Record<string, boolean>>({})
+  // T12: 展开/批次状态改用 explorer.store
+  const expandedOutputProjects = useExplorerStore((s) => s.expandedOutputProjects)
+  const outputBatches = useExplorerStore((s) => s.outputBatches)
+  const expandedBatches = useExplorerStore((s) => s.expandedBatches)
+  const toggleOutputProject = useExplorerStore((s) => s.toggleOutputProject)
+  const toggleBatch = useExplorerStore((s) => s.toggleBatch)
+  const setOutputBatches = useExplorerStore((s) => s.setOutputBatches)
   const addToast = useToastStore((s) => s.addToast)
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  // T12: 删除上下文(比按名称匹配更可靠)
+  const [deleteCtx, setDeleteCtx] = useState<{
+    type: 'batch' | 'file'
+    projectName: string
+    batchName: string
+    fileName?: string
+  } | null>(null)
 
-  const refreshBatches = useCallback((projectName: string) => {
-    // Clear cache and force re-fetch
-    setBatchesMap((prev) => {
-      const next = { ...prev }
-      delete next[projectName]
-      return next
-    })
-    setExpandedProjects((prev) => {
-      const next = { ...prev }
-      delete next[projectName]
-      return next
-    })
-  }, [])
+  const deleteTarget: DeleteTarget | null = deleteCtx
+    ? { type: deleteCtx.type, name: deleteCtx.type === 'batch' ? deleteCtx.batchName : (deleteCtx.fileName || '') }
+    : null
 
+  const refreshBatches = useCallback(async (projectName: string) => {
+    try {
+      const batches = await window.electron.project.listOutputBatches(projectName)
+      setOutputBatches(projectName, batches)
+    } catch {
+      setOutputBatches(projectName, [])
+    }
+  }, [setOutputBatches])
+
+  // T12: 首次展开拉取批次并缓存到 store
   const toggleProject = useCallback(async (projectName: string) => {
-    const currently = expandedProjects[projectName]
-    if (!currently) {
-      // Load batches
+    const currently = expandedOutputProjects[projectName]
+    if (!currently && !outputBatches[projectName]) {
       try {
         const batches = await window.electron.project.listOutputBatches(projectName)
-        setBatchesMap((prev) => ({ ...prev, [projectName]: batches }))
+        setOutputBatches(projectName, batches)
       } catch {
-        setBatchesMap((prev) => ({ ...prev, [projectName]: [] }))
+        setOutputBatches(projectName, [])
       }
     }
-    setExpandedProjects((prev) => ({ ...prev, [projectName]: !currently }))
-  }, [expandedProjects])
-
-  const toggleBatch = useCallback((batchKey: string) => {
-    setExpandedBatches((prev) => ({ ...prev, [batchKey]: !prev[batchKey] }))
-  }, [])
+    toggleOutputProject(projectName)
+  }, [expandedOutputProjects, outputBatches, toggleOutputProject, setOutputBatches])
 
   const handleFileClick = useCallback((filePath: string, fileName: string) => {
     openTab({
@@ -601,52 +994,99 @@ function OutputSection({ projects, openTab }: {
     })
   }, [openTab])
 
+  // T12: 批次右键菜单(openInFileManager/deleteBatch)
+  const buildBatchContextMenu = (projectName: string, batchName: string): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.openInFileManager'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        window.electron?.shell?.showItemInFolder(`${wsp}/${projectName}/output/${batchName}`)
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.deleteBatch'),
+      danger: true,
+      action: () => setDeleteCtx({ type: 'batch', projectName, batchName }),
+    },
+  ]
+
+  // T12: 文件右键菜单(openFile/showInFileManager/copyFilePath/deleteFile)
+  const buildFileContextMenu = (projectName: string, batchName: string, filePath: string, fileName: string): ContextMenuItem[] => [
+    { label: t('common:explorer.contextMenu.openFile'), action: () => handleFileClick(filePath, fileName) },
+    {
+      label: t('common:explorer.contextMenu.showInFileManager'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        window.electron?.shell?.showItemInFolder(`${wsp}/${filePath}`)
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.copyFilePath'),
+      action: async () => {
+        const wsp = await window.electron?.app?.getPath('workspace')
+        await navigator.clipboard.writeText(`${wsp}/${filePath}`)
+        addToast('success', t('common:explorer.toast.filePathCopied', '已复制文件路径'))
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.deleteFile'),
+      danger: true,
+      action: () => setDeleteCtx({ type: 'file', projectName, batchName, fileName }),
+    },
+  ]
+
   if (projects.length === 0) return null
 
   return (
     <>
-      <Section title={t('common:explorer.outputFiles')} icon={<FileOutput size={14} />}>
+      <Section title={t('common:explorer.outputFiles')} icon={<FileOutput size={14} />} sectionKey="output">
         {projects.map((p) => {
-          const isExpanded = expandedProjects[p.name]
-          const batches = batchesMap[p.name] || []
+          const isExpanded = expandedOutputProjects[p.name]
+          const batches = outputBatches[p.name] || []
           return (
             <div key={p.name}>
-              <TreeItem
+              <TreeNode
                 label={p.name}
+                depth={0}
+                leading={<FolderOpen size={12} className="text-gray-400" />}
                 onClick={() => toggleProject(p.name)}
+                onArrowClick={() => toggleProject(p.name)}
+                isExpanded={isExpanded}
+                hasChildren
               />
               {isExpanded && batches.length === 0 && (
-                <div className="text-2xs text-gray-400 italic py-0.5" style={{ paddingLeft: '28px' }}>
+                <div className="text-2xs text-gray-400 italic py-0.5" style={{ paddingLeft: '16px' }}>
                   {t('common:noData', '暂无输出批次')}
                 </div>
               )}
               {isExpanded && batches.map((batch) => {
-                const batchKey = `${p.name}/${batch.name}`
-                const isBatchExpanded = expandedBatches[batchKey]
+                const isBatchExpanded = expandedBatches[`batch:${p.name}/${batch.name}`]
                 return (
-                  <div key={batchKey}>
-                    <ExpandableTreeItem
+                  <div key={`batch:${p.name}/${batch.name}`}>
+                    <TreeNode
                       label={batch.name}
-                      depth={6}
-                      onClick={() => toggleBatch(batchKey)}
-                      onContextMenu={(e) => {
-                        e.preventDefault()
-                        setDeleteTarget({ name: `${p.name} / ${batch.name}`, type: 'batch' })
-                      }}
+                      depth={1}
+                      leading={
+                        isBatchExpanded
+                          ? <FolderOpen size={12} className="text-gray-400" />
+                          : <Folder size={12} className="text-gray-400" />
+                      }
+                      onClick={() => toggleBatch(p.name, batch.name)}
+                      onArrowClick={() => toggleBatch(p.name, batch.name)}
+                      isExpanded={isBatchExpanded}
+                      hasChildren={batch.files.length > 0}
+                      contextMenu={buildBatchContextMenu(p.name, batch.name)}
                     />
                     {isBatchExpanded && batch.files.map((f) => {
                       const { Icon, color } = getFileIcon(f.name)
                       return (
-                        <ExpandableTreeItem
+                        <TreeNode
                           key={f.path}
                           label={f.name}
-                          depth={9}
-                          icon={<Icon size={12} className={color} />}
+                          depth={2}
+                          leading={<Icon size={12} className={color} />}
                           onClick={() => handleFileClick(f.path, f.name)}
-                          onContextMenu={(e) => {
-                            e.preventDefault()
-                            setDeleteTarget({ name: f.name, type: 'file' })
-                          }}
+                          contextMenu={buildFileContextMenu(p.name, batch.name, f.path, f.name)}
                         />
                       )
                     })}
@@ -663,38 +1103,22 @@ function OutputSection({ projects, openTab }: {
         <ConfirmDeleteDialog
           target={deleteTarget}
           onConfirm={async () => {
-            // Find which project the target belongs to
-            for (const p of projects) {
-              const batches = batchesMap[p.name] || []
-              for (const batch of batches) {
-                if (deleteTarget.type === 'batch' && deleteTarget.name === `${p.name} / ${batch.name}`) {
-                  await window.electron.project.deleteOutputBatch(p.name, batch.name)
-                  addToast('success', t('common:explorer.toast.batchDeleted', { name: batch.name }))
-                  refreshBatches(p.name)
-                  return
-                }
-                if (deleteTarget.type === 'file') {
-                  for (const f of batch.files) {
-                    if (f.name === deleteTarget.name) {
-                      // filePath is like "projectName/output/batchName/fileName"
-                      const relPath = f.path.substring(f.path.indexOf('/output/') + 8) // strip "projectName/output/"
-                      await window.electron.project.deleteOutputFile(p.name, relPath)
-                      addToast('success', t('common:explorer.toast.fileDeleted', { name: f.name }))
-                      refreshBatches(p.name)
-                      return
-                    }
-                  }
-                }
+            if (!deleteCtx) return
+            try {
+              if (deleteCtx.type === 'batch') {
+                await window.electron.project.deleteOutputBatch(deleteCtx.projectName, deleteCtx.batchName)
+                addToast('success', t('common:explorer.toast.batchDeleted', { name: deleteCtx.batchName }))
+              } else {
+                // deleteOutputFile 期望相对 output 目录的路径:batchName/fileName
+                await window.electron.project.deleteOutputFile(deleteCtx.projectName, `${deleteCtx.batchName}/${deleteCtx.fileName}`)
+                addToast('success', t('common:explorer.toast.fileDeleted', { name: deleteCtx.fileName }))
               }
-              if (deleteTarget.type === 'clearOutput' && deleteTarget.name.startsWith(p.name)) {
-                await window.electron.project.clearOutput(p.name)
-                addToast('success', t('common:explorer.toast.outputCleared', { name: p.name }))
-                refreshBatches(p.name)
-                return
-              }
+              await refreshBatches(deleteCtx.projectName)
+            } catch (err) {
+              addToast('error', err instanceof Error ? err.message : String(err))
             }
           }}
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => setDeleteCtx(null)}
         />
       )}
     </>
@@ -708,38 +1132,43 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
   handleOpenInExplorer: (name: string) => void
 }) {
   const { t } = useTranslation()
-  const [expandedTemplates, setExpandedTemplates] = useState<Record<string, boolean>>({})
-  const [structureMap, setStructureMap] = useState<Record<string, Array<{ name: string; type: string; children?: Array<{ name: string; type: string; children?: unknown[] }> }>>>({})
-  const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({})
+  const explorerGroupMode = useUIStore((s) => s.explorerGroupMode)
+  // T11: 模板展开状态改用 explorer.store
+  const expandedTemplates = useExplorerStore((s) => s.expandedTemplates)
+  const templateStructures = useExplorerStore((s) => s.templateStructures)
+  const expandedGroups = useExplorerStore((s) => s.expandedGroups)
+  const expandedDirs = useExplorerStore((s) => s.expandedDirs)
+  const toggleTemplateStore = useExplorerStore((s) => s.toggleTemplate)
+  const toggleGroup = useExplorerStore((s) => s.toggleGroup)
+  const toggleDir = useExplorerStore((s) => s.toggleDir)
+  const setTemplateStructure = useExplorerStore((s) => s.setTemplateStructure)
   const { deleteTemplate, updateTemplate, exportTemplate, importTemplate } = useProjectStore()
   const addToast = useToastStore((s) => s.addToast)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; description: string; scenario: string; tags: string[]; isBuiltin?: boolean } | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const toggleTemplate = useCallback(async (tplName: string) => {
+  // T11: 首次展开拉取结构并缓存到 store
+  const toggleTemplateExpand = useCallback(async (tplName: string) => {
     const currently = expandedTemplates[tplName]
-    if (!currently) {
+    if (!currently && !templateStructures[tplName]) {
       try {
         const structure = await window.electron.template.getStructure(tplName)
-        setStructureMap((prev) => ({ ...prev, [tplName]: structure }))
+        setTemplateStructure(tplName, (structure as FileTreeNode[]) || [])
       } catch {
-        setStructureMap((prev) => ({ ...prev, [tplName]: [] }))
+        setTemplateStructure(tplName, [])
       }
     }
-    setExpandedTemplates((prev) => ({ ...prev, [tplName]: !currently }))
-  }, [expandedTemplates])
+    toggleTemplateStore(tplName)
+  }, [expandedTemplates, templateStructures, toggleTemplateStore, setTemplateStructure])
 
-  const toggleDir = useCallback((dirKey: string) => {
-    setExpandedDirs((prev) => ({ ...prev, [dirKey]: !prev[dirKey] }))
-  }, [])
-
-  const handleTemplateFileClick = useCallback((tplName: string, filePath: string, fileName: string) => {
+  // T6: 点击模板内文件 → 打开 fileViewer (filePath 用 node.path 相对模板根)
+  const handleTemplateFileClick = useCallback((tplName: string, node: FileTreeNode) => {
     openTab({
       type: 'fileViewer',
-      title: fileName,
+      title: node.name,
       closable: true,
-      state: { templateName: tplName, filePath, isTemplate: true },
+      state: { templateName: tplName, filePath: node.path, isTemplate: true },
     })
   }, [openTab])
 
@@ -794,43 +1223,55 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
     }
   }, [busy, importTemplate, addToast])
 
-  const renderStructure = (items: Array<{ name: string; type: string; children?: unknown[] }>, tplName: string, basePath: string, depth: number) => {
-    return items.map((item) => {
-      const itemPath = basePath ? `${basePath}/${item.name}` : item.name
-      const dirKey = `${tplName}/${itemPath}`
+  // T11: 模板文件右键菜单(openFile)
+  const buildTemplateFileContextMenu = (tplName: string, node: FileTreeNode): ContextMenuItem[] => [
+    { label: t('common:explorer.contextMenu.openFile'), action: () => handleTemplateFileClick(tplName, node) },
+  ]
 
-      if (item.type === 'directory') {
-        const isDirExpanded = expandedDirs[dirKey]
-        return (
-          <div key={dirKey}>
-            <ExpandableTreeItem
-              label={item.name}
-              depth={depth}
-              onClick={() => toggleDir(dirKey)}
-            />
-            {isDirExpanded && item.children && Array.isArray(item.children) && (
-              renderStructure(item.children as Array<{ name: string; type: string; children?: unknown[] }>, tplName, itemPath, depth + 1)
-            )}
-          </div>
-        )
-      }
+  // T11: 模板目录右键菜单(openInFileManager)
+  const buildTemplateDirContextMenu = (tplName: string, _node: FileTreeNode): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.openInFileManager'),
+      action: () => handleOpenInExplorer(tplName),
+    },
+  ]
 
-      return (
-        <ExpandableTreeItem
-          key={dirKey}
-          label={item.name}
-          depth={depth}
-          onClick={() => handleTemplateFileClick(tplName, itemPath, item.name)}
-        />
-      )
-    })
-  }
+  // T11: 智能分组右键菜单(expandAll/collapseAll)
+  const buildTemplateGroupContextMenu = (tplName: string, _groupKey: GroupKey, nodes: FileTreeNode[]): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.expandAll'),
+      action: () => {
+        const dirPaths = collectAllDirPaths(nodes)
+        if (dirPaths.length > 0) {
+          useExplorerStore.setState((s) => {
+            const next = { ...s.expandedDirs }
+            for (const p of dirPaths) next[`dir:template:${tplName}/${p}`] = true
+            return { expandedDirs: next }
+          })
+        }
+      },
+    },
+    {
+      label: t('common:explorer.contextMenu.collapseAll'),
+      action: () => {
+        const dirPaths = collectAllDirPaths(nodes)
+        if (dirPaths.length > 0) {
+          useExplorerStore.setState((s) => {
+            const next = { ...s.expandedDirs }
+            for (const p of dirPaths) next[`dir:template:${tplName}/${p}`] = false
+            return { expandedDirs: next }
+          })
+        }
+      },
+    },
+  ]
 
   return (
     <>
       <Section
         title={t('common:explorer.templateCenter')}
         icon={<Folder size={14} />}
+        sectionKey="templates"
         actions={
           <button
             onClick={handleImportTemplate}
@@ -844,34 +1285,40 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
       >
         {templates.map((tpl) => {
           const isExpanded = expandedTemplates[tpl.name]
-          const structure = structureMap[tpl.name] || []
+          const structure = templateStructures[tpl.name] || []
           return (
             <div key={tpl.id}>
-              <TreeItem
-                label={tpl.name}
-                onClick={() => toggleTemplate(tpl.name)}
-                leading={<LayoutTemplate size={12} className="text-gray-400 dark:text-gray-500 shrink-0" />}
-                meta={
-                  <span className="flex items-center gap-1.5">
+              <TreeNode
+                label={
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate">{tpl.name}</span>
                     {tpl.isBuiltin && (
-                      <span className="text-3xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1 rounded">
+                      <span className="shrink-0 text-3xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1 rounded">
                         {t('common:template.builtin', '内置')}
                       </span>
                     )}
                     {tpl.description && (
-                      <span className="truncate max-w-[120px]">{tpl.description}</span>
+                      <span className="truncate text-2xs text-gray-400 dark:text-gray-500 max-w-[100px]">
+                        {tpl.description}
+                      </span>
                     )}
                   </span>
                 }
+                depth={0}
+                onClick={() => toggleTemplateExpand(tpl.name)}
+                onArrowClick={() => toggleTemplateExpand(tpl.name)}
+                isExpanded={isExpanded}
+                hasChildren
+                leading={<LayoutTemplate size={12} className="text-gray-400 dark:text-gray-500 shrink-0" />}
                 contextMenu={[
-                  { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplate(tpl.name) },
+                  { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplateExpand(tpl.name) },
                   { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(tpl.name) },
                   { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExportTemplate(tpl.name) },
                   ...(tpl.isBuiltin
                     ? []
                     : [
                         { label: t('common:explorer.contextMenu.editTemplate'), action: () => handleEditTemplate(tpl) },
-                        { label: t('common:explorer.contextMenu.deleteTemplate'), action: () => setDeleteTarget({ name: tpl.name, type: 'template' }) },
+                        { label: t('common:explorer.contextMenu.deleteTemplate'), action: () => setDeleteTarget({ name: tpl.name, type: 'template' as const }) },
                       ]
                   ),
                 ]}
@@ -881,7 +1328,18 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                   {t('common:explorer.noTemplateFiles')}
                 </div>
               )}
-              {isExpanded && renderStructure(structure, tpl.name, '', 6)}
+              {isExpanded && structure.length > 0 && (
+                renderTemplateChildren(tpl.name, structure, 1, explorerGroupMode, {
+                  onFileClick: (node) => handleTemplateFileClick(tpl.name, node),
+                  onDirToggle: (scope, relativePath) => toggleDir(scope, relativePath),
+                  isDirExpanded: (scope, relativePath) => !!expandedDirs[`dir:${scope}/${relativePath}`],
+                  isGroupExpanded: (tplName, gk) => !!expandedGroups[`group:${tplName}/${gk}`],
+                  onGroupToggle: (tplName, gk) => toggleGroup(tplName, gk),
+                  fileContextMenuBuilder: (node) => buildTemplateFileContextMenu(tpl.name, node),
+                  dirContextMenuBuilder: (node) => buildTemplateDirContextMenu(tpl.name, node),
+                  groupContextMenuBuilder: (gk, nodes) => buildTemplateGroupContextMenu(tpl.name, gk, nodes),
+                })
+              )}
             </div>
           )
         })}
@@ -1412,6 +1870,7 @@ const SETTINGS_CATEGORIES = [
   { key: 'keyboard', label: 'keyboard', icon: Keyboard },
   { key: 'deviceLibrary', label: 'deviceLibrary', icon: Database },
   { key: 'network', label: 'network', icon: Wifi },
+  { key: 'explorer', label: 'explorer', icon: FolderTree },
   { key: 'data', label: 'data', icon: Shield },
   { key: 'about', label: 'about', icon: Info },
 ] as const
@@ -1461,6 +1920,7 @@ function SettingsExplorer() {
             {activeCat === 'keyboard' && <KeyboardSettings />}
             {activeCat === 'deviceLibrary' && <DeviceLibrarySettings />}
             {activeCat === 'network' && <NetworkSettings />}
+            {activeCat === 'explorer' && <ExplorerSettings />}
             {activeCat === 'data' && <DataSettings />}
             {activeCat === 'about' && <AboutSettings onOpenAbout={() => setAboutOpen(true)} />}
           </div>
@@ -1711,6 +2171,56 @@ function NetworkSettings() {
             className={clsx('w-20', INPUT_CLASS)} />
         </div>
       </SettingsRow>
+    </SettingsSection>
+  )
+}
+
+/* 8a. Explorer (项目浏览器) */
+function ExplorerSettings() {
+  const { t } = useTranslation()
+  const groupMode = useUIStore((s) => s.explorerGroupMode)
+  const setGroupMode = useUIStore((s) => s.setExplorerGroupMode)
+  const resetAll = useExplorerStore((s) => s.resetAll)
+  const addToast = useToastStore((s) => s.addToast)
+
+  const handleResetExpand = () => {
+    resetAll()
+    addToast('info', t('common:explorer.settings.data.resetExplorerStateDone'))
+  }
+
+  return (
+    <SettingsSection title={t('common:explorer.settings.explorer.title')}>
+      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+        {t('common:explorer.settings.explorer.groupMode')}
+      </label>
+      <div className="space-y-1.5 mb-3">
+        {([
+          { mode: 'smart' as const, label: t('common:explorer.settings.explorer.smartGroup'), desc: t('common:explorer.settings.explorer.smartGroupDesc') },
+          { mode: 'raw' as const, label: t('common:explorer.settings.explorer.rawGroup'), desc: t('common:explorer.settings.explorer.rawGroupDesc') },
+        ]).map((item) => (
+          <button
+            key={item.mode}
+            onClick={() => setGroupMode(item.mode)}
+            className={`w-full text-left px-2.5 py-2 rounded border text-xs transition-colors
+              ${groupMode === item.mode
+                ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${groupMode === item.mode ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+              <span className="font-medium">{item.label}</span>
+            </div>
+            <p className="mt-0.5 ml-4 text-2xs text-gray-400 dark:text-gray-500">{item.desc}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+        <button onClick={handleResetExpand}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <RotateCcw size={13} />{t('common:explorer.settings.data.resetExplorerState')}
+        </button>
+      </div>
     </SettingsSection>
   )
 }

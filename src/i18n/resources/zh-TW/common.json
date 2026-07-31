@@ -241,7 +241,20 @@
       "deleteProject": "刪除專案",
       "viewTemplateFiles": "檢視範本檔案",
       "editTemplate": "編輯範本...",
-      "deleteTemplate": "刪除範本"
+      "deleteTemplate": "刪除範本",
+      "openFile": "開啟",
+      "showInFileManager": "在檔案管理員中顯示",
+      "copyFilePath": "複製檔案路徑",
+      "deleteFile": "刪除檔案",
+      "deleteBatch": "刪除批次",
+      "expandAll": "全部展開",
+      "collapseAll": "全部摺疊"
+    },
+    "group": {
+      "input": "輸入設定",
+      "output": "輸出檔案",
+      "topology": "拓撲資料",
+      "other": "其他檔案"
     },
     "toast": {
       "projectDeleted": "專案 \"{{name}}\" 已刪除",
@@ -344,6 +357,7 @@
         "keyboard": "快捷鍵",
         "deviceLibrary": "設備庫",
         "network": "網路",
+        "explorer": "瀏覽器",
         "data": "資料",
         "about": "關於"
       },
@@ -409,7 +423,17 @@
         "exportFailed": "匯出失敗",
         "importSuccess": "資料匯入成功，請重新整理頁面載入新設定",
         "importFailed": "匯入失敗，請檢查檔案格式",
-        "resetDone": "所有設定已重置"
+        "resetDone": "所有設定已重置",
+        "resetExplorerState": "重置專案瀏覽器展開狀態",
+        "resetExplorerStateDone": "專案瀏覽器展開狀態已重置"
+      },
+      "explorer": {
+        "title": "專案瀏覽器",
+        "groupMode": "分組模式",
+        "smartGroup": "智慧分組",
+        "smartGroupDesc": "按檔案用途虛擬分組(輸入設定/輸出檔案/拓撲資料)",
+        "rawGroup": "真實分組",
+        "rawGroupDesc": "按檔案系統真實目錄展示"
       },
       "about": {
         "title": "關於 AutoLink",

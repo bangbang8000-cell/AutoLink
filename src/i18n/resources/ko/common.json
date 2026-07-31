@@ -241,7 +241,20 @@
       "deleteProject": "프로젝트 삭제",
       "viewTemplateFiles": "템플릿 파일 보기",
       "editTemplate": "템플릿 편집...",
-      "deleteTemplate": "템플릿 삭제"
+      "deleteTemplate": "템플릿 삭제",
+      "openFile": "열기",
+      "showInFileManager": "파일 관리자에서 표시",
+      "copyFilePath": "파일 경로 복사",
+      "deleteFile": "파일 삭제",
+      "deleteBatch": "배치 삭제",
+      "expandAll": "모두 펼치기",
+      "collapseAll": "모두 접기"
+    },
+    "group": {
+      "input": "입력 설정",
+      "output": "출력 파일",
+      "topology": "토폴로지 데이터",
+      "other": "기타 파일"
     },
     "toast": {
       "projectDeleted": "프로젝트 \"{{name}}\" 삭제됨",
@@ -344,6 +357,7 @@
         "keyboard": "단축키",
         "deviceLibrary": "장치 라이브러리",
         "network": "네트워크",
+        "explorer": "탐색기",
         "data": "데이터",
         "about": "정보"
       },
@@ -409,7 +423,17 @@
         "exportFailed": "내보내기 실패",
         "importSuccess": "데이터 가져오기 성공. 페이지를 새로고침하세요",
         "importFailed": "가져오기 실패. 파일 형식을 확인하세요",
-        "resetDone": "모든 설정이 초기화되었습니다"
+        "resetDone": "모든 설정이 초기화되었습니다",
+        "resetExplorerState": "탐색기 확장 상태 초기화",
+        "resetExplorerStateDone": "탐색기 확장 상태가 초기화되었습니다"
+      },
+      "explorer": {
+        "title": "프로젝트 탐색기",
+        "groupMode": "그룹 모드",
+        "smartGroup": "스마트 그룹",
+        "smartGroupDesc": "파일 용도별 가상 그룹화(입력/출력/토폴로지)",
+        "rawGroup": "실제 그룹",
+        "rawGroupDesc": "파일 시스템 실제 디렉토리로 표시"
       },
       "about": {
         "title": "AutoLink 정보",

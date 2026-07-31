@@ -83,10 +83,17 @@ export function WorkspaceView() {
       }
       case 'fileViewer': {
         const fvState = activeTab?.state
+        // T6: 非模板项目文件传 projectName + filePath(相对项目根),
+        // 此处组合为 FileViewerTab 期望的 `${projectName}/${filePath}` 形式
+        const projectName = fvState?.projectName as string | undefined
+        const rawFilePath = fvState?.filePath as string | undefined
+        const filePath = projectName && !fvState?.isTemplate && rawFilePath
+          ? `${projectName}/${rawFilePath}`
+          : rawFilePath
         return (
           <FileViewerTab
             templateName={fvState?.templateName as string | undefined}
-            filePath={fvState?.filePath as string | undefined}
+            filePath={filePath}
             isTemplate={fvState?.isTemplate as boolean | undefined}
           />
         )

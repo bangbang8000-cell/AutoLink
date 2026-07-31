@@ -17,7 +17,7 @@ interface Window {
         } | null
         targetDir: string
       }>
-      getStructure: (name: string) => Promise<unknown[]>
+      getStructure: (name: string) => Promise<import('@/types/file-tree').FileTreeNode[]>
       getConfigFile: (name: string) => Promise<string | null>
       saveConfigFile: (name: string, content: string) => Promise<void>
       // T6.1: 通用项目文件保存(白名单: topology.json, rack_layout.json)
@@ -25,13 +25,13 @@ interface Window {
       getFile: (name: string, filePath: string) => Promise<string | null>
       getFileBinary: (name: string, filePath: string) => Promise<string | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
-      listOutputBatches: (projectName: string) => Promise<Array<{ name: string; files: Array<{ name: string; path: string }> }>>
+      listOutputBatches: (projectName: string) => Promise<import('@/types/file-tree').OutputBatch[]>
       deleteOutputFile: (projectName: string, filePath: string) => Promise<void>
       deleteOutputBatch: (projectName: string, batchName: string) => Promise<void>
       clearOutput: (projectName: string) => Promise<void>
     }
     template: {
-      getStructure: (templateName: string) => Promise<Array<{ name: string; type: string; children?: Array<{ name: string; type: string; children?: unknown[] }> }>>
+      getStructure: (templateName: string) => Promise<import('@/types/file-tree').FileTreeNode[]>
       getFile: (templateName: string, filePath: string) => Promise<string | null>
       list: () => Promise<Array<{ id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean }>>
       create: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>

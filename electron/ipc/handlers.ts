@@ -21,6 +21,7 @@ const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
   custom: 'custom',
 }
 import { updateService } from '../services/update.service.js'
+import type { FileTreeNode } from '../../src/types/file-tree.js'
 
 // ===== Security Helpers =====
 function sanitizePath(segments: string[]): string {
@@ -408,16 +409,36 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const projectDir = path.join(getWorkspacePath(), name)
     if (!fs.existsSync(projectDir)) return []
 
-    function walkDir(dir: string): { name: string; type: string; children?: unknown[] }[] {
+    // 隐藏文件/目录 + 常见非业务目录过滤(与 template 统一)
+    const isHidden = (n: string) => n.startsWith('.')
+    const isExcludedDir = (n: string) => n === 'node_modules' || n === '.git'
+
+    function walkDir(dir: string, basePath: string): FileTreeNode[] {
       const entries = fs.readdirSync(dir, { withFileTypes: true })
-      return entries.map((e) => {
-        if (e.isDirectory()) {
-          return { name: e.name, type: 'directory', children: walkDir(path.join(dir, e.name)) }
-        }
-        return { name: e.name, type: 'file' }
-      })
+      return entries
+        .filter((e) => !isHidden(e.name) && !(e.isDirectory() && isExcludedDir(e.name)))
+        .map((e) => {
+          const nodePath = basePath ? `${basePath}/${e.name}` : e.name
+          if (e.isDirectory()) {
+            return {
+              name: e.name,
+              type: 'directory' as const,
+              path: nodePath,
+              children: walkDir(path.join(dir, e.name), nodePath),
+            }
+          }
+          const fullPath = path.join(dir, e.name)
+          const stat = fs.statSync(fullPath)
+          return {
+            name: e.name,
+            type: 'file' as const,
+            path: nodePath,
+            size: stat.size,
+            updatedAt: stat.mtime.toISOString(),
+          }
+        })
     }
-    return walkDir(projectDir)
+    return walkDir(projectDir, '')
   }))
 
   ipcMain.handle('project:getConfigFile', wrapHandler(async (_event, name: string) => {
@@ -829,18 +850,35 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const tplDir = fs.existsSync(userTplDir) ? userTplDir : builtinTplDir
     if (!fs.existsSync(tplDir)) return []
 
-    function walkDir(dir: string): { name: string; type: string; children?: unknown[] }[] {
+    const isHidden = (n: string) => n.startsWith('.')
+    const isExcludedDir = (n: string) => n === 'node_modules' || n === '.git'
+
+    function walkDir(dir: string, basePath: string): FileTreeNode[] {
       const entries = fs.readdirSync(dir, { withFileTypes: true })
       return entries
-        .filter((e) => !e.name.startsWith('.'))
+        .filter((e) => !isHidden(e.name) && !(e.isDirectory() && isExcludedDir(e.name)))
         .map((e) => {
+          const nodePath = basePath ? `${basePath}/${e.name}` : e.name
           if (e.isDirectory()) {
-            return { name: e.name, type: 'directory', children: walkDir(path.join(dir, e.name)) }
+            return {
+              name: e.name,
+              type: 'directory' as const,
+              path: nodePath,
+              children: walkDir(path.join(dir, e.name), nodePath),
+            }
           }
-          return { name: e.name, type: 'file' }
+          const fullPath = path.join(dir, e.name)
+          const stat = fs.statSync(fullPath)
+          return {
+            name: e.name,
+            type: 'file' as const,
+            path: nodePath,
+            size: stat.size,
+            updatedAt: stat.mtime.toISOString(),
+          }
         })
     }
-    return walkDir(tplDir)
+    return walkDir(tplDir, '')
   }))
 
   ipcMain.handle('template:getFile', wrapHandler(async (_event, templateName: string, filePath: string) => {

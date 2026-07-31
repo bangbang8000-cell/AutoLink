@@ -256,7 +256,20 @@
       "deleteProject": "Delete Project",
       "viewTemplateFiles": "View Template Files",
       "editTemplate": "Edit Template...",
-      "deleteTemplate": "Delete Template"
+      "deleteTemplate": "Delete Template",
+      "openFile": "Open",
+      "showInFileManager": "Show in File Manager",
+      "copyFilePath": "Copy File Path",
+      "deleteFile": "Delete File",
+      "deleteBatch": "Delete Batch",
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All"
+    },
+    "group": {
+      "input": "Input Config",
+      "output": "Output Files",
+      "topology": "Topology Data",
+      "other": "Other Files"
     },
     "toast": {
       "projectDeleted": "Project \"{{name}}\" deleted",
@@ -359,6 +372,7 @@
         "keyboard": "Shortcuts",
         "deviceLibrary": "Device Library",
         "network": "Network",
+        "explorer": "Explorer",
         "data": "Data",
         "about": "About"
       },
@@ -424,7 +438,17 @@
         "exportFailed": "Export failed",
         "importSuccess": "Data imported. Please refresh to load new config",
         "importFailed": "Import failed. Please check file format",
-        "resetDone": "All settings have been reset"
+        "resetDone": "All settings have been reset",
+        "resetExplorerState": "Reset Explorer Expand State",
+        "resetExplorerStateDone": "Explorer expand state has been reset"
+      },
+      "explorer": {
+        "title": "Project Explorer",
+        "groupMode": "Group Mode",
+        "smartGroup": "Smart Group",
+        "smartGroupDesc": "Group by file purpose (input/output/topology)",
+        "rawGroup": "Raw Group",
+        "rawGroupDesc": "Display by real file system directory"
       },
       "about": {
         "title": "About AutoLink",

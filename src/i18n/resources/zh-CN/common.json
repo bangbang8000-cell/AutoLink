@@ -256,7 +256,20 @@
       "deleteProject": "删除项目",
       "viewTemplateFiles": "查看模板文件",
       "editTemplate": "编辑模板...",
-      "deleteTemplate": "删除模板"
+      "deleteTemplate": "删除模板",
+      "openFile": "打开",
+      "showInFileManager": "在文件管理器中显示",
+      "copyFilePath": "复制文件路径",
+      "deleteFile": "删除文件",
+      "deleteBatch": "删除批次",
+      "expandAll": "全部展开",
+      "collapseAll": "全部折叠"
+    },
+    "group": {
+      "input": "输入配置",
+      "output": "输出文件",
+      "topology": "拓扑数据",
+      "other": "其他文件"
     },
     "toast": {
       "projectDeleted": "项目 \"{{name}}\" 已删除",
@@ -359,6 +372,7 @@
         "keyboard": "快捷键",
         "deviceLibrary": "设备库",
         "network": "网络",
+        "explorer": "浏览器",
         "data": "数据",
         "about": "关于"
       },
@@ -420,11 +434,21 @@
         "exportAll": "导出全部数据",
         "importData": "导入数据",
         "resetAll": "重置所有设置",
+        "resetExplorerState": "重置项目浏览器展开状态",
+        "resetExplorerStateDone": "项目浏览器展开状态已重置",
         "exportSuccess": "数据导出成功",
         "exportFailed": "导出失败",
         "importSuccess": "数据导入成功，请刷新页面加载新配置",
         "importFailed": "导入失败，请检查文件格式",
         "resetDone": "所有设置已重置"
+      },
+      "explorer": {
+        "title": "项目浏览器",
+        "groupMode": "分组模式",
+        "smartGroup": "智能分组",
+        "smartGroupDesc": "按文件用途虚拟分组(输入配置/输出文件/拓扑数据)",
+        "rawGroup": "真实分组",
+        "rawGroupDesc": "按文件系统真实目录展示"
       },
       "about": {
         "title": "关于 AutoLink",
