@@ -138,16 +138,16 @@ export function ProjectOverviewTab({ projectName }: Props) {
       <div className="h-full p-6 space-y-4">
         <Skeleton lines={1} />
         <div className="grid grid-cols-2 gap-4">
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-4">
             <Skeleton lines={4} />
           </div>
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-4">
             <Skeleton lines={4} />
           </div>
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-4">
             <Skeleton lines={4} />
           </div>
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-4">
             <Skeleton lines={4} />
           </div>
         </div>
@@ -167,7 +167,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <div className="flex items-center gap-2">
           <FolderOpen size={18} className="text-primary-500" />
           <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -177,14 +177,14 @@ export function ProjectOverviewTab({ projectName }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={handleOpenDesign}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
             <Settings size={13} />
             编辑配置
           </button>
           <button
             onClick={() => window.electron?.shell?.openPath(projectName)}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
             <ExternalLink size={13} />
             在管理器中打开
@@ -217,7 +217,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
                     <span className="text-right text-gray-500 dark:text-gray-400 tabular-nums">{g.totalPower.toLocaleString()}W</span>
                   </div>
                 ))}
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1.5">
+                <div className="border-t border-gray-200 dark:border-edge-subtle pt-1.5 mt-1.5">
                   <div className="flex justify-between px-2 text-xs">
                     <span className="text-gray-500 dark:text-gray-400">合计</span>
                     <span className="font-medium text-gray-800 dark:text-gray-200">
@@ -366,7 +366,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
       </div>
 
       {/* Quick Actions */}
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-2">快速操作</span>
         <button
           onClick={handleQuickRender}
@@ -377,21 +377,21 @@ export function ProjectOverviewTab({ projectName }: Props) {
         </button>
         <button
           onClick={() => openTab({ type: 'output', title: '导出设备清单', closable: true, state: { fileName: '设备清单.xlsx', fileType: 'xlsx' } })}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
         >
           <Download size={13} />
           导出设备清单
         </button>
         <button
           onClick={() => openTab({ type: 'output', title: '导出上机表', closable: true, state: { fileName: '上机表.xlsx', fileType: 'xlsx' } })}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
         >
           <Download size={13} />
-          导出上机表
+          上机表
         </button>
         <button
           onClick={() => openTab({ type: 'output', title: '导出拓扑图', closable: true, state: { fileName: '拓扑图.png', fileType: 'png' } })}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
         >
           <Download size={13} />
           导出拓扑图
@@ -410,8 +410,8 @@ function SectionCard({ title, icon, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-edge-subtle">
         {icon}
         <span>{title}</span>
       </div>

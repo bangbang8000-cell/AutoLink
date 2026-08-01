@@ -401,7 +401,7 @@ function ProjectExplorer() {
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <button
           onClick={() => setShowCreateProjectWizard(true)}
           className="flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded bg-primary-500 hover:bg-primary-600 text-white shrink-0"
@@ -416,13 +416,13 @@ function ProjectExplorer() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common:search')}
-            className="w-full pl-7 pr-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+            className="w-full pl-7 pr-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
         <button
           onClick={handleImport}
           disabled={importing}
-          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
           title={t('common:project.importZip', '导入项目 ZIP')}
         >
           {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
@@ -431,7 +431,7 @@ function ProjectExplorer() {
           <button
             onClick={handleBatchExport}
             disabled={batchExporting}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('common:project.batchExport', '批量导出项目')}
           >
             {batchExporting ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
@@ -440,7 +440,7 @@ function ProjectExplorer() {
         {selectedProjectName && (
           <button
             onClick={() => handleOpenInExplorer(selectedProjectName)}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
             title={t('common:explorer.openInExplorer')}
           >
             <FolderOpen size={14} />
@@ -563,7 +563,7 @@ function Section({ title, icon, children, actions, sectionKey }: { title: string
       <div className="flex items-center group">
         <button
           onClick={toggle}
-          className="flex-1 flex items-center gap-1.5 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+          className="flex-1 flex items-center gap-1.5 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           {icon}
@@ -1276,7 +1276,7 @@ function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
           <button
             onClick={handleImportTemplate}
             disabled={busy}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 disabled:opacity-50"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50"
             title={t('common:template.importZip', '导入模板 ZIP')}
           >
             {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
@@ -1416,10 +1416,10 @@ function DesignExplorer() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.design.title')}</span>
         <button onClick={handleOpenFullDesign}
-          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-app-hover">
           {t('common:explorer.design.openFullSize')}
         </button>
       </div>
@@ -1428,7 +1428,7 @@ function DesignExplorer() {
         {/* Mode selector */}
         <select value={config.downlink_mode}
           onChange={(e) => updateConfig({ downlink_mode: e.target.value as 'full' | 'custom' })}
-          className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+          className={`w-full ${INPUT_CLASS} text-gray-800 dark:text-gray-200`}>
           <option value="full">{t('common:explorer.design.fullMode')}</option>
           <option value="custom">{t('common:explorer.design.customMode')}</option>
         </select>
@@ -1469,7 +1469,7 @@ function DesignExplorer() {
 
         {/* Design summary */}
         {summary && (
-          <div className="border border-gray-200 dark:border-gray-700 rounded p-2.5 space-y-1.5">
+          <div className="border border-gray-200 dark:border-edge-subtle rounded p-2.5 space-y-1.5">
             <div className="flex items-center gap-1.5">
               {valid ? <CheckCircle size={12} className="text-gray-400" /> : <XCircle size={12} className="text-gray-400" />}
               <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">
@@ -1517,17 +1517,17 @@ function WorkbenchExplorer() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.title')}</span>
         <button onClick={handleOpenFullWorkbench}
-          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-app-hover">
           {t('common:explorer.workbench.openFullSize')}
         </button>
       </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         {/* Project info */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-1.5">
+        <div className="bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs">
             <FolderOpen size={12} className="text-gray-400" />
             <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{selectedProjectName}</span>
@@ -1535,7 +1535,7 @@ function WorkbenchExplorer() {
         </div>
 
         {/* Readiness */}
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-2">
+        <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-2">
           <div className="flex items-center gap-1.5">
             {valid === true ? <CheckCircle size={11} className="text-gray-400" />
               : valid === false ? <XCircle size={11} className="text-gray-400" />
@@ -1556,8 +1556,8 @@ function WorkbenchExplorer() {
         </div>
 
         {/* Output types */}
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800/50 text-2xs font-medium text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.outputTypes')}</div>
+        <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-app/50 text-2xs font-medium text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.outputTypes')}</div>
           <div className="p-2 space-y-1">
             {([
               { type: 'connections' as const, icon: <FileSpreadsheet size={12} className="text-gray-400" />, label: t('common:explorer.workbench.connectionTable') },
@@ -1608,10 +1608,10 @@ function VisualizationExplorer() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.visualization.title')}</span>
         <button onClick={handleOpenFullVisualization}
-          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="text-2xs px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-app-hover">
           {t('common:explorer.visualization.openFullSize')}
         </button>
       </div>
@@ -1626,28 +1626,28 @@ function VisualizationExplorer() {
         ) : (
           <>
             {/* Topology Overview */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-1.5">
+            <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-1.5">
               <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.topologyOverview')}</label>
               <div className="space-y-1 text-2xs">
                 <div className="flex justify-between">
                   <span className="text-gray-500">{t('common:explorer.visualization.totalNodes')}</span>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{topology.nodes.length}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300 font-mono tabular-nums">{topology.nodes.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">{t('common:explorer.visualization.totalConnections')}</span>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{topology.edges.length}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300 font-mono tabular-nums">{topology.edges.length}</span>
                 </div>
               </div>
             </div>
 
             {/* Node Type Stats */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5">
+            <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5">
               <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.nodeTypeStats')}</label>
               <div className="mt-1.5 space-y-1">
                 {Object.entries(nodeStats).map(([type, count]) => (
                   <div key={type} className="flex justify-between items-center">
                     <span className="text-2xs text-gray-500">{NODE_TYPE_LABELS[type] || type}</span>
-                    <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">{count}</span>
+                    <span className="text-2xs font-medium text-gray-700 dark:text-gray-300 font-mono tabular-nums">{count}</span>
                   </div>
                 ))}
                 {Object.keys(nodeStats).length === 0 && (
@@ -1658,13 +1658,13 @@ function VisualizationExplorer() {
 
             {/* Cabinet List */}
             {cabinets.length > 0 && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5">
+              <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5">
                 <label className="text-2xs text-gray-500 uppercase tracking-wider">{t('common:explorer.visualization.cabinetList')}</label>
                 <div className="mt-1.5 space-y-1">
                   {cabinets.map((cab) => (
                     <div key={cab.id} className="flex justify-between items-center">
                       <span className="text-2xs text-gray-500 truncate max-w-[120px]">{cab.name}</span>
-                      <span className="text-2xs font-medium text-gray-700 dark:text-gray-300">{cab.devices.length}</span>
+                      <span className="text-2xs font-medium text-gray-700 dark:text-gray-300 font-mono tabular-nums">{cab.devices.length}</span>
                     </div>
                   ))}
                 </div>
@@ -1780,7 +1780,7 @@ function DeviceLibExplorer() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{t('common:explorer.deviceLibrary.title')}</p>
         <p className="text-2xs text-gray-400 dark:text-gray-500 mt-0.5">{t('common:explorer.deviceLibrary.deviceCount', { count: allDevices.length })}</p>
       </div>
@@ -1792,7 +1792,7 @@ function DeviceLibExplorer() {
             'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
             !activeCategory
               ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-2 border-l-transparent',
           )}
         >
           <Package size={13} />
@@ -1819,7 +1819,7 @@ function DeviceLibExplorer() {
                   'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
                   (isActive || hasActiveChild)
                     ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-2 border-l-transparent',
                 )}
               >
                 {hasChildren ? (
@@ -1843,7 +1843,7 @@ function DeviceLibExplorer() {
                       'w-full flex items-center gap-2 pl-8 pr-3 py-1.5 text-2xs transition-colors',
                       childActive
                         ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-2 border-l-transparent',
                     )}
                   >
                     <span className="truncate">{t(`common:explorer.deviceLibrary.categories.${child.label}`)}</span>
@@ -1884,12 +1884,12 @@ function SettingsExplorer() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.settings.title')}</span>
       </div>
       <div className="flex-1 flex overflow-hidden">
         {/* Left: category nav */}
-        <div className="w-36 shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-auto py-1">
+        <div className="w-36 shrink-0 border-r border-gray-200 dark:border-edge-subtle overflow-auto py-1">
           {SETTINGS_CATEGORIES.map((cat) => {
             const Icon = cat.icon
             return (
@@ -1900,7 +1900,7 @@ function SettingsExplorer() {
                   'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors text-left',
                   activeCat === cat.key
                     ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent',
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-2 border-l-transparent',
                 )}
               >
                 <Icon size={13} />
@@ -1965,7 +1965,7 @@ function AppearanceSettings() {
 
       <SettingsRow label={t('common:explorer.settings.appearance.fontSize')}>
         <select value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
           {[12, 13, 14, 16, 18].map((n) => <option key={n} value={n}>{n}px</option>)}
         </select>
       </SettingsRow>
@@ -2023,7 +2023,7 @@ function ProjectDefaultsSettings() {
     <SettingsSection title={t('common:explorer.settings.projectDefaults.title')}>
       <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultRackType')}>
         <select value={defaultRack} onChange={(e) => setDefaultRack(Number(e.target.value))}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
           <option value={42}>42U</option>
           <option value={49}>49U</option>
         </select>
@@ -2031,11 +2031,11 @@ function ProjectDefaultsSettings() {
       <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultPowerLimit')}>
         <input type="number" value={defaultPowerLimit}
           onChange={(e) => setDefaultPowerLimit(Number(e.target.value))}
-          className="w-20 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700" />
+          className="w-20 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
       </SettingsRow>
       <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultPortSpeed')}>
         <select value={defaultPortSpeed} onChange={(e) => setDefaultPortSpeed(e.target.value)}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
           {['100G', '200G', '400G', '800G'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </SettingsRow>
@@ -2054,7 +2054,7 @@ function OutputSettings() {
     <SettingsSection title={t('common:explorer.settings.output.title')}>
       <SettingsRow label={t('common:explorer.settings.output.defaultFormat')}>
         <select value={defaultFormat} onChange={(e) => setDefaultFormat(e.target.value)}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
           <option value="xlsx">{t('common:explorer.settings.output.formatExcel')}</option>
           <option value="csv">{t('common:explorer.settings.output.formatCsv')}</option>
           <option value="png">{t('common:explorer.settings.output.formatPng')}</option>
@@ -2068,7 +2068,7 @@ function OutputSettings() {
               const result = await window.electron?.dialog?.openDirectory?.()
               if (result) setOutputDir(result as string)
             }}
-            className="text-2xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+            className="text-2xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500">
             {t('common:explorer.settings.output.select')}
           </button>
         </div>
@@ -2076,7 +2076,7 @@ function OutputSettings() {
       <SettingsRow label={t('common:explorer.settings.output.autoSaveInterval')}>
         <input type="number" value={autoSaveInterval} min={1} max={60}
           onChange={(e) => setAutoSaveInterval(Number(e.target.value))}
-          className="w-16 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700" />
+          className="w-16 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
       </SettingsRow>
     </SettingsSection>
   )
@@ -2101,10 +2101,10 @@ function KeyboardSettings() {
 
   return (
     <SettingsSection title={t('common:explorer.settings.keyboard.title')}>
-      <div className="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+      <div className="border border-gray-200 dark:border-edge-subtle rounded overflow-hidden">
         {shortcuts.map((s) => (
           <div key={s.keys}
-            className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 text-xs">
+            className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-100 dark:border-edge-subtle/50 last:border-b-0 text-xs">
             <span className="text-gray-600 dark:text-gray-400">{s.desc}</span>
             <kbd className="px-1.5 py-0.5 text-2xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono">
               {s.keys}
@@ -2133,7 +2133,7 @@ function DeviceLibrarySettings() {
               const result = await window.electron?.dialog?.openDirectory?.()
               if (result) setDataDir(result as string)
             }}
-            className="text-2xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+            className="text-2xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500">
             {t('common:explorer.settings.output.select')}
           </button>
         </div>
@@ -2164,7 +2164,7 @@ function NetworkSettings() {
         <div className="flex items-center gap-1">
           <input placeholder={t('common:explorer.settings.network.host')} value={proxyHost}
             onChange={(e) => setProxyHost(e.target.value)}
-            className="w-20 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700" />
+            className="w-20 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
           <span className="text-gray-400">:</span>
           <input placeholder={t('common:explorer.settings.network.port')} value={proxyPort}
             onChange={(e) => setProxyPort(e.target.value)}
@@ -2204,7 +2204,7 @@ function ExplorerSettings() {
             className={`w-full text-left px-2.5 py-2 rounded border text-xs transition-colors
               ${groupMode === item.mode
                 ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50'}`}
           >
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${groupMode === item.mode ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
@@ -2215,9 +2215,9 @@ function ExplorerSettings() {
         ))}
       </div>
 
-      <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="pt-3 border-t border-gray-200 dark:border-edge-subtle">
         <button onClick={handleResetExpand}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover">
           <RotateCcw size={13} />{t('common:explorer.settings.data.resetExplorerState')}
         </button>
       </div>
@@ -2280,11 +2280,11 @@ function DataSettings() {
   return (
     <SettingsSection title={t('common:explorer.settings.data.title')}>
       <button onClick={handleExportAll}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover">
         <Download size={13} />{t('common:explorer.settings.data.exportAll')}
       </button>
       <button onClick={handleImport}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover">
         <Upload size={13} />{t('common:explorer.settings.data.importData')}
       </button>
       <button onClick={handleReset}
@@ -2318,7 +2318,7 @@ function AboutSettings({ onOpenAbout }: { onOpenAbout: () => void }) {
 
   return (
     <SettingsSection title={t('common:explorer.settings.about.title')}>
-      <div className="border border-gray-200 dark:border-gray-700 rounded p-3">
+      <div className="border border-gray-200 dark:border-edge-subtle rounded p-3">
         <div className="text-xs space-y-1.5">
           <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">{t('common:explorer.settings.about.version')}</span>
@@ -2335,11 +2335,11 @@ function AboutSettings({ onOpenAbout }: { onOpenAbout: () => void }) {
         </div>
       </div>
       <button onClick={handleCheckUpdate}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover">
         <ExternalLink size={13} />{t('common:explorer.settings.about.checkUpdate')}
       </button>
       <button onClick={onOpenAbout}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover">
         <Info size={13} />{t('common:explorer.settings.about.viewFullInfo')}
       </button>
     </SettingsSection>
@@ -2360,7 +2360,7 @@ function NumberInputMini({ label, value, onChange }: { label: string; value: num
       <span className="text-2xs text-gray-500 dark:text-gray-400">{label}</span>
       <input type="number" value={value}
         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(v) }}
-        className="w-20 px-1.5 py-1 text-2xs text-right rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400" />
+        className="w-20 px-1.5 py-1 text-2xs text-right font-mono tabular-nums rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400" />
     </div>
   )
 }
@@ -2372,7 +2372,7 @@ function SelectMini({ label, value, onChange, options }: {
     <div className="flex items-center justify-between gap-2">
       <span className="text-2xs text-gray-500 dark:text-gray-400">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-20 px-1 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400">
+        className="w-20 px-1 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>

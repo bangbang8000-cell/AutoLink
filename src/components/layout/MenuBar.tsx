@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { useUIStore } from '@/stores/ui.store'
@@ -276,17 +276,17 @@ export function MenuBar() {
             onClick={() => handleMenuClick(menuName)}
             onMouseEnter={() => { if (openMenu) setOpenMenu(menuName) }}
             className={clsx(
-              'px-2.5 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors',
+              'px-2.5 py-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover transition-colors',
               openMenu === menuName ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'
             )}
           >
             {menuName}
           </button>
           {openMenu === menuName && (
-            <div className="absolute top-full left-0 mt-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-[70] min-w-[200px]">
+            <div className="absolute top-full left-0 mt-0.5 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 z-[70] min-w-[200px] animate-dropdown-in">
               {MENUS[menuName].map((item, i) => {
                 if (item.separator) {
-                  return <div key={i} className="my-1 border-t border-gray-200 dark:border-gray-700" />
+                  return <div key={i} className="my-1 border-t border-gray-200 dark:border-edge-subtle" />
                 }
                 return (
                   <button
@@ -295,7 +295,7 @@ export function MenuBar() {
                       item.action?.()
                       setOpenMenu(null)
                     }}
-                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                   >
                     <span>{item.label}</span>
                     {item.shortcut && (

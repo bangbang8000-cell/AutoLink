@@ -37,7 +37,7 @@ export function WizardStepBasic() {
           value={config.meta.name}
           onChange={(e) => updateMeta(e.target.value, config.meta.description)}
           placeholder="请输入项目名称"
-          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
         />
       </div>
 
@@ -51,7 +51,7 @@ export function WizardStepBasic() {
           onChange={(e) => updateMeta(config.meta.name, e.target.value)}
           placeholder="请输入项目描述（可选）"
           rows={4}
-          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400 resize-none"
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400 resize-none"
         />
       </div>
     </div>

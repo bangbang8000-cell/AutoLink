@@ -57,11 +57,11 @@ function InterfaceModelRow({
   canRemove: boolean
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs bg-gray-50 dark:bg-gray-800 rounded p-2">
+    <div className="flex items-center gap-1.5 text-xs bg-gray-50 dark:bg-app-surface rounded p-2">
       <select
         value={model.network_type}
         onChange={(e) => onChange(index, 'network_type', e.target.value)}
-        className="w-20 px-1.5 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs"
+        className="w-20 px-1.5 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-xs"
       >
         {NETWORK_TYPES.map((nt) => (
           <option key={nt.value} value={nt.value}>{nt.label}</option>
@@ -71,35 +71,35 @@ function InterfaceModelRow({
         type="number"
         value={model.port_count}
         onChange={(e) => onChange(index, 'port_count', parseInt(e.target.value) || 0)}
-        className="w-12 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs text-center"
+        className="w-12 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-xs text-center"
         title="端口数"
       />
       <input
         type="text"
         value={model.port_speed}
         onChange={(e) => onChange(index, 'port_speed', e.target.value)}
-        className="w-14 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs"
+        className="w-14 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-xs"
         placeholder="速率"
       />
       <input
         type="text"
         value={model.port_type}
         onChange={(e) => onChange(index, 'port_type', e.target.value)}
-        className="w-16 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs"
+        className="w-16 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-xs"
         placeholder="端口类型"
       />
       <input
         type="text"
         value={model.cable_type}
         onChange={(e) => onChange(index, 'cable_type', e.target.value)}
-        className="w-14 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs"
+        className="w-14 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-xs"
         placeholder="线缆"
       />
       <input
         type="text"
         value={model.downlink_prefix}
         onChange={(e) => onChange(index, 'downlink_prefix', e.target.value)}
-        className="w-14 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs"
+        className="w-14 px-1 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-xs"
         placeholder="下行前缀"
       />
       {canRemove && (
@@ -186,15 +186,15 @@ export function ServerProfileForm() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={closeForm}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col"
+        className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h3 className="text-sm font-semibold">
             {editingDevice ? `编辑: ${editingDevice.vendor} ${editingDevice.model}` : t('actions.addServer')}
           </h3>
-          <button onClick={closeForm} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button onClick={closeForm} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover">
             <X size={16} />
           </button>
         </div>
@@ -213,7 +213,7 @@ export function ServerProfileForm() {
                     'px-2 py-1 text-xs rounded transition-colors',
                     device.category === st.value
                       ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
+                      : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
                   )}
                 >
                   {st.label}
@@ -231,7 +231,7 @@ export function ServerProfileForm() {
                 value={device.vendor}
                 onChange={(e) => updateField('vendor', e.target.value)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.vendor ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="厂商"
@@ -245,7 +245,7 @@ export function ServerProfileForm() {
                 value={device.model}
                 onChange={(e) => updateField('model', e.target.value)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.model ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="型号"
@@ -260,7 +260,7 @@ export function ServerProfileForm() {
               type="text"
               value={device.description}
               onChange={(e) => updateField('description', e.target.value)}
-              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               placeholder="设备描述"
             />
           </div>
@@ -274,7 +274,7 @@ export function ServerProfileForm() {
                 value={device.power_watts || ''}
                 onChange={(e) => updateField('power_watts', parseInt(e.target.value) || 0)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.power_watts ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
@@ -287,7 +287,7 @@ export function ServerProfileForm() {
                 value={device.u_height || ''}
                 onChange={(e) => updateField('u_height', parseInt(e.target.value) || 0)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.u_height ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
@@ -299,7 +299,7 @@ export function ServerProfileForm() {
                 type="number"
                 value={device.depth_mm || ''}
                 onChange={(e) => updateField('depth_mm', parseInt(e.target.value) || 0)}
-                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               />
             </div>
           </div>
@@ -311,7 +311,7 @@ export function ServerProfileForm() {
                 type="number"
                 value={device.weight_kg || ''}
                 onChange={(e) => updateField('weight_kg', parseInt(e.target.value) || 0)}
-                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               />
             </div>
             <div>
@@ -319,7 +319,7 @@ export function ServerProfileForm() {
               <select
                 value={device.cooling}
                 onChange={(e) => updateField('cooling', e.target.value as 'air' | 'liquid')}
-                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               >
                 <option value="air">风冷</option>
                 <option value="liquid">液冷</option>
@@ -332,7 +332,7 @@ export function ServerProfileForm() {
                 value={device.name_prefix}
                 onChange={(e) => updateField('name_prefix', e.target.value)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.name_prefix ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="前缀"
@@ -355,7 +355,7 @@ export function ServerProfileForm() {
                     <button
                       key={nt.value}
                       onClick={() => addInterfaceModel(nt.value)}
-                      className="flex items-center gap-0.5 px-1.5 py-0.5 text-2xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 text-2xs rounded bg-gray-100 dark:bg-app text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
                       <Plus size={10} /> {nt.label}
                     </button>
@@ -390,17 +390,17 @@ export function ServerProfileForm() {
               type="text"
               value={device.tags.join(', ')}
               onChange={(e) => updateField('tags', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               placeholder="逗号分隔，如: 400G, RoCEv2"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
           <button
             onClick={closeForm}
-            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-app-hover"
           >
             取消
           </button>

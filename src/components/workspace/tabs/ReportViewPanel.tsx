@@ -75,11 +75,11 @@ export function ReportViewPanel({ projectName }: Props) {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
       {/* Header (clickable) */}
       <button
         onClick={handleToggle}
-        className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-app/50 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <FileText size={14} className="text-primary-500" />
@@ -108,7 +108,7 @@ export function ReportViewPanel({ projectName }: Props) {
               <button
                 onClick={loadReport}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400 disabled:opacity-50"
               >
                 {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                 {t('design:reEstimate')}
@@ -154,7 +154,7 @@ export function ReportViewPanel({ projectName }: Props) {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="text-left text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                        <tr className="text-left text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-edge-subtle">
                           <th className="py-1.5 pr-3">型号</th>
                           <th className="py-1.5 pr-3">数量</th>
                           <th className="py-1.5 pr-3">规格</th>
@@ -163,7 +163,7 @@ export function ReportViewPanel({ projectName }: Props) {
                       </thead>
                       <tbody>
                         {Object.entries(data.modules).map(([id, m]) => (
-                          <tr key={id} className="border-b border-gray-50 dark:border-gray-700/50">
+                          <tr key={id} className="border-b border-gray-50 dark:border-edge-subtle/50">
                             <td className="py-1.5 pr-3 font-medium text-gray-700 dark:text-gray-300">{id}</td>
                             <td className="py-1.5 pr-3 tabular-nums">{m.count}</td>
                             <td className="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{m.spec || '-'}</td>
@@ -204,7 +204,7 @@ export function ReportViewPanel({ projectName }: Props) {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="border border-gray-100 dark:border-gray-700 rounded p-3">
+    <div className="border border-gray-100 dark:border-edge-subtle rounded p-3">
       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
         {icon}
         {title}

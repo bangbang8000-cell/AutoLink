@@ -586,7 +586,7 @@ function TopologyFlowInner() {
   /* ---------- empty states ---------- */
   if (!selectedProjectName) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-gray-800">
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-app-elevated">
         <Network size={48} className="text-gray-300 dark:text-gray-600 mb-3" />
         <p className="text-sm text-gray-400 dark:text-gray-500">拓扑可视化</p>
         <p className="text-xs text-gray-400">请先选择一个项目</p>
@@ -596,7 +596,7 @@ function TopologyFlowInner() {
 
   if (!topology) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-gray-800">
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-app-elevated">
         <Network size={48} className="text-gray-300 dark:text-gray-600 mb-3" />
         <p className="text-sm text-gray-400 dark:text-gray-500">尚未生成拓扑</p>
         <p className="text-xs text-gray-400">在「设计」面板中生成拓扑数据后查看</p>
@@ -606,18 +606,18 @@ function TopologyFlowInner() {
 
   /* ---------- render ---------- */
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
+    <div className="h-full flex flex-col bg-white dark:bg-app-elevated">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50 z-10">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50 z-10">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">拓扑视图</span>
-          <span className="text-2xs text-gray-400">{nodeCount} 节点 · {edgeCount} 连接</span>
+          <span className="text-2xs text-gray-400"><span className="font-mono tabular-nums">{nodeCount}</span> 节点 · <span className="font-mono tabular-nums">{edgeCount}</span> 连接</span>
         </div>
         <div className="flex items-center gap-1">
           {/* 搜索框 */}
           <div className="flex items-center gap-1">
             {showSearch ? (
-              <div className="flex items-center gap-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5">
+              <div className="flex items-center gap-1 bg-white dark:bg-app border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5">
                 <Search size={11} className="text-gray-400" />
                 <input
                   type="text"
@@ -645,7 +645,7 @@ function TopologyFlowInner() {
             ) : (
               <button
                 onClick={() => setShowSearch(true)}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
                 title="搜索节点"
               >
                 <Search size={14} />
@@ -659,7 +659,7 @@ function TopologyFlowInner() {
             className={`p-1 rounded transition-colors ${
               selectionMode
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+                : 'hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500'
             }`}
             title={selectionMode ? '框选模式（点击切换为平移）' : '平移模式（点击切换为框选）'}
           >
@@ -672,7 +672,7 @@ function TopologyFlowInner() {
             disabled={!canUndo}
             className={`p-1 rounded transition-colors ${
               canUndo
-                ? 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+                ? 'hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500'
                 : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
             }`}
             title="撤销 (Ctrl+Z)"
@@ -684,7 +684,7 @@ function TopologyFlowInner() {
             disabled={!canRedo}
             className={`p-1 rounded transition-colors ${
               canRedo
-                ? 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+                ? 'hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500'
                 : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
             }`}
             title="重做 (Ctrl+Y)"
@@ -700,17 +700,17 @@ function TopologyFlowInner() {
               className={`flex items-center gap-1 px-2 py-1 text-2xs rounded border transition-colors ${
                 filter !== '全部'
                   ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'
               }`}>
               <Filter size={11} />{filter}
             </button>
             {showFilter && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowFilter(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 min-w-[120px]">
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded shadow-lg py-1 min-w-[120px]">
                   {FILTER_OPTIONS.map((opt) => (
                     <button key={opt} onClick={() => { setFilter(opt); setShowFilter(false) }}
-                      className={`block w-full text-left px-3 py-1.5 text-2xs hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                      className={`block w-full text-left px-3 py-1.5 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover ${
                         filter === opt ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
                       }`}>
                       {opt}
@@ -721,23 +721,23 @@ function TopologyFlowInner() {
             )}
           </div>
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
-          <button onClick={handleFitView} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title="适应视图">
+          <button onClick={handleFitView} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500" title="适应视图">
             <Maximize2 size={14} />
           </button>
           <button onClick={handleSaveLayout}
-            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
             title="保存当前布局">
             <Save size={12} />保存布局
           </button>
           {hasSavedLayout && (
             <button onClick={handleResetLayout}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
               title="重置为自动布局">
               <RotateCcw size={12} />重置
             </button>
           )}
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
-          <button onClick={handleExportPng} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500" title="导出PNG">
+          <button onClick={handleExportPng} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500" title="导出PNG">
             <Download size={14} />
           </button>
         </div>
@@ -763,12 +763,12 @@ function TopologyFlowInner() {
           panOnDrag={!selectionMode}
           selectionKeyCode={selectionMode ? undefined : 'Shift'}
           proOptions={{ hideAttribution: true }}
-          className="bg-white dark:bg-gray-800"
+          className="bg-white dark:bg-app-surface"
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={isDark ? '#374151' : '#e5e7eb'} />
-          <Controls className="!bg-white dark:!bg-gray-700 !border-gray-200 dark:!border-gray-600" showInteractive={false} />
+          <Controls className="!bg-white dark:!bg-surface !border-gray-200 dark:!border-gray-600" showInteractive={false} />
           <MiniMap
-            className="!bg-white dark:!bg-gray-700 !border-gray-200 dark:!border-gray-600"
+            className="!bg-white dark:!bg-surface !border-gray-200 dark:!border-gray-600"
             nodeColor={(node) => {
               const data = node.data as unknown as TopologyNodeData
               return NODE_COLORS[data?.nodeType] || '#9ca3af'
@@ -781,11 +781,11 @@ function TopologyFlowInner() {
 
         {/* Detail panel */}
         {selectedNode && (
-          <div className="absolute top-3 right-3 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[240px]">
+          <div className="absolute top-3 right-3 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg p-4 min-w-[240px]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">节点详情</span>
               <button onClick={() => setSelectedNode(null)}
-                className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400">
+                className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-400">
                 <X size={14} />
               </button>
             </div>
@@ -826,7 +826,7 @@ function TopologyFlowInner() {
 
         {/* Legend */}
         {rfNodes.length > 0 && (
-          <div className="absolute bottom-3 left-3 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
+          <div className="absolute bottom-3 left-3 z-20 bg-white/90 dark:bg-app/90 backdrop-blur-sm border border-gray-200 dark:border-edge-subtle rounded-lg px-3 py-2">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {Object.entries(NODE_COLORS).filter(([type]) =>
                 rfNodes.some((n) => (n.data as unknown as TopologyNodeData)?.nodeType === type)
@@ -837,7 +837,7 @@ function TopologyFlowInner() {
                 </div>
               ))}
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-edge-subtle">
               {Object.entries(EDGE_COLORS).map(([label, color]) => (
                 <div key={label} className="flex items-center gap-1.5 text-2xs text-gray-600 dark:text-gray-400">
                   <span className="inline-block w-4 h-px" style={{ backgroundColor: color }} />

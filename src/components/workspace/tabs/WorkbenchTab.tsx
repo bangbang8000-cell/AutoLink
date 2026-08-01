@@ -27,7 +27,7 @@ export function WorkbenchTab() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
           {t('workbench:title')}
         </span>
@@ -39,7 +39,7 @@ export function WorkbenchTab() {
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         {/* Row 1: Project info card (full width) */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 flex items-center gap-4">
+        <div className="bg-white dark:bg-app-elevated border border-gray-200 dark:border-edge-subtle rounded-lg p-4 mb-4 flex items-center gap-4">
           <div className="p-2 rounded-lg bg-warning-100 dark:bg-warning-900/30">
             <FolderOpen size={20} className="text-warning-500" />
           </div>

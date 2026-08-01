@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { FileCheck, FileSpreadsheet, Image, FileText, File, Loader2, FolderOpen, RefreshCw, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -72,17 +72,17 @@ export function OutputPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           输出结果
         </span>
         <div className="flex items-center gap-1">
           <button onClick={loadFiles} disabled={loading}
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded disabled:opacity-50" title="刷新">
+            className="p-1 hover:bg-gray-200 dark:hover:bg-app-hover rounded disabled:opacity-50" title="刷新">
             <RefreshCw size={13} className={`text-gray-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={handleOpenWorkspace}
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500" title="在工作区打开">
+            className="p-1 hover:bg-gray-200 dark:hover:bg-app-hover rounded text-gray-500" title="在工作区打开">
             <Maximize2 size={13} />
           </button>
         </div>
@@ -109,7 +109,7 @@ export function OutputPanel() {
                 key={file.name}
                 onClick={() => handleOpenFile(file.name)}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors
-                  text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                  text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50"
               >
                 {getFileIcon(file.type)}
                 <span className="flex-1 truncate">{file.name}</span>

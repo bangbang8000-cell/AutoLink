@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
 
@@ -90,7 +90,7 @@ export function EditTemplateModal({ template, configContent: initialConfig, onCo
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-3 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="px-3 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
           >
             {t('common:cancel')}
           </button>
@@ -113,7 +113,7 @@ export function EditTemplateModal({ template, configContent: initialConfig, onCo
           value={name}
           onChange={(e) => { setName(e.target.value); setError('') }}
           disabled={loading}
-          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
@@ -126,7 +126,7 @@ export function EditTemplateModal({ template, configContent: initialConfig, onCo
           onChange={(e) => setDescription(e.target.value)}
           disabled={loading}
           rows={2}
-          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
         />
       </div>
 
@@ -140,7 +140,7 @@ export function EditTemplateModal({ template, configContent: initialConfig, onCo
             value={scenario}
             onChange={(e) => setScenario(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
         <div>
@@ -153,7 +153,7 @@ export function EditTemplateModal({ template, configContent: initialConfig, onCo
             onChange={(e) => setTagsText(e.target.value)}
             disabled={loading}
             placeholder="H100, 128台, 2层组网"
-            className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
       </div>
@@ -173,7 +173,7 @@ export function EditTemplateModal({ template, configContent: initialConfig, onCo
             disabled={loading}
             rows={12}
             spellCheck={false}
-            className="w-full px-3 py-2 text-2xs font-mono rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"
+            className="w-full px-3 py-2 text-2xs font-mono rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"
           />
         )}
       </div>

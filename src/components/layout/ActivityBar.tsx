@@ -21,6 +21,16 @@ const activities: ActivityItem[] = [
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
 
+// v2.6.8: ActivityBar 入口语义色
+const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
+  project: { icon: 'text-primary-500 dark:text-primary-400', bar: 'bg-primary-500' },
+  design: { icon: 'text-warning-500 dark:text-warning-400', bar: 'bg-warning-500' },
+  workbench: { icon: 'text-success-500 dark:text-success-400', bar: 'bg-success-500' },
+  visualization: { icon: 'text-info-500 dark:text-info-400', bar: 'bg-info-500' },
+  device_library: { icon: 'text-purple-500 dark:text-purple-400', bar: 'bg-purple-500' },
+  settings: { icon: 'text-gray-500 dark:text-gray-400', bar: 'bg-gray-500' },
+}
+
 interface Props {
   onActivityClick?: (activity: ActivityType) => void
 }
@@ -38,10 +48,11 @@ export function ActivityBar({ onActivityClick }: Props) {
   }
 
   return (
-    <div className="w-12 flex flex-col items-center py-2 gap-0.5 shrink-0 bg-gray-100 dark:bg-gray-900 border-e border-gray-200 dark:border-gray-700">
+    <div className="w-12 flex flex-col items-center py-2 gap-0.5 shrink-0 bg-gray-100 dark:bg-app border-e border-gray-200 dark:border-edge-subtle">
       <div className="flex-1 flex flex-col items-center gap-0.5 w-full">
         {activities.map((item) => {
           const active = activeActivity === item.id
+          const colors = ACTIVITY_COLORS[item.id]
           return (
             <button
               key={item.id}
@@ -50,12 +61,12 @@ export function ActivityBar({ onActivityClick }: Props) {
               className={clsx(
                 'w-12 h-12 flex items-center justify-center relative transition-colors',
                 active
-                  ? 'text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-600'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700',
+                  ? `${colors.icon} bg-gray-200 dark:bg-app-hover`
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-app-hover',
               )}
             >
               {active && (
-                <div className="absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-gray-500 dark:bg-gray-400" />
+                <div className={clsx('absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r', colors.bar)} />
               )}
               {item.icon}
             </button>
@@ -65,7 +76,7 @@ export function ActivityBar({ onActivityClick }: Props) {
       <button
         onClick={toggleSidebar}
         title={sidebarVisible ? t('common:menu.hideSidebar') : t('common:menu.showSidebar')}
-        className="w-12 h-10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        className="w-12 h-10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-app-hover transition-colors"
       >
         {sidebarVisible ? <PanelLeftClose size={18} /> : <PanelLeft size={18} />}
       </button>

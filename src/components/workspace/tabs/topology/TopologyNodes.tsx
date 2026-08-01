@@ -65,7 +65,7 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
   const color = NODE_COLORS[d.nodeType] || TOPOLOGY_NODE_DEFAULT_COLOR
   return (
     <div
-      className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-gray-700 shadow-sm transition-shadow"
+      className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-app-elevated shadow-sm transition-shadow"
       style={{
         borderColor: selected ? '#f59e0b' : color,
         boxShadow: selected ? '0 0 0 2px rgba(245,158,11,0.3)' : undefined,
@@ -103,7 +103,7 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
   const color = NODE_COLORS[d.nodeType] || TOPOLOGY_NODE_DEFAULT_COLOR
   return (
     <div
-      className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-gray-700 shadow-sm transition-shadow"
+      className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-app-elevated shadow-sm transition-shadow"
       style={{
         borderColor: selected ? '#f59e0b' : color,
         boxShadow: selected ? '0 0 0 2px rgba(245,158,11,0.3)' : undefined,

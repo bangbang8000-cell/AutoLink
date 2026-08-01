@@ -73,7 +73,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <div className="flex items-center gap-2">
           <BookOpen size={15} className="text-primary-500" />
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -82,7 +82,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
         </div>
         <button
           onClick={() => { resetFilter(); selectDevice(null) }}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
         >
           重置筛选
         </button>
@@ -107,9 +107,9 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
       {!loading && !error && (
         <div className="flex-1 flex overflow-hidden">
           {/* Left: Search + vendor filter + device list */}
-          <div className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+          <div className="w-64 shrink-0 border-r border-gray-200 dark:border-edge-subtle flex flex-col overflow-hidden">
             {/* Search + vendor filter */}
-            <div className="p-2 space-y-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <div className="p-2 space-y-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
               <div className="relative">
                 <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -117,7 +117,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
                   value={filter.search}
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder="搜索设备型号/厂商..."
-                  className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
                 {filter.search && (
                   <button
@@ -132,7 +132,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
                 <select
                   value={filter.vendor}
                   onChange={(e) => handleVendorFilter(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="">全部厂商</option>
                   {vendors.map((v) => (
@@ -194,7 +194,7 @@ function DeviceListItem({ device, isSelected, onClick }: {
     <div
       onClick={onClick}
       className={clsx(
-        'flex items-start gap-2 px-3 py-2 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 transition-colors',
+        'flex items-start gap-2 px-3 py-2 cursor-pointer border-b border-gray-100 dark:border-edge-subtle/50 transition-colors',
         isSelected
           ? 'bg-primary-50 dark:bg-primary-900/20 border-l-2 border-l-primary-500'
           : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-l-2 border-l-transparent',
@@ -285,7 +285,7 @@ function DeviceDetailCard({ device }: { device: LibraryDevice }) {
       {isServer && device.interface_models && (
         <Section title="接口模型" icon={<Cable size={13} />}>
           {device.interface_models.map((m, idx) => (
-            <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded p-3 mb-2 last:mb-0">
+            <div key={idx} className="border border-gray-200 dark:border-edge-subtle rounded p-3 mb-2 last:mb-0">
               <div className="flex items-center gap-2 mb-2">
                 <span className={clsx(
                   'text-2xs font-medium px-2 py-0.5 rounded',

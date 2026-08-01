@@ -39,13 +39,13 @@ export function DeviceExportModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={closeExportModal}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[520px] max-h-[80vh] flex flex-col"
+        className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[520px] max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h3 className="text-sm font-semibold">{t('export.title')}</h3>
-          <button onClick={closeExportModal} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button onClick={closeExportModal} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover">
             <X size={16} />
           </button>
         </div>
@@ -93,10 +93,10 @@ export function DeviceExportModal() {
                     key={device.id}
                     onClick={() => toggleDevice(device.id)}
                     className={clsx(
-                      'flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0 transition-colors',
+                      'flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer border-b border-gray-100 dark:border-edge-subtle last:border-b-0 transition-colors',
                       isSelected
                         ? 'bg-primary-50 dark:bg-primary-900/20'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700',
+                        : 'hover:bg-gray-50 dark:hover:bg-app-hover',
                     )}
                   >
                     <div className={clsx(
@@ -159,10 +159,10 @@ export function DeviceExportModal() {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
           <button
             onClick={closeExportModal}
-            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-app-hover"
           >
             {t('export.cancel')}
           </button>

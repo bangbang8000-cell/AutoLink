@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GitBranch, Network, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
@@ -40,7 +40,7 @@ export function TopologyPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('topology:title')}
         </span>
@@ -59,11 +59,11 @@ export function TopologyPanel() {
           {/* Stats */}
           <div className="px-3 py-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded p-2 text-center">
+              <div className="bg-gray-50 dark:bg-app-surface rounded p-2 text-center">
                 <div className="text-lg font-bold text-gray-700 dark:text-gray-200">{stats.nodes}</div>
                 <div className="text-2xs text-gray-400">{t('topology:deviceList')}</div>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded p-2 text-center">
+              <div className="bg-gray-50 dark:bg-app-surface rounded p-2 text-center">
                 <div className="text-lg font-bold text-purple-600 dark:text-purple-400">{stats.edges}</div>
                 <div className="text-2xs text-gray-400">{t('topology:connectionList')}</div>
               </div>
@@ -83,7 +83,7 @@ export function TopologyPanel() {
           <div className="px-3 pb-3 mt-auto">
             <button
               onClick={handleOpenWorkspace}
-              className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
             >
               <Maximize2 size={13} />
               在工作区查看完整拓扑

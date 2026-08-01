@@ -59,10 +59,10 @@ export function GuideTab() {
   }
 
   return (
-    <div className="h-full overflow-auto bg-white dark:bg-gray-800">
+    <div className="h-full overflow-auto bg-white dark:bg-app-elevated">
       <div className="max-w-4xl mx-auto px-8 py-6">
         {/* 顶部标识 */}
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-edge-subtle">
           <BookOpen size={18} className="text-primary-500" />
           <h1 className="text-base font-semibold text-gray-800 dark:text-gray-100">
             {t('guide.title')}

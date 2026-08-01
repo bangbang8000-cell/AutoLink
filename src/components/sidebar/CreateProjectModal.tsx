@@ -49,15 +49,15 @@ export function CreateProjectModal({ templates, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[480px] max-h-[70vh] flex flex-col border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[480px] max-h-[70vh] flex flex-col border border-gray-200 dark:border-edge-subtle">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             {t('project:createProject')}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
           >
             <X size={16} />
           </button>
@@ -77,7 +77,7 @@ export function CreateProjectModal({ templates, onClose }: Props) {
               onChange={(e) => { setName(e.target.value); setError(null) }}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreate() }}
               placeholder={t('project:projectNamePlaceholder')}
-              className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
+              className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
             />
           </div>
 
@@ -155,10 +155,10 @@ export function CreateProjectModal({ templates, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="px-4 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
           >
             {t('project:cancel')}
           </button>

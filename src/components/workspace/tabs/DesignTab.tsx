@@ -22,10 +22,10 @@ function FormSection({ title, icon, defaultOpen = true, children }: {
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         {icon}
@@ -47,7 +47,7 @@ function NumberInput({ label, value, onChange, min = 0, max = 99999, step = 1, c
         type="number" min={min} max={max} step={step}
         value={value}
         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(v) }}
-        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
+        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
       />
     </div>
   )
@@ -63,7 +63,7 @@ function SelectInput({ label, value, onChange, options }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
+        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -105,8 +105,8 @@ function DesignSummaryView({ summary }: { summary: DesignSummary; valid: boolean
     : null
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 text-sm font-medium text-gray-600 dark:text-gray-300">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="px-4 py-2.5 bg-gray-50 dark:bg-app/50 text-sm font-medium text-gray-600 dark:text-gray-300">
         {t('design:designSummary')}
       </div>
       <div className="p-4 space-y-4">
@@ -121,7 +121,7 @@ function DesignSummaryView({ summary }: { summary: DesignSummary; valid: boolean
         {/* Network details in 2 columns */}
         <div className="grid grid-cols-2 gap-3">
           {/* Param network */}
-          <div className="border border-gray-100 dark:border-gray-700 rounded p-3">
+          <div className="border border-gray-100 dark:border-edge-subtle rounded p-3">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
               {t('design:summaryParam')} ({summary.paramSpeed})
             </div>
@@ -133,7 +133,7 @@ function DesignSummaryView({ summary }: { summary: DesignSummary; valid: boolean
           </div>
 
           {/* Storage network */}
-          <div className="border border-gray-100 dark:border-gray-700 rounded p-3">
+          <div className="border border-gray-100 dark:border-edge-subtle rounded p-3">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
               {t('design:summaryStorage')} ({summary.storageSpeed})
             </div>
@@ -153,7 +153,7 @@ function DesignSummaryView({ summary }: { summary: DesignSummary; valid: boolean
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-gray-50 dark:bg-gray-800/80 rounded px-3 py-2 text-center">
+    <div className="bg-gray-50 dark:bg-app/80 rounded px-3 py-2 text-center">
       <div className="text-lg font-bold text-gray-800 dark:text-gray-100">{value}</div>
       <div className="text-2xs text-gray-400 dark:text-gray-500">{label}</div>
     </div>
@@ -228,7 +228,7 @@ export function DesignTab() {
   return (
     <div className="h-full flex flex-col">
       {/* Title bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <div className="flex items-center gap-2">
           <Settings2 size={16} className="text-primary-500" />
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -238,7 +238,7 @@ export function DesignTab() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => { resetConfig(); clearResults() }}
-            className="flex items-center gap-1 px-2.5 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="flex items-center gap-1 px-2.5 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
           >
             <RefreshCw size={12} />
             重置
@@ -252,11 +252,11 @@ export function DesignTab() {
           {/* Mode toggle */}
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">{t('design:mode')}</label>
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 max-w-md">
+            <div className="flex gap-1 bg-gray-100 dark:bg-app-surface rounded-lg p-0.5 max-w-md">
               <button
                 onClick={() => updateConfig({ downlink_mode: 'full' })}
                 className={`flex-1 py-2 text-sm rounded-md transition-colors ${config.downlink_mode === 'full'
-                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
+                  ? 'bg-white dark:bg-app-hover text-gray-800 dark:text-gray-200 shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
                   }`}
               >
@@ -266,7 +266,7 @@ export function DesignTab() {
               <button
                 onClick={() => updateConfig({ downlink_mode: 'custom' })}
                 className={`flex-1 py-2 text-sm rounded-md transition-colors ${config.downlink_mode === 'custom'
-                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
+                  ? 'bg-white dark:bg-app-hover text-gray-800 dark:text-gray-200 shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
                   }`}
               >

@@ -58,11 +58,11 @@ export function NumberInput({
       disabled={disabled}
       className={clsx(
         'w-full px-2 py-1 text-xs rounded border',
-        'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800',
+        'border-gray-300 dark:border-gray-600 bg-white dark:bg-app-surface',
         'text-gray-900 dark:text-gray-100',
         'focus:outline-none focus:ring-1 focus:ring-primary-500',
         'disabled:opacity-50 disabled:cursor-not-allowed',
-        'text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+        'text-right font-mono tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
         className,
       )}
     />

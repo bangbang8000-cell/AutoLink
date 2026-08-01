@@ -55,7 +55,7 @@ export function ConfirmDeleteDialog({ target, onConfirm, onClose }: Props) {
       bodyClassName="p-0"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-edge-subtle">
         <div className="flex items-center justify-center w-9 h-9 rounded-full bg-error-100 dark:bg-error-900/30 text-error-600 dark:text-error-400 shrink-0">
           <AlertTriangle size={18} />
         </div>
@@ -84,7 +84,7 @@ export function ConfirmDeleteDialog({ target, onConfirm, onClose }: Props) {
               placeholder={target.name}
               className={clsx(
                 'w-full px-3 py-1.5 text-xs rounded-lg border',
-                'bg-gray-50 dark:bg-gray-900',
+                'bg-gray-50 dark:bg-app',
                 'border-gray-200 dark:border-gray-600',
                 'focus:outline-none focus:ring-2 focus:ring-error-400',
                 'text-gray-900 dark:text-gray-100 placeholder-gray-400',
@@ -101,14 +101,14 @@ export function ConfirmDeleteDialog({ target, onConfirm, onClose }: Props) {
       </div>
 
       {/* Footer */}
-      <div className="flex justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-app border-t border-gray-100 dark:border-edge-subtle">
         <button
           onClick={onClose}
           disabled={loading}
           className={clsx(
             'px-3 py-1.5 text-xs rounded-lg transition-colors',
             'text-gray-600 dark:text-gray-400',
-            'hover:bg-gray-200 dark:hover:bg-gray-700',
+            'hover:bg-gray-200 dark:hover:bg-app-hover',
           )}
         >
           {t('common:cancel')}

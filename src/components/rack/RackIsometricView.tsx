@@ -242,7 +242,7 @@ export function RackIsometricView({ cabinet }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Box size={13} className="text-purple-500" />
@@ -261,7 +261,7 @@ export function RackIsometricView({ cabinet }: Props) {
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+                className="flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
               >
                 <Download size={11} />
                 <ChevronDown size={9} />
@@ -269,16 +269,16 @@ export function RackIsometricView({ cabinet }: Props) {
               {showExportMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 min-w-[110px]">
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded shadow-lg py-1 min-w-[110px]">
                     <button
                       onClick={handleExportSvg}
-                      className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                     >
                       导出 SVG
                     </button>
                     <button
                       onClick={handleExportPng}
-                      className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                     >
                       导出 PNG
                     </button>

@@ -12,7 +12,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
         ref={ref}
         className={clsx(
           'w-full px-2.5 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600',
-          'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100',
+          'bg-white dark:bg-app-surface text-gray-900 dark:text-gray-100',
           'focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className,

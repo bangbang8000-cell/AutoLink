@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileSpreadsheet, GitBranch, Table2, List, Cable, Calculator } from 'lucide-react'
 import { useRenderStore, type OutputType } from '@/stores/render.store'
@@ -48,8 +48,8 @@ export function WorkbenchOutputCard() {
   const toggleOutputType = useRenderStore((s) => s.toggleOutputType)
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
         <FileSpreadsheet size={12} />
         {t('workbench:outputTypes')}
       </div>
@@ -57,7 +57,7 @@ export function WorkbenchOutputCard() {
         {outputDefs.map((def) => (
           <label
             key={def.type}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-app-hover/50 cursor-pointer"
           >
             <input
               type="checkbox"

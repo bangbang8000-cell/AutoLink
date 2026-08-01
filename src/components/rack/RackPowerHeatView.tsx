@@ -67,7 +67,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header：机柜名称 + 总功率 + 热力图例 */}
-      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
             <Flame size={13} className="text-orange-500" />
@@ -108,7 +108,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
             {Array.from({ length: cabinet.totalU }, (_, i) => (
               <div
                 key={i}
-                className="h-7 flex items-center justify-end pr-1.5 text-2xs text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700/50 last:border-b-0"
+                className="h-7 flex items-center justify-end pr-1.5 text-2xs text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-edge-subtle/50 last:border-b-0"
               >
                 {cabinet.totalU - i}
               </div>
@@ -122,7 +122,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
                 return (
                   <div
                     key={i}
-                    className="h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 bg-gray-50 dark:bg-gray-800"
+                    className="h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 bg-gray-50 dark:bg-app-elevated"
                   />
                 )
               }
@@ -137,7 +137,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
                 return (
                   <div
                     key={i}
-                    className="h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+                    className="h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0"
                     style={{ background: color.fill }}
                   />
                 )
@@ -149,7 +149,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
               return (
                 <div
                   key={i}
-                  className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 flex items-center px-2 group transition-colors"
+                  className="border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 group transition-colors"
                   style={{
                     height,
                     background: color.fill,

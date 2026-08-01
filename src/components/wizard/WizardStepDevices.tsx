@@ -283,10 +283,10 @@ export function WizardStepDevices() {
         return (
           <div
             key={group.networkKey}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+            className="rounded-lg border border-gray-200 dark:border-edge-subtle overflow-hidden"
           >
             {/* Section header */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-app/50 border-b border-gray-200 dark:border-edge-subtle">
               <span className={group.accentColor}>{group.icon}</span>
               <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
                 {group.label}
@@ -308,7 +308,7 @@ export function WizardStepDevices() {
 
                     {device ? (
                       <>
-                        <div className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 min-w-0">
+                        <div className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app min-w-0">
                           <Zap size={12} className={group.accentColor} />
                           <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
                             {device.vendor} {device.model}
@@ -340,7 +340,7 @@ export function WizardStepDevices() {
 
               {/* Server refs with counts */}
               {group.serverRefKeys.length > 0 && (
-                <div className="border-t border-gray-100 dark:border-gray-700/50 pt-2 mt-1 space-y-2">
+                <div className="border-t border-gray-100 dark:border-edge-subtle/50 pt-2 mt-1 space-y-2">
                   {group.serverRefKeys.map((server) => {
                     const device = findDevice(server.refKey)
                     const label = server.label
@@ -355,7 +355,7 @@ export function WizardStepDevices() {
 
                         {device ? (
                           <>
-                            <div className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 min-w-0">
+                            <div className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app min-w-0">
                               <Zap size={12} className={group.accentColor} />
                               <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
                                 {device.vendor} {device.model}
@@ -392,7 +392,7 @@ export function WizardStepDevices() {
                               onChange={(e) =>
                                 updateTopology({ [countKey]: Math.max(0, parseInt(e.target.value) || 0) } as any)
                               }
-                              className="w-20 px-2 py-1 text-xs text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
+                              className="w-20 px-2 py-1 text-xs text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
                             />
                           </div>
                         )}

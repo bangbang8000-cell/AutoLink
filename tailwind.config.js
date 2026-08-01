@@ -67,14 +67,38 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
         },
+        purple: {
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7e22ce',
+          800: '#6b21a8',
+          900: '#581c87',
+        },
+        // v2.6.8: 暗色模式语义色阶
+        app: {
+          DEFAULT: '#0D1117',
+          surface: '#161B22',
+          elevated: '#1C2333',
+          hover: '#252D3A',
+        },
+        // v2.6.8: 暗色模式边框色阶
+        edge: {
+          subtle: '#30363D',
+          DEFAULT: '#484F58',
+        },
       },
       borderRadius: {
         'token': '6px',
       },
-      // U4: 字号 token(渐进式,新增 text-2xs/text-3xs,保留现有 text-xs/sm/base 语义)
+      // v2.6.8: 字号 token, 最小 10px 提升可读性
       fontSize: {
-        '3xs': ['9px', '12px'],   // 原 text-[9px]/text-[8px],徽章/计数等极小字
-        '2xs': ['10px', '14px'],  // 原 text-[10px]/text-[11px],次要信息/时间戳/版权
+        '3xs': ['10px', '13px'],
+        '2xs': ['11px', '15px'],
       },
       // U4: 中文字体堆栈
       fontFamily: {

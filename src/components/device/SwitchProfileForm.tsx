@@ -100,15 +100,15 @@ export function SwitchProfileForm() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={closeForm}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[560px] max-h-[85vh] flex flex-col"
+        className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[560px] max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h3 className="text-sm font-semibold">
             {editingDevice ? `编辑: ${editingDevice.vendor} ${editingDevice.model}` : t('actions.addSwitch')}
           </h3>
-          <button onClick={closeForm} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button onClick={closeForm} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover">
             <X size={16} />
           </button>
         </div>
@@ -127,7 +127,7 @@ export function SwitchProfileForm() {
                     'px-2 py-1 text-xs rounded transition-colors',
                     device.category === st.value
                       ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
+                      : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
                   )}
                 >
                   {st.label}
@@ -145,7 +145,7 @@ export function SwitchProfileForm() {
                 value={device.vendor}
                 onChange={(e) => updateField('vendor', e.target.value)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.vendor ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="厂商"
@@ -159,7 +159,7 @@ export function SwitchProfileForm() {
                 value={device.model}
                 onChange={(e) => updateField('model', e.target.value)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.model ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="型号"
@@ -174,7 +174,7 @@ export function SwitchProfileForm() {
               type="text"
               value={device.description}
               onChange={(e) => updateField('description', e.target.value)}
-              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               placeholder="设备描述"
             />
           </div>
@@ -188,7 +188,7 @@ export function SwitchProfileForm() {
                 value={device.power_watts || ''}
                 onChange={(e) => updateField('power_watts', parseInt(e.target.value) || 0)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.power_watts ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
@@ -201,7 +201,7 @@ export function SwitchProfileForm() {
                 value={device.u_height || ''}
                 onChange={(e) => updateField('u_height', parseInt(e.target.value) || 0)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.u_height ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
               />
@@ -213,7 +213,7 @@ export function SwitchProfileForm() {
                 type="number"
                 value={device.depth_mm || ''}
                 onChange={(e) => updateField('depth_mm', parseInt(e.target.value) || 0)}
-                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               />
             </div>
           </div>
@@ -225,7 +225,7 @@ export function SwitchProfileForm() {
                 type="number"
                 value={device.weight_kg || ''}
                 onChange={(e) => updateField('weight_kg', parseInt(e.target.value) || 0)}
-                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               />
             </div>
             <div>
@@ -233,7 +233,7 @@ export function SwitchProfileForm() {
               <select
                 value={device.cooling}
                 onChange={(e) => updateField('cooling', e.target.value as 'air' | 'liquid')}
-                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               >
                 <option value="air">风冷</option>
                 <option value="liquid">液冷</option>
@@ -246,7 +246,7 @@ export function SwitchProfileForm() {
                 value={device.name_prefix}
                 onChange={(e) => updateField('name_prefix', e.target.value)}
                 className={clsx(
-                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                  'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                   errors.name_prefix ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                 )}
                 placeholder="前缀"
@@ -256,7 +256,7 @@ export function SwitchProfileForm() {
           </div>
 
           {/* Port config */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="border-t border-gray-200 dark:border-edge-subtle pt-4">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">端口配置</label>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -265,7 +265,7 @@ export function SwitchProfileForm() {
                   type="number"
                   value={device.port_count || ''}
                   onChange={(e) => updateField('port_count', parseInt(e.target.value) || 0)}
-                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
                 />
               </div>
               <div>
@@ -275,7 +275,7 @@ export function SwitchProfileForm() {
                   value={device.port_speed || ''}
                   onChange={(e) => updateField('port_speed', e.target.value)}
                   className={clsx(
-                    'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                    'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                     errors.port_speed ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                   )}
                   placeholder="如 400G"
@@ -289,7 +289,7 @@ export function SwitchProfileForm() {
                   value={device.port_type || ''}
                   onChange={(e) => updateField('port_type', e.target.value)}
                   className={clsx(
-                    'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-gray-700',
+                    'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                     errors.port_type ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                   )}
                   placeholder="如 QSFP56"
@@ -304,7 +304,7 @@ export function SwitchProfileForm() {
                   type="text"
                   value={device.downlink_prefix || ''}
                   onChange={(e) => updateField('downlink_prefix', e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
                 />
               </div>
               <div>
@@ -313,7 +313,7 @@ export function SwitchProfileForm() {
                   type="text"
                   value={device.uplink_prefix || ''}
                   onChange={(e) => updateField('uplink_prefix', e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
                 />
               </div>
             </div>
@@ -326,17 +326,17 @@ export function SwitchProfileForm() {
               type="text"
               value={device.tags.join(', ')}
               onChange={(e) => updateField('tags', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
               placeholder="逗号分隔，如: 400G, RoCEv2"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
           <button
             onClick={closeForm}
-            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-app-hover"
           >
             取消
           </button>

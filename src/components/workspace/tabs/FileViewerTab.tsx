@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Copy, Check, Table2, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
@@ -143,15 +143,15 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
       <div className="flex-1 overflow-auto">
         {/* Sheet tabs */}
         {sheets.length > 1 && (
-          <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0">
+          <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 shrink-0">
             {sheets.map((s) => (
               <button
                 key={s}
                 onClick={() => s !== current && switchSheet(s)}
                 className={`px-2.5 py-0.5 text-2xs rounded ${
                   s === current
-                    ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
-                    : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-white dark:bg-app-hover text-gray-800 dark:text-gray-200 shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-app-hover'
                 }`}
               >
                 {s}
@@ -168,7 +168,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
                   return (
                     <CellTag
                       key={ci}
-                      className={`px-2 py-1 border border-gray-200 dark:border-gray-700 whitespace-nowrap ${
+                      className={`px-2 py-1 border border-gray-200 dark:border-edge-subtle whitespace-nowrap ${
                         ri === 0
                           ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200'
                           : 'text-gray-600 dark:text-gray-400'
@@ -257,7 +257,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 shrink-0">
         <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 min-w-0">
           {headerIcon}
           <span className="truncate">{displayPath}</span>
@@ -265,7 +265,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
         {content && (
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-0.5 text-xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0 ml-2"
+            className="flex items-center gap-1 px-2 py-0.5 text-xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400 shrink-0 ml-2"
           >
             {copied ? <Check size={12} /> : <Copy size={12} />}
             <span>{copied ? '已复制' : '复制'}</span>
@@ -274,7 +274,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto bg-white dark:bg-gray-800">
+      <div className="flex-1 overflow-auto bg-white dark:bg-app-elevated">
         {renderContent()}
       </div>
     </div>

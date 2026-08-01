@@ -1,4 +1,4 @@
-﻿import { useWizardStore } from '@/stores/wizard.store'
+import { useWizardStore } from '@/stores/wizard.store'
 import { Layers } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -36,7 +36,7 @@ export function WizardStepRack() {
                 'flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors',
                 rack.rack_type === opt.value
                   ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                  : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500',
+                  : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500',
               )}
             >
               <Layers size={16} />
@@ -59,7 +59,7 @@ export function WizardStepRack() {
           onChange={(e) =>
             updateRackConfig({ power_limit_per_rack: Math.max(0, parseInt(e.target.value) || 0) })
           }
-          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
         />
         <p className="text-2xs text-gray-400 mt-1">
           默认 6000W，用于机柜电力容量规划
@@ -76,7 +76,7 @@ export function WizardStepRack() {
           value={rack.naming_prefix}
           onChange={(e) => updateRackConfig({ naming_prefix: e.target.value })}
           placeholder="机柜"
-          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
         />
         <p className="text-2xs text-gray-400 mt-1">
           生成机柜名称时将使用此前缀，例如 &quot;机柜-A01&quot;

@@ -204,8 +204,8 @@ export function WorkbenchActionCard() {
   }, [clearResults, resetProgress])
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
         <Play size={12} />
         {t('workbench:renderActions')}
       </div>
@@ -243,7 +243,7 @@ export function WorkbenchActionCard() {
 
           <button
             onClick={() => addToast('info', t('common:toast.previewInProgress'))}
-            className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
           >
             <Eye size={13} />
             {t('workbench:preview')}
@@ -252,7 +252,7 @@ export function WorkbenchActionCard() {
           <button
             onClick={handleClear}
             disabled={isRendering}
-            className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover disabled:opacity-50"
           >
             <Trash2 size={13} />
             {t('workbench:clear')}

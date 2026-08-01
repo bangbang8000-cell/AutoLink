@@ -50,7 +50,7 @@ export function Header() {
   return (
     <header
       className={clsx(
-        'h-9 flex items-center justify-between shrink-0 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 select-none',
+        'h-9 flex items-center justify-between shrink-0 bg-gray-50 dark:bg-app border-b border-gray-200 dark:border-edge-subtle select-none',
         isMac && 'pl-20',
       )}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -66,17 +66,17 @@ export function Header() {
         <div className="relative">
           <button
             onClick={() => { setThemeOpen(!themeOpen); setLangOpen(false) }}
-            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
           >
             {themeIcon}
           </button>
           {themeOpen && (
-            <div className="absolute top-8 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-50 w-36">
+            <div className="absolute top-8 right-0 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 z-50 w-36 animate-dropdown-in">
               {themes.map((t) => (
                 <button
                   key={t.mode}
                   onClick={() => { setTheme(t.mode); setThemeOpen(false) }}
-                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                 >
                   {t.icon}
                   {t.label}
@@ -91,17 +91,17 @@ export function Header() {
         <div className="relative">
           <button
             onClick={() => { setLangOpen(!langOpen); setThemeOpen(false) }}
-            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
           >
             <Globe size={16} />
           </button>
           {langOpen && (
-            <div className="absolute top-8 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-50 w-36">
+            <div className="absolute top-8 right-0 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 z-50 w-36 animate-dropdown-in">
               {languages.map((l) => (
                 <button
                   key={l.code}
                   onClick={() => { setLanguage(l.code); i18n.changeLanguage(l.code); setLangOpen(false) }}
-                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                 >
                   {l.label}
                   {language === l.code && <span className="ml-auto text-gray-500">✓</span>}
@@ -116,10 +116,10 @@ export function Header() {
 
         {/* Window controls */}
         <div className="flex items-center ml-2">
-          <button onClick={handleMinimize} className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500">
+          <button onClick={handleMinimize} className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500">
             <Minus size={14} />
           </button>
-          <button onClick={handleMaximize} className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500">
+          <button onClick={handleMaximize} className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500">
             {isMaximized ? <Square size={12} /> : <Maximize2 size={12} />}
           </button>
           <button onClick={handleClose} className="w-7 h-7 flex items-center justify-center hover:bg-error-500 hover:text-white text-gray-500">

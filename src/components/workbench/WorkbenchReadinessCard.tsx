@@ -37,8 +37,8 @@ export function WorkbenchReadinessCard() {
   }, [selectedProjectName, validate, addToast])
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center justify-between">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <CheckCircle size={12} />
           {t('workbench:readiness')}
@@ -46,7 +46,7 @@ export function WorkbenchReadinessCard() {
         <button
           onClick={handleValidate}
           disabled={validatingTopo || generating || !selectedProjectName}
-          className="flex items-center gap-1 px-2 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {validatingTopo ? (
             <Loader2 size={10} className="animate-spin" />

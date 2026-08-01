@@ -53,12 +53,12 @@ export function ResizableAppLayout({ sidebarVisible, panelVisible, sidebar, edit
     <div className="flex-1 flex overflow-hidden">
       {sidebarVisible && (
         <>
-          <div style={{ width: sidebarWidth }} className="shrink-0 overflow-auto border-e border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div style={{ width: sidebarWidth }} className="shrink-0 overflow-auto border-e border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-surface">
             {sidebar}
           </div>
           <div
             onMouseDown={startResizeSidebar}
-            className="w-1 shrink-0 cursor-col-resize bg-gray-200 dark:bg-gray-700 hover:bg-primary-400 transition-colors"
+            className="w-1.5 shrink-0 cursor-col-resize bg-gray-200 dark:bg-edge-default hover:bg-primary-400 hover:w-2 transition-all"
           />
         </>
       )}
@@ -68,9 +68,9 @@ export function ResizableAppLayout({ sidebarVisible, panelVisible, sidebar, edit
           <>
             <div
               onMouseDown={startResizePanel}
-              className="h-1 shrink-0 cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-primary-400 transition-colors"
+              className="h-1.5 shrink-0 cursor-row-resize bg-gray-200 dark:bg-edge-default hover:bg-primary-400 hover:h-2 transition-all"
             />
-            <div style={{ height: panelHeight }} className="shrink-0 overflow-auto border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div style={{ height: panelHeight }} className="shrink-0 overflow-auto border-t border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-surface">
               {bottomPanel}
             </div>
           </>

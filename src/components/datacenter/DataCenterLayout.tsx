@@ -47,7 +47,7 @@ export function DataCenterLayout() {
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-gray-50 dark:bg-gray-900">
+    <div className="w-full h-full overflow-auto bg-gray-50 dark:bg-app">
       <svg
         width={canvasSize.width}
         height={canvasSize.height}

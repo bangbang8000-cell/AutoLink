@@ -62,7 +62,7 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
         ? 'bg-error-50 dark:bg-error-900/10 border-error-200 dark:border-error-800'
         : warning
           ? 'bg-warning-50 dark:bg-warning-900/10 border-warning-200 dark:border-warning-800'
-          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+          : 'bg-white dark:bg-app-elevated border-gray-200 dark:border-edge-subtle',
     )}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">

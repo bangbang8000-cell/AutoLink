@@ -85,14 +85,14 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[600px] max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[600px] max-h-[85vh] flex flex-col border border-gray-200 dark:border-edge-subtle">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             导入机柜列表
           </h2>
           <button onClick={onClose}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500">
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500">
             <X size={16} />
           </button>
         </div>
@@ -120,7 +120,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
               </button>
               <button
                 onClick={handleDownloadTemplate}
-                className="flex items-center gap-2 px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
               >
                 <Download size={16} />
                 下载模板
@@ -136,7 +136,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
             />
 
             {/* Format hint */}
-            <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 max-w-md">
+            <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-app/50 border border-gray-200 dark:border-edge-subtle max-w-md">
               <p className="text-xs font-medium text-gray-500 mb-2">CSV 列格式说明：</p>
               <code className="text-2xs text-gray-400 block">
                 机柜编号,机柜名称,类型,U数,功率上限(W),位置,备注
@@ -149,7 +149,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Preview header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50">
               <span className="text-xs text-gray-500">
                 预览: {result?.cabinets.length || 0} 个机柜
               </span>
@@ -184,7 +184,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
               {result && result.cabinets.length > 0 ? (
                 <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
+                    <tr className="border-b border-gray-200 dark:border-edge-subtle text-left">
                       <th className="py-1.5 px-2 text-gray-500 font-medium">编号</th>
                       <th className="py-1.5 px-2 text-gray-500 font-medium">名称</th>
                       <th className="py-1.5 px-2 text-gray-500 font-medium">类型</th>
@@ -195,7 +195,7 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
                   </thead>
                   <tbody>
                     {result.cabinets.map((cab) => (
-                      <tr key={cab.id} className="border-b border-gray-100 dark:border-gray-700/30">
+                      <tr key={cab.id} className="border-b border-gray-100 dark:border-edge-subtle/30">
                         <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">{cab.id}</td>
                         <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">{cab.name}</td>
                         <td className="py-1.5 px-2 text-gray-500">{cab.type}</td>
@@ -214,9 +214,9 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
               <button onClick={onClose}
-                className="px-3 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                className="px-3 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover">
                 取消
               </button>
               <button onClick={handleImport}

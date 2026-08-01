@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, FolderOpen, FileSpreadsheet, GitBranch, Table2, List } from 'lucide-react'
 import { useRenderStore, type RenderResult } from '@/stores/render.store'
@@ -39,8 +39,8 @@ export function WorkbenchResultCard() {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
         <CheckCircle size={12} />
         {t('workbench:renderResults')}
       </div>
@@ -64,14 +64,14 @@ export function WorkbenchResultCard() {
             <div className="flex items-center gap-0.5">
               <button
                 onClick={() => handleOpenFile(result)}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-app-hover rounded text-gray-400"
                 title="打开文件"
               >
                 <FileSpreadsheet size={11} />
               </button>
               <button
                 onClick={() => handleOpenFolder(result)}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-app-hover rounded text-gray-400"
                 title="打开文件夹"
               >
                 <FolderOpen size={11} />

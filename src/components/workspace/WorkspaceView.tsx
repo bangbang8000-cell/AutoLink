@@ -1,4 +1,4 @@
-﻿import { useCallback, useState, useRef, useEffect } from 'react'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
@@ -107,7 +107,7 @@ export function WorkspaceView() {
     <div className="h-full flex flex-col">
       {/* Tab Bar */}
       {tabs.length > 0 && (
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0 overflow-x-auto">
+        <div className="flex items-center bg-gray-100 dark:bg-app-surface border-b border-gray-200 dark:border-edge-subtle shrink-0 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = TAB_ICONS[tab.type] || Monitor
             const isActive = tab.id === activeTabId
@@ -118,10 +118,10 @@ export function WorkspaceView() {
                 onContextMenu={(e) => handleContextMenu(e, tab.id)}
                 className={`
                   group flex items-center gap-1.5 px-3 py-1.5 text-xs cursor-pointer select-none
-                  border-r border-gray-200 dark:border-gray-700 shrink-0 max-w-[180px]
+                  border-r border-gray-200 dark:border-edge-subtle shrink-0 max-w-[180px]
                   ${isActive
-                    ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 border-t-2 border-t-primary-500'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border-t-2 border-t-transparent'}
+                    ? 'bg-white dark:bg-app-elevated text-primary-600 dark:text-primary-400 border-t-2 border-t-primary-500'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-app-hover border-t-2 border-t-transparent'}
                 `}
               >
                 <Icon size={13} className="shrink-0" />
@@ -129,7 +129,7 @@ export function WorkspaceView() {
                 {tab.closable && (
                   <button
                     onClick={(e) => { e.stopPropagation(); closeTab(tab.id) }}
-                    className="shrink-0 ml-0.5 p-0.5 rounded hover:bg-gray-300 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="shrink-0 ml-0.5 p-0.5 rounded hover:bg-gray-300 dark:hover:bg-app-hover opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X size={11} />
                   </button>
@@ -144,31 +144,31 @@ export function WorkspaceView() {
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className="fixed z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[140px]"
+          className="fixed z-[9999] bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 min-w-[140px] animate-contextmenu-in"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button
             onClick={() => { closeTab(contextMenu.tabId); setContextMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
             {t('welcome.closeTab')}
           </button>
           <button
             onClick={() => { closeOtherTabs(contextMenu.tabId); setContextMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
             {t('welcome.closeOthers')}
           </button>
           <button
             onClick={() => { closeTabsToRight(contextMenu.tabId); setContextMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
             {t('welcome.closeRight')}
           </button>
-          <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
+          <div className="my-1 border-t border-gray-200 dark:border-edge-subtle" />
           <button
             onClick={() => { closeAllTabs(); setContextMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
             {t('welcome.closeAll')}
           </button>
@@ -176,11 +176,11 @@ export function WorkspaceView() {
       )}
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto bg-white dark:bg-gray-800">
+      <div className="flex-1 overflow-auto bg-white dark:bg-app-elevated">
         {activeTab ? (
           <div className="h-full">{renderTabContent()}</div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-gray-800">
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-app-elevated">
             <Monitor size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
             {selectedProjectName ? (
               <>
@@ -204,7 +204,7 @@ export function WorkspaceView() {
                   </button>
                   <button
                     onClick={() => { setActiveActivity('project'); addToast('info', t('common:toast.templateHint')) }}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"
                   >
                     <LayoutTemplate size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
@@ -214,7 +214,7 @@ export function WorkspaceView() {
                   </button>
                   <button
                     onClick={() => { setActiveActivity('project'); addToast('info', t('common:toast.selectProjectFromList')) }}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"
                   >
                     <FolderOpen size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
@@ -231,7 +231,7 @@ export function WorkspaceView() {
                         addToast('error', t('common:toast.importFailed', { error: err?.message || err }))
                       }
                     }}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"
                   >
                     <Upload size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
@@ -244,7 +244,7 @@ export function WorkspaceView() {
                       setActiveActivity('workbench')
                       openTab({ type: 'workbench', title: t('menu.workbench'), closable: false })
                     }}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"
                   >
                     <Play size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>
@@ -255,7 +255,7 @@ export function WorkspaceView() {
                   <button
                     // P2: 使用指南改为本地加载(工作区标签页),不再跳转 GitHub
                     onClick={() => openTab({ type: 'guide', title: t('guide.title'), closable: true })}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"
                   >
                     <BookOpen size={22} className="text-gray-500 dark:text-gray-400" />
                     <div>

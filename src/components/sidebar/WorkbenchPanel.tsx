@@ -24,7 +24,7 @@ export function WorkbenchPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Title */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('workbench:title')}
         </span>
@@ -32,7 +32,7 @@ export function WorkbenchPanel() {
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         {/* Project info */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1.5">
+        <div className="bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg p-3 space-y-1.5">
           <div className="flex items-center gap-2 text-xs">
             <FolderOpen size={13} className="text-gray-400" />
             <span className="text-gray-500 dark:text-gray-400">{t('workbench:name')}:</span>

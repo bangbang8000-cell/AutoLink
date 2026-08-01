@@ -269,7 +269,7 @@ export function AboutDialog({ onClose }: Props) {
       </div>
 
       {/* 信息区：软件栈 + 快捷链接 - T4: 优化字号和布局层次 */}
-      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 overflow-y-auto">
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-edge-subtle overflow-y-auto">
         {/* T4: 软件栈标题更醒目 */}
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
           {t('about.version')}

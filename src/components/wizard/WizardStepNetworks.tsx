@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { Zap, HardDrive, Network, Monitor } from 'lucide-react'
@@ -89,8 +89,8 @@ export function WizardStepNetworks() {
                   'flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer',
                   active
                     ? card.accentBorder
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
-                  active ? card.accentBg : 'bg-white dark:bg-gray-800',
+                    : 'border-gray-200 dark:border-edge-subtle hover:border-gray-300 dark:hover:border-gray-600',
+                  active ? card.accentBg : 'bg-white dark:bg-app-elevated',
                 )}
                 onClick={() => toggle(card.key)}
               >
@@ -140,7 +140,7 @@ export function WizardStepNetworks() {
                       className={clsx(
                         'px-3 py-1 text-xs rounded-md transition-colors',
                         config.topology.param_protocol === 'IB'
-                          ? 'bg-white dark:bg-gray-600 text-primary-700 dark:text-primary-300 font-medium shadow-sm'
+                          ? 'bg-white dark:bg-app-hover text-primary-700 dark:text-primary-300 font-medium shadow-sm'
                           : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
                       )}
                     >
@@ -151,7 +151,7 @@ export function WizardStepNetworks() {
                       className={clsx(
                         'px-3 py-1 text-xs rounded-md transition-colors',
                         config.topology.param_protocol === 'RoCE'
-                          ? 'bg-white dark:bg-gray-600 text-primary-700 dark:text-primary-300 font-medium shadow-sm'
+                          ? 'bg-white dark:bg-app-hover text-primary-700 dark:text-primary-300 font-medium shadow-sm'
                           : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
                       )}
                     >

@@ -58,7 +58,7 @@ function IssueItem({ issue }: { issue: ValidationIssue }) {
               {issue.affected_items.slice(0, 5).map((item, i) => (
                 <code
                   key={i}
-                  className="text-2xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                  className="text-2xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-app-elevated text-gray-600 dark:text-gray-300"
                 >
                   {item}
                 </code>
@@ -99,8 +99,8 @@ export function ValidationPanel() {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-md overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-app/80 border-b border-gray-200 dark:border-edge-subtle">
         <div className="flex items-center gap-1.5">
           <AlertTriangle size={14} className="text-warning-500" />
           <span className="text-xs font-medium text-gray-700 dark:text-gray-200">

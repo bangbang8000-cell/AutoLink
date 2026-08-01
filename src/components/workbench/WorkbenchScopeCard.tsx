@@ -1,4 +1,4 @@
-﻿import { useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import { FolderOpen } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRenderStore } from '@/stores/render.store'
@@ -13,8 +13,8 @@ export function WorkbenchScopeCard() {
   const toggleBatchProject = useRenderStore((s) => s.toggleBatchProject)
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+      <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
         <FolderOpen size={12} />
         {t('workbench:scope')}
       </div>

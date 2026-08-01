@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
@@ -59,7 +59,7 @@ export function WizardStepConfirm() {
       </div>
 
       {/* Basic info */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+      <div className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2">
         <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           基本信息
         </h4>
@@ -80,7 +80,7 @@ export function WizardStepConfirm() {
       </div>
 
       {/* Networks */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+      <div className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2">
         <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           网络类型
         </h4>
@@ -110,7 +110,7 @@ export function WizardStepConfirm() {
         return (
           <div
             key={net.key}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2"
+            className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2"
           >
             <div className="flex items-center gap-2">
               <span className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium', net.color)}>
@@ -143,7 +143,7 @@ export function WizardStepConfirm() {
       })}
 
       {/* Server counts */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+      <div className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2">
         <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           服务器数量
         </h4>
@@ -176,7 +176,7 @@ export function WizardStepConfirm() {
       </div>
 
       {/* Rack config */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+      <div className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2">
         <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           机柜配置
         </h4>

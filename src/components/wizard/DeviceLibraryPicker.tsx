@@ -109,22 +109,22 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[640px] max-h-[85vh] flex flex-col border border-gray-200 dark:border-edge-subtle">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             {deviceLabel ? `选择设备 - ${deviceLabel}` : '选择设备'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Filter bar */}
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
+        <div className="px-4 py-2 border-b border-gray-200 dark:border-edge-subtle space-y-2">
           {/* Category tabs */}
           <div className="flex gap-1 overflow-x-auto">
             {CATEGORY_TABS.map((cat) => (
@@ -135,7 +135,7 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
                   'px-2.5 py-1 text-xs rounded whitespace-nowrap transition-colors',
                   category === cat.id
                     ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover',
                 )}
               >
                 {cat.label}
@@ -149,7 +149,7 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
             <select
               value={vendor}
               onChange={(e) => setVendor(e.target.value)}
-              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-400"
+              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-400"
             >
               {VENDORS.map((v) => (
                 <option key={v} value={v}>{v === '全部' ? '厂商: 全部' : v}</option>
@@ -160,7 +160,7 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
             <select
               value={deviceType}
               onChange={(e) => setDeviceType(e.target.value)}
-              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-400"
+              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-400"
             >
               {DEVICE_TYPES.map((dt) => (
                 <option key={dt.id} value={dt.id}>{dt.id === 'all' ? '类型: 全部' : dt.label}</option>
@@ -175,7 +175,7 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('search')}
-                className="w-full pl-8 pr-3 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+                className="w-full pl-8 pr-3 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
               />
             </div>
           </div>
@@ -202,7 +202,7 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
                 <button
                   key={device.id}
                   onClick={() => handleSelect(device)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-app-hover text-left transition-colors"
                 >
                   <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                     {getCategoryIcon(device.category)}

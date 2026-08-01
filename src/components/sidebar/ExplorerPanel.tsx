@@ -37,7 +37,7 @@ function Section({
         {onRefresh && (
           <button
             onClick={(e) => { e.stopPropagation(); onRefresh() }}
-            className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+            className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded"
             title="Refresh"
           >
             <RefreshCw size={10} />
@@ -75,7 +75,7 @@ const ProjectItem = memo(function ProjectItem({
       className={`group flex items-center gap-1.5 px-3 py-1 cursor-pointer text-xs
         ${isSelected
           ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200'
-          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover/50'
         }`}
     >
       <FolderOpen size={13} className="shrink-0 text-gray-400" />
@@ -116,7 +116,7 @@ function DeleteConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 w-80 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-app-surface rounded-lg shadow-xl p-4 w-80 border border-gray-200 dark:border-edge-subtle">
         <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
           {t('project:deleteConfirm', { name })}
         </p>
@@ -152,7 +152,7 @@ const TemplateItem = memo(function TemplateItem({
   return (
     <div
       onClick={onCreateProject}
-      className="group flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs hover:bg-gray-100 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300"
+      className="group flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs hover:bg-gray-100 dark:hover:bg-app-hover/50 text-gray-700 dark:text-gray-300"
     >
       <Package size={13} className="shrink-0 text-gray-400" />
       <div className="flex-1 min-w-0">
@@ -210,21 +210,21 @@ export function ExplorerPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Title bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('project:title')}
         </span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => fetchProjects()}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
             title="Refresh"
           >
             <RefreshCw size={13} />
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
             title={t('project:createProject')}
           >
             <Plus size={14} />
@@ -242,7 +242,7 @@ export function ExplorerPanel() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('project:projectNamePlaceholder') ?? 'Search...'}
-              className="w-full pl-6 pr-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:border-primary-400"
+              className="w-full pl-6 pr-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:border-primary-400"
             />
           </div>
         </div>

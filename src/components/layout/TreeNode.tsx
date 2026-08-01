@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
@@ -73,7 +73,7 @@ export function TreeNode({
           'group flex items-center gap-1.5 pr-3 py-1 text-xs cursor-pointer select-none transition-colors border-l-2',
           isActive
             ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-primary-500'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-transparent',
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-transparent',
           className,
         )}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}

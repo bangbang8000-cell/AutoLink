@@ -39,10 +39,10 @@ body {
   background: #9ca3af;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: #484F58;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #6B7280;
 }
 
 /* ---- Reduced motion ---- */
@@ -52,4 +52,20 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---- v2.6.8: Dropdown animations ---- */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes contextmenu-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-dropdown-in {
+  animation: dropdown-in 150ms ease-out;
+}
+.animate-contextmenu-in {
+  animation: contextmenu-in 150ms ease-out;
 }

@@ -129,18 +129,18 @@ export function RackPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {t('rack:title')}
         </span>
         <div className="flex items-center gap-1">
           <button onClick={() => handleOpenDataCenter()}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
             title="机房平面布局">
             <Building2 size={13} />
           </button>
           <button onClick={() => handleOpenWorkspace()}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500"
             title="在工作区打开">
             <Maximize2 size={13} />
           </button>
@@ -166,10 +166,10 @@ export function RackPanel() {
               <button
                 key={cab.id}
                 onClick={() => handleOpenWorkspace(cab.id)}
-                className={`w-full px-3 py-2.5 text-left text-xs transition-colors border-b border-gray-100 dark:border-gray-700/50
+                className={`w-full px-3 py-2.5 text-left text-xs transition-colors border-b border-gray-100 dark:border-edge-subtle/50
                   ${selectedCabinetId === cab.id
                     ? 'bg-primary-50 dark:bg-primary-900/20 border-l-2 border-l-primary-500'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700/50 border-l-2 border-l-transparent'
+                    : 'hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-2 border-l-transparent'
                   }`}
               >
                 <div className="flex items-center gap-1.5">
@@ -195,7 +195,7 @@ export function RackPanel() {
 
       {/* Unplaced devices summary */}
       {unplacedDevices.length > 0 && (
-        <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 px-3 py-2">
+        <div className="shrink-0 border-t border-gray-200 dark:border-edge-subtle px-3 py-2">
           <div className="text-2xs font-medium text-gray-500 mb-1">
             待分配: {unplacedDevices.length} 台
           </div>

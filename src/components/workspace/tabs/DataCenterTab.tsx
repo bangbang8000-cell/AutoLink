@@ -77,7 +77,7 @@ export function DataCenterTab() {
 
   if (!selectedProjectName) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-gray-800">
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-app-elevated">
         <Building2 size={48} className="text-gray-300 dark:text-gray-600 mb-3" />
         <p className="text-sm text-gray-400">{t('datacenter:noProject', '请先选择项目')}</p>
       </div>
@@ -85,9 +85,9 @@ export function DataCenterTab() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
+    <div className="h-full flex flex-col bg-white dark:bg-app-elevated">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-edge-subtle">
         <div className="flex items-center gap-2">
           <Building2 size={16} className="text-primary-500" />
           <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -100,7 +100,7 @@ export function DataCenterTab() {
           <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500"
             >
               <Download size={12} />
               导出
@@ -109,16 +109,16 @@ export function DataCenterTab() {
             {showExportMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 min-w-[120px]">
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded shadow-lg py-1 min-w-[120px]">
                   <button
                     onClick={handleExportSvg}
-                    className="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    className="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                   >
                     导出 SVG
                   </button>
                   <button
                     onClick={handleExportPng}
-                    className="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    className="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                   >
                     导出 PNG
                   </button>
@@ -128,7 +128,7 @@ export function DataCenterTab() {
           </div>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500"
           >
             <Settings2 size={12} />
             {showSettings ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -139,7 +139,7 @@ export function DataCenterTab() {
 
       {/* 参数设置面板 */}
       {showSettings && (
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-4 py-2 bg-gray-50 dark:bg-app/50 border-b border-gray-200 dark:border-edge-subtle">
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
             <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetsPerRow', '每排机柜数')}</span>
@@ -149,7 +149,7 @@ export function DataCenterTab() {
                 max={16}
                 value={params.cabinetsPerRow}
                 onChange={(e) => setParams({ cabinetsPerRow: Math.max(4, Math.min(16, Number(e.target.value) || 8)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
               />
             </label>
             <label className="text-2xs">
@@ -160,7 +160,7 @@ export function DataCenterTab() {
                 max={120}
                 value={params.cabinetWidth}
                 onChange={(e) => setParams({ cabinetWidth: Math.max(40, Math.min(120, Number(e.target.value) || 60)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
               />
             </label>
             <label className="text-2xs">
@@ -171,7 +171,7 @@ export function DataCenterTab() {
                 max={200}
                 value={params.cabinetHeight}
                 onChange={(e) => setParams({ cabinetHeight: Math.max(60, Math.min(200, Number(e.target.value) || 100)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
               />
             </label>
             <label className="text-2xs">
@@ -182,7 +182,7 @@ export function DataCenterTab() {
                 max={120}
                 value={params.rowGap}
                 onChange={(e) => setParams({ rowGap: Math.max(30, Math.min(120, Number(e.target.value) || 60)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
               />
             </label>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
 
@@ -68,7 +68,7 @@ export function RenameProjectModal({ title, label, defaultValue, confirmText, on
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-3 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="px-3 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
           >
             {t('common:cancel')}
           </button>
@@ -90,7 +90,7 @@ export function RenameProjectModal({ title, label, defaultValue, confirmText, on
         onChange={(e) => { setValue(e.target.value); setError('') }}
         onKeyDown={handleKeyDown}
         disabled={loading}
-        className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
       {error && (
         <p className="mt-2 text-xs text-error-500">{error}</p>

@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Upload, Download, AlertTriangle, CheckCircle } from 'lucide-react'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
@@ -218,13 +218,13 @@ export function DeviceImportModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={closeImportModal}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[680px] max-h-[85vh] flex flex-col"
+        className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[680px] max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
           <h3 className="text-sm font-semibold">{t('import.title')}</h3>
-          <button onClick={closeImportModal} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button onClick={closeImportModal} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover">
             <X size={16} />
           </button>
         </div>
@@ -239,7 +239,7 @@ export function DeviceImportModal() {
                 'px-3 py-1.5 text-xs rounded',
                 activeTab === 'server'
                   ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                  : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400',
               )}
             >
               {t('import.serverTab')}
@@ -250,7 +250,7 @@ export function DeviceImportModal() {
                 'px-3 py-1.5 text-xs rounded',
                 activeTab === 'switch'
                   ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                  : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400',
               )}
             >
               {t('import.switchTab')}
@@ -298,7 +298,7 @@ export function DeviceImportModal() {
 
               <div className="max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded">
                 <table className="w-full text-xs">
-                  <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                  <thead className="bg-gray-50 dark:bg-app sticky top-0">
                     <tr>
                       <th className="px-2 py-1 text-left">厂商</th>
                       <th className="px-2 py-1 text-left">型号</th>
@@ -308,7 +308,7 @@ export function DeviceImportModal() {
                   </thead>
                   <tbody>
                     {parsedRows.map((row, idx) => (
-                      <tr key={idx} className="border-t border-gray-100 dark:border-gray-700">
+                      <tr key={idx} className="border-t border-gray-100 dark:border-edge-subtle">
                         <td className="px-2 py-1">{row.raw['厂商'] || '-'}</td>
                         <td className="px-2 py-1">{row.raw['型号'] || '-'}</td>
                         <td className="px-2 py-1">
@@ -329,10 +329,10 @@ export function DeviceImportModal() {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
           <button
             onClick={closeImportModal}
-            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-app-hover"
           >
             {t('import.cancel')}
           </button>

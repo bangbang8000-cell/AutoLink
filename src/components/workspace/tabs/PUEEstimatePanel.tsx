@@ -49,9 +49,9 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
   const pueBg = pue.meetsTarget ? 'bg-success-50 dark:bg-success-900/20' : 'bg-error-50 dark:bg-error-900/20'
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
+      <div className="px-4 py-2.5 bg-gray-50 dark:bg-app/50 text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
         <Thermometer size={14} className="text-orange-500" />
         {t('design:pueEstimate')}
       </div>
@@ -72,11 +72,11 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
           </div>
 
           {/* 能耗分解 */}
-          <div className="border border-gray-100 dark:border-gray-700 rounded-lg p-3 space-y-1.5">
+          <div className="border border-gray-100 dark:border-edge-subtle rounded-lg p-3 space-y-1.5">
             <EnergyRow label={t('design:itPower')} value={pue.itPowerKw} unit="kW" />
             <EnergyRow label={t('design:coolingPower')} value={pue.coolingPowerKw} unit="kW" />
             <EnergyRow label={t('design:upsLoss')} value={pue.upsLossKw} unit="kW" />
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-1.5">
+            <div className="border-t border-gray-100 dark:border-edge-subtle pt-1.5">
               <EnergyRow label={t('design:totalPower')} value={pue.totalPowerKw} unit="kW" bold />
             </div>
           </div>
@@ -90,7 +90,7 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
           </div>
           <div className="grid grid-cols-3 gap-2">
             {Object.entries(convergence).map(([key, c]) => (
-              <div key={key} className="border border-gray-100 dark:border-gray-700 rounded p-2">
+              <div key={key} className="border border-gray-100 dark:border-edge-subtle rounded p-2">
                 <div className="text-2xs text-gray-400 dark:text-gray-500 mb-1">{t(NETWORK_LABEL[key] || key)}</div>
                 <div className={`text-sm font-bold ${c.meetsTarget ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'}`}>
                   {c.convergenceRatio.toFixed(1)} : 1
@@ -104,7 +104,7 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
         </div>
 
         {/* 机柜功率密度 */}
-        <div className="border border-gray-100 dark:border-gray-700 rounded p-3">
+        <div className="border border-gray-100 dark:border-edge-subtle rounded p-3">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
             <Gauge size={12} />
             {t('design:cabinetDensity')}
@@ -130,7 +130,7 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
         </div>
 
         {/* 参数调整 */}
-        <div className="border border-gray-100 dark:border-gray-700 rounded p-3">
+        <div className="border border-gray-100 dark:border-edge-subtle rounded p-3">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('design:coolingMethod')}</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-2xs">
@@ -138,7 +138,7 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
               <select
                 value={form.cooling_method}
                 onChange={(e) => setForm({ ...form, cooling_method: e.target.value as 'air' | 'cold_plate' | 'immersion' })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200"
               >
                 {COOLING_METHODS.map((m) => (
                   <option key={m.value} value={m.value}>{t(m.labelKey)}</option>
@@ -212,7 +212,7 @@ function NumberField({ label, value, onChange, step = 1, min, max }: {
           const v = parseFloat(e.target.value)
           if (!isNaN(v)) onChange(v)
         }}
-        className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+        className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200"
       />
     </label>
   )

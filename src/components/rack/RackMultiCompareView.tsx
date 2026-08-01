@@ -61,7 +61,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Columns size={13} className="text-info-500" />
@@ -74,7 +74,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
           </div>
           <button
             onClick={() => setShowPicker(!showPicker)}
-            className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-600 dark:text-gray-300"
           >
             选择机柜
             <ChevronRight size={11} className={showPicker ? 'rotate-90' : ''} />
@@ -93,7 +93,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
                   className={`px-2 py-1 text-2xs rounded border transition-colors ${
                     isSelected
                       ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-400 text-primary-700 dark:text-primary-300'
-                      : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300'
+                      : 'bg-white dark:bg-app-elevated border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300'
                   }`}
                 >
                   {c.name}
@@ -168,11 +168,11 @@ function CompactCabinet({
       className={`flex flex-col w-[160px] shrink-0 rounded-lg border-2 transition-all cursor-pointer ${
         isActive
           ? 'border-primary-500 shadow-md'
-          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          : 'border-gray-200 dark:border-edge-subtle hover:border-gray-300 dark:hover:border-gray-600'
       }`}
     >
       {/* 头部统计 */}
-      <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-800/70 rounded-t-md border-b border-gray-200 dark:border-gray-700">
+      <div className="px-2 py-1.5 bg-gray-50 dark:bg-app/70 rounded-t-md border-b border-gray-200 dark:border-edge-subtle">
         <div className="text-2xs font-semibold text-gray-700 dark:text-gray-200 truncate">
           {cabinet.name}
         </div>
@@ -187,7 +187,7 @@ function CompactCabinet({
       </div>
 
       {/* 紧凑机柜 SVG */}
-      <div className="px-2 py-2 flex justify-center bg-white dark:bg-gray-800">
+      <div className="px-2 py-2 flex justify-center bg-white dark:bg-app-elevated">
         <svg width={40} height={cabinetHeight} className="border border-gray-300 dark:border-gray-600 rounded-sm">
           {uSlots.map((entry, i) => {
             const y = i * slotHeight
@@ -232,7 +232,7 @@ function CompactCabinet({
       </div>
 
       {/* 底部信息 */}
-      <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-800/70 rounded-b-md border-t border-gray-200 dark:border-gray-700 text-3xs">
+      <div className="px-2 py-1.5 bg-gray-50 dark:bg-app/70 rounded-b-md border-t border-gray-200 dark:border-edge-subtle text-3xs">
         <div className="flex justify-between text-gray-500 dark:text-gray-400">
           <span>设备: <span className="font-medium text-gray-700 dark:text-gray-200">{cabinet.devices.length}</span></span>
           <span>{(totalPower / 1000).toFixed(1)}kW</span>

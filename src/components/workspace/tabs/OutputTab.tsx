@@ -87,7 +87,7 @@ export function OutputTab({ fileName, fileType }: Props) {
   // Image preview
   if (imageSrc) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+      <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-app p-4">
         <img
           src={imageSrc}
           alt={fileName || 'preview'}
@@ -111,7 +111,7 @@ export function OutputTab({ fileName, fileType }: Props) {
       <div className="h-full flex flex-col">
         {/* Sheet tabs */}
         {Object.keys(sheets).length > 1 && (
-          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 shrink-0 overflow-x-auto">
             {Object.keys(sheets).map((name) => (
               <button
                 key={name}
@@ -119,7 +119,7 @@ export function OutputTab({ fileName, fileType }: Props) {
                 className={`px-2.5 py-0.5 text-xs rounded whitespace-nowrap ${
                   name === activeSheet
                     ? 'bg-primary-500 text-white'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-app-hover'
                 }`}
               >
                 {name}
@@ -148,8 +148,8 @@ export function OutputTab({ fileName, fileType }: Props) {
                   key={ri}
                   className={
                     ri % 2 === 0
-                      ? 'bg-white dark:bg-gray-800'
-                      : 'bg-gray-50 dark:bg-gray-800/50'
+                      ? 'bg-white dark:bg-app-elevated'
+                      : 'bg-gray-50 dark:bg-app/50'
                   }
                 >
                   {row.map((cell, ci) => (

@@ -29,7 +29,7 @@ export function Toggle({ checked, onChange, label, size = 'md', className, disab
       onClick={() => !disabled && onChange(!checked)}
       className={clsx(
         'relative rounded-full transition-colors',
-        size === 'sm' ? 'w-7 h-4' : 'w-8 h-4',
+        size === 'sm' ? 'w-7 h-4' : 'w-9 h-5',
         checked
           ? 'bg-primary-500'
           : 'bg-gray-300 dark:bg-gray-600',
@@ -40,7 +40,7 @@ export function Toggle({ checked, onChange, label, size = 'md', className, disab
         className={clsx(
           'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform',
           checked
-            ? size === 'sm' ? 'left-3.5' : 'left-4'
+            ? size === 'sm' ? 'left-3.5' : 'left-5'
             : 'left-0.5',
         )}
       />

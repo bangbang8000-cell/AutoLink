@@ -55,9 +55,9 @@ export function LogPanel() {
 
   if (collapsed) {
     return (
-      <div className="h-7 flex items-center justify-between px-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0">
+      <div className="h-7 flex items-center justify-between px-3 border-t border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app-surface shrink-0">
         <span className="text-2xs text-gray-500">{t('common:logPanel.title')} ({logs.length})</span>
-        <button onClick={() => setCollapsed(false)} className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+        <button onClick={() => setCollapsed(false)} className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded">
           <ChevronUp size={12} className="text-gray-400" />
         </button>
       </div>
@@ -67,13 +67,13 @@ export function LogPanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1 border-t border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-3 py-1 border-t border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app-surface shrink-0">
         <span className="text-2xs text-gray-500 font-medium">{t('common:logPanel.title')}</span>
         <div className="flex items-center gap-0.5">
-          <button onClick={handleClear} className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title={t('common:logPanel.clear')}>
+          <button onClick={handleClear} className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded" title={t('common:logPanel.clear')}>
             <Trash2 size={11} className="text-gray-400" />
           </button>
-          <button onClick={() => setCollapsed(true)} className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title={t('common:logPanel.collapse')}>
+          <button onClick={() => setCollapsed(true)} className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded" title={t('common:logPanel.collapse')}>
             <ChevronDown size={12} className="text-gray-400" />
           </button>
         </div>

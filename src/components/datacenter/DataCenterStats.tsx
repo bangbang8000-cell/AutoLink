@@ -13,7 +13,7 @@ function StatCard({ icon, label, value, unit, color }: {
   color: string
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-3">
+    <div className="bg-white dark:bg-app-elevated rounded-lg border border-gray-100 dark:border-edge-subtle p-3">
       <div className="flex items-center gap-1.5 mb-1">
         <span className={color}>{icon}</span>
         <span className="text-2xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</span>

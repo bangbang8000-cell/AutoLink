@@ -22,11 +22,11 @@ export function DeviceLibraryPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle">
         <h3 className="text-sm font-semibold">{t('title')}</h3>
         <button
           onClick={handleOpenWorkspace}
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500"
           title="在工作区打开设备库"
         >
           <Maximize2 size={14} />
@@ -42,7 +42,7 @@ export function DeviceLibraryPanel() {
             value={filter.search}
             onChange={(e) => setFilter({ search: e.target.value })}
             placeholder={t('search')}
-            className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
       </div>
@@ -63,7 +63,7 @@ export function DeviceLibraryPanel() {
               'px-2 py-1 text-xs rounded whitespace-nowrap transition-colors',
               filter.category === cat.id
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover',
             )}
           >
             {cat.label}
@@ -72,10 +72,10 @@ export function DeviceLibraryPanel() {
       </div>
 
       {/* Open workspace button */}
-      <div className="px-3 pt-2 pb-3 mt-auto border-t border-gray-200 dark:border-gray-700">
+      <div className="px-3 pt-2 pb-3 mt-auto border-t border-gray-200 dark:border-edge-subtle">
         <button
           onClick={handleOpenWorkspace}
-          className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
         >
           <Maximize2 size={13} />
           在工作区打开完整设备库

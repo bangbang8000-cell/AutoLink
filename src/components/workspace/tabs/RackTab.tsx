@@ -147,13 +147,13 @@ export function RackTab({ cabinetId }: Props) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <div className="flex items-center gap-2">
           {/* Cabinet selector */}
           <div className="relative">
             <button
               onClick={() => setCabinetDropdownOpen(!cabinetDropdownOpen)}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-app-surface border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600"
             >
               机柜 {cabinet.name}
               <ChevronDown size={12} />
@@ -161,12 +161,12 @@ export function RackTab({ cabinetId }: Props) {
             {cabinetDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setCabinetDropdownOpen(false)} />
-                <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 min-w-[160px] max-h-[200px] overflow-y-auto">
+                <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded shadow-lg py-1 min-w-[160px] max-h-[200px] overflow-y-auto">
                   {cabinets.map((c) => (
                     <button
                       key={c.id}
                       onClick={() => handleSelectCabinet(c.id)}
-                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-app-hover ${
                         c.id === cabinet.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
                       }`}
                     >
@@ -202,7 +202,7 @@ export function RackTab({ cabinetId }: Props) {
           )}
 
           {/* 视图模式切换器 */}
-          <div className="flex items-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
+          <div className="flex items-center bg-white dark:bg-app-elevated border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
             {VIEW_MODES.map((mode) => {
               const Icon = mode.icon
               const isActive = viewMode === mode.id
@@ -228,7 +228,7 @@ export function RackTab({ cabinetId }: Props) {
 
       {/* Power bar (仅在基础模式显示，避免与其他视图的功率信息重复) */}
       {viewMode === 'basic' && (
-        <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="shrink-0 px-3 py-2 border-b border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-surface">
           <RackPowerBar used={power.used} limit={power.limit} compact />
         </div>
       )}
@@ -238,14 +238,14 @@ export function RackTab({ cabinetId }: Props) {
         {/* Unplaced devices panel (仅基础模式显示) */}
         {viewMode === 'basic' && (
           <>
-            <div className={`border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col transition-all ${showUnplaced ? 'w-[220px] shrink-0' : 'w-0 overflow-hidden'}`}>
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <div className={`border-r border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 flex flex-col transition-all ${showUnplaced ? 'w-[220px] shrink-0' : 'w-0 overflow-hidden'}`}>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
                 <span className="text-2xs font-semibold text-gray-600 dark:text-gray-300">
                   待分配 ({unplacedDevices.length})
                 </span>
                 <button
                   onClick={() => setShowUnplaced(false)}
-                  className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
+                  className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-400"
                 >
                   <X size={12} />
                 </button>
@@ -264,7 +264,7 @@ export function RackTab({ cabinetId }: Props) {
                           className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-2xs rounded mb-0.5 transition-colors text-left ${
                             selectedUnplaced === d.id
                               ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-1 ring-primary-300'
-                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                              : 'bg-white dark:bg-app-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover border border-gray-200 dark:border-edge-subtle'
                           }`}
                         >
                           <GripVertical size={11} className="shrink-0 text-gray-400" />
@@ -282,7 +282,7 @@ export function RackTab({ cabinetId }: Props) {
             {!showUnplaced && (
               <button
                 onClick={() => setShowUnplaced(true)}
-                className="shrink-0 px-1 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
+                className="shrink-0 px-1 bg-gray-100 dark:bg-app-surface border-r border-gray-200 dark:border-edge-subtle hover:bg-gray-200 dark:hover:bg-app-hover text-gray-400"
                 title="显示待分配设备"
               >
                 <ArrowRight size={14} />
@@ -317,7 +317,7 @@ export function RackTab({ cabinetId }: Props) {
                     <button
                       key={i}
                       onClick={() => handleSlotClick(uNum)}
-                      className={`h-7 flex items-center justify-end pr-1.5 text-2xs border-b border-gray-200 dark:border-gray-700/50 last:border-b-0 w-full transition-colors ${
+                      className={`h-7 flex items-center justify-end pr-1.5 text-2xs border-b border-gray-200 dark:border-edge-subtle/50 last:border-b-0 w-full transition-colors ${
                         isConflictArea
                           ? 'text-error-300 dark:text-error-700 cursor-not-allowed'
                           : selectedUnplaced
@@ -351,14 +351,14 @@ export function RackTab({ cabinetId }: Props) {
                       <button
                         key={i}
                         onClick={() => handleSlotClick(uNum)}
-                        className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 w-full transition-colors block ${
+                        className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 w-full transition-colors block ${
                           isConflictArea
                             ? 'bg-error-50 dark:bg-error-900/10 cursor-not-allowed'
                             : selectedUnplaced && isPendingSlot
                               ? 'bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 cursor-pointer'
                               : selectedUnplaced
-                                ? 'bg-white dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
-                                : 'bg-white dark:bg-gray-800'
+                                ? 'bg-white dark:bg-app-elevated hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
+                                : 'bg-white dark:bg-app-elevated'
                         }`}
                         disabled={isConflictArea}
                       />
@@ -371,7 +371,7 @@ export function RackTab({ cabinetId }: Props) {
                   return (
                     <div
                       key={i}
-                      className={`h-7 border-b border-gray-200 dark:border-gray-700 last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group`}
+                      className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group`}
                       title={`${device.name} (U${device.startU}-U${device.endU} · ${device.power_watts}W)`}
                     >
                       {isFirst && (

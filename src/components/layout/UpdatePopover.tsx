@@ -111,7 +111,7 @@ export function UpdatePopover() {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 relative"
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400 relative"
         title={t('common:update.title')}
       >
         {status === 'downloaded' ? (
@@ -131,7 +131,7 @@ export function UpdatePopover() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-8 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-2 z-50 w-72">
+          <div className="absolute top-8 right-0 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-2 z-50 w-72">
             <div className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
               {t('common:update.title')}
             </div>
@@ -173,7 +173,7 @@ export function UpdatePopover() {
                         {t('common:update.releaseNotes')}
                       </button>
                       {showNotes && (
-                        <div className="mt-1 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-900/50 rounded text-2xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap border border-gray-200 dark:border-gray-700">
+                        <div className="mt-1 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-app/50 rounded text-2xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap border border-gray-200 dark:border-edge-subtle">
                           {releaseNotes}
                         </div>
                       )}

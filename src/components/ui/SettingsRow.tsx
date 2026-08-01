@@ -6,7 +6,7 @@ import clsx from 'clsx'
  * repeated `text-xs px-1.5 py-0.5 rounded border ...` className string.
  */
 export const INPUT_CLASS =
-  'text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700'
+  'text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app'
 
 interface SettingsSectionProps {
   title: string

@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore, type WizardStep } from '@/stores/wizard.store'
 import { WizardStepBasic } from './WizardStepBasic'
@@ -55,7 +55,7 @@ export function ProjectWizard({ onComplete, onCancel }: Props) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Step indicator */}
-      <div className="flex items-center justify-center gap-1 px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <div className="flex items-center justify-center gap-1 px-6 py-4 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         {STEPS.map((s, i) => (
           <React.Fragment key={s.step}>
             <div className="flex items-center gap-1.5">
@@ -102,10 +102,10 @@ export function ProjectWizard({ onComplete, onCancel }: Props) {
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 sticky bottom-0 bg-white dark:bg-gray-800">
+      <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-edge-subtle shrink-0 sticky bottom-0 bg-white dark:bg-app-elevated">
         <button
           onClick={onCancel}
-          className="px-4 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="px-4 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
         >
           {t('project:cancel')}
         </button>
@@ -114,7 +114,7 @@ export function ProjectWizard({ onComplete, onCancel }: Props) {
           {step > 1 && step < 5 && (
             <button
               onClick={prevStep}
-              className="flex items-center gap-1 px-4 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center gap-1 px-4 py-1.5 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
             >
               <ChevronLeft size={14} />
               上一步

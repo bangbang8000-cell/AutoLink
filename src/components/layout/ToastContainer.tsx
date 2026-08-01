@@ -3,10 +3,10 @@ import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
 import { useToastStore, type Toast } from '@/stores/toast.store'
 
 const iconMap = {
-  success: <CheckCircle size={14} className="text-gray-400" />,
-  error: <XCircle size={14} className="text-gray-400" />,
-  warning: <AlertTriangle size={14} className="text-gray-400" />,
-  info: <Info size={14} className="text-gray-400" />,
+  success: <CheckCircle size={14} className="text-success-500" />,
+  error: <XCircle size={14} className="text-error-500" />,
+  warning: <AlertTriangle size={14} className="text-warning-500" />,
+  info: <Info size={14} className="text-info-500" />,
 }
 
 const bgMap = {

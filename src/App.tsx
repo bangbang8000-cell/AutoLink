@@ -41,6 +41,8 @@ export default function App() {
   const togglePanel = useUIStore((s) => s.togglePanel)
   const panelVisible = useUIStore((s) => s.panelVisible)
   const isDark = useUIStore((s) => s.isDark)
+  const theme = useUIStore((s) => s.theme)
+  const setTheme = useUIStore((s) => s.setTheme)
   const syncSystemTheme = useUIStore((s) => s.syncSystemTheme)
   const language = useUIStore((s) => s.language)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
@@ -57,6 +59,11 @@ export default function App() {
     if (isDark) root.classList.add('dark')
     else root.classList.remove('dark')
   }, [isDark])
+
+  // v2.6.8: 根据持久化的 theme 初始化 isDark (isDark 不会被 persist, 需在挂载时计算)
+  useEffect(() => {
+    setTheme(theme)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync i18n language with persisted UI store language
   useEffect(() => {
@@ -184,7 +191,7 @@ export default function App() {
     <div
       className={clsx(
         'h-screen w-screen flex flex-col overflow-hidden',
-        isDark ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900',
+        isDark ? 'dark bg-app text-gray-100' : 'bg-gray-50 text-gray-900',
       )}
     >
       <Header />
