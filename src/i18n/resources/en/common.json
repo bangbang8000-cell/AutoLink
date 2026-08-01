@@ -195,6 +195,7 @@
     "download": "Download update",
     "downloading": "Downloading",
     "downloadFailed": "Download failed",
+    "downloadFailedHint": "A browser download page has been opened for you to download manually.",
     "downloaded": "Download complete",
     "restartToInstall": "Restart to install",
     "error": "Update error",

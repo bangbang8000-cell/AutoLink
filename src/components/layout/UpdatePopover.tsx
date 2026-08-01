@@ -220,10 +220,11 @@ export function UpdatePopover() {
 
               {status === 'error' && (
                 <div className="space-y-2">
-                  <p className="text-xs text-error-500 flex items-center gap-1">
+                  <p className="text-xs text-warning-500 flex items-center gap-1">
                     <AlertTriangle size={13} />
-                    {errorMessage || t('common:update.error')}
+                    {errorMessage || t('common:update.downloadFailed')}
                   </p>
+                  <p className="text-2xs text-gray-400">{t('common:update.downloadFailedHint')}</p>
                   <div className="flex gap-1.5">
                     <button
                       onClick={handleCheckUpdate}

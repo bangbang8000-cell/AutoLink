@@ -135,7 +135,7 @@ function ProjectExplorer() {
       type: 'fileViewer',
       title: file.name,
       closable: true,
-      state: { filePath: file.path, isTemplate: false },
+      state: { filePath: file.path, projectName: _projectName, isTemplate: false },
     })
   }, [openTab])
 
@@ -985,12 +985,12 @@ function OutputSection({ projects, openTab }: {
     toggleOutputProject(projectName)
   }, [expandedOutputProjects, outputBatches, toggleOutputProject, setOutputBatches])
 
-  const handleFileClick = useCallback((filePath: string, fileName: string) => {
+  const handleFileClick = useCallback((filePath: string, fileName: string, projectName: string) => {
     openTab({
       type: 'fileViewer',
       title: fileName,
       closable: true,
-      state: { filePath, isTemplate: false },
+      state: { filePath, projectName, isTemplate: false },
     })
   }, [openTab])
 
@@ -1012,7 +1012,7 @@ function OutputSection({ projects, openTab }: {
 
   // T12: 文件右键菜单(openFile/showInFileManager/copyFilePath/deleteFile)
   const buildFileContextMenu = (projectName: string, batchName: string, filePath: string, fileName: string): ContextMenuItem[] => [
-    { label: t('common:explorer.contextMenu.openFile'), action: () => handleFileClick(filePath, fileName) },
+    { label: t('common:explorer.contextMenu.openFile'), action: () => handleFileClick(filePath, fileName, projectName) },
     {
       label: t('common:explorer.contextMenu.showInFileManager'),
       action: async () => {
@@ -1085,7 +1085,7 @@ function OutputSection({ projects, openTab }: {
                           label={f.name}
                           depth={2}
                           leading={<Icon size={12} className={color} />}
-                          onClick={() => handleFileClick(f.path, f.name)}
+                          onClick={() => handleFileClick(f.path, f.name, p.name)}
                           contextMenu={buildFileContextMenu(p.name, batch.name, f.path, f.name)}
                         />
                       )

@@ -182,6 +182,7 @@
     "download": "업데이트 다운로드",
     "downloading": "다운로드 중",
     "downloadFailed": "다운로드 실패",
+    "downloadFailedHint": "브라우저 다운로드 페이지가 열렸습니다. 수동으로 다운로드하세요.",
     "downloaded": "다운로드 완료",
     "restartToInstall": "재시작하여 설치",
     "error": "업데이트 오류",

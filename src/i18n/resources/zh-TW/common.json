@@ -182,6 +182,7 @@
     "download": "下載更新",
     "downloading": "正在下載",
     "downloadFailed": "下載失敗",
+    "downloadFailedHint": "已為您開啟瀏覽器下載頁面，請手動下載安裝。",
     "downloaded": "下載完成",
     "restartToInstall": "重啟安裝",
     "error": "更新出錯",

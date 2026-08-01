@@ -213,11 +213,19 @@ class UpdateService {
       })
 
       updater.on('error', (err: Error) => {
+        console.warn('[UpdateService] Download error, falling back to releases page:', err.message)
         this.mainWindow?.webContents.send('update:error', err.message)
-        reject(err)
+        // v2.6.9: 下载失败时回退到打开 Releases 页面，不 reject
+        this.openReleasesPage()
+        resolve()
       })
 
-      updater.downloadUpdate().catch(reject)
+      updater.downloadUpdate().catch((err) => {
+        console.warn('[UpdateService] downloadUpdate() threw, opening releases page:', err.message)
+        this.mainWindow?.webContents.send('update:error', err.message)
+        this.openReleasesPage()
+        resolve()
+      })
     })
   }
 

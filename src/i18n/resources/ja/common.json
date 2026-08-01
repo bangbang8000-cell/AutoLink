@@ -182,6 +182,7 @@
     "download": "更新をダウンロード",
     "downloading": "ダウンロード中",
     "downloadFailed": "ダウンロードに失敗しました",
+    "downloadFailedHint": "ブラウザでダウンロードページを開きました。手動でダウンロードしてください。",
     "downloaded": "ダウンロード完了",
     "restartToInstall": "再起動してインストール",
     "error": "更新エラー",

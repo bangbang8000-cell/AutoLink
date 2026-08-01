@@ -496,7 +496,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       .map((d) => {
         const batchFiles = fs.readdirSync(path.join(outputDir, d.name))
           .filter((f) => !f.startsWith('.'))
-          .map((f) => ({ name: f, path: `${projectName}/output/${d.name}/${f}` }))
+          .map((f) => ({ name: f, path: `output/${d.name}/${f}` }))
         return { name: d.name, files: batchFiles }
       })
   }))

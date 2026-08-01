@@ -68,7 +68,7 @@ export function ResizableAppLayout({ sidebarVisible, panelVisible, sidebar, edit
           <>
             <div
               onMouseDown={startResizePanel}
-              className="h-1.5 shrink-0 cursor-row-resize bg-gray-200 dark:bg-edge-default hover:bg-primary-400 hover:h-2 transition-all"
+              className="h-1.5 shrink-0 cursor-row-resize bg-gray-200 dark:bg-edge hover:bg-primary-400 hover:h-2 transition-all"
             />
             <div style={{ height: panelHeight }} className="shrink-0 overflow-auto border-t border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-surface">
               {bottomPanel}
