@@ -1,4 +1,4 @@
-# AutoLink V2.6 部署指南
+# AutoLink V2.7 部署指南
 
 ## 环境准备
 
@@ -69,19 +69,19 @@ npm run dev
 ### Windows (NSIS 安装包)
 ```bash
 npm run dist:win
-# 输出: release/AutoLink-Setup-2.6.3-win.exe
+# 输出: release/AutoLink-Setup-2.7.0-win.exe
 ```
 
 ### macOS (DMG)
 ```bash
 npm run dist:mac
-# 输出: release/AutoLink-2.6.3-mac-x64.dmg / AutoLink-2.6.3-mac-arm64.dmg
+# 输出: release/AutoLink-2.7.0-mac-x64.dmg / AutoLink-2.7.0-mac-arm64.dmg
 ```
 
 ### Linux (AppImage + DEB)
 ```bash
 npm run dist:linux
-# 输出: release/AutoLink-2.6.3-linux.AppImage / .deb
+# 输出: release/AutoLink-2.7.0-linux.AppImage / .deb
 ```
 
 ## 生产部署
@@ -134,13 +134,39 @@ V2.6 安装包内置以下资源（通过 `extraResources` 打包）：
 
 ## 自动更新机制
 
-V2.6 修复了 V2.6.0 之前 `electron-updater` 依赖位置错误导致的更新功能失效问题。
+V2.7.0 对自动更新进行了彻底重构，解决国内网络环境下「检查到新版本但无法下载」的问题。
+
+### 双通道检查
+
+- **主通道**：`electron-updater` 模块（GitHub Releases 标准协议）
+- **备用通道**：Electron `net` 模块直接请求 `latest.yml`/`latest-mac.yml`/`latest-linux.yml`（按平台选择），走 Chromium 网络栈，对国内网络更友好
+- 主通道失败时自动切换备用通道，备用通道解析 `version` 字段判断是否新版本，同时解析 `path` 字段缓存下载信息
+
+### 正向下载（V2.7.0 新增）
+
+检测到新版本后，`downloadUpdate()` 按以下优先级正向下载：
+
+1. **electron-updater 下载**：主通道成功时使用，支持断点续传与 SHA512 校验
+2. **直接下载安装包**：主通道失败或备用通道检测时使用
+   - 用 Electron `net` 模块直接下载安装包到本地「下载」目录
+   - 手动处理 GitHub Releases 的 302 重定向（跟随到 `objects.githubusercontent.com`）
+   - 实时发送下载进度到前端
+   - 下载完成点击「重启安装」时调用 `shell.openPath` 启动安装程序并退出应用
+3. **打开 Releases 页面**：上述均失败时的最终 fallback
+
+### 关键文件
+
+- `electron/services/update.service.ts`：更新服务核心（检查/下载/安装/降级）
+- `electron/ipc/handlers.ts`：IPC 处理器（`app:check-update`/`app:download-update`/`app:quit-and-install`/`app:open-releases-page`）
+- `src/components/layout/UpdatePopover.tsx`：顶部栏更新弹层 UI
+- `src/components/layout/AboutDialog.tsx`：关于弹窗更新 UI
+
+### 其他说明
 
 - **依赖位置**：`electron-updater` 必须在 `dependencies`（非 `devDependencies`），否则打包后 asar 内模块缺失
 - **更新源**：GitHub Releases（配置见 `package.json` 的 `build.publish`）
 - **检测时机**：应用启动后自动检测（首次提示，可在设置中关闭）
 - **手动检查**：菜单「帮助 → 检查更新」或关于对话框中点击「检查更新」
-- **下载安装**：下载进度条显示，下载完成后提示重启安装
 
 ## 数据持久化
 
@@ -188,12 +214,12 @@ V2.6.2+ 拓扑与机柜数据按项目持久化：
 ```bash
 # 更新 package.json version
 # 提交代码（含 [skip ci] 避免触发 Actions 编译）
-git commit -m "release: v2.6.3 [skip ci]"
+git commit -m "release: v2.7.0 [skip ci]"
 # 打 tag 并推送
-git tag v2.6.3
-git push origin main v2.6.3
+git tag v2.7.0
+git push origin main v2.7.0
 # 手动触发 CI 构建
-gh workflow run build.yml --ref v2.6.3
+gh workflow run build.yml --ref v2.7.0
 ```
 
 GitHub Actions 自动构建三平台安装包并发布到 Releases 页面：
@@ -233,7 +259,10 @@ PUE 估算在生成拓扑后自动显示。若未显示，检查设计摘要是�
 确保依赖已正确安装：`npm install @xyflow/react`。V2.6 使用 react-flow 12.x 替代 ECharts 拓扑渲染。
 
 **Q: 更新功能提示"已是最新版本"但实际有新版本**
-V2.6.2 已修复此问题（`electron-updater` 依赖位置错误）。请确保使用 V2.6.2 及以上版本。旧版本需手动下载最新安装包一次。
+V2.6.2 已修复此问题（`electron-updater` 依赖位置错误）。V2.7.0 进一步重构为双通道检查 + 正向下载。请确保使用 V2.7.0 及以上版本。旧版本需手动下载最新安装包一次。
+
+**Q: 检查到新版本后点击下载无反应或下载失败**
+V2.7.0 已彻底解决此问题：检测到新版本后程序会直接下载安装包到本地「下载」目录（支持 GitHub 302 重定向跟随），下载完成点击「重启安装」即可启动安装程序。若网络完全无法访问 GitHub，可点击「手动下载」打开 Releases 页面。
 
 **Q: 切换项目后拓扑/机柜数据还是上一个项目的**
 V2.6.2+ 已修复此问题，拓扑和机柜数据按项目持久化到 `topology.json` / `rack_layout.json`。请确保使用 V2.6.2 及以上版本。

@@ -58,7 +58,7 @@ export function ResizableAppLayout({ sidebarVisible, panelVisible, sidebar, edit
           </div>
           <div
             onMouseDown={startResizeSidebar}
-            className="w-1.5 shrink-0 cursor-col-resize bg-gray-200 dark:bg-edge-default hover:bg-primary-400 hover:w-2 transition-all"
+            className="w-1.5 shrink-0 cursor-col-resize bg-gray-200 dark:bg-edge hover:bg-primary-400 hover:w-2 transition-all"
           />
         </>
       )}

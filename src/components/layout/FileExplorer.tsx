@@ -90,8 +90,9 @@ function ProjectExplorer() {
 
   // T9: 项目文件树展开/折叠 — 首次展开拉取结构 + 输出批次并缓存到 store
   const toggleProjectExpand = useCallback(async (projectName: string) => {
-    const currently = expandedProjects[projectName]
-    if (!currently && !projectStructures[projectName]) {
+    // 只要结构缓存为空就拉取(不依赖当前展开状态)
+    // 修复重启后 expandedProjects 持久化为 true 但 projectStructures 为空导致点击无响应的问题
+    if (!projectStructures[projectName]) {
       try {
         const [structure, batches] = await Promise.all([
           window.electron?.project?.getStructure(projectName),
@@ -105,7 +106,28 @@ function ProjectExplorer() {
       }
     }
     toggleProject(projectName)
-  }, [expandedProjects, projectStructures, toggleProject, setProjectStructure, setOutputBatches])
+  }, [projectStructures, toggleProject, setProjectStructure, setOutputBatches])
+
+  // 重启后自动恢复已展开项目的结构缓存
+  // persist 持久化了 expandedProjects 但不持久化 projectStructures,导致重启后项目展开但子节点为空
+  useEffect(() => {
+    for (const name of Object.keys(expandedProjects)) {
+      if (expandedProjects[name] && !projectStructures[name]) {
+        Promise.all([
+          window.electron?.project?.getStructure(name),
+          window.electron?.project?.listOutputBatches(name),
+        ]).then(([structure, batches]) => {
+          setProjectStructure(name, (structure as FileTreeNode[]) || [])
+          setOutputBatches(name, (batches as OutputBatch[]) || [])
+        }).catch(() => {
+          setProjectStructure(name, [])
+          setOutputBatches(name, [])
+        })
+      }
+    }
+    // 只在挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // T9: 删除文件/批次后刷新项目结构 + 批次缓存
   const refreshProjectStructure = useCallback(async (projectName: string) => {

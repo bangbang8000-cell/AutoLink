@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## [2.7.0] - 2026-08-01
+
+### 三项核心修复
+
+#### 1. 暗色模式拖拽分隔线颜色修复
+- **问题**：暗色模式下中栏（文件浏览器）与工作区之间的垂直拖拽分隔线显示为白色，视觉突兀
+- **根因**：`ResizableAppLayout.tsx` 使用 `dark:bg-edge-default` 类，但 Tailwind 的 `edge.DEFAULT` 生成的类名是 `bg-edge`（无后缀），`bg-edge-default` 是无效类，导致暗色模式下未覆盖亮色的 `bg-gray-200`
+- **修复**：`dark:bg-edge-default` → `dark:bg-edge`（渲染为 `#484F58` 暗灰，与水平分隔线一致）
+
+#### 2. 项目浏览器目录显示修复
+- **问题**：应用重启后，项目浏览器中已展开的目录/子目录无法正确显示对应文件，点击无响应
+- **根因**：`explorer.store.ts` 持久化了 `expandedProjects`（展开状态）但不持久化 `projectStructures`（结构缓存）。重启后项目显示为"已展开"但结构缓存为空，而 `toggleProjectExpand` 的条件 `!currently && !projectStructures[name]` 因 `currently===true` 跳过了结构拉取
+- **修复**：
+  - `toggleProjectExpand` 条件改为 `!projectStructures[projectName]`（不依赖当前展开状态）
+  - 新增 `useEffect`：组件挂载时自动为所有"已展开但无结构缓存"的项目拉取结构
+
+#### 3. 自动更新下载重构
+- **问题**：检查到新版本后点击下载无反应或失败，原实现回退到打开浏览器而非真正下载
+- **根因**：国内网络下 `electron-updater.checkForUpdates()` 失败后走 fallback 通道，但 fallback 只解析了 version 未解析下载信息；`downloadUpdate()` 因 electron-updater 内部无 `updateInfo` 缓存而抛错
+- **修复**（`update.service.ts` 重构）：
+  - **增强 fallback 检查**：解析 `latest.yml` 的 `path` 字段（当前平台安装包文件名），构造下载 URL 并缓存
+  - **平台适配**：新增 `getPlatformYmlName()`，Windows/macOS/Linux 分别请求 `latest.yml`/`latest-mac.yml`/`latest-linux.yml`
+  - **正向直接下载**：新增 `downloadInstallerFile()`，用 Electron net 模块直接下载安装包到本地下载目录，手动处理 GitHub 的 302 重定向，实时发送下载进度
+  - **多级 fallback**：electron-updater 下载 → 直接下载安装包 → 打开浏览器
+  - **安装支持**：`quitAndInstall()` 检测直接下载场景，打开本地安装包并退出应用
+
+### 涉及文件
+- `src/components/layout/ResizableAppLayout.tsx`：拖拽线颜色修复
+- `src/components/layout/FileExplorer.tsx`：项目浏览器结构缓存恢复
+- `electron/services/update.service.ts`：自动更新下载逻辑重构
+- `README.md`：版本号更新至 2.7.0，自动更新章节重写
+- `docs/deployment.md`：版本号更新至 2.7.0，自动更新机制章节重写，新增下载失败 FAQ
+- `package.json`：版本号 2.6.9 → 2.7.0
+
+### 回归测试
+- TypeScript typecheck：0 errors
+- ESLint：0 errors（7 warnings 为历史遗留）
+
+---
+
 ## [2.6.5] - 2026-07-31
 
 ### 更新检查机制修复

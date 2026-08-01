@@ -2,7 +2,7 @@
 
 **AI 智算中心网络规划与可视化工具 | AI Data Center Network Planning & Visualization**
 
-[![Version](https://img.shields.io/badge/version-2.6.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-2.7.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -18,7 +18,7 @@
 3. 渲染输出连接表、布线表、BOM、设备清单、拓扑图
 ```
 
-## V2.6 核心能力
+## V2.7 核心能力
 
 ### Rail-Optimized 拓扑设计
 - NVIDIA SuperPOD 8-Rail 架构自动计算
@@ -90,10 +90,13 @@
 - 本地用户指南（Markdown 渲染，离线可用）
 - 关于对话框含快捷键速查表与软件栈信息
 
-### 自动更新
+### 自动更新（V2.7.0 重构）
 - 启动时自动检测新版本并 Toast 通知
 - Release Notes 折叠展示
 - 下载进度条 + 错误提示
+- **双通道检查**：electron-updater 主路径 + Electron net 备用通道（解析 `latest.yml`/`latest-mac.yml`/`latest-linux.yml`，国内网络友好）
+- **正向下载**：检测到新版本后直接下载安装包到本地下载目录，支持 GitHub 302 重定向跟随与进度反馈，下载完成点击「重启安装」自动启动安装程序
+- **多级 fallback**：electron-updater 下载 → 直接下载安装包 → 打开 Releases 页面
 - 支持 Windows / macOS / Linux 三平台
 
 ## 快速开始
@@ -101,9 +104,9 @@
 ### 方式一：下载安装包（推荐）
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
-- **Windows**：`AutoLink-Setup-2.6.3-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-2.6.3-mac-x64.dmg` / `AutoLink-2.6.3-mac-arm64.dmg`
-- **Linux**：`AutoLink-2.6.3-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-2.7.0-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-2.7.0-mac-x64.dmg` / `AutoLink-2.7.0-mac-arm64.dmg`
+- **Linux**：`AutoLink-2.7.0-linux.AppImage` / `.deb`
 
 安装后首次启动会自动创建 3 个示例项目，内置 11 套场景模板和 109+ 款设备库。
 
@@ -230,6 +233,7 @@ AutoLink/
 - [V2.6 PRD](docs/v2.6/v2.6_PRD.md)
 - [V2.6 开发计划](docs/v2.6/v2.6_Development_Plan.md)
 - [V2.6.3 PRD 与开发计划](docs/v2.6/v2.6.3_PRD与开发计划.md)
+- [V2.7.0 PRD](docs/v2.6/v2.7.0_PRD.md)
 - [更新日志](CHANGELOG.md)
 - [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki)
 
