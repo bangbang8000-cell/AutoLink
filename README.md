@@ -233,7 +233,8 @@ AutoLink/
 - [V2.6 PRD](docs/v2.6/v2.6_PRD.md)
 - [V2.6 开发计划](docs/v2.6/v2.6_Development_Plan.md)
 - [V2.6.3 PRD 与开发计划](docs/v2.6/v2.6.3_PRD与开发计划.md)
-- [V2.7.0 PRD](docs/v2.6/v2.7.0_PRD.md)
+- [V2.7.X 系列 PRD](docs/v2.7/v2.7.X_PRD.md)
+- [V2.7.X 系列开发计划](docs/v2.7/v2.7.X_开发计划.md)
 - [更新日志](CHANGELOG.md)
 - [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki)
 

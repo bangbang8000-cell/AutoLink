@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## [2.7.1] - 2026-08-01
+
+### 质量基线
+
+v2.7.1 建立质量门禁,补齐核心算法测试,修复 VERSION 同步问题。
+
+#### CI 质量门禁
+- CI 增加 vitest(前端) + pytest(后端) 测试步骤,PR 全绿方可合并
+- CI 增加 VERSION 文件与 package.json version 一致性校验
+- CI 增加 ruff(Python lint) + mypy(类型检查) 步骤
+
+#### 后端算法测试补齐(94 用例)
+- 新建 `test_validation.py`:覆盖 V001-V010 共 10 条校验规则,每条 ≥1 正例 + ≥1 反例
+- 新建 `test_estimation.py`:覆盖 PUE 估算(风冷/冷板/浸没 + 温度/自然冷/负载率)、收敛比(4 种网络类型)、机柜密度(5 档)
+- 新建 `test_optical_selector.py`:覆盖速率解析、距离估算、规格推荐、选型逻辑、价格估算
+
+#### 前端 Store 测试补齐(108 用例)
+- explorer.store(15)、render.store(16)、toast.store(10)、ui.store(17)、wizard.store(20)、workspace.store(20)、ProjectContext(10)
+- 覆盖状态变更、action 调用、persist 中间件、边界情况
+
+#### Bug 修复
+- VERSION 文件从 2.6.9 同步至 2.7.1
+
+#### 测试统计
+- 前端:304 passed(15 files)
+- 后端:393 passed
+- TypeScript:0 errors
+- ESLint:0 errors
+
+---
+
 ## [2.7.0] - 2026-08-01
 
 ### 三项核心修复
