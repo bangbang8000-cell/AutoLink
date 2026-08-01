@@ -45,9 +45,7 @@ import {
   getPodColor,
   type PodGroupNodeData,
 } from './topology/PodGroupNode'
-import {
-  computeTopologyLayout,
-} from './topology/topologyLayout'
+import { useTopologyLayout } from '@/hooks/useTopologyLayout'
 
 /* ---------- node / edge types ---------- */
 
@@ -283,13 +281,16 @@ function TopologyFlowInner() {
     return { filteredNodes: nodes, filteredEdges: edges }
   }, [topology, filter])
 
+  /* ---------- v2.7.3-T6: 通过 Web Worker 计算布局(大规模拓扑不阻塞主线程) ---------- */
+  const { layout: layoutResult, computing: layoutComputing } = useTopologyLayout(filteredNodes, filteredEdges)
+
   /* ---------- compute layout + build react-flow nodes/edges (pure, no setState) ---------- */
   const { nodeCount, edgeCount, computedNodes, computedEdges } = useMemo(() => {
-    if (filteredNodes.length === 0) return { nodeCount: 0, edgeCount: 0, computedNodes: [] as Node[], computedEdges: [] as Edge[] }
+    if (filteredNodes.length === 0 || !layoutResult) return { nodeCount: 0, edgeCount: 0, computedNodes: [] as Node[], computedEdges: [] as Edge[] }
 
     const saved = selectedProjectName ? loadLayout(selectedProjectName) : null
-    // V2.4.2: 新布局 API 返回 LayoutResult (含 pods 背景框信息)
-    const { layoutNodes, pods } = computeTopologyLayout(filteredNodes, filteredEdges)
+    // v2.7.3-T6: 布局结果由 useTopologyLayout 异步提供(大规模走 Worker)
+    const { layoutNodes, pods } = layoutResult
 
     // 计算连接数
     const connCount = new Map<string, number>()
@@ -387,7 +388,7 @@ function TopologyFlowInner() {
     })
 
     return { nodeCount: nodes.length, edgeCount: edges.length, computedNodes: allNodes, computedEdges: edges }
-  }, [filteredNodes, filteredEdges, selectedProjectName])
+  }, [filteredNodes, filteredEdges, selectedProjectName, layoutResult])
 
   /* ---------- sync computed nodes/edges to state (for drag-to-move) ---------- */
   useEffect(() => {
@@ -396,6 +397,7 @@ function TopologyFlowInner() {
   }, [computedNodes, computedEdges])
 
   /* ---------- V2.4.7: 显示层 = 折叠隐藏 + 搜索高亮 ---------- */
+  /* v2.7.3-T7: 引用稳定化 — 仅在节点状态实际变化时创建新对象,拖拽时未变节点复用原引用,避免全量重渲染 */
   const displayNodes = useMemo(() => {
     // 构建折叠 POD 内设备节点 ID 集合
     const collapsedNodeIds = new Set<string>()
@@ -417,6 +419,11 @@ function TopologyFlowInner() {
       if (n.id.startsWith('pod-group-')) {
         const podid = n.id.replace('pod-group-', '')
         const isCollapsed = collapsedPods.has(podid)
+        const prevData = n.data as unknown as { collapsed?: boolean; onToggleCollapse?: unknown }
+        // 状态未变则复用原对象
+        if (prevData?.collapsed === isCollapsed && prevData?.onToggleCollapse === togglePodCollapse) {
+          return n
+        }
         return {
           ...n,
           data: {
@@ -429,6 +436,7 @@ function TopologyFlowInner() {
 
       // 折叠 POD 内的设备节点：隐藏
       if (collapsedNodeIds.has(n.id)) {
+        if (n.hidden === true) return n
         return { ...n, hidden: true }
       }
 
@@ -437,20 +445,22 @@ function TopologyFlowInner() {
         const matches = n.id.toLowerCase().includes(q) ||
           (n.data?.label as string)?.toLowerCase().includes(q) ||
           (n.data?.nodeType as string)?.toLowerCase().includes(q)
-        if (matches) {
-          return {
-            ...n,
-            hidden: false,
-            style: { ...n.style, opacity: 1, boxShadow: '0 0 0 2px #3b82f6' },
-          }
+        const targetOpacity = matches ? 1 : 0.12
+        const targetBoxShadow = matches ? '0 0 0 2px #3b82f6' : undefined
+        const prevStyle = n.style as { opacity?: number; boxShadow?: string } | undefined
+        if (n.hidden === false && prevStyle?.opacity === targetOpacity && prevStyle?.boxShadow === targetBoxShadow) {
+          return n
         }
-        return {
-          ...n,
-          hidden: false,
-          style: { ...n.style, opacity: 0.12 },
-        }
+        const newStyle: Record<string, unknown> = { ...n.style, opacity: targetOpacity }
+        if (targetBoxShadow) newStyle.boxShadow = targetBoxShadow
+        return { ...n, hidden: false, style: newStyle }
       }
 
+      // 普通节点:清除可能的搜索/折叠残留样式
+      const prevStyle = n.style as { opacity?: number; boxShadow?: string } | undefined
+      if (n.hidden === false && prevStyle?.opacity === undefined && prevStyle?.boxShadow === undefined) {
+        return n
+      }
       return { ...n, hidden: false }
     })
   }, [rfNodes, searchQuery, collapsedPods, togglePodCollapse])
@@ -473,12 +483,16 @@ function TopologyFlowInner() {
     return rfEdges.map((e) => {
       // 折叠 POD 内的边：隐藏
       if (collapsedNodeIds.has(e.source) || collapsedNodeIds.has(e.target)) {
+        if (e.hidden === true) return e
         return { ...e, hidden: true }
       }
       // 搜索时降低所有边的透明度
       if (hasSearch) {
+        const prevStyle = e.style as { opacity?: number } | undefined
+        if (e.hidden === false && prevStyle?.opacity === 0.05) return e
         return { ...e, hidden: false, style: { ...e.style, opacity: 0.05 } }
       }
+      if (e.hidden === false && !(e.style as { opacity?: number } | undefined)?.opacity) return e
       return { ...e, hidden: false }
     })
   }, [rfNodes, rfEdges, searchQuery, collapsedPods])
@@ -534,15 +548,16 @@ function TopologyFlowInner() {
     if (!selectedProjectName) return
     clearLayout(selectedProjectName)
     setHasSavedLayout(false)
-    // 触发重新计算布局 (V2.4.2: 新布局 API 返回 LayoutResult)
-    const { layoutNodes } = computeTopologyLayout(filteredNodes, filteredEdges)
-    const posMap = new Map(layoutNodes.map((p) => [p.id, p]))
-    setRfNodes((prev) => prev.map((n) => {
-      const pos = posMap.get(n.id)
-      return pos ? { ...n, position: { x: pos.x, y: pos.y } } : n
-    }))
+    // v2.7.3-T6: 复用已计算的 layoutResult,避免重复计算(大规模拓扑走 Worker 时尤为重要)
+    if (layoutResult) {
+      const posMap = new Map(layoutResult.layoutNodes.map((p) => [p.id, p]))
+      setRfNodes((prev) => prev.map((n) => {
+        const pos = posMap.get(n.id)
+        return pos ? { ...n, position: { x: pos.x, y: pos.y } } : n
+      }))
+    }
     addToast('success', t('common:toast.layoutReset'))
-  }, [selectedProjectName, filteredNodes, filteredEdges, addToast])
+  }, [selectedProjectName, layoutResult, addToast])
 
   /* ---------- V2.4.4: 根据节点规模动态调整画布缩放范围 ---------- */
   const { minZoom, fitViewPadding } = useMemo(() => {
@@ -740,6 +755,11 @@ function TopologyFlowInner() {
           <button onClick={handleExportPng} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500" title="导出PNG">
             <Download size={14} />
           </button>
+          {layoutComputing && (
+            <span className="flex items-center gap-1 px-2 py-1 text-2xs text-primary-500">
+              <Activity size={12} className="animate-pulse" />计算布局中…
+            </span>
+          )}
         </div>
       </div>
 

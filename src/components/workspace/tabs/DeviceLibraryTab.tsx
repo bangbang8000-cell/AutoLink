@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import clsx from 'clsx'
 import {
   Search, Zap, X, Award, Globe, Hash, Thermometer, Weight,
   Ruler, Cable, History, Tags, Network, Package, Layers,
   Loader2, AlertTriangle, BookOpen, Server,
 } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useDeviceLibraryStore, type DeviceCategoryFilter } from '@/stores/device-library.store'
 import type { LibraryDevice } from '@/types/device-profile'
 import { isServerDevice } from '@/types/device-profile'
@@ -142,24 +143,12 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
               )}
             </div>
 
-            {/* Device list */}
-            <div className="flex-1 overflow-auto">
-              {filteredDevices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Package size={28} className="text-gray-300 dark:text-gray-600 mb-2" />
-                  <p className="text-xs text-gray-400 dark:text-gray-500">暂无匹配设备</p>
-                </div>
-              ) : (
-                filteredDevices.map((device) => (
-                  <DeviceListItem
-                    key={device.id}
-                    device={device}
-                    isSelected={selectedDevice?.id === device.id}
-                    onClick={() => selectDevice(device)}
-                  />
-                ))
-              )}
-            </div>
+            {/* Device list — v2.7.3-T12: 虚拟化(@tanstack/react-virtual),仅渲染可见区域 */}
+            <DeviceList
+              devices={filteredDevices}
+              selectedId={selectedDevice?.id}
+              onSelect={selectDevice}
+            />
           </div>
 
           {/* Right: Device detail */}
@@ -178,6 +167,63 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* -------------------------------------------------- */
+/*  DeviceList (v2.7.3-T12: 虚拟化列表)              */
+/* -------------------------------------------------- */
+function DeviceList({ devices, selectedId, onSelect }: {
+  devices: LibraryDevice[]
+  selectedId?: string
+  onSelect: (device: LibraryDevice) => void
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // v2.7.3-T12: useVirtualizer 仅渲染可见区域,500+ 设备滚动流畅
+  const virtualizer = useVirtualizer({
+    count: devices.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 64, // 估算行高(实际由 measureElement 动态测量)
+    overscan: 8,            // 预渲染上下 8 项,减少滚动闪烁
+  })
+
+  if (devices.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center py-10 text-center">
+        <Package size={28} className="text-gray-300 dark:text-gray-600 mb-2" />
+        <p className="text-xs text-gray-400 dark:text-gray-500">暂无匹配设备</p>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={scrollRef} className="flex-1 overflow-auto">
+      <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+        {virtualizer.getVirtualItems().map((vi) => {
+          const device = devices[vi.index]
+          return (
+            <div
+              key={device.id}
+              data-index={vi.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${vi.start}px)`,
+              }}
+            >
+              <DeviceListItem
+                device={device}
+                isSelected={selectedId === device.id}
+                onClick={() => onSelect(device)}
+              />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -1,20 +1,22 @@
-import { useCallback, useState, useRef, useEffect } from 'react'
+import { useCallback, useState, useRef, useEffect, Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
 import { useToastStore } from '@/stores/toast.store'
-import { WorkbenchTab } from './tabs/WorkbenchTab'
-import { TopologyTab } from './tabs/TopologyTab'
-import { RackTab } from './tabs/RackTab'
-import { OutputTab } from './tabs/OutputTab'
-import { ProjectOverviewTab } from './tabs/ProjectOverviewTab'
-import { DesignTab } from './tabs/DesignTab'
-import { DeviceLibraryTab } from './tabs/DeviceLibraryTab'
-import { FileViewerTab } from './tabs/FileViewerTab'
-import { DataCenterTab } from './tabs/DataCenterTab'
-import { GuideTab } from './tabs/GuideTab'
+
+// v2.7.3-T8: Tab 懒加载,首屏仅加载当前 Tab 代码
+const WorkbenchTab = lazy(() => import('./tabs/WorkbenchTab').then(m => ({ default: m.WorkbenchTab })))
+const TopologyTab = lazy(() => import('./tabs/TopologyTab').then(m => ({ default: m.TopologyTab })))
+const RackTab = lazy(() => import('./tabs/RackTab').then(m => ({ default: m.RackTab })))
+const OutputTab = lazy(() => import('./tabs/OutputTab').then(m => ({ default: m.OutputTab })))
+const ProjectOverviewTab = lazy(() => import('./tabs/ProjectOverviewTab').then(m => ({ default: m.ProjectOverviewTab })))
+const DesignTab = lazy(() => import('./tabs/DesignTab').then(m => ({ default: m.DesignTab })))
+const DeviceLibraryTab = lazy(() => import('./tabs/DeviceLibraryTab').then(m => ({ default: m.DeviceLibraryTab })))
+const FileViewerTab = lazy(() => import('./tabs/FileViewerTab').then(m => ({ default: m.FileViewerTab })))
+const DataCenterTab = lazy(() => import('./tabs/DataCenterTab').then(m => ({ default: m.DataCenterTab })))
+const GuideTab = lazy(() => import('./tabs/GuideTab').then(m => ({ default: m.GuideTab })))
 
 const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
   workbench: LayoutDashboard,
@@ -178,7 +180,11 @@ export function WorkspaceView() {
       {/* Tab Content */}
       <div className="flex-1 overflow-auto bg-white dark:bg-app-elevated">
         {activeTab ? (
-          <div className="h-full">{renderTabContent()}</div>
+          <div className="h-full">
+            <Suspense fallback={<div className="h-full flex items-center justify-center text-xs text-gray-400 dark:text-gray-500">...</div>}>
+              {renderTabContent()}
+            </Suspense>
+          </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-app-elevated">
             <Monitor size={48} className="text-gray-300 dark:text-gray-600 mb-4" />

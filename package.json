@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -35,6 +35,7 @@
     "test:all": "npm run test && npm run test:backend"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.9",
     "@xyflow/react": "^12.11.2",
     "adm-zip": "^0.6.0",
     "archiver": "^8.0.0",

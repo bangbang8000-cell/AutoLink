@@ -79,17 +79,16 @@ export default {
           800: '#6b21a8',
           900: '#581c87',
         },
-        // v2.6.8: 暗色模式语义色阶
+        // v2.7.3-T5: 语义色阶 (CSS 变量驱动,亮暗自动适配)
         app: {
-          DEFAULT: '#0D1117',
-          surface: '#161B22',
-          elevated: '#1C2333',
-          hover: '#252D3A',
+          DEFAULT: 'rgb(var(--app-bg) / <alpha-value>)',
+          surface: 'rgb(var(--app-surface) / <alpha-value>)',
+          elevated: 'rgb(var(--app-elevated) / <alpha-value>)',
+          hover: 'rgb(var(--app-hover) / <alpha-value>)',
         },
-        // v2.6.8: 暗色模式边框色阶
         edge: {
-          subtle: '#30363D',
-          DEFAULT: '#484F58',
+          subtle: 'rgb(var(--edge-subtle) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--edge-default) / <alpha-value>)',
         },
       },
       borderRadius: {

@@ -6,6 +6,23 @@
 /* U4: 移除未使用的 CSS 变量(--color-surface 等组件代码 0 引用),仅保留字号调节用变量 */
 :root {
   --font-size-base: 14px;
+  /* v2.7.3-T5: 亮色语义色阶 (RGB 通道值,供 Tailwind alpha-value 使用) */
+  --app-bg: 255 255 255;
+  --app-surface: 249 250 251;
+  --app-elevated: 255 255 255;
+  --app-hover: 243 244 246;
+  --edge-subtle: 229 231 235;
+  --edge-default: 209 213 219;
+}
+
+/* v2.7.3-T5: 暗色语义色阶 */
+.dark {
+  --app-bg: 13 17 23;
+  --app-surface: 22 27 34;
+  --app-elevated: 28 35 51;
+  --app-hover: 37 45 58;
+  --edge-subtle: 48 54 61;
+  --edge-default: 72 79 88;
 }
 
 /* ---- Base ---- */
@@ -52,6 +69,13 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* v2.7.3-T11: 用户关闭动画效果时禁用所有动画/过渡(覆盖 prefers-reduced-motion) */
+.motion-off *, .motion-off *::before, .motion-off *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* ---- v2.6.8: Dropdown animations ---- */

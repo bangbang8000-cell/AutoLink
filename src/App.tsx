@@ -5,6 +5,7 @@ import { useProjectStore } from '@/stores/project.store'
 import { ProjectProvider } from '@/stores/ProjectContext'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useDesignStore } from '@/stores/design.store'
 import { Header } from '@/components/layout/Header'
 import { ActivityBar } from '@/components/layout/ActivityBar'
 import { StatusBar } from '@/components/layout/StatusBar'
@@ -13,6 +14,7 @@ import { ToastContainer } from '@/components/layout/ToastContainer'
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary'
 import { LogPanel } from '@/components/layout/LogPanel'
 import { FileExplorer } from '@/components/layout/FileExplorer'
+import { ShortcutsDialog } from '@/components/layout/ShortcutsDialog'
 import { WorkspaceView } from '@/components/workspace/WorkspaceView'
 import { WorkspaceErrorBoundary } from '@/components/workspace/WorkspaceErrorBoundary'
 import { ServerProfileForm } from '@/components/device/ServerProfileForm'
@@ -20,6 +22,7 @@ import { SwitchProfileForm } from '@/components/device/SwitchProfileForm'
 import { DeviceImportModal } from '@/components/device/DeviceImportModal'
 import { DeviceExportModal } from '@/components/device/DeviceExportModal'
 import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
+import { matchShortcut } from '@/utils/shortcuts'
 import i18n from '@/i18n'
 
 /** Map activity types to workspace tab config */
@@ -52,6 +55,10 @@ export default function App() {
   const reopenLastClosed = useWorkspaceStore((s) => s.reopenLastClosed)
   const showCreateProjectWizard = useUIStore((s) => s.showCreateProjectWizard)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
+  const showShortcutsDialog = useUIStore((s) => s.showShortcutsDialog)
+  const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
+  // v2.7.3-T1: Ctrl+S 保存配置
+  const saveConfig = useDesignStore((s) => s.saveConfig)
 
   // Apply dark mode to HTML element
   useEffect(() => {
@@ -59,6 +66,22 @@ export default function App() {
     if (isDark) root.classList.add('dark')
     else root.classList.remove('dark')
   }, [isDark])
+
+  // v2.7.3-T11: 应用外观设置(fontSize/animations) — 启动时从 localStorage 读取并应用
+  // 避免哑设置项:设置面板的控件必须有实际效果
+  useEffect(() => {
+    const root = document.documentElement
+    try {
+      const fontSize = JSON.parse(localStorage.getItem('autolink-font-size') || '14')
+      if (typeof fontSize === 'number' && fontSize > 0) {
+        root.style.setProperty('--font-size-base', `${fontSize}px`)
+      }
+    } catch { /* ignore */ }
+    try {
+      const animations = JSON.parse(localStorage.getItem('autolink-animations') || 'true')
+      root.classList.toggle('motion-off', !animations)
+    } catch { /* ignore */ }
+  }, [])
 
   // v2.6.8: 根据持久化的 theme 初始化 isDark (isDark 不会被 persist, 需在挂载时计算)
   useEffect(() => {
@@ -137,50 +160,39 @@ export default function App() {
     }
   }, [openTab, setActiveActivity, selectedProjectName, t])
 
-  // Keyboard shortcuts
+  // v2.7.3-T1: 统一快捷键派发(从 shortcuts.ts 映射表驱动)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const ctrl = e.ctrlKey || e.metaKey
-      const shift = e.shiftKey
+      // 输入框内不拦截(除 Ctrl+S/Ctrl+,等全局快捷键)
+      const target = e.target as HTMLElement
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
-      if (ctrl && shift) {
-        switch (e.key.toLowerCase()) {
-          case 'e': e.preventDefault(); setActiveActivity('project'); break
-          case 'd': e.preventDefault(); handleActivityClick('design'); break
-          case 'w': e.preventDefault(); handleActivityClick('workbench'); break
-          case 'v': e.preventDefault(); handleActivityClick('visualization'); break
-          case 'l': e.preventDefault(); handleActivityClick('device_library'); break
-        }
-      }
-      if (ctrl && e.key === ',') {
-        e.preventDefault(); setActiveActivity('settings')
-      }
-      if (ctrl && e.key.toLowerCase() === 's') {
-        e.preventDefault(); handleActivityClick('design')
-      }
-      if (ctrl && e.key.toLowerCase() === 'b') {
-        e.preventDefault(); toggleSidebar()
-      }
-      // Ctrl+N: 新建项目（不与 Ctrl+Shift+* 冲突）
-      if (ctrl && !shift && e.key.toLowerCase() === 'n') {
-        e.preventDefault(); setShowCreateProjectWizard(true)
-      }
-      if (ctrl && e.key.toLowerCase() === 'j') {
-        e.preventDefault(); togglePanel()
-      }
-      // Workspace tab shortcuts
-      if (ctrl && e.key.toLowerCase() === 'w' && !shift) {
-        e.preventDefault()
-        if (activeTabId) closeTab(activeTabId)
-      }
-      if (ctrl && shift && e.key.toLowerCase() === 't') {
-        e.preventDefault()
-        reopenLastClosed()
+      const def = matchShortcut(e)
+      if (!def) return
+      // 输入框内仅允许 Ctrl+S/Ctrl+,/Ctrl+K
+      if (isInput && !['saveConfig', 'preferences', 'showShortcuts'].includes(def.action)) return
+      e.preventDefault()
+      switch (def.action) {
+        case 'newProject': setShowCreateProjectWizard(true); break
+        case 'saveConfig':
+          if (selectedProjectName) saveConfig(selectedProjectName)
+          break
+        case 'preferences': setActiveActivity('settings'); break
+        case 'toggleSidebar': toggleSidebar(); break
+        case 'togglePanel': togglePanel(); break
+        case 'view-project': setActiveActivity('project'); break
+        case 'view-design': handleActivityClick('design'); break
+        case 'view-workbench': handleActivityClick('workbench'); break
+        case 'view-visualization': handleActivityClick('visualization'); break
+        case 'view-deviceLibrary': handleActivityClick('device_library'); break
+        case 'closeTab': if (activeTabId) closeTab(activeTabId); break
+        case 'reopenTab': reopenLastClosed(); break
+        case 'showShortcuts': setShowShortcutsDialog(true); break
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, activeTabId, closeTab, reopenLastClosed])
+  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, activeTabId, closeTab, reopenLastClosed, setShowCreateProjectWizard, setShowShortcutsDialog, saveConfig, selectedProjectName])
 
   const renderSidebarContent = useCallback(() => {
     return <ErrorBoundary key={activeActivity}><FileExplorer /></ErrorBoundary>
@@ -212,6 +224,7 @@ export default function App() {
       </div>
       <StatusBar />
       <ToastContainer />
+      {showShortcutsDialog && <ShortcutsDialog onClose={() => setShowShortcutsDialog(false)} />}
       <ServerProfileForm />
       <SwitchProfileForm />
       <DeviceImportModal />

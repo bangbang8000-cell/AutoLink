@@ -47,9 +47,11 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
     }
   }, [onClose])
 
-  // 边界检测:防止菜单超出视窗
-  const adjustedX = x
-  const adjustedY = y
+  // v2.7.3-T3: 边界检测,防止菜单超出视窗
+  const menuWidth = 200
+  const menuHeight = items.length * 32
+  const adjustedX = Math.min(x, window.innerWidth - menuWidth - 8)
+  const adjustedY = Math.min(y, window.innerHeight - menuHeight - 8)
 
   return (
     <>

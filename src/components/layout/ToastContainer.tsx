@@ -19,6 +19,8 @@ const bgMap = {
 function ToastItem({ toast }: { toast: Toast }) {
   const [entering, setEntering] = useState(true)
   const removeToast = useToastStore((s) => s.removeToast)
+  const pauseToast = useToastStore((s) => s.pauseToast)
+  const resumeToast = useToastStore((s) => s.resumeToast)
 
   useEffect(() => {
     const t = setTimeout(() => setEntering(false), 20)
@@ -27,6 +29,8 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   return (
     <div
+      onMouseEnter={() => pauseToast(toast.id)}
+      onMouseLeave={() => resumeToast(toast.id)}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border shadow-lg text-xs
         transition-all duration-300 ${entering ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
         ${bgMap[toast.type]} text-gray-700 dark:text-gray-200 min-w-[260px] max-w-[360px]`}
@@ -46,7 +50,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed top-10 right-4 z-[9999] flex flex-col gap-1.5 pointer-events-none">
+    <div className="fixed top-14 right-4 z-[9999] flex flex-col gap-1.5 pointer-events-none">
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
           <ToastItem toast={t} />

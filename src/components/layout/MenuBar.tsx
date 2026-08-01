@@ -2,13 +2,13 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { useUIStore } from '@/stores/ui.store'
-import { Modal } from '@/components/ui/Modal'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { AboutDialog } from './AboutDialog'
+import { ShortcutsDialog } from './ShortcutsDialog'
 
 interface MenuItem {
   label?: string
@@ -319,73 +319,5 @@ export function MenuBar() {
         <ShortcutsDialog onClose={() => setShowShortcutsDialog(false)} />
       )}
     </div>
-  )
-}
-
-/* ---------- V2.4.4: 快捷键参考对话框 ---------- */
-
-// P3: ShortcutsDialog i18n 化(由组件内部 useTranslation 驱动)
-function ShortcutsDialog({ onClose }: { onClose: () => void }) {
-  const { t } = useTranslation('common')
-  const SHORTCUTS: { category: string; items: { keys: string; desc: string }[] }[] = [
-    {
-      category: t('menu.shortcuts.general'),
-      items: [
-        { keys: 'Ctrl+N', desc: t('menu.shortcuts.newProject') },
-        { keys: 'Ctrl+S', desc: t('menu.shortcuts.saveConfig') },
-        { keys: 'Ctrl+,', desc: t('menu.shortcuts.preferences') },
-      ],
-    },
-    {
-      category: t('menu.shortcuts.view'),
-      items: [
-        { keys: 'Ctrl+B', desc: t('menu.shortcuts.toggleFileBrowser') },
-        { keys: 'Ctrl+J', desc: t('menu.shortcuts.toggleLogPanel') },
-        { keys: 'Ctrl+=', desc: t('menu.shortcuts.zoomIn') },
-        { keys: 'Ctrl+-', desc: t('menu.shortcuts.zoomOut') },
-        { keys: 'F11', desc: t('menu.shortcuts.fullscreen') },
-      ],
-    },
-    {
-      category: t('menu.shortcuts.workspace'),
-      items: [
-        { keys: 'Ctrl+Shift+E', desc: t('menu.shortcuts.designView') },
-        { keys: 'Ctrl+Shift+D', desc: t('menu.shortcuts.deviceView') },
-        { keys: 'Ctrl+Shift+W', desc: t('menu.shortcuts.wiringView') },
-        { keys: 'Ctrl+Shift+V', desc: t('menu.shortcuts.visualizationView') },
-        { keys: 'Ctrl+K', desc: t('menu.shortcuts.shortcutsRef') },
-      ],
-    },
-  ]
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={t('menu.shortcuts.title')}
-      width={520}
-      maxHeight="80vh"
-      closeOnEsc
-      closeOnOverlay
-      bodyClassName="p-4 space-y-4"
-    >
-      {SHORTCUTS.map((group) => (
-        <div key={group.category}>
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
-            {group.category}
-          </h3>
-          <div className="space-y-1">
-            {group.items.map((item) => (
-              <div key={item.keys} className="flex items-center justify-between py-1">
-                <span className="text-xs text-gray-600 dark:text-gray-300">{item.desc}</span>
-                <kbd className="text-2xs font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
-                  {item.keys}
-                </kbd>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </Modal>
   )
 }
