@@ -309,6 +309,43 @@ export function DesignTab() {
             </div>
           </FormSection>
 
+          {/* V2.7.2: 高级配置 — Rail-Optimized 模式与协议 */}
+          <FormSection title="高级配置" icon={<Network size={13} />} defaultOpen={config.rail_mode === 'rail_optimized'}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <SelectInput
+                label="Rail 模式"
+                value={config.rail_mode}
+                onChange={(v) => updateConfig({ rail_mode: v as 'standard' | 'rail_optimized' })}
+                options={[
+                  { value: 'standard', label: 'Standard (Fat-Tree)' },
+                  { value: 'rail_optimized', label: 'Rail-Optimized (SuperPOD)' },
+                ]}
+              />
+              {config.rail_mode === 'rail_optimized' && (
+                <NumberInput
+                  label="Rail 数量"
+                  value={config.rail_count}
+                  onChange={(v) => updateConfig({ rail_count: v })}
+                  min={2} max={16} step={1}
+                />
+              )}
+              <SelectInput
+                label="参数网协议"
+                value={config.param_protocol}
+                onChange={(v) => updateConfig({ param_protocol: v as 'IB' | 'RoCE' })}
+                options={[
+                  { value: 'RoCE', label: 'RoCE (以太网)' },
+                  { value: 'IB', label: 'InfiniBand' },
+                ]}
+              />
+            </div>
+            {config.rail_mode === 'rail_optimized' && (
+              <p className="text-2xs text-gray-400 dark:text-gray-500">
+                Rail-Optimized 模式采用 NVIDIA SuperPOD 8-Rail 架构,服务器交错分配到各 Rail,单 Rail 故障不影响整体可用性。
+              </p>
+            )}
+          </FormSection>
+
           {/* Custom downlink limits */}
           {config.downlink_mode === 'custom' && (
             <FormSection title={t('design:downlinkConfig')} icon={<Network size={13} />}>

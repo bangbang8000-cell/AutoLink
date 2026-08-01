@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## [2.7.2] - 2026-08-02
+
+### 算法可用性
+
+v2.7.2 让 validation 引擎与 Rail-Optimized 算法真正生效,统一配置格式,完成 12 项任务。
+
+#### 校验引擎接入 (T1-T3)
+- **T1**: `validation.py` 接入 `engine.handle_design`,替换简化版校验为 10 条规则结构化校验 (V001-V010)
+- **T2**: 修复 V004/V005/V009 字段映射,与 engine.py 的 edge schema 对齐 (`a_port_type` → `speed`, `network_type` 改为英文枚举)
+- **T3**: 前端 `ValidationPanel.tsx` 重写,按规则 ID 分组展示,支持折叠/展开,错误优先
+
+#### Rail-Optimized 拓扑修复 (T4-T5)
+- **T4**: 修复 `rail_topology.py` 连接生成,光模块型号 (`a_module`/`z_module`) 使用 `network_speed` 变量,端口名改用计数器
+- **T5**: 服务器分配改为交错模式 (`idx % rail_count`),符合 NVIDIA SuperPOD 规范,单 Rail 故障不集中
+
+#### 配置统一与持久化 (T6-T7)
+- **T6**: `design:generate` 改为合并更新 `project_config.json`,保留 `rail_mode`/`param_protocol` 等扩展字段
+- **T7**: `DesignConfig` 接口补充 `rail_mode`/`rail_count`/`param_protocol` 字段,DesignTab UI 增加配置控件
+
+#### 设备选型与网络增强 (T8-T9)
+- **T8**: `designer.py` 根据 `param_protocol` (IB/RoCE) 自动选择参数网交换机 (IB→NVIDIA Quantum, RoCE→H3C S9820)
+- **T9**: 存储网放开 3-tier 限制,根据服务器数量自动判断是否升级为 3-tier 拓扑
+
+#### 项目迁移与端口适配 (T10-T12)
+- **T10**: 项目加载时自动检测 V2.0 INI 格式并迁移为 V2.1 JSON 格式
+- **T11**: OOB/业务网下联口数从设备档案 `port_count` 读取,覆盖硬编码 48/32
+- **T12**: 业务网框式阈值参数化,`biz_chassis_threshold`/`biz_chassis_frames_map` 可配置,移除硬编码 128/512/1024 → 4/8/18
+
+#### Bug 修复(回归测试发现)
+- 修复 INI 模式缺少 `biz_chassis_threshold` 属性导致 33 个测试失败
+- 修复 `LibraryDevice` 无 `port_prefix` 属性问题 (改用 `name_prefix`)
+- 补充缺失的 `_calc_biz_chassis_frames` 方法
+
+#### 测试统计
+- 前端:304 passed (15 files)
+- 后端:398 passed
+- TypeScript:0 errors
+- ESLint:0 errors (78 warnings)
+
+---
+
 ## [2.7.1] - 2026-08-01
 
 ### 质量基线

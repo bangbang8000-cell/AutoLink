@@ -141,45 +141,96 @@ def _rule_pue_target(ctx: ValidationContext) -> List[ValidationIssue]:
     return issues
 
 
+def _parse_speed_gbps(speed_str: str) -> float:
+    """从速率字符串解析 Gbps 数值,如 '400G' -> 400.0"""
+    if not speed_str:
+        return 0.0
+    s = str(speed_str).strip().upper()
+    for unit, factor in (('GB', 1.0), ('G', 1.0), ('TB', 1000.0), ('T', 1000.0)):
+        if s.endswith(unit):
+            try:
+                return float(s[:-len(unit)]) * factor
+            except ValueError:
+                break
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
 def _rule_port_type_match(ctx: ValidationContext) -> List[ValidationIssue]:
-    """V004: 端口类型匹配校验"""
+    """V004: 端口类型匹配校验
+
+    v2.7.2: 字段映射与 engine.py edges schema 对齐
+      - 原 a_port_type/z_port_type → a_speed/z_speed (光模块速率决定端口规格)
+      - 若两端光模块速率不一致,视为端口规格不匹配
+    """
     issues = []
-    port_type_map = {
-        "QSFP56": "QSFP56", "QSFP-DD": "QSFP-DD", "OSFP": "OSFP", "OSFP-XD": "OSFP-XD",
-        "SFP28": "SFP28", "SFP56": "SFP56", "RJ45": "RJ45",
-    }
     for conn in ctx.connections:
-        a_port = conn.get("a_port_type", "")
-        z_port = conn.get("z_port_type", "")
-        if a_port and z_port and a_port != z_port:
-            a_normalized = port_type_map.get(a_port, a_port)
-            z_normalized = port_type_map.get(z_port, z_port)
-            if a_normalized != z_normalized:
-                issues.append(ValidationIssue(
-                    rule_id="V004",
-                    severity=Severity.ERROR,
-                    category="兼容性规则",
-                    message=f"连接 {conn.get('name', '')} 端口类型不匹配: {a_port} vs {z_port}",
-                    affected_items=[conn.get("name", "")],
-                    recommendation="使用匹配的端口类型或添加转接模块",
-                ))
+        a_speed = conn.get("a_speed", "") or conn.get("speed", "")
+        z_speed = conn.get("z_speed", "") or conn.get("speed", "")
+        if a_speed and z_speed and a_speed != z_speed:
+            conn_name = conn.get("name", "") or f"{conn.get('source', '')}->{conn.get('target', '')}"
+            issues.append(ValidationIssue(
+                rule_id="V004",
+                severity=Severity.ERROR,
+                category="兼容性规则",
+                message=f"连接 {conn_name} 端口规格不匹配: {a_speed} vs {z_speed}",
+                affected_items=[conn_name],
+                recommendation="使用相同速率的光模块或添加降速协商配置",
+            ))
     return issues
 
 
 def _rule_speed_match(ctx: ValidationContext) -> List[ValidationIssue]:
-    """V005: 速率匹配校验"""
+    """V005: 速率匹配校验
+
+    v2.7.2: 字段映射与 engine.py edges schema 对齐
+      - 原 a_speed/z_speed 两端比较 → 改为校验连接速率与网络类型是否匹配
+      - param 网络: 应 ≥ 100G
+      - storage 网络: 应 ≥ 25G
+      - biz 网络: 应 ≥ 1G
+      - oob 网络: 应 ≤ 10G
+    """
     issues = []
+    speed_limits = {
+        "param": (100.0, None),      # 参数网最低 100G
+        "storage": (25.0, None),     # 存储网最低 25G
+        "biz": (1.0, None),          # 业务网最低 1G
+        "oob": (None, 10.0),         # OOB 网最高 10G
+    }
     for conn in ctx.connections:
-        a_speed = conn.get("a_speed", "")
-        z_speed = conn.get("z_speed", "")
-        if a_speed and z_speed and a_speed != z_speed:
+        net_type = conn.get("network_type", "") or conn.get("networkType", "")
+        if not net_type:
+            continue
+        speed_str = conn.get("a_speed", "") or conn.get("speed", "")
+        if not speed_str:
+            continue
+        speed_gbps = _parse_speed_gbps(speed_str)
+        if speed_gbps <= 0:
+            continue
+        limits = speed_limits.get(net_type)
+        if not limits:
+            continue
+        min_speed, max_speed = limits
+        conn_name = conn.get("name", "") or f"{conn.get('source', '')}->{conn.get('target', '')}"
+        if min_speed and speed_gbps < min_speed:
             issues.append(ValidationIssue(
                 rule_id="V005",
                 severity=Severity.WARNING,
                 category="兼容性规则",
-                message=f"连接 {conn.get('name', '')} 速率不匹配: {a_speed} vs {z_speed}",
-                affected_items=[conn.get("name", "")],
-                recommendation="确保两端速率一致或配置降速协商",
+                message=f"连接 {conn_name} 速率 {speed_str} 低于 {net_type} 网络最低要求 {int(min_speed)}G",
+                affected_items=[conn_name],
+                recommendation=f"{net_type} 网络应使用 ≥ {int(min_speed)}G 速率",
+            ))
+        elif max_speed and speed_gbps > max_speed:
+            issues.append(ValidationIssue(
+                rule_id="V005",
+                severity=Severity.WARNING,
+                category="兼容性规则",
+                message=f"连接 {conn_name} 速率 {speed_str} 超过 {net_type} 网络常规上限 {int(max_speed)}G",
+                affected_items=[conn_name],
+                recommendation=f"{net_type} 网络通常使用 ≤ {int(max_speed)}G 速率",
             ))
     return issues
 
@@ -214,12 +265,19 @@ def _rule_u_position_conflict(ctx: ValidationContext) -> List[ValidationIssue]:
 
 
 def _rule_rail_consistency(ctx: ValidationContext) -> List[ValidationIssue]:
-    """V007: Rail-Optimized 一致性校验"""
+    """V007: Rail-Optimized 一致性校验
+
+    v2.7.2: 同时支持两种字段格式
+      - rail_mode == 'rail_optimized' (designer.py 实际字段)
+      - rail_optimized == True (旧格式/测试用)
+    """
     issues = []
     config = ctx.config
-    if config.get("rail_optimized"):
-        num_rails = config.get("num_rails", 8)
-        ports_per_server = config.get("ports_per_server", 8)
+    rail_mode = config.get("rail_mode", "")
+    is_rail_optimized = (rail_mode == "rail_optimized") or (config.get("rail_optimized") is True)
+    if is_rail_optimized:
+        num_rails = config.get("num_rails", 8) or config.get("rail_count", 8)
+        ports_per_server = config.get("ports_per_server", 8) or config.get("param_ports_per_server", 8)
         if ports_per_server != num_rails:
             issues.append(ValidationIssue(
                 rule_id="V007",
@@ -251,15 +309,25 @@ def _rule_oob_reachability(ctx: ValidationContext) -> List[ValidationIssue]:
 
 
 def _rule_storage_redundancy(ctx: ValidationContext) -> List[ValidationIssue]:
-    """V009: 存储网冗余路径校验"""
+    """V009: 存储网冗余路径校验
+
+    v2.7.2: 字段映射与 engine.py edges schema 对齐
+      - 原 cable_type 含"存储" → 改为检查 network_type == 'storage' (英文枚举)
+      - 原 a_end_name → 改为 source (与 edges schema 一致)
+    """
     issues = []
-    storage_conns = [c for c in ctx.connections if "存储" in c.get("cable_type", "")]
+    storage_conns = [c for c in ctx.connections
+                     if c.get("network_type", "") == "storage"
+                     or c.get("networkType", "") == "storage"]
     storage_servers = set()
     for c in storage_conns:
-        if c.get("a_end_name", "").startswith("Server"):
-            storage_servers.add(c["a_end_name"])
+        # 服务器侧端点(source 优先,fallback 到 a_end_name)
+        src = c.get("source", "") or c.get("a_end_name", "")
+        if src.startswith("Server") or src.startswith("GPU服务器") or src.startswith("存储服务器") or src.startswith("通算服务器"):
+            storage_servers.add(src)
     for server in storage_servers:
-        server_conns = [c for c in storage_conns if c.get("a_end_name") == server]
+        server_conns = [c for c in storage_conns
+                        if (c.get("source", "") or c.get("a_end_name", "")) == server]
         if len(server_conns) < 2:
             issues.append(ValidationIssue(
                 rule_id="V009",

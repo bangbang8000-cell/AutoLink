@@ -22,6 +22,7 @@ from estimation import (
     estimate_pue, calc_convergence_ratio, estimate_cabinet_power_density,
     PUEInput,
 )
+from validation import create_default_engine, ValidationContext, Severity
 import pandas as pd
 
 
@@ -204,6 +205,8 @@ def handle_design(params):
         # V2.4.6: Rail-Optimized 模式
         "railMode": getattr(designer, 'rail_mode', 'standard'),
         "railCount": getattr(designer, 'rail_count', 8),
+        # V2.7.2: 参数网协议
+        "paramProtocol": getattr(designer, 'param_protocol', 'RoCE'),
     }
 
     # Build topology data for visualization
@@ -280,9 +283,12 @@ def handle_design(params):
                 "source": conn.a_device,
                 "target": conn.z_device,
                 "speed": conn.a_module,
+                "aSpeed": conn.a_module,   # v2.7.2: 供 V004 端口规格匹配校验
+                "zSpeed": conn.z_module,   # v2.7.2: 供 V004 端口规格匹配校验
                 "cableType": conn.cable_type,
                 "description": conn.description,
                 "networkType": conn.network_type,
+                "network_type": conn.network_type,  # v2.7.2: 供 V005/V009 校验读取
                 "aCabinetId": conn.a_cabinet_id,
                 "aCabinetName": conn.a_cabinet_name,
                 "aStartU": conn.a_start_u,
@@ -293,10 +299,102 @@ def handle_design(params):
                 "zEndU": conn.z_end_u,
             })
 
+    # V2.7.2: 接入 validation.py 规则校验引擎(10 条规则结构化校验)
     validate_result = designer.validate_topology()
 
-    # V2.4.6: 结构化校验问题列表
-    validation_issues = [
+    # V2.7.2: 构造 ValidationContext,传入 validation.py 引擎
+    # 1. 收集机柜信息(含设备 U 位用于 V006)
+    cabinet_map = {}
+    for server in designer.servers:
+        if server.cabinet_id is None:
+            continue
+        cid = server.cabinet_id
+        if cid not in cabinet_map:
+            cabinet_map[cid] = {
+                "name": server.cabinet_name or f"机柜{cid}",
+                "power_watts": 0,
+                "cooling_method": getattr(designer, '_default_cooling_method', 'air'),
+                "items": [],
+            }
+        cabinet_map[cid]["power_watts"] += server.power_watts or 0
+        cabinet_map[cid]["items"].append({
+            "device_name": server.name,
+            "start_u": server.start_u or 0,
+            "end_u": server.end_u or 0,
+        })
+
+    cabinets_ctx = []
+    for cid, info in cabinet_map.items():
+        # V002: 机柜功率密度校验(每机柜一条记录)
+        cabinets_ctx.append({
+            "name": info["name"],
+            "power_watts": info["power_watts"],
+            "cooling_method": info["cooling_method"],
+        })
+        # V006: U 位冲突校验(每个设备一条记录)
+        for item in info["items"]:
+            cabinets_ctx.append({
+                "name": info["name"],
+                "device_name": item["device_name"],
+                "start_u": item["start_u"],
+                "end_u": item["end_u"],
+            })
+
+    # 2. 收集交换机信息(含 network_type 用于 V008)
+    switches_ctx = []
+    for sw in all_switches:
+        # 推断交换机所属网络类型
+        if sw.obj_type.startswith('param'):
+            net_type = 'param'
+        elif sw.obj_type.startswith('storage'):
+            net_type = 'storage'
+        elif sw.obj_type.startswith('oob'):
+            net_type = 'oob'
+        elif sw.obj_type.startswith('biz'):
+            net_type = 'biz'
+        else:
+            net_type = ''
+        switches_ctx.append({
+            "name": sw.name,
+            "obj_type": sw.obj_type,
+            "network_type": net_type,
+            "max_ports": sw.max_ports,
+        })
+
+    # 3. 构造 config 字典(用于 V007 Rail 一致性校验)
+    config_ctx = {
+        "rail_mode": getattr(designer, 'rail_mode', 'standard'),
+        "rail_count": getattr(designer, 'rail_count', 8),
+        "num_rails": getattr(designer, 'rail_count', 8),
+        "param_ports_per_server": getattr(designer, 'param_ports_per_server', 8),
+        "ports_per_server": getattr(designer, 'param_ports_per_server', 8),
+        "oob_enabled": getattr(designer, 'oob_enabled', True),
+    }
+
+    # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
+    try:
+        estimation = _estimate_design(designer)
+    except Exception as e:
+        estimation = {"error": f"估算失败: {e}"}
+
+    pue_result_ctx = estimation.get("pue") if isinstance(estimation, dict) else None
+    convergence_results_ctx = estimation.get("convergence", {}) if isinstance(estimation, dict) else {}
+
+    # 5. 调用 validation 引擎
+    validation_engine = create_default_engine()
+    val_ctx = ValidationContext(
+        servers=[{"name": s.name, "cabinet_id": s.cabinet_id} for s in designer.servers],
+        switches=switches_ctx,
+        connections=edges,
+        cabinets=cabinets_ctx,
+        config=config_ctx,
+        pue_result=pue_result_ctx,
+        convergence_results=convergence_results_ctx,
+    )
+    rule_issues = validation_engine.validate(val_ctx)
+
+    # V2.4.6: 旧版端口溢出校验结果(保留作为补充)
+    port_overflow_issues = [
         {
             "rule_id": "PORT_OVERFLOW" if "端口溢出" in e else "CONN_COUNT",
             "severity": "error",
@@ -308,19 +406,30 @@ def handle_design(params):
         for e in validate_result.get("errors", [])
     ]
 
+    # V2.7.2: 合并 validation 引擎结果 + 旧版端口溢出结果
+    validation_issues = port_overflow_issues + [
+        {
+            "rule_id": issue.rule_id,
+            "severity": issue.severity.value,
+            "category": issue.category,
+            "message": issue.message,
+            "affected_items": issue.affected_items,
+            "recommendation": issue.recommendation,
+        }
+        for issue in rule_issues
+    ]
+
+    # valid 字段:旧版端口溢出校验 + 新版规则校验均无 ERROR 才为 True
+    has_error = any(i["severity"] == "error" for i in validation_issues)
+    is_valid = validate_result["valid"] and not has_error
+
     # 功率评估 (V2.1新增)
     power_data = _calculate_power_summary(designer)
-
-    # V2.4: PUE/收敛比/机柜功率密度估算
-    try:
-        estimation = _estimate_design(designer)
-    except Exception as e:
-        estimation = {"error": f"估算失败: {e}"}
 
     return {
         "summary": summary,
         "topology": {"nodes": nodes, "edges": edges},
-        "valid": validate_result["valid"],
+        "valid": is_valid,
         "validationIssues": validation_issues,
         "powerData": power_data,
         "estimation": estimation,
@@ -398,6 +507,30 @@ def handle_validate(params):
     designer = NetworkDesignerV2(config_file)
     result = designer.validate_topology()
     return {"valid": result["valid"]}
+
+
+def handle_migrate(params):
+    """V2.7.2-T10: 迁移 V2.0 INI 项目为 V2.1 JSON 格式
+
+    参数:
+        projectDir: 项目目录绝对路径
+    返回:
+        {migrated: bool, jsonPath: str | None, warnings: [str]}
+    """
+    from migration import migrate_project, needs_migration
+    project_dir = params.get('projectDir', '')
+    if not project_dir or not os.path.isdir(project_dir):
+        return {"migrated": False, "warnings": ["项目目录无效"]}
+
+    if not needs_migration(project_dir):
+        return {"migrated": False, "warnings": []}
+
+    json_path, warnings = migrate_project(project_dir)
+    return {
+        "migrated": json_path is not None,
+        "jsonPath": json_path,
+        "warnings": warnings or [],
+    }
 
 
 def handle_export(params):
@@ -486,6 +619,7 @@ def main():
             'export': handle_export,
             'estimate': handle_estimate,
             'report': handle_report,
+            'migrate': handle_migrate,
         }
 
         handler = actions.get(action)

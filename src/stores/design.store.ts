@@ -20,6 +20,12 @@ export interface DesignConfig {
   oob_downlink_limit: number
   oob_enabled: boolean
   biz_enabled: boolean
+  /** V2.7.2: Rail-Optimized 模式 (standard | rail_optimized) */
+  rail_mode: 'standard' | 'rail_optimized'
+  /** V2.7.2: Rail 数量 (NVIDIA 标准 8) */
+  rail_count: number
+  /** V2.7.2: 参数网协议 (IB | RoCE),用于设备选型 */
+  param_protocol: 'IB' | 'RoCE'
 }
 
 export interface DesignSummary {
@@ -145,6 +151,9 @@ export const defaultDesignConfig: DesignConfig = {
   oob_downlink_limit: 25,
   oob_enabled: true,
   biz_enabled: true,
+  rail_mode: 'standard',
+  rail_count: 8,
+  param_protocol: 'RoCE',
 }
 
 /* ---------- helpers ---------- */
@@ -166,6 +175,9 @@ param_downlink_limit = ${config.param_downlink_limit}
 storage_downlink_limit = ${config.storage_downlink_limit}
 biz_downlink_limit = ${config.biz_downlink_limit}
 oob_downlink_limit = ${config.oob_downlink_limit}
+rail_mode = ${config.rail_mode}
+rail_count = ${config.rail_count}
+param_protocol = ${config.param_protocol}
 cable_param_server_leaf = MPO
 cable_param_leaf_spine = MPO
 cable_param_spine_core = MPO
@@ -456,5 +468,8 @@ function parseINI(ini: string): DesignConfig {
     oob_downlink_limit: parseInt(config['oob_downlink_limit']) || 25,
     oob_enabled: config['oob_enabled'] !== 'false',
     biz_enabled: config['biz_enabled'] !== 'false',
+    rail_mode: (config['rail_mode'] as 'standard' | 'rail_optimized') || 'standard',
+    rail_count: parseInt(config['rail_count']) || 8,
+    param_protocol: (config['param_protocol'] as 'IB' | 'RoCE') || 'RoCE',
   }
 }

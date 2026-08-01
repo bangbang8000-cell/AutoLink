@@ -455,9 +455,23 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('project:getConfigFile', wrapHandler(async (_event, name: string) => {
     sanitizeName(name)
-    const configPath = path.join(getWorkspacePath(), name, 'network_config.ini')
-    if (!fs.existsSync(configPath)) return null
-    return fs.readFileSync(configPath, 'utf-8')
+    const projectDir = path.join(getWorkspacePath(), name)
+    const iniPath = path.join(projectDir, 'network_config.ini')
+    const jsonPath = path.join(projectDir, 'project_config.json')
+
+    // V2.7.2-T10: 自动迁移 — INI 存在但 JSON 不存在时,调用 Python 引擎迁移
+    if (fs.existsSync(iniPath) && !fs.existsSync(jsonPath)) {
+      try {
+        await pythonService.call('migrate', { projectDir })
+        console.log(`[project:getConfigFile] V2.7.2-T10: 自动迁移项目 ${name}`)
+      } catch (err) {
+        console.error(`[project:getConfigFile] 自动迁移失败:`, err)
+        // 迁移失败不阻塞,继续读 INI
+      }
+    }
+
+    if (!fs.existsSync(iniPath)) return null
+    return fs.readFileSync(iniPath, 'utf-8')
   }))
 
   ipcMain.handle('project:getFile', wrapHandler(async (_event, name: string, filePath: string) => {
@@ -533,22 +547,96 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   // ===== Design =====
+  // v2.7.2 B5: design:generate 改为合并更新 project_config.json(非删除)
+  // 原逻辑删除 JSON 会导致 rail_mode/param_protocol 等扩展字段永久丢失
+  // 新逻辑:读取现有 JSON,合并 INI 解析出的字段,保留扩展字段
+  const mergeIniIntoJsonConfig = (projectDir: string, configINI: string): void => {
+    const iniPath = path.join(projectDir, 'network_config.ini')
+    const jsonPath = path.join(projectDir, 'project_config.json')
+    fs.writeFileSync(iniPath, configINI, 'utf-8')
+
+    // 尝试合并到现有 project_config.json
+    if (!fs.existsSync(jsonPath)) {
+      return // 无 JSON 可合并,后端会从 INI 加载
+    }
+    try {
+      const existingJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+      // 从 INI 解析基础字段,合并到 JSON(保留 JSON 中的扩展字段如 rail_mode/param_protocol/device_refs)
+      const iniConfig: Record<string, string> = {}
+      for (const line of configINI.split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('[')) continue
+        const eq = trimmed.indexOf('=')
+        if (eq === -1) continue
+        iniConfig[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim()
+      }
+
+      // 更新 topology 基础字段(INI 优先,但保留 JSON 中的扩展字段)
+      const topo = existingJson.topology || {}
+      const intFields: Record<string, string> = {
+        num_gpu_servers: 'num_servers',
+        param_ports_per_server: 'param_ports_per_server',
+        storage_ports_per_server: 'storage_ports_per_server',
+        param_switch_ports: 'param_switch_ports',
+        storage_switch_ports: 'storage_switch_ports',
+        param_downlink_limit: 'param_downlink_limit',
+        storage_downlink_limit: 'storage_downlink_limit',
+        biz_downlink_limit: 'biz_downlink_limit',
+        oob_downlink_limit: 'oob_downlink_limit',
+        num_compute_servers: 'additional_compute_servers',
+      }
+      for (const [jsonKey, iniKey] of Object.entries(intFields)) {
+        if (iniKey in iniConfig) {
+          const v = parseInt(iniConfig[iniKey])
+          if (!isNaN(v)) topo[jsonKey] = v
+        }
+      }
+      // additional_storage_servers 拆分为全闪/混闪(若 JSON 已有则保留)
+      if ('additional_storage_servers' in iniConfig) {
+        const storageCount = parseInt(iniConfig.additional_storage_servers) || 0
+        if (!('num_all_flash_storage' in topo) && !('num_hybrid_flash_storage' in topo)) {
+          topo.num_all_flash_storage = Math.max(1, Math.ceil(storageCount / 2))
+          topo.num_hybrid_flash_storage = Math.floor(storageCount / 2)
+        }
+      }
+      // 字符串字段
+      if ('downlink_mode' in iniConfig) topo.downlink_mode = iniConfig.downlink_mode
+      if ('param_speed' in iniConfig) topo.param_speed = iniConfig.param_speed
+      if ('storage_speed' in iniConfig) topo.storage_speed = iniConfig.storage_speed
+      // V2.7.2: rail_mode / param_protocol 字符串字段
+      if ('rail_mode' in iniConfig) topo.rail_mode = iniConfig.rail_mode
+      if ('param_protocol' in iniConfig) topo.param_protocol = iniConfig.param_protocol
+      // V2.7.2: rail_count 整数字段
+      if ('rail_count' in iniConfig) {
+        const rc = parseInt(iniConfig.rail_count)
+        if (!isNaN(rc)) topo.rail_count = rc
+      }
+
+      // 网络开关(保留 JSON 已有的 device_refs)
+      const networks = existingJson.networks || {}
+      if ('oob_enabled' in iniConfig) networks.oob_network = iniConfig.oob_enabled !== 'false'
+      if ('biz_enabled' in iniConfig) networks.biz_network = iniConfig.biz_enabled !== 'false'
+
+      existingJson.topology = topo
+      existingJson.networks = networks
+      fs.writeFileSync(jsonPath, JSON.stringify(existingJson, null, 2), 'utf-8')
+    } catch (err) {
+      console.error('[design:generate] merge INI into JSON failed:', err)
+      // 合并失败不影响主流程,后端会从 INI 加载
+    }
+  }
+
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
     const configPath = path.join(projectDir, 'network_config.ini')
-    const jsonConfigPath = path.join(projectDir, 'project_config.json')
 
     if (configINI) {
       if (!fs.existsSync(projectDir)) {
         fs.mkdirSync(projectDir, { recursive: true })
       }
-      fs.writeFileSync(configPath, configINI, 'utf-8')
-      // 如果用户在设计中修改了配置，删除旧的 project_config.json
-      // 确保后端使用最新的 INI 配置而非旧的 JSON 配置
-      if (fs.existsSync(jsonConfigPath)) {
-        fs.unlinkSync(jsonConfigPath)
-      }
+      // v2.7.2 B5: 合并更新 project_config.json(保留扩展字段),不再删除
+      mergeIniIntoJsonConfig(projectDir, configINI)
     }
 
     if (!fs.existsSync(configPath)) {
@@ -562,16 +650,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
     const configPath = path.join(projectDir, 'network_config.ini')
-    const jsonConfigPath = path.join(projectDir, 'project_config.json')
 
     if (configINI) {
       if (!fs.existsSync(projectDir)) {
         fs.mkdirSync(projectDir, { recursive: true })
       }
-      fs.writeFileSync(configPath, configINI, 'utf-8')
-      if (fs.existsSync(jsonConfigPath)) {
-        fs.unlinkSync(jsonConfigPath)
-      }
+      // v2.7.2 B5: 同步合并更新
+      mergeIniIntoJsonConfig(projectDir, configINI)
     }
 
     if (!fs.existsSync(configPath)) {

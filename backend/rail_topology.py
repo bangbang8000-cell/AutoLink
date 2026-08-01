@@ -133,58 +133,91 @@ class RailOptimizedTopology:
     def generate_connections(self, server_names: Optional[List[str]] = None) -> List[Connection]:
         """
         生成 Rail-Optimized 连接关系
-        server_names: 服务器名称列表（如果为 None，使用 Server_1..Server_N）
+
+        v2.7.2 修复:
+          - B2: a_module/z_module 改用 network_speed(原为空字符串,导出 Excel 光模块选型失效)
+          - B3: 端口名改用 switch.get_downlink_port()/get_uplink_port() 计数器(原静态 "Uplink"/"Downlink")
+          - B4: 服务器分配改为交错模式(i % num_rails,符合 NVIDIA SuperPOD 规范,原为连续分块)
         """
         connections: List[Connection] = []
 
         if server_names is None:
             server_names = [f"Server_{i+1}" for i in range(self.num_servers)]
 
-        # 1. 服务器 NIC_i → Rail_i 的 Leaf（按负载分配）
-        servers_per_rail = math.ceil(self.num_servers / self.num_rails)
         downlink_per_leaf = self.switch_ports // 2
 
-        for rail in range(self.num_rails):
+        # 1. 服务器 NIC_i → Rail_i 的 Leaf
+        # v2.7.2 B4: 交错分配 server_i → rail = i % num_rails(符合 NVIDIA SuperPOD 规范)
+        # 这样单 Rail 故障分散到所有服务器,而非集中影响某段连续服务器
+        rail_server_counters = {r: 0 for r in range(self.num_rails)}  # 每 Rail 的服务器序号
+        for i, server_name in enumerate(server_names):
+            rail = i % self.num_rails
             rail_leaves = self.rail_leaf_map[rail]
-            # 该 Rail 组的服务器
-            start_idx = rail * servers_per_rail
-            end_idx = min(start_idx + servers_per_rail, self.num_servers)
-            rail_servers = server_names[start_idx:end_idx]
+            s_idx = rail_server_counters[rail]
+            rail_server_counters[rail] += 1
 
-            for s_idx, server_name in enumerate(rail_servers):
-                leaf_idx = s_idx // downlink_per_leaf
-                leaf_name = rail_leaves[min(leaf_idx, len(rail_leaves) - 1)]
-                connections.append(Connection(
-                    a_device=server_name, a_port=f"NIC{rail}", a_module="",
-                    z_device=leaf_name, z_port=f"Port{s_idx % downlink_per_leaf + 1}", z_module="",
-                    cable_type=f"{self.prefix}网-{self.network_speed}",
-                    description=f"{self.prefix}网 Rail-{rail} 下行",
-                    network_type=self.network_type,
-                ))
+            leaf_idx = s_idx // downlink_per_leaf
+            leaf_idx = min(leaf_idx, len(rail_leaves) - 1)
+            leaf = next((l for l in self.leaves if l.name == rail_leaves[leaf_idx]), None)
+            if not leaf:
+                continue
+
+            # v2.7.2 B2: a_module/z_module 使用 network_speed(非空)
+            # v2.7.2 B3: 端口名使用计数器(非静态 "Port{x}")
+            try:
+                leaf_port = leaf.get_downlink_port()
+            except ValueError:
+                leaf_port = f"Port{s_idx % downlink_per_leaf + 1}"
+
+            connections.append(Connection(
+                a_device=server_name, a_port=f"NIC{rail}", a_module=self.network_speed,
+                z_device=leaf.name, z_port=leaf_port, z_module=self.network_speed,
+                cable_type=f"{self.prefix}网-{self.network_speed}",
+                description=f"{self.prefix}网 Rail-{rail} 下行",
+                network_type=self.network_type,
+            ))
 
         # 2. Rail 内 Leaf ↔ Spine 全互联
+        # v2.7.2 B3: 端口名使用 get_uplink_port()/get_downlink_port() 计数器
         for rail in range(self.num_rails):
-            rail_leaves = [n.name for n in self.leaves if n.group == f"Rail-{rail}"]
-            rail_spines = [n.name for n in self.spines if n.group == f"Rail-{rail}"]
-            for leaf_name in rail_leaves:
-                for spine_name in rail_spines:
+            rail_leaves = [n for n in self.leaves if n.group == f"Rail-{rail}"]
+            rail_spines = [n for n in self.spines if n.group == f"Rail-{rail}"]
+            for leaf in rail_leaves:
+                for spine in rail_spines:
+                    try:
+                        leaf_port = leaf.get_uplink_port()
+                    except ValueError:
+                        leaf_port = "Uplink"
+                    try:
+                        spine_port = spine.get_downlink_port()
+                    except ValueError:
+                        spine_port = "Downlink"
                     connections.append(Connection(
-                        a_device=leaf_name, a_port="Uplink", a_module="",
-                        z_device=spine_name, z_port="Downlink", z_module="",
+                        a_device=leaf.name, a_port=leaf_port, a_module=self.network_speed,
+                        z_device=spine.name, z_port=spine_port, z_module=self.network_speed,
                         cable_type=f"{self.prefix}网-{self.network_speed}",
                         description=f"{self.prefix}网 Rail-{rail} Leaf-Spine",
                         network_type=self.network_type,
                     ))
 
         # 3. 跨 Rail: Spine → Core
+        # v2.7.2 B3: 端口名使用计数器
         total_cores = len(self.cores)
         if total_cores > 0:
-            for s_idx, spine in enumerate(self.spines):
-                core_idx = s_idx % total_cores
-                core_name = self.cores[core_idx].name
+            for spine in self.spines:
+                core_idx = (self.spines.index(spine)) % total_cores
+                core = self.cores[core_idx]
+                try:
+                    spine_port = spine.get_uplink_port()
+                except ValueError:
+                    spine_port = "Uplink"
+                try:
+                    core_port = core.get_core_port()
+                except (ValueError, AttributeError):
+                    core_port = f"Port{self.spines.index(spine) % self.switch_ports + 1}"
                 connections.append(Connection(
-                    a_device=spine.name, a_port="Uplink", a_module="",
-                    z_device=core_name, z_port=f"Port{s_idx % self.switch_ports + 1}", z_module="",
+                    a_device=spine.name, a_port=spine_port, a_module=self.network_speed,
+                    z_device=core.name, z_port=core_port, z_module=self.network_speed,
                     cable_type=f"{self.prefix}网-{self.network_speed}",
                     description=f"{self.prefix}网 Spine-Core 跨Rail",
                     network_type=self.network_type,

@@ -98,21 +98,24 @@ class TestV003PUETarget:
 
 
 class TestV004PortTypeMatch:
-    """V004: 端口类型匹配校验"""
+    """V004: 端口类型匹配校验
+
+    v2.7.2: 字段映射改为 a_speed/z_speed (光模块速率决定端口规格)
+    """
 
     def test_passes_when_matching(self, engine):
-        """正例:两端端口类型一致"""
+        """正例:两端光模块速率一致"""
         ctx = ValidationContext(connections=[
-            {"name": "c1", "a_port_type": "QSFP-DD", "z_port_type": "QSFP-DD"},
+            {"name": "c1", "a_speed": "400G", "z_speed": "400G"},
         ])
         issues = engine.validate(ctx)
         v004 = [i for i in issues if i.rule_id == "V004"]
         assert len(v004) == 0
 
     def test_errors_when_mismatch(self, engine):
-        """反例:QSFP-DD vs OSFP"""
+        """反例:400G vs 800G 端口规格不匹配"""
         ctx = ValidationContext(connections=[
-            {"name": "c1", "a_port_type": "QSFP-DD", "z_port_type": "OSFP"},
+            {"name": "c1", "a_speed": "400G", "z_speed": "800G"},
         ])
         issues = engine.validate(ctx)
         v004 = [i for i in issues if i.rule_id == "V004"]
@@ -121,21 +124,34 @@ class TestV004PortTypeMatch:
 
 
 class TestV005SpeedMatch:
-    """V005: 速率匹配校验"""
+    """V005: 速率匹配校验
 
-    def test_passes_when_matching(self, engine):
-        """正例:两端速率一致"""
+    v2.7.2: 改为校验连接速率与网络类型是否匹配
+    """
+
+    def test_passes_when_param_speed_ok(self, engine):
+        """正例:param 网络 400G 满足最低 100G"""
         ctx = ValidationContext(connections=[
-            {"name": "c1", "a_speed": "400G", "z_speed": "400G"},
+            {"name": "c1", "network_type": "param", "a_speed": "400G"},
         ])
         issues = engine.validate(ctx)
         v005 = [i for i in issues if i.rule_id == "V005"]
         assert len(v005) == 0
 
-    def test_warns_when_mismatch(self, engine):
-        """反例:400G vs 100G"""
+    def test_warns_when_param_speed_too_low(self, engine):
+        """反例:param 网络 25G 低于 100G 最低要求"""
         ctx = ValidationContext(connections=[
-            {"name": "c1", "a_speed": "400G", "z_speed": "100G"},
+            {"name": "c1", "network_type": "param", "a_speed": "25G"},
+        ])
+        issues = engine.validate(ctx)
+        v005 = [i for i in issues if i.rule_id == "V005"]
+        assert len(v005) == 1
+        assert v005[0].severity == Severity.WARNING
+
+    def test_warns_when_oob_speed_too_high(self, engine):
+        """反例:oob 网络 400G 超过 10G 上限"""
+        ctx = ValidationContext(connections=[
+            {"name": "c1", "network_type": "oob", "a_speed": "400G"},
         ])
         issues = engine.validate(ctx)
         v005 = [i for i in issues if i.rule_id == "V005"]
@@ -224,13 +240,16 @@ class TestV008OOBReachability:
 
 
 class TestV009StorageRedundancy:
-    """V009: 存储网冗余路径校验"""
+    """V009: 存储网冗余路径校验
+
+    v2.7.2: 字段映射改为 network_type == 'storage' (英文枚举)
+    """
 
     def test_passes_when_dual_links(self, engine):
         """正例:存储网双链路"""
         ctx = ValidationContext(connections=[
-            {"a_end_name": "Server1", "cable_type": "存储-MPO"},
-            {"a_end_name": "Server1", "cable_type": "存储-AOC"},
+            {"source": "Server1", "network_type": "storage"},
+            {"source": "Server1", "network_type": "storage"},
         ])
         issues = engine.validate(ctx)
         v009 = [i for i in issues if i.rule_id == "V009"]
@@ -239,7 +258,7 @@ class TestV009StorageRedundancy:
     def test_warns_when_single_link(self, engine):
         """反例:仅单链路"""
         ctx = ValidationContext(connections=[
-            {"a_end_name": "Server1", "cable_type": "存储-MPO"},
+            {"source": "Server1", "network_type": "storage"},
         ])
         issues = engine.validate(ctx)
         v009 = [i for i in issues if i.rule_id == "V009"]

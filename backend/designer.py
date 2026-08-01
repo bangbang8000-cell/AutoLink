@@ -69,6 +69,10 @@ class NetworkDesignerV2:
         except Exception as e:
             print(f"[Designer] 设备库加载失败: {e}")
 
+        # V2.7.2: 读取 param_protocol (IB | RoCE),用于自动设备选型
+        topo = self._project_config.get('topology', {})
+        self.param_protocol = topo.get('param_protocol', 'RoCE')
+
         # 解析 device_refs
         if self._device_library:
             for key, ref in self._project_config.get('device_refs', {}).items():
@@ -76,10 +80,52 @@ class NetworkDesignerV2:
                 if device:
                     self._device_profiles[key] = device
 
+            # V2.7.2-T8: 未通过 device_refs 指定 param_switch 时,按 param_protocol 自动选型
+            if 'param_switch' not in self._device_profiles:
+                auto_sw = self._auto_select_param_switch(topo.get('param_speed', '400G'))
+                if auto_sw:
+                    self._device_profiles['param_switch'] = auto_sw
+
+    def _auto_select_param_switch(self, speed: str):
+        """V2.7.2-T8: 根据 param_protocol + 速度自动选择参数网交换机
+
+        IB  → NVIDIA Quantum 系列 (按速度: 200G→MQM8790, 400G→MQM9700, 800G→Q3200)
+        RoCE → H3C S9820 系列 (按速度: 400G→S9820-64H, 800G→S12500R)
+        """
+        if not self._device_library:
+            return None
+        speed_norm = (speed or '400G').upper()
+        # 候选 ID 表(与 template/device_library/switches/param/ 目录对齐)
+        if self.param_protocol == 'IB':
+            candidates = {
+                '200G': 'nvidia_mqm8790_40_200g_ib',
+                '400G': 'nvidia_mqm9700_64_400g_ib',
+                '800G': 'nvidia_q3200_72_800g_ib',
+            }
+        else:  # RoCE
+            candidates = {
+                '200G': 'nvidia_sn5400_64_200g',
+                '400G': 'h3c_s9820_64h',
+                '800G': 'h3c_s12500r_48_800g',
+            }
+        device_id = candidates.get(speed_norm)
+        if not device_id:
+            # 速度未匹配时,回退到 400G 默认
+            device_id = 'nvidia_mqm9700_64_400g_ib' if self.param_protocol == 'IB' else 'h3c_s9820_64h'
+        device = self._device_library.get(device_id)
+        if device:
+            print(f"[Designer] V2.7.2-T8: 自动选型 param_switch = {device_id} (protocol={self.param_protocol}, speed={speed_norm})")
+        return device
+
     def _load_ini_config(self, config_file):
         """加载 network_config.ini 格式"""
         with open(config_file, 'r', encoding='utf-8') as f:
             self.config.read_file(f)
+        # V2.7.2-T8: INI 模式也加载设备库,支持自动设备选型
+        try:
+            self._device_library = get_device_library()
+        except Exception as e:
+            print(f"[Designer] 设备库加载失败: {e}")
 
     def _init_from_project_config(self):
         """从 project_config.json 初始化配置"""
@@ -157,6 +203,12 @@ class NetworkDesignerV2:
         self.cable_biz_server_access = '光纤'
         self.cable_biz_access_agg = '光纤'
         self.biz_dl = topo.get('biz_downlink_limit', 25)
+        # V2.7.2-T12: 业务网框式阈值参数化
+        self.biz_chassis_threshold = topo.get('biz_chassis_threshold', 128)
+        # 框数映射表: [(服务器数阈值, 框数), ...] 按升序,取第一个满足的
+        self.biz_chassis_frames_map = topo.get('biz_chassis_frames_map', [
+            [512, 4], [1024, 8], [float('inf'), 16]
+        ])
 
         # --- 机柜配置 (V2.1新增) ---
         self.rack_type = rack.get('rack_type', 42)  # 42U or 49U
@@ -194,6 +246,38 @@ class NetworkDesignerV2:
                         self._storage_switch_downlink_prefix = device.downlink_prefix
                         self._storage_switch_uplink_prefix = device.uplink_prefix or device.downlink_prefix
 
+        # V2.7.2-T11: 从设备档案读取 OOB/业务网下联口数(覆盖硬编码)
+        self._apply_device_port_overrides()
+
+    def _apply_device_port_overrides(self):
+        """V2.7.2-T11: 从设备档案读取 OOB/业务网端口数,覆盖硬编码 48/32"""
+        # OOB 接入交换机: port_count 覆盖 oob_access_ports(保留 uplinks)
+        oob_access_profile = self._device_profiles.get('oob_access_switch')
+        if oob_access_profile and oob_access_profile.port_count:
+            total = oob_access_profile.port_count
+            # 下联口 = 总端口 - 上联口
+            self.oob_access_ports = max(1, total - self.oob_access_uplinks)
+            if oob_access_profile.port_speed:
+                self.oob_speed = oob_access_profile.port_speed
+
+        # OOB 汇聚交换机: port_count 覆盖 oob_agg_ports
+        oob_agg_profile = self._device_profiles.get('oob_agg_switch')
+        if oob_agg_profile and oob_agg_profile.port_count:
+            self.oob_agg_ports = oob_agg_profile.port_count
+
+        # 业务接入交换机: port_count 覆盖 biz_access_ports
+        biz_access_profile = self._device_profiles.get('biz_access_switch')
+        if biz_access_profile and biz_access_profile.port_count:
+            total = biz_access_profile.port_count
+            self.biz_access_ports = max(1, total - self.biz_access_uplinks)
+            if biz_access_profile.port_speed:
+                self.biz_port_speed = biz_access_profile.port_speed
+
+        # 业务汇聚交换机: port_count 覆盖 biz_agg_box_ports
+        biz_agg_profile = self._device_profiles.get('biz_agg_switch')
+        if biz_agg_profile and biz_agg_profile.port_count:
+            self.biz_agg_box_ports = biz_agg_profile.port_count
+
     def _init_from_ini(self):
         """从 network_config.ini 初始化配置 (兼容旧版)"""
         # --- 通用配置 (必须先加载，后续依赖 param_switch_ports 等) ---
@@ -207,11 +291,20 @@ class NetworkDesignerV2:
         self.rail_mode = self.config.get('DEFAULT', 'rail_mode', fallback='standard')
         self.rail_count = self.config.getint('DEFAULT', 'rail_count', fallback=8)
 
+        # V2.7.2: 参数网协议 (IB | RoCE),用于自动设备选型
+        self.param_protocol = self.config.get('DEFAULT', 'param_protocol', fallback='RoCE')
+
         # --- 网络开关 ---
         self.param_enabled = True
         self.storage_enabled = True
         self.biz_enabled = self.config.getboolean('DEFAULT', 'biz_enabled', fallback=True)
         self.oob_enabled = self.config.getboolean('DEFAULT', 'oob_enabled', fallback=True)
+
+        # V2.7.2-T8: INI 模式下也根据 param_protocol 自动选型 param_switch(若设备库可用)
+        if self._device_library and 'param_switch' not in self._device_profiles:
+            auto_sw = self._auto_select_param_switch(self.param_speed)
+            if auto_sw:
+                self._device_profiles['param_switch'] = auto_sw
 
     def _load_common_ini_config(self):
         """加载 INI 格式通用配置 (向后兼容)"""
@@ -256,6 +349,12 @@ class NetworkDesignerV2:
         self.biz_agg_chassis_ports = int(self.config.get('DEFAULT', 'biz_agg_chassis_ports', fallback=32))
         self.cable_biz_server_access = self.config.get('DEFAULT', 'cable_biz_server_access', fallback='光纤')
         self.cable_biz_access_agg = self.config.get('DEFAULT', 'cable_biz_access_agg', fallback='光纤')
+
+        # V2.7.2-T12: 业务网框式阈值参数化 (INI 模式默认值,与 project_config 保持一致)
+        self.biz_chassis_threshold = int(self.config.get('DEFAULT', 'biz_chassis_threshold', fallback=128))
+        self.biz_chassis_frames_map = [
+            [512, 4], [1024, 8], [float('inf'), 16]
+        ]
 
         # 机柜 (旧格式无此配置，使用默认值)
         self.rack_type = 42
@@ -390,15 +489,40 @@ class NetworkDesignerV2:
             self.param_servers_per_pod = 0
 
         # --- 存储网络 (自动计算) ---
-        self.storage_3tier_needed = False
-        self.storage_servers_per_group = min(self.storage_dl, self.total_servers)
-        if self.storage_servers_per_group <= 0:
-            self.storage_servers_per_group = 1
-        self.storage_groups = math.ceil(self.total_servers / self.storage_servers_per_group)
-        self.storage_leaf_per_group = self.storage_ports_per_server
-        self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
-        self.storage_spine_count = max(1, self.storage_leaf_count // 2)
-        self.storage_core_count = 0
+        # V2.7.2-T9: 放开 3-tier 限制,根据服务器数量自动判定
+        storage_max_2tier = calc_max_2tier(self.storage_switch_ports, self.storage_ports_per_server)
+        self.storage_3tier_needed = self.total_servers > storage_max_2tier if storage_max_2tier > 0 else False
+
+        if self.storage_3tier_needed:
+            # 三层组网: Leaf-Spine-Core
+            self.storage_pods = math.ceil(self.total_servers / max(storage_max_2tier, 1))
+            self.storage_servers_per_pod = min(storage_max_2tier, self.total_servers)
+            # 每 Pod 内 Leaf 数 = (servers_per_pod / max_servers_per_leaf) * ports_per_server
+            max_servers_per_storage_leaf = self.storage_switch_ports // 2
+            storage_servers_per_group = max(1, min(
+                self.storage_servers_per_pod // self.storage_ports_per_server,
+                max_servers_per_storage_leaf
+            ))
+            storage_groups_per_pod = max(1, self.storage_servers_per_pod // storage_servers_per_group)
+            self.storage_leaf_per_group = self.storage_ports_per_server
+            self.storage_groups = self.storage_pods * storage_groups_per_pod
+            self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
+            self.storage_spine_count = max(1, self.storage_leaf_count // 2)
+            # Core 数 = ceil(spine_count / (switch_ports // 2))
+            spine_per_core = max(1, self.storage_switch_ports // 2)
+            self.storage_core_count = math.ceil(self.storage_spine_count / spine_per_core)
+            self.storage_servers_per_group = storage_servers_per_group
+        else:
+            self.storage_pods = 0
+            self.storage_servers_per_pod = 0
+            self.storage_servers_per_group = min(self.storage_dl, self.total_servers)
+            if self.storage_servers_per_group <= 0:
+                self.storage_servers_per_group = 1
+            self.storage_groups = math.ceil(self.total_servers / self.storage_servers_per_group)
+            self.storage_leaf_per_group = self.storage_ports_per_server
+            self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
+            self.storage_spine_count = max(1, self.storage_leaf_count // 2)
+            self.storage_core_count = 0
 
     # ================================================================
     #  对象创建
@@ -500,7 +624,7 @@ class NetworkDesignerV2:
             if profile:
                 sw.downlink_prefix = profile.downlink_prefix or ""
                 sw.uplink_prefix = profile.uplink_prefix or ""
-                sw.port_prefix = profile.port_prefix or ""
+                sw.port_prefix = profile.name_prefix or ""
             else:
                 sw.downlink_prefix = self._param_switch_downlink_prefix or ""
                 sw.uplink_prefix = self._param_switch_uplink_prefix or ""
@@ -559,9 +683,10 @@ class NetworkDesignerV2:
             self.podid_map[sw.name] = sw.podid
 
         # 为 GPU 服务器标注 rail_id 和 rail_role
-        servers_per_rail = math.ceil(self.num_servers / self.rail_count)
+        # v2.7.2 B4: 交错分配(idx % rail_count),与 rail_topology.py 保持一致
+        # 符合 NVIDIA SuperPOD 规范:server_i → rail = i % num_rails
         for idx, server in enumerate(self.servers[:self.num_servers]):
-            server.rail_id = idx // servers_per_rail
+            server.rail_id = idx % self.rail_count
             server.rail_role = "server_rail_endpoint"
 
         # 应用交换机端口前缀
@@ -601,6 +726,21 @@ class NetworkDesignerV2:
             self.storage_spines.append(sw)
             self.switch_groups[sw.name] = sw.group
             self.podid_map[sw.name] = sw.podid
+        # V2.7.2-T9: 3-tier 模式下创建 Core 层
+        if self.storage_3tier_needed:
+            for i in range(1, self.storage_core_count + 1):
+                sw = NetworkObject(name=f"存储Core_{i}", obj_type='storage_core',
+                                   group="存储Core组", max_ports=self.storage_switch_ports,
+                                   podid="superpod", device_profile=profile)
+                if profile:
+                    sw.downlink_prefix = profile.downlink_prefix or ""
+                    sw.uplink_prefix = profile.uplink_prefix or ""
+                else:
+                    sw.downlink_prefix = self._storage_switch_downlink_prefix or ""
+                    sw.uplink_prefix = self._storage_switch_uplink_prefix or ""
+                self.storage_cores.append(sw)
+                self.switch_groups[sw.name] = sw.group
+                self.podid_map[sw.name] = sw.podid
 
     # ================================================================
     #  连接生成
@@ -682,7 +822,7 @@ class NetworkDesignerV2:
                                    network_type='param')
 
     def _wire_storage(self):
-        """存储网络: 所有服务器→Leaf + Leaf→Spine (每Spine ports_per_spine×200G)"""
+        """存储网络: 所有服务器→Leaf + Leaf→Spine (+ Spine→Core 当 3-tier)"""
         # Server → Leaf: 轮转分配
         servers_per_leaf = math.ceil(self.total_servers / self.storage_leaf_count)
         for si, server in enumerate(self.servers):
@@ -719,6 +859,30 @@ class NetworkDesignerV2:
                                    self.cable_types['storage']['leaf_spine'],
                                    "存储Leaf到Spine",
                                    network_type='storage')
+
+        # V2.7.2-T9: Spine → Core (仅 3-tier 模式)
+        if self.storage_3tier_needed and self.storage_cores:
+            # Spine 上联端口: downlink_limit 之后为上联区域
+            spine_uplink_start = self.storage_dl + 1
+            spine_uplink_avail = self.storage_switch_ports - spine_uplink_start + 1
+            # 每 Spine 可用上联端口数,分配给 Core
+            uplinks_per_spine = max(1, spine_uplink_avail // max(self.storage_core_count, 1))
+            for spine_idx, spine in enumerate(self.storage_spines):
+                spine.uplink_counter = spine_uplink_start
+                spine.uplink_limit = self.storage_switch_ports
+                for _ in range(uplinks_per_spine):
+                    # 轮转分配 Core,避免单 Core 端口溢出
+                    core_idx = spine_idx % len(self.storage_cores)
+                    core = self.storage_cores[core_idx]
+                    try:
+                        sp = spine.get_uplink_port()
+                        cp = core.get_core_port()
+                        self._add_conn(spine, sp, self.storage_speed, core, cp, self.storage_speed,
+                                       self.cable_types['storage']['spine_core'],
+                                       "存储Spine到Core",
+                                       network_type='storage')
+                    except ValueError:
+                        break
 
     def _add_conn(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod, cable, desc, network_type=""):
         c1 = Connection(a_dev.name, a_port, a_mod, z_dev.name, z_port, z_mod, cable, desc,
@@ -760,6 +924,18 @@ class NetworkDesignerV2:
         self.switch_groups.update(topo.switch_groups)
         self.podid_map.update(topo.podid_map)
 
+    def _calc_biz_chassis_frames(self):
+        """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数
+
+        frames_map 格式: [[阈值, 框数], ...] 按升序,取第一个满足 total_servers <= 阈值 的框数
+        默认: ≤512→4框, ≤1024→8框, >1024→16框
+        """
+        for threshold, frames in self.biz_chassis_frames_map:
+            if self.total_servers <= threshold:
+                return frames
+        # 兜底:返回最后一个框数
+        return self.biz_chassis_frames_map[-1][1] if self.biz_chassis_frames_map else 4
+
     def _design_biz_network(self):
         topo = AccessAggTopology(
             access_down_ports=self.biz_access_ports,
@@ -774,8 +950,10 @@ class NetworkDesignerV2:
             downlink_limit=self.biz_dl
         )
         chassis_config = None
-        if self.total_servers > 128:
-            frames = 4 if self.total_servers <= 512 else 8 if self.total_servers <= 1024 else 18
+        # V2.7.2-T12: 框式阈值参数化(不再硬编码 128/512/1024 → 4/8/18)
+        # 默认阈值: >128 启用, ≤512→4框, ≤1024→8框, >1024→16框
+        if self.total_servers > self.biz_chassis_threshold:
+            frames = self._calc_biz_chassis_frames()
             chassis_config = {'enabled': True, 'frames': frames}
             topo.agg_down_ports = self.biz_agg_chassis_ports
         self.biz_info = topo.calculate(self.total_servers, chassis_config)
