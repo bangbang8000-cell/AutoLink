@@ -667,6 +667,33 @@ def handle_migrate(params):
     }
 
 
+@register_action('project_config_to_ini')
+def handle_project_config_to_ini(params):
+    """V2.9.6-T1: 校验 project_config 并反向序列化为 network_config.ini
+
+    参数:
+        config: 完整 ProjectConfig 字典
+    返回:
+        {valid: bool, error: str | None, ini: str | None}
+        校验失败时 valid=False 且带 error，ini 为 None
+    """
+    from migration import project_config_to_ini
+    from project_config import validate_config
+    config = params.get('config')
+    if not isinstance(config, dict):
+        return {"valid": False, "error": "config 必须是 JSON 对象", "ini": None}
+
+    error = validate_config(config)
+    if error:
+        return {"valid": False, "error": error, "ini": None}
+
+    try:
+        ini = project_config_to_ini(config)
+        return {"valid": True, "error": None, "ini": ini}
+    except Exception as e:
+        return {"valid": False, "error": f"INI 生成失败: {e}", "ini": None}
+
+
 @register_action('export')
 def handle_export(params):
     """处理渲染导出请求"""

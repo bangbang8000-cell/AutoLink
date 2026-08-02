@@ -21,8 +21,8 @@ export interface ProjectNetworks {
   oob_network: boolean
 }
 
-/** 参数面协议类型 */
-export type ParamProtocol = 'IB' | 'RoCE'
+/** 参数面协议类型（V2.7.6-T2/V2.9.3-T8: 支持 UEC） */
+export type ParamProtocol = 'IB' | 'RoCE' | 'UEC'
 
 /** 拓扑计算参数 */
 export interface ProjectTopology {

@@ -76,7 +76,7 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
     })
   }, [addToast])
 
-  const handleEditConfirm = useCallback(async (updates: { name: string; description: string; scenario: string; tags: string[]; configContent?: string }) => {
+  const handleEditConfirm = useCallback(async (updates: { name: string; description: string; scenario: string; tags: string[]; configContent?: string; projectConfig?: string }) => {
     if (!editTarget) return
     await updateTemplate(editTarget.id, updates)
     addToast('success', t('common:explorer.toast.templateUpdated', { id: editTarget.id }))

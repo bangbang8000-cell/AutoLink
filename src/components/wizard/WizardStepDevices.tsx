@@ -58,6 +58,11 @@ const STORAGE_DEFAULTS_BY_PROTOCOL: Record<ParamProtocol, Record<string, string>
     storage_leaf_switch: 'huawei_ce6881_48s6cq',
     storage_spine_switch: 'huawei_ce6881_48s6cq',
   },
+  // UEC: 基于以太网,存储接入与 RoCE 一致
+  UEC: {
+    storage_leaf_switch: 'huawei_ce6881_48s6cq',
+    storage_spine_switch: 'huawei_ce6881_48s6cq',
+  },
 }
 
 /** 已知的存储默认设备 ID(用于判断用户是否手动改过) */

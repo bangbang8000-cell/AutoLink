@@ -43,6 +43,7 @@ interface Window {
         scenario?: string
         tags?: string[]
         configContent?: string
+        projectConfig?: string
       }) => Promise<void>
       exportZip: (templateName: string) => Promise<{ canceled: boolean; zipPath: string }>
       importZip: (options?: { templateName?: string; zipPath?: string }) => Promise<{ canceled: boolean; templateName: string }>

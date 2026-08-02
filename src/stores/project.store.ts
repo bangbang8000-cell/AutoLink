@@ -62,6 +62,7 @@ interface ProjectState {
     scenario?: string
     tags?: string[]
     configContent?: string
+    projectConfig?: string
   }) => Promise<void>
   exportTemplate: (templateName: string) => Promise<{ canceled: boolean; zipPath: string }>
   importTemplate: (options?: { templateName?: string; zipPath?: string }) => Promise<{ canceled: boolean; templateName: string }>

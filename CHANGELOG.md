@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## [2.9.6] - 2026-08-02
+
+### 模板可视化编辑（项目模板生命周期打通 · 第三阶段）
+
+v2.9.6 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第三阶段：将模板编辑从纯 INI 文本升级为可视化表单，支持规模/网络/选型/机柜全量编辑，JSON+INI 双文件同步（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+
+#### 后端：JSON→INI 反向序列化（T1/T2）
+- `migration.project_config_to_ini`：project_config.json 全字段映射回模板 `[DEFAULT]` 段 INI（与 designer `_load_common_ini_config` 键一一对应）；含 `[rack]` 段（冷却/GPU 独占）与 `[scale_up]` 段（非空才输出）
+- 存储合并：全闪+混闪 → `additional_storage_servers` 单键（往返按 1/2 拆分，总量一致）
+- 网络开关 → `oob_enabled`/`biz_enabled` 布尔
+- 新增 engine action `project_config_to_ini`：`validate_config` 校验通过后返回 INI，失败返回具体错误
+- `template:update` 扩展 `projectConfig` 字段：JSON.parse + 后端校验 → 写回 `project_config.json` + 同步生成 `network_config.ini`；校验失败明确抛错
+
+#### 前端：EditTemplateModal v2 表单化（T3/T4/T5）
+- 重构为可视化表单：基本信息（名称/描述/场景/标签）+ 规模设置（GPU/全闪/混闪/通算数量、网卡/交换机口数、速率、协议 IB/RoCE/UEC、下行模式与 4 网下行数）+ 网络类型（4 Toggle）+ 选型设置（按网络分组，复用 `DeviceLibraryPicker`）+ 机柜设置（42U/49U、功率预设、散热方式、GPU 独占、命名前缀）
+- JSON 原文兜底折叠面板：手动编辑 JSON 时以 JSON 为准保存（保存前语法校验），可"从表单重新生成"
+- 保存失败（含后端校验失败）保持弹窗打开并展示具体错误
+- `ParamProtocol` 类型扩展 UEC；`WizardStepDevices` 存储默认表补 UEC 键
+
+#### 内置模板编辑策略（T6）
+- 内置模板仍不可编辑（toast 提示），行为不变
+
+#### i18n 与测试（T7）
+- 新增 5 语言 `common.template.editForm.*`（37 keys）
+- `test_migration.py` 新增 8 个用例：往返一致性/rack/scale_up/存储合并/网络开关/空 scale_up/action 校验（合法/非法/非字典）
+
+#### 版本与回归
+- 版本号 2.9.5 → 2.9.6（package.json / VERSION / package-lock.json）
+- 全量回归：pytest 560 passed（+8）、vitest 345 passed、tsc 0 error、eslint 0 error（37 个既有 warning）、模板验证 16/16 通过
+
 ## [2.9.5] - 2026-08-02
 
 ### 从模板创建项目（项目模板生命周期打通 · 第二阶段）

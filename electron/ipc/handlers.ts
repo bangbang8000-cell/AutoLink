@@ -1125,6 +1125,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     scenario?: string
     tags?: string[]
     configContent?: string
+    projectConfig?: string
   }) => {
     sanitizeName(templateName)
     // 优先在用户模板目录查找（可编辑）；内置模板目录只读，不可编辑
@@ -1169,6 +1170,29 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (typeof updates.configContent === 'string') {
       const configPath = path.join(targetDir, 'network_config.ini')
       fs.writeFileSync(configPath, updates.configContent, 'utf-8')
+    }
+
+    // V2.9.6-T1: 如果提供了 project_config.json 内容（JSON 字符串），
+    // 校验通过后写回 project_config.json，并从 JSON 反向生成同步 network_config.ini
+    if (typeof updates.projectConfig === 'string') {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(updates.projectConfig)
+      } catch (e) {
+        throw new Error(`project_config.json 不是合法 JSON: ${(e as Error).message}`)
+      }
+      const result = await pythonService.call('project_config_to_ini', { config: parsed }) as {
+        valid?: boolean
+        error?: string | null
+        ini?: string | null
+      }
+      if (!result?.valid) {
+        throw new Error(`模板配置校验失败: ${result?.error || '未知错误'}`)
+      }
+      const jsonPath = path.join(targetDir, 'project_config.json')
+      fs.writeFileSync(jsonPath, updates.projectConfig, 'utf-8')
+      const iniPath = path.join(targetDir, 'network_config.ini')
+      fs.writeFileSync(iniPath, result.ini ?? '', 'utf-8')
     }
   }))
 

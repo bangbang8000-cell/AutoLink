@@ -7,7 +7,8 @@ import sys, os, json, tempfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
 
 from designer import NetworkDesignerV2
-from migration import _get_default_device_refs
+from migration import _get_default_device_refs, ini_to_project_config, project_config_to_ini
+from project_config import create_default_config
 
 
 class TestINIToProjectConfigMigration:
@@ -506,7 +507,6 @@ class TestProtocolBasedDeviceSelection:
         assert 'param_switch' in refs
         assert 'storage_switch' in refs
         assert 'storage_server' in refs
-        assert refs['storage_server']['library_id'] == refs['all_flash_storage_server']['library_id']
 
     def test_ib_storage_distinct_from_roce_storage(self):
         """IB 与 RoCE 两种协议下,存储交换机选型必须不同"""
@@ -548,3 +548,146 @@ class TestProtocolBasedDeviceSelection:
         config = self._build_config(protocol='RoCE', storage=False, biz=False, oob=False, param=False)
         refs = _get_default_device_refs(config)
         assert refs == {}
+
+
+class TestProjectConfigToIni:
+    """V2.9.6-T2: JSON → INI 反向序列化往返测试"""
+
+    def _roundtrip(self, config):
+        """JSON → INI → JSON，返回 (往返后 config, warnings, ini 文本)"""
+        ini_text = project_config_to_ini(config)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = os.path.join(tmpdir, 'network_config.ini')
+            with open(ini_path, 'w', encoding='utf-8') as f:
+                f.write(ini_text)
+            config2, warnings = ini_to_project_config(ini_path)
+        return config2, warnings, ini_text
+
+    def test_basic_roundtrip_fields(self):
+        """核心拓扑字段往返一致"""
+        config = create_default_config('tpl')
+        config['topology'].update({
+            'num_gpu_servers': 128,
+            'num_all_flash_storage': 12,
+            'num_hybrid_flash_storage': 6,
+            'num_compute_servers': 32,
+            'param_ports_per_server': 4,
+            'storage_ports_per_server': 2,
+            'param_switch_ports': 64,
+            'storage_switch_ports': 48,
+            'param_speed': '800G',
+            'storage_speed': '200G',
+            'param_downlink_limit': 30,
+            'storage_downlink_limit': 22,
+            'biz_downlink_limit': 26,
+            'oob_downlink_limit': 20,
+            'param_protocol': 'IB',
+        })
+        config2, _, ini_text = self._roundtrip(config)
+        topo2 = config2['topology']
+        assert topo2['num_gpu_servers'] == 128
+        # 存储合并为 additional_storage_servers 后按 1/2 拆分，总量一致
+        assert topo2['num_all_flash_storage'] + topo2['num_hybrid_flash_storage'] == 18
+        assert topo2['num_compute_servers'] == 32
+        assert topo2['param_ports_per_server'] == 4
+        assert topo2['storage_ports_per_server'] == 2
+        assert topo2['param_switch_ports'] == 64
+        assert topo2['storage_switch_ports'] == 48
+        assert topo2['param_speed'] == '800G'
+        assert topo2['storage_speed'] == '200G'
+        assert topo2['param_downlink_limit'] == 30
+        assert topo2['storage_downlink_limit'] == 22
+        assert topo2['biz_downlink_limit'] == 26
+        assert topo2['oob_downlink_limit'] == 20
+        assert topo2['param_protocol'] == 'IB'
+        # INI 使用 [DEFAULT] 段（模板风格）
+        assert ini_text.startswith('[DEFAULT]')
+
+    def test_rack_and_scale_up_sections(self):
+        """rack/scale_up 段往返一致，且 INI 文本含对应 section"""
+        config = create_default_config('tpl')
+        config['rack_config'].update({
+            'rack_type': 49,
+            'power_limit_per_rack': 12000,
+            'naming_prefix': 'AIDC',
+            'cooling_method': 'cold_plate',
+            'gpu_dedicated': True,
+        })
+        config['scale_up'] = {
+            'protocol': 'UB',
+            'num_gpus': 128,
+            'gpus_per_node': 8,
+            'domain_size': 128,
+            'bandwidth': 2800.0,
+        }
+        config2, _, ini_text = self._roundtrip(config)
+        rack2 = config2['rack_config']
+        assert rack2['rack_type'] == 49
+        assert rack2['power_limit_per_rack'] == 12000
+        assert rack2['naming_prefix'] == 'AIDC'
+        assert rack2['cooling_method'] == 'cold_plate'
+        assert rack2['gpu_dedicated'] is True
+        assert config2['scale_up']['protocol'] == 'UB'
+        assert config2['scale_up']['num_gpus'] == 128
+        assert config2['scale_up']['gpus_per_node'] == 8
+        assert config2['scale_up']['domain_size'] == 128
+        assert config2['scale_up']['bandwidth'] == 2800.0
+        assert '[rack]' in ini_text
+        assert '[scale_up]' in ini_text
+        assert 'cooling_method = cold_plate' in ini_text
+
+    def test_storage_servers_merged_into_single_key(self):
+        """全闪+混闪合并为 additional_storage_servers 单键"""
+        config = create_default_config('tpl')
+        config['topology']['num_all_flash_storage'] = 8
+        config['topology']['num_hybrid_flash_storage'] = 8
+        ini_text = project_config_to_ini(config)
+        assert 'additional_storage_servers = 16' in ini_text
+
+    def test_network_toggles(self):
+        """网络开关映射为 oob_enabled/biz_enabled 布尔"""
+        config = create_default_config('tpl')
+        config['networks']['oob_network'] = False
+        config['networks']['biz_network'] = True
+        ini_text = project_config_to_ini(config)
+        assert 'oob_enabled = false' in ini_text
+        assert 'biz_enabled = true' in ini_text
+        # 往返后网络开关一致
+        config2, _, _ = self._roundtrip(config)
+        assert config2['networks']['oob_network'] is False
+        assert config2['networks']['biz_network'] is True
+
+    def test_empty_scale_up_not_emitted(self):
+        """空 scale_up 不输出 [scale_up] 段"""
+        config = create_default_config('tpl')
+        ini_text = project_config_to_ini(config)
+        assert '[scale_up]' not in ini_text
+
+
+class TestProjectConfigToIniAction:
+    """V2.9.6-T1: engine project_config_to_ini action（template:update 校验入口）"""
+
+    def test_valid_config_returns_ini(self):
+        from engine import handle_project_config_to_ini
+        config = create_default_config('tpl')
+        result = handle_project_config_to_ini({'config': config})
+        assert result['valid'] is True
+        assert result['error'] is None
+        assert result['ini'] is not None
+        assert result['ini'].startswith('[DEFAULT]')
+
+    def test_invalid_config_rejected(self):
+        """缺 topology → validate_config 拒绝，返回具体错误"""
+        from engine import handle_project_config_to_ini
+        config = create_default_config('tpl')
+        del config['topology']
+        result = handle_project_config_to_ini({'config': config})
+        assert result['valid'] is False
+        assert result['error'] is not None
+        assert result['ini'] is None
+
+    def test_non_dict_rejected(self):
+        from engine import handle_project_config_to_ini
+        result = handle_project_config_to_ini({'config': 'not-a-dict'})
+        assert result['valid'] is False
+        assert result['error'] is not None

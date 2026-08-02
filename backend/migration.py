@@ -306,6 +306,88 @@ def _get_default_device_refs(config: dict) -> dict:
     return refs
 
 
+# ================================================================
+#  JSON → INI 反向序列化 (V2.9.6-T2: 模板编辑保存时同步生成 network_config.ini)
+# ================================================================
+
+def project_config_to_ini(config: dict) -> str:
+    """
+    将 V2.1 project_config.json 反向序列化为 V2.0 network_config.ini（模板 [DEFAULT] 风格）
+
+    字段与 designer._load_common_ini_config 读取的 [DEFAULT] 键一一对应，
+    保证 JSON → INI → JSON 往返核心字段一致。
+
+    Args:
+        config: 完整 ProjectConfig 字典（应已通过 validate_config）
+
+    Returns:
+        network_config.ini 内容字符串
+    """
+    topo = config.get('topology', {}) or {}
+    networks = config.get('networks', {}) or {}
+    rack = config.get('rack_config', {}) or {}
+    scale_up = config.get('scale_up') or {}
+
+    lines = ['[DEFAULT]']
+
+    def _add(key, value):
+        lines.append(f'{key} = {value}')
+
+    # --- topology 基础字段 ---
+    _add('downlink_mode', topo.get('downlink_mode', 'custom'))
+    _add('num_servers', topo.get('num_gpu_servers', 100))
+    storage_total = topo.get('num_all_flash_storage', 0) + topo.get('num_hybrid_flash_storage', 0)
+    _add('additional_storage_servers', storage_total)
+    _add('additional_compute_servers', topo.get('num_compute_servers', 0))
+    _add('param_ports_per_server', topo.get('param_ports_per_server', 8))
+    _add('storage_ports_per_server', topo.get('storage_ports_per_server', 1))
+    _add('param_switch_ports', topo.get('param_switch_ports', 64))
+    _add('storage_switch_ports', topo.get('storage_switch_ports', 40))
+    _add('param_speed', topo.get('param_speed', '400G'))
+    _add('storage_speed', topo.get('storage_speed', '200G'))
+    _add('param_downlink_limit', topo.get('param_downlink_limit', 25))
+    _add('storage_downlink_limit', topo.get('storage_downlink_limit', 20))
+    _add('biz_downlink_limit', topo.get('biz_downlink_limit', 25))
+    _add('oob_downlink_limit', topo.get('oob_downlink_limit', 25))
+    # 可选扩展字段（存在才写入，避免旧 INI 携带多余键）
+    if 'param_protocol' in topo:
+        _add('param_protocol', topo['param_protocol'])
+    if 'rail_mode' in topo:
+        _add('rail_mode', topo['rail_mode'])
+    if 'rail_count' in topo:
+        _add('rail_count', topo['rail_count'])
+    if 'biz_chassis_threshold' in topo:
+        _add('biz_chassis_threshold', topo['biz_chassis_threshold'])
+
+    # --- 网络开关 ---
+    if 'oob_network' in networks:
+        _add('oob_enabled', 'true' if networks['oob_network'] else 'false')
+    if 'biz_network' in networks:
+        _add('biz_enabled', 'true' if networks['biz_network'] else 'false')
+
+    # --- [rack] 段 ---
+    if rack:
+        lines.append('')
+        lines.append('[rack]')
+        _add('rack_type', rack.get('rack_type', 42))
+        _add('power_limit_per_rack', rack.get('power_limit_per_rack', 6000))
+        _add('naming_prefix', rack.get('naming_prefix', '机柜'))
+        if 'cooling_method' in rack:
+            _add('cooling_method', rack['cooling_method'])
+        if 'gpu_dedicated' in rack:
+            _add('gpu_dedicated', 'true' if rack['gpu_dedicated'] else 'false')
+
+    # --- [scale_up] 段（非空才写入） ---
+    if scale_up:
+        lines.append('')
+        lines.append('[scale_up]')
+        for k, v in scale_up.items():
+            if v is not None:
+                _add(k, v)
+
+    return '\n'.join(lines) + '\n'
+
+
 def migrate_project(project_dir: str) -> tuple:
     """
     迁移整个项目目录：将 network_config.ini 转换为 project_config.json
