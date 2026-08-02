@@ -29,6 +29,12 @@ INI_TO_TOPOLOGY = {
     'storage_downlink_limit': ('storage_downlink_limit', int),
     'biz_downlink_limit': ('biz_downlink_limit', int),
     'oob_downlink_limit': ('oob_downlink_limit', int),
+    # V2.9.4-T1: 模板 INI（[DEFAULT] 段）补充字段
+    'additional_compute_servers': ('num_compute_servers', int),
+    'rail_mode': ('rail_mode', str),
+    'rail_count': ('rail_count', int),
+    'param_protocol': ('param_protocol', str),
+    'biz_chassis_threshold': ('biz_chassis_threshold', int),
 }
 
 # 网络开关从 INI section 推断
@@ -71,64 +77,90 @@ def ini_to_project_config(ini_path: str, project_name: str = None) -> dict:
     except Exception as e:
         return None, [f"INI 文件解析失败: {e}"]
 
+    # 有效配置段：优先 [topology]（V2.0 项目），兼容模板 [DEFAULT]（V2.0 模板，V2.9.4-T1）
+    sec = 'topology' if ini.has_section('topology') else 'DEFAULT'
+
+    def _has(key):
+        return ini.has_option(sec, key)
+
+    def _get(key, fallback=None):
+        return ini.get(sec, key, fallback=fallback) if _has(key) else fallback
+
     # --- 迁移 topology section ---
-    if ini.has_section('topology'):
-        for ini_key, (json_key, value_type) in INI_TO_TOPOLOGY.items():
-            if ini.has_option('topology', ini_key):
-                raw = ini.get('topology', ini_key)
-                try:
-                    value = value_type(raw)
-                except (ValueError, TypeError):
-                    warnings.append(f"topology.{ini_key} 值 '{raw}' 无法转换为 {value_type.__name__}，使用默认值")
-                    continue
-                config['topology'][json_key] = value
-    else:
-        warnings.append("INI 文件缺少 [topology] section，使用默认拓扑参数")
+    if sec == 'DEFAULT' and not any(k in ini.defaults() for k in ('num_servers', 'downlink_mode', 'param_speed')):
+        warnings.append("INI 缺少 [topology] section 且 [DEFAULT] 无有效键，使用默认拓扑参数")
+    for ini_key, (json_key, value_type) in INI_TO_TOPOLOGY.items():
+        if not _has(ini_key):
+            continue
+        raw = _get(ini_key)
+        try:
+            config['topology'][json_key] = value_type(raw)
+        except (ValueError, TypeError):
+            warnings.append(f"{sec}.{ini_key} 值 '{raw}' 无法转换为 {value_type.__name__}，使用默认值")
 
-    # --- 迁移服务器数量 ---
-    if ini.has_option('topology', 'num_servers'):
-        config['topology']['num_gpu_servers'] = ini.getint('topology', 'num_servers')
+    def _split_storage(count):
+        """存储数量拆分为 全闪/混闪（0 台时保持 0）"""
+        if count <= 0:
+            return 0, 0
+        return max(1, count // 2 + count % 2), count // 2
 
-    # num_additional_servers → compute_servers
-    if ini.has_option('topology', 'num_additional_servers'):
-        config['topology']['num_compute_servers'] = ini.getint('topology', 'num_additional_servers')
-        warnings.append("num_additional_servers 已映射为 num_compute_servers")
+    # --- 服务器数量 ---
+    # additional_storage_servers（模板风格）→ 拆分为全闪/混闪
+    if _has('additional_storage_servers'):
+        try:
+            storage_count = ini.getint(sec, 'additional_storage_servers')
+            all_flash, hybrid = _split_storage(storage_count)
+            config['topology']['num_all_flash_storage'] = all_flash
+            config['topology']['num_hybrid_flash_storage'] = hybrid
+            warnings.append(f"additional_storage_servers ({storage_count}) 已拆分为 全闪({all_flash}) + 混闪({hybrid})")
+        except (ValueError, TypeError):
+            pass
 
-    # num_storage_servers → 如果存在则映射到全闪存储，混闪设为0
-    if ini.has_option('topology', 'num_storage_servers'):
-        storage_count = ini.getint('topology', 'num_storage_servers')
-        # 拆分为全闪和混闪（默认各一半，至少1台）
-        all_flash = max(1, storage_count // 2 + storage_count % 2)
-        hybrid = storage_count // 2
-        config['topology']['num_all_flash_storage'] = all_flash
-        config['topology']['num_hybrid_flash_storage'] = hybrid
-        warnings.append(f"num_storage_servers ({storage_count}) 已拆分为 全闪({all_flash}) + 混闪({hybrid})")
+    # num_storage_servers → 拆分为全闪/混闪（旧字段兼容）
+    if _has('num_storage_servers'):
+        try:
+            storage_count = ini.getint(sec, 'num_storage_servers')
+            all_flash, hybrid = _split_storage(storage_count)
+            config['topology']['num_all_flash_storage'] = all_flash
+            config['topology']['num_hybrid_flash_storage'] = hybrid
+            warnings.append(f"num_storage_servers ({storage_count}) 已拆分为 全闪({all_flash}) + 混闪({hybrid})")
+        except (ValueError, TypeError):
+            pass
+
+    # num_additional_servers → compute_servers（旧字段兼容）
+    if _has('num_additional_servers'):
+        try:
+            config['topology']['num_compute_servers'] = ini.getint(sec, 'num_additional_servers')
+            warnings.append("num_additional_servers 已映射为 num_compute_servers")
+        except (ValueError, TypeError):
+            pass
 
     # --- 迁移网络开关 ---
-    # 检查 oob_enabled
-    if ini.has_option('topology', 'oob_enabled'):
-        oob_enabled = ini.getboolean('topology', 'oob_enabled')
-        config['networks']['oob_network'] = oob_enabled
+    if _has('oob_enabled'):
+        try:
+            config['networks']['oob_network'] = ini.getboolean(sec, 'oob_enabled')
+        except ValueError:
+            pass
     else:
         # 如果有 oob_downlink_limit > 0，认为 OOB 启用
-        oob_dl = config['topology'].get('oob_downlink_limit', 0)
-        config['networks']['oob_network'] = oob_dl > 0
+        config['networks']['oob_network'] = config['topology'].get('oob_downlink_limit', 0) > 0
 
-    # check biz_enabled
-    if ini.has_option('topology', 'biz_enabled'):
-        biz_enabled = ini.getboolean('topology', 'biz_enabled')
-        config['networks']['biz_network'] = biz_enabled
+    if _has('biz_enabled'):
+        try:
+            config['networks']['biz_network'] = ini.getboolean(sec, 'biz_enabled')
+        except ValueError:
+            pass
     else:
-        biz_dl = config['topology'].get('biz_downlink_limit', 0)
-        config['networks']['biz_network'] = biz_dl > 0
+        config['networks']['biz_network'] = config['topology'].get('biz_downlink_limit', 0) > 0
 
-    # param_network: 有 num_servers > 0 则启用
+    # param_network: 有 GPU 服务器则启用
     gpu_servers = config['topology'].get('num_gpu_servers', 0)
     config['networks']['param_network'] = gpu_servers > 0
 
-    # storage_network: 有 storage 配置则启用
-    storage_dl = config['topology'].get('storage_downlink_limit', 0) or config['topology'].get('num_hybrid_flash_storage', 0)
-    config['networks']['storage_network'] = (config['topology'].get('num_hybrid_flash_storage', 0) + config['topology'].get('num_all_flash_storage', 0)) > 0
+    # storage_network: 有存储配置则启用
+    config['networks']['storage_network'] = (
+        config['topology'].get('num_all_flash_storage', 0) + config['topology'].get('num_hybrid_flash_storage', 0)
+    ) > 0
 
     # --- 迁移 rack_config ---
     if ini.has_section('rack'):
@@ -147,6 +179,16 @@ def ini_to_project_config(ini_path: str, project_name: str = None) -> dict:
                 pass
         if ini.has_option('rack', 'naming_prefix'):
             config['rack_config']['naming_prefix'] = ini.get('rack', 'naming_prefix')
+        # V2.9.4-T4: 模板机柜校准字段（V2.9.1 前端 rack_config 扩展）
+        if ini.has_option('rack', 'cooling_method'):
+            cooling = ini.get('rack', 'cooling_method').strip().lower()
+            if cooling in ('air', 'cold_plate', 'immersion'):
+                config['rack_config']['cooling_method'] = cooling
+        if ini.has_option('rack', 'gpu_dedicated'):
+            try:
+                config['rack_config']['gpu_dedicated'] = ini.getboolean('rack', 'gpu_dedicated')
+            except ValueError:
+                pass
 
     # --- V2.9.3-T1: 迁移 scale_up section (可选) ---
     if ini.has_section('scale_up'):
@@ -189,33 +231,67 @@ def ini_to_project_config(ini_path: str, project_name: str = None) -> dict:
 
 
 def _get_default_device_refs(config: dict) -> dict:
-    """根据网络开关生成默认设备引用"""
+    """根据网络开关生成默认设备引用（V2.9.4-T3: 含 gpu_server 与 designer 别名键）"""
     refs = {}
     networks = config.get('networks', {})
-    protocol = config.get('topology', {}).get('param_protocol', 'RoCE')
+    topology = config.get('topology', {})
+    protocol = topology.get('param_protocol', 'RoCE')
+    speed = str(topology.get('param_speed', '400G')).upper()
+
+    # GPU 服务器：通用默认（模板场景由 prepare_templates.py 按模板语义覆盖）
+    if networks.get('param_network'):
+        refs['gpu_server'] = {'library_id': 'nvidia_dgx_h100'}
 
     if networks.get('param_network'):
+        # 交换机选型按协议+速率（与 designer._auto_select_param_switch 保持一致）
         if protocol == 'IB':
-            refs['param_leaf_switch'] = {'library_id': 'nvidia_mqm9700_64_400g_ib'}
-            refs['param_spine_switch'] = {'library_id': 'nvidia_q3200_72_800g_ib'}
-            refs['param_core_switch'] = {'library_id': 'nvidia_q3400_144_800g_ib'}
-        else:
-            refs['param_leaf_switch'] = {'library_id': 'h3c_s9850_64h'}
-            refs['param_spine_switch'] = {'library_id': 'h3c_s9820_64h'}
-            refs['param_core_switch'] = {'library_id': 'h3c_s9820_8c'}
+            leaf_id = {
+                '200G': 'nvidia_mqm8790_40_200g_ib',
+                '400G': 'nvidia_mqm9700_64_400g_ib',
+                '800G': 'nvidia_q3200_72_800g_ib',
+            }.get(speed, 'nvidia_mqm9700_64_400g_ib')
+            spine_id = leaf_id
+            core_id = leaf_id
+        elif protocol == 'UEC':
+            leaf_id = {
+                '400G': 'ruijie_s6910_32oc2vs_1_6t',
+                '800G': 'h3c_s12500r_48_800g',
+                '1600G': 'h3c_s12500r_cpo_51_2t',
+            }.get(speed, 'h3c_s12500r_cpo_51_2t')
+            spine_id = leaf_id
+            core_id = leaf_id
+        else:  # RoCE
+            leaf_id = {
+                '200G': 'nvidia_sn5400_64_200g',
+                '400G': 'h3c_s9820_64h',
+                '800G': 'h3c_s12500r_48_800g',
+            }.get(speed, 'h3c_s9820_64h')
+            spine_id = leaf_id
+            core_id = leaf_id
+        refs['param_leaf_switch'] = {'library_id': leaf_id}
+        refs['param_spine_switch'] = {'library_id': spine_id}
+        refs['param_core_switch'] = {'library_id': core_id}
+        # designer 使用的别名键（leaf 档案代表整个参数网）
+        refs['param_switch'] = {'library_id': leaf_id}
 
     if networks.get('storage_network'):
         # T5: 存储交换机按协议分流
         # IB: 复用 Quantum HDR 交换机(IB 存储与参数面共用 Quantum 系列)
         # RoCE: 专用存储接入交换机(ce6881,支持 RoCEv2/FC-NVMe)
         if protocol == 'IB':
-            refs['storage_leaf_switch'] = {'library_id': 'nvidia_mqm8700_40_200g_ib'}
-            refs['storage_spine_switch'] = {'library_id': 'nvidia_mqm8700_40_200g_ib'}
+            storage_leaf_id = 'nvidia_mqm8700_40_200g_ib'
         else:
-            refs['storage_leaf_switch'] = {'library_id': 'huawei_ce6881_48s6cq'}
-            refs['storage_spine_switch'] = {'library_id': 'huawei_ce6881_48s6cq'}
-        refs['all_flash_storage_server'] = {'library_id': 'generic_all_flash'}
-        refs['hybrid_flash_storage_server'] = {'library_id': 'generic_hybrid_flash'}
+            storage_leaf_id = 'huawei_ce6881_48s6cq'
+        refs['storage_leaf_switch'] = {'library_id': storage_leaf_id}
+        refs['storage_spine_switch'] = {'library_id': storage_leaf_id}
+        # designer 使用的别名键
+        refs['storage_switch'] = {'library_id': storage_leaf_id}
+        all_flash_id = 'generic_all_flash'
+        hybrid_id = 'generic_hybrid_flash'
+        refs['all_flash_storage_server'] = {'library_id': all_flash_id}
+        refs['hybrid_flash_storage_server'] = {'library_id': hybrid_id}
+        # designer 使用单一存储档案（全闪代表）
+        refs['storage_server'] = {'library_id': all_flash_id}
 
     if networks.get('biz_network'):
         # T9: 业务接入交换机对齐 biz_port_speed=25G(原 h3c_s5560x_54s_ei 为 10G)

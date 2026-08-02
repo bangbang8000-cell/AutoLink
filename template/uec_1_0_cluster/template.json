@@ -3,6 +3,14 @@
   "name": "UEC 1.0 集群方案",
   "description": "基于 UEC 1.0 (Ultra Ethernet Consortium) 规范的 1024 GPU 集群，RoCE 400G Scale-Out，面向超大模型训练",
   "scenario": "UEC-1.0-1024",
-  "tags": ["UEC", "Ultra Ethernet", "1024台", "400G", "Scale-Out", "大模型"],
-  "updatedAt": "2026-08-02"
+  "tags": [
+    "UEC",
+    "Ultra Ethernet",
+    "1024台",
+    "400G",
+    "Scale-Out",
+    "大模型"
+  ],
+  "updatedAt": "2026-08-02",
+  "templateVersion": 2
 }

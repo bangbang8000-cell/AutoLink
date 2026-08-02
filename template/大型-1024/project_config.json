@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "name": "大型-1024",
+    "description": "",
+    "version": 1,
+    "created_at": "2026-08-02T22:48:15.573655",
+    "updated_at": "2026-08-02T22:48:15.573655"
+  },
+  "networks": {
+    "param_network": true,
+    "storage_network": true,
+    "biz_network": true,
+    "oob_network": true
+  },
+  "topology": {
+    "downlink_mode": "custom",
+    "param_protocol": "RoCE",
+    "num_gpu_servers": 1024,
+    "num_all_flash_storage": 48,
+    "num_hybrid_flash_storage": 48,
+    "num_compute_servers": 48,
+    "param_ports_per_server": 8,
+    "storage_ports_per_server": 1,
+    "param_switch_ports": 64,
+    "storage_switch_ports": 48,
+    "param_speed": "400G",
+    "storage_speed": "200G",
+    "param_downlink_limit": 32,
+    "storage_downlink_limit": 24,
+    "biz_downlink_limit": 25,
+    "oob_downlink_limit": 25
+  },
+  "device_refs": {
+    "gpu_server": {
+      "library_id": "nvidia_dgx_h100"
+    },
+    "param_leaf_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "param_spine_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "param_core_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "param_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "storage_leaf_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "storage_spine_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "storage_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "all_flash_storage_server": {
+      "library_id": "generic_all_flash"
+    },
+    "hybrid_flash_storage_server": {
+      "library_id": "generic_hybrid_flash"
+    },
+    "storage_server": {
+      "library_id": "generic_all_flash"
+    },
+    "biz_access_switch": {
+      "library_id": "h3c_s6850_56hf"
+    },
+    "biz_agg_switch": {
+      "library_id": "h3c_s6520x_54qc_ei"
+    },
+    "compute_server": {
+      "library_id": "generic_2u_compute"
+    },
+    "oob_access_switch": {
+      "library_id": "h3c_s5130s_52p_ei"
+    },
+    "oob_agg_switch": {
+      "library_id": "h3c_s5120v3_52p_ei"
+    }
+  },
+  "rack_config": {
+    "rack_type": 42,
+    "power_limit_per_rack": 12000,
+    "naming_prefix": "机柜",
+    "cooling_method": "air",
+    "gpu_dedicated": true
+  },
+  "scale_up": {}
+}

@@ -3,6 +3,16 @@
   "name": "海光 DCU 集群方案",
   "description": "64台海光K100 DCU服务器（8卡/台），RoCE 200G参数面，面向信创AI训练场景",
   "scenario": "Hygon-DCU-64",
-  "tags": ["海光", "DCU", "K100", "64台", "国产化", "信创", "RoCE", "200G"],
-  "updatedAt": "2026-08-02"
+  "tags": [
+    "海光",
+    "DCU",
+    "K100",
+    "64台",
+    "国产化",
+    "信创",
+    "RoCE",
+    "200G"
+  ],
+  "updatedAt": "2026-08-02",
+  "templateVersion": 2
 }

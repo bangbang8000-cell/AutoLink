@@ -3,6 +3,13 @@
   "name": "SuperPOD-256方案",
   "description": "256台H100 GPU（NVIDIA SuperPOD参考架构，三层Fat-Tree 400G）+ 48存储 + 32通算",
   "scenario": "SuperPOD-256",
-  "tags": ["H100", "256台", "3层组网", "SuperPOD", "400G"],
-  "updatedAt": "2026-07-29"
+  "tags": [
+    "H100",
+    "256台",
+    "3层组网",
+    "SuperPOD",
+    "400G"
+  ],
+  "updatedAt": "2026-07-29",
+  "templateVersion": 2
 }

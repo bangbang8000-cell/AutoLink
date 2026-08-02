@@ -201,6 +201,220 @@ biz_enabled = False
             assert len(designer.storage_leaves) == 0
 
 
+class TestDefaultSectionMigration:
+    """V2.9.4-T1: 模板风格 [DEFAULT] 段 INI → JSON 迁移测试"""
+
+    def _migrate(self, content, name='tpl'):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = os.path.join(tmpdir, 'network_config.ini')
+            with open(ini_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            from migration import ini_to_project_config
+            config, warnings = ini_to_project_config(ini_path, project_name=name)
+            return config, warnings
+
+    def test_default_section_full_mapping(self):
+        """[DEFAULT] 段全字段映射：拓扑/服务器/网络/rack/scale_up"""
+        content = """[DEFAULT]
+downlink_mode = custom
+num_servers = 100
+additional_storage_servers = 14
+additional_compute_servers = 20
+param_ports_per_server = 8
+storage_ports_per_server = 1
+param_switch_ports = 64
+storage_switch_ports = 40
+param_speed = 400G
+storage_speed = 200G
+param_downlink_limit = 25
+storage_downlink_limit = 20
+biz_downlink_limit = 25
+oob_downlink_limit = 25
+param_protocol = RoCE
+oob_enabled = true
+biz_enabled = true
+
+[rack]
+rack_type = 42
+power_limit_per_rack = 12000
+naming_prefix = 机柜
+cooling_method = cold_plate
+gpu_dedicated = true
+"""
+        config, _ = self._migrate(content)
+        assert config is not None
+        # 拓扑
+        assert config['topology']['num_gpu_servers'] == 100
+        assert config['topology']['num_all_flash_storage'] == 7
+        assert config['topology']['num_hybrid_flash_storage'] == 7
+        assert config['topology']['num_compute_servers'] == 20
+        assert config['topology']['param_protocol'] == 'RoCE'
+        # 网络开关
+        assert config['networks']['param_network'] is True
+        assert config['networks']['storage_network'] is True
+        assert config['networks']['oob_network'] is True
+        assert config['networks']['biz_network'] is True
+        # 机柜
+        assert config['rack_config']['power_limit_per_rack'] == 12000
+        assert config['rack_config']['cooling_method'] == 'cold_plate'
+        assert config['rack_config']['gpu_dedicated'] is True
+        # 选型（含 gpu_server 与别名键）
+        assert 'gpu_server' in config['device_refs']
+        assert 'param_switch' in config['device_refs']
+        assert 'storage_switch' in config['device_refs']
+        assert 'storage_server' in config['device_refs']
+
+    def test_zero_storage_split(self):
+        """存储数量为 0 时拆分为 0+0（不强制至少 1 台）"""
+        content = """[DEFAULT]
+num_servers = 10
+additional_storage_servers = 0
+additional_compute_servers = 0
+oob_enabled = false
+biz_enabled = false
+"""
+        config, _ = self._migrate(content)
+        assert config['topology']['num_all_flash_storage'] == 0
+        assert config['topology']['num_hybrid_flash_storage'] == 0
+        assert config['topology']['num_compute_servers'] == 0
+        assert config['networks']['storage_network'] is False
+
+    def test_legacy_topology_section_still_works(self):
+        """旧 [topology] 段格式仍可迁移（向后兼容）"""
+        content = """[topology]
+downlink_mode = full
+num_servers = 64
+num_storage_servers = 8
+num_additional_servers = 4
+param_ports_per_server = 8
+storage_ports_per_server = 1
+param_switch_ports = 64
+storage_switch_ports = 48
+param_speed = 400G
+storage_speed = 200G
+param_downlink_limit = 32
+storage_downlink_limit = 24
+biz_downlink_limit = 25
+oob_downlink_limit = 25
+oob_enabled = true
+biz_enabled = true
+"""
+        config, warnings = self._migrate(content)
+        assert config is not None
+        assert config['topology']['num_gpu_servers'] == 64
+        assert config['topology']['num_all_flash_storage'] == 4  # 8 → 4+4
+        assert config['topology']['num_hybrid_flash_storage'] == 4
+        assert config['topology']['num_compute_servers'] == 4
+        assert config['topology']['downlink_mode'] == 'full'
+
+    def test_scale_up_section_migrated(self):
+        """[scale_up] 段迁移为 JSON scale_up 对象"""
+        content = """[DEFAULT]
+num_servers = 48
+additional_storage_servers = 16
+additional_compute_servers = 24
+param_ports_per_server = 8
+storage_ports_per_server = 2
+param_switch_ports = 64
+storage_switch_ports = 48
+param_speed = 200G
+storage_speed = 200G
+oob_enabled = true
+biz_enabled = true
+
+[scale_up]
+protocol = UB
+num_gpus = 384
+gpus_per_node = 8
+domain_size = 384
+bandwidth = 2800
+"""
+        config, _ = self._migrate(content)
+        assert config['scale_up']['protocol'] == 'UB'
+        assert config['scale_up']['num_gpus'] == 384
+        assert config['scale_up']['domain_size'] == 384
+        assert config['scale_up']['bandwidth'] == 2800.0
+
+
+class TestDesignerAliasResolution:
+    """V2.9.4-T3: designer 设备档案别名收敛（向导键名 → designer 键名）"""
+
+    def _write_project(self, tmpdir, device_refs):
+        config = {
+            "meta": {"name": "alias", "version": 1},
+            "networks": {"param_network": True, "storage_network": True,
+                         "biz_network": True, "oob_network": True},
+            "topology": {
+                "downlink_mode": "custom", "param_protocol": "RoCE",
+                "num_gpu_servers": 8, "num_all_flash_storage": 1,
+                "num_hybrid_flash_storage": 0, "num_compute_servers": 1,
+                "param_ports_per_server": 8, "storage_ports_per_server": 1,
+                "param_switch_ports": 64, "storage_switch_ports": 40,
+                "param_speed": "400G", "storage_speed": "200G",
+                "param_downlink_limit": 25, "storage_downlink_limit": 20,
+                "biz_downlink_limit": 25, "oob_downlink_limit": 25,
+            },
+            "device_refs": device_refs,
+            "rack_config": {"rack_type": 42, "power_limit_per_rack": 12000,
+                            "naming_prefix": "机柜"},
+        }
+        json_path = os.path.join(tmpdir, 'project_config.json')
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False)
+        return json_path
+
+    def test_wizard_keys_mapped_to_designer_keys(self):
+        """仅向导键名（param_leaf_switch/all_flash_storage_server）时，designer 自动映射别名"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            refs = {
+                'gpu_server': {'library_id': 'nvidia_dgx_h100'},
+                'param_leaf_switch': {'library_id': 'h3c_s9820_64h'},
+                'param_spine_switch': {'library_id': 'h3c_s9820_64h'},
+                'param_core_switch': {'library_id': 'h3c_s9820_64h'},
+                'storage_leaf_switch': {'library_id': 'huawei_ce6881_48s6cq'},
+                'storage_spine_switch': {'library_id': 'huawei_ce6881_48s6cq'},
+                'all_flash_storage_server': {'library_id': 'generic_all_flash'},
+                'hybrid_flash_storage_server': {'library_id': 'generic_hybrid_flash'},
+                'biz_access_switch': {'library_id': 'h3c_s6850_56hf'},
+                'biz_agg_switch': {'library_id': 'h3c_s6520x_54qc_ei'},
+                'compute_server': {'library_id': 'generic_2u_compute'},
+                'oob_access_switch': {'library_id': 'h3c_s5130s_52p_ei'},
+                'oob_agg_switch': {'library_id': 'h3c_s5120v3_52p_ei'},
+            }
+            json_path = self._write_project(tmpdir, refs)
+            designer = NetworkDesignerV2(json_path)
+            assert 'param_switch' in designer._device_profiles
+            assert designer._device_profiles['param_switch'].id == 'h3c_s9820_64h'
+            assert 'storage_switch' in designer._device_profiles
+            assert designer._device_profiles['storage_switch'].id == 'huawei_ce6881_48s6cq'
+            assert 'storage_server' in designer._device_profiles
+            assert designer._device_profiles['storage_server'].id == 'generic_all_flash'
+            # GPU 档案生效（功率来自设备库，非默认 500W）
+            assert designer._device_profiles['gpu_server'].power_watts == 10200
+
+    def test_explicit_designer_keys_take_precedence(self):
+        """同时存在 designer 键名与向导键名时，designer 键名优先"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            refs = {
+                'gpu_server': {'library_id': 'nvidia_dgx_h100'},
+                'param_leaf_switch': {'library_id': 'h3c_s9820_64h'},
+                'param_switch': {'library_id': 'h3c_s9850_64h'},
+                'param_spine_switch': {'library_id': 'h3c_s9820_64h'},
+                'param_core_switch': {'library_id': 'h3c_s9820_64h'},
+                'storage_leaf_switch': {'library_id': 'huawei_ce6881_48s6cq'},
+                'all_flash_storage_server': {'library_id': 'generic_all_flash'},
+                'hybrid_flash_storage_server': {'library_id': 'generic_hybrid_flash'},
+                'biz_access_switch': {'library_id': 'h3c_s6850_56hf'},
+                'biz_agg_switch': {'library_id': 'h3c_s6520x_54qc_ei'},
+                'compute_server': {'library_id': 'generic_2u_compute'},
+                'oob_access_switch': {'library_id': 'h3c_s5130s_52p_ei'},
+                'oob_agg_switch': {'library_id': 'h3c_s5120v3_52p_ei'},
+            }
+            json_path = self._write_project(tmpdir, refs)
+            designer = NetworkDesignerV2(json_path)
+            assert designer._device_profiles['param_switch'].id == 'h3c_s9850_64h'
+
+
 class TestProtocolBasedDeviceSelection:
     """T5/T9: 协议联动设备选型测试"""
 
@@ -255,20 +469,44 @@ class TestProtocolBasedDeviceSelection:
         assert 'all_flash_storage_server' not in refs
 
     def test_param_switch_ib_protocol(self):
-        """IB 协议下,参数面交换机应选 NVIDIA Quantum 系列"""
+        """IB 协议下,参数面交换机按速率选 NVIDIA Quantum 系列（V2.9.4-T3 速率收敛）"""
         config = self._build_config(protocol='IB', param=True)
         refs = _get_default_device_refs(config)
+        # 默认 400G → MQM9700（leaf/spine/core 与 designer 自动选型一致）
         assert refs['param_leaf_switch']['library_id'] == 'nvidia_mqm9700_64_400g_ib'
-        assert refs['param_spine_switch']['library_id'] == 'nvidia_q3200_72_800g_ib'
-        assert refs['param_core_switch']['library_id'] == 'nvidia_q3400_144_800g_ib'
+        assert refs['param_spine_switch']['library_id'] == 'nvidia_mqm9700_64_400g_ib'
+        assert refs['param_core_switch']['library_id'] == 'nvidia_mqm9700_64_400g_ib'
+        # designer 别名键
+        assert refs['param_switch']['library_id'] == 'nvidia_mqm9700_64_400g_ib'
 
     def test_param_switch_roce_protocol(self):
-        """RoCE 协议下,参数面交换机应选 H3C S9850/S9820 系列"""
+        """RoCE 协议下,参数面交换机按速率选型（V2.9.4-T3 速率收敛）"""
         config = self._build_config(protocol='RoCE', param=True)
         refs = _get_default_device_refs(config)
-        assert refs['param_leaf_switch']['library_id'] == 'h3c_s9850_64h'
+        # 默认 400G → H3C S9820-64H
+        assert refs['param_leaf_switch']['library_id'] == 'h3c_s9820_64h'
         assert refs['param_spine_switch']['library_id'] == 'h3c_s9820_64h'
-        assert refs['param_core_switch']['library_id'] == 'h3c_s9820_8c'
+        assert refs['param_core_switch']['library_id'] == 'h3c_s9820_64h'
+        assert refs['param_switch']['library_id'] == 'h3c_s9820_64h'
+
+    def test_param_switch_roce_speed_aware(self):
+        """RoCE 参数交换机按速率区分（200G/800G）"""
+        refs_200 = _get_default_device_refs(self._build_config(protocol='RoCE', param=True)
+                                            | {'topology': {'param_protocol': 'RoCE', 'param_speed': '200G'}})
+        refs_800 = _get_default_device_refs(self._build_config(protocol='RoCE', param=True)
+                                            | {'topology': {'param_protocol': 'RoCE', 'param_speed': '800G'}})
+        assert refs_200['param_leaf_switch']['library_id'] == 'nvidia_sn5400_64_200g'
+        assert refs_800['param_leaf_switch']['library_id'] == 'h3c_s12500r_48_800g'
+
+    def test_default_refs_include_gpu_and_designer_aliases(self):
+        """默认引用应含 gpu_server 与 designer 别名键（param_switch/storage_switch/storage_server）"""
+        config = self._build_config(protocol='RoCE', storage=True, param=True)
+        refs = _get_default_device_refs(config)
+        assert refs['gpu_server']['library_id'] == 'nvidia_dgx_h100'
+        assert 'param_switch' in refs
+        assert 'storage_switch' in refs
+        assert 'storage_server' in refs
+        assert refs['storage_server']['library_id'] == refs['all_flash_storage_server']['library_id']
 
     def test_ib_storage_distinct_from_roce_storage(self):
         """IB 与 RoCE 两种协议下,存储交换机选型必须不同"""

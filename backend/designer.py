@@ -86,6 +86,18 @@ class NetworkDesignerV2:
                 if device:
                     self._device_profiles[key] = device
 
+            # V2.9.4-T3: 设备档案别名收敛 — 向导键名映射到 designer 键名
+            # (向导写 param_leaf_switch/all_flash_storage_server, designer 读 param_switch/storage_server)
+            if 'param_switch' not in self._device_profiles and 'param_leaf_switch' in self._device_profiles:
+                self._device_profiles['param_switch'] = self._device_profiles['param_leaf_switch']
+            if 'storage_switch' not in self._device_profiles and 'storage_leaf_switch' in self._device_profiles:
+                self._device_profiles['storage_switch'] = self._device_profiles['storage_leaf_switch']
+            if 'storage_server' not in self._device_profiles:
+                if 'all_flash_storage_server' in self._device_profiles:
+                    self._device_profiles['storage_server'] = self._device_profiles['all_flash_storage_server']
+                elif 'hybrid_flash_storage_server' in self._device_profiles:
+                    self._device_profiles['storage_server'] = self._device_profiles['hybrid_flash_storage_server']
+
             # V2.7.2-T8: 未通过 device_refs 指定 param_switch 时,按 param_protocol 自动选型
             if 'param_switch' not in self._device_profiles:
                 auto_sw = self._auto_select_param_switch(topo.get('param_speed', '400G'))

@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## [2.9.4] - 2026-08-02
+
+### 模板数据模型与库治理（项目模板生命周期打通 · 第一阶段）
+
+v2.9.4 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第一阶段：为每个内置模板补齐 `project_config.json`（规模/选型/机柜/网络的唯一权威载体），并升级模板生成与验证脚本，为"从模板创建项目"打好数据地基（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+
+#### 迁移引擎支持模板 INI（T1）
+- `migration.ini_to_project_config` 支持 `[DEFAULT]` 段（模板风格），兼容旧 `[topology]` 段
+- 新增映射：`additional_storage_servers`（拆分为全闪/混闪）、`additional_compute_servers`、`rail_mode`/`rail_count`/`param_protocol`/`biz_chassis_threshold`
+- `[rack]` 段支持 `cooling_method`/`gpu_dedicated`（V2.9.1 rack_config 扩展）；存储数量为 0 时正确拆分为 0+0
+
+#### 模板预生成脚本（T2）
+- 新建 `scripts/prepare_templates.py`：INI → JSON 批量生成 + 按模板语义覆盖 GPU 选型 + 校验（validate_config + 设备库解析）；幂等，`--force` 覆盖，`--check` dry-run
+
+#### 选型规则收敛（T3）
+- `_get_default_device_refs` 补充 `gpu_server` 与 designer 别名键（`param_switch`/`storage_switch`/`storage_server`）
+- 参数交换机按协议+速率选型（IB/UEC/RoCE × 200G/400G/800G），与 `designer._auto_select_param_switch` 一致
+- `designer._load_project_config` 新增别名收敛：向导键名（`param_leaf_switch`/`all_flash_storage_server`）自动映射为 designer 键名
+
+#### 内置模板库治理（T4）
+- 16 个内置模板全部生成并人工校准 `project_config.json`（GPU 选型：H100/L20/GB300 NVL72/MLU590/昇腾 910C/海光 K100/B200 等）
+- 11 个模板补充 `[rack]` 段机柜配置（功率上限 8K~18KW、液冷-H100-256 为 cold_plate、GPU 独占）
+- `template.json` 增加 `templateVersion: 2`；修复 cambricon_mlu_cluster 缺失的 template.json
+
+#### 模板验证升级（T5）
+- `validate_templates.py` 升级：project_config.json 完整性、device_refs 全量解析、INI/JSON 设计拓扑等价、机柜功率/U 位/上架检查
+- 全量结果：`prepare_templates.py` 16/16 OK，`validate_templates.py` 16/16 通过
+
+#### 版本与回归（T7）
+- 版本号 2.9.3 → 2.9.4（package.json / VERSION / package-lock.json）
+- 全量回归：pytest 552 passed（新增 12 个迁移/别名用例）、vitest 341 passed、tsc 0 error、eslint 0 error（37 个既有 warning）
+
 ## [2.9.3] - 2026-08-02
 
 ### 能力补强收口（3.0 前收官 · 第三阶段）

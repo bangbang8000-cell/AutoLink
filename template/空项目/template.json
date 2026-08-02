@@ -3,6 +3,10 @@
   "name": "空项目",
   "description": "空白项目模板，适合从头开始设计",
   "scenario": "自定义",
-  "tags": ["空白", "自定义"],
-  "updatedAt": "2026-07-26"
+  "tags": [
+    "空白",
+    "自定义"
+  ],
+  "updatedAt": "2026-07-26",
+  "templateVersion": 2
 }

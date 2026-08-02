@@ -3,6 +3,14 @@
   "name": "超大2048台方案",
   "description": "2048台H100 GPU（三层Fat-Tree XDR 400G，16 POD）+ 192存储 + 96通算",
   "scenario": "超大-2048",
-  "tags": ["H100", "2048台", "3层组网", "Fat-Tree", "XDR", "400G"],
-  "updatedAt": "2026-07-29"
+  "tags": [
+    "H100",
+    "2048台",
+    "3层组网",
+    "Fat-Tree",
+    "XDR",
+    "400G"
+  ],
+  "updatedAt": "2026-07-29",
+  "templateVersion": 2
 }

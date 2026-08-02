@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "name": "hygon_dcu_cluster",
+    "description": "",
+    "version": 1,
+    "created_at": "2026-08-02T22:48:15.566943",
+    "updated_at": "2026-08-02T22:48:15.566943"
+  },
+  "networks": {
+    "param_network": true,
+    "storage_network": true,
+    "biz_network": true,
+    "oob_network": true
+  },
+  "topology": {
+    "downlink_mode": "custom",
+    "param_protocol": "RoCE",
+    "num_gpu_servers": 64,
+    "num_all_flash_storage": 4,
+    "num_hybrid_flash_storage": 4,
+    "num_compute_servers": 8,
+    "param_ports_per_server": 4,
+    "storage_ports_per_server": 2,
+    "param_switch_ports": 64,
+    "storage_switch_ports": 48,
+    "param_speed": "200G",
+    "storage_speed": "100G",
+    "param_downlink_limit": 32,
+    "storage_downlink_limit": 24,
+    "biz_downlink_limit": 25,
+    "oob_downlink_limit": 25
+  },
+  "device_refs": {
+    "gpu_server": {
+      "library_id": "hygon_k100_ai"
+    },
+    "param_leaf_switch": {
+      "library_id": "nvidia_sn5400_64_200g"
+    },
+    "param_spine_switch": {
+      "library_id": "nvidia_sn5400_64_200g"
+    },
+    "param_core_switch": {
+      "library_id": "nvidia_sn5400_64_200g"
+    },
+    "param_switch": {
+      "library_id": "nvidia_sn5400_64_200g"
+    },
+    "storage_leaf_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "storage_spine_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "storage_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "all_flash_storage_server": {
+      "library_id": "generic_all_flash"
+    },
+    "hybrid_flash_storage_server": {
+      "library_id": "generic_hybrid_flash"
+    },
+    "storage_server": {
+      "library_id": "generic_all_flash"
+    },
+    "biz_access_switch": {
+      "library_id": "h3c_s6850_56hf"
+    },
+    "biz_agg_switch": {
+      "library_id": "h3c_s6520x_54qc_ei"
+    },
+    "compute_server": {
+      "library_id": "generic_2u_compute"
+    },
+    "oob_access_switch": {
+      "library_id": "h3c_s5130s_52p_ei"
+    },
+    "oob_agg_switch": {
+      "library_id": "h3c_s5120v3_52p_ei"
+    }
+  },
+  "rack_config": {
+    "rack_type": 42,
+    "power_limit_per_rack": 6000,
+    "naming_prefix": "机柜"
+  },
+  "scale_up": {}
+}
