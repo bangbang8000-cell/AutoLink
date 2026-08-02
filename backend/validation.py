@@ -323,6 +323,152 @@ def _rule_cabinet_utilization(ctx: ValidationContext) -> List[ValidationIssue]:
     return issues
 
 
+# ====== V2.9.3-T5: 硬规则 V016-V019 ======
+
+def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V016: 服务器网卡总数 vs Leaf 下行容量
+
+    参数网/存储网所有服务器的网卡总数不得超过 Leaf 下行口总容量，
+    否则 Leaf 端口不足导致部分服务器无法接入。
+    """
+    issues = []
+
+    # 参数网
+    num_servers = int(ctx.config.get('num_servers', 0) or 0)
+    ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
+    leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
+    dl = int(ctx.config.get('param_dl', 0) or 0)
+    required = num_servers * ports_per_server
+    capacity = leaf_count * dl
+    if capacity > 0 and required > capacity:
+        issues.append(ValidationIssue(
+            rule_id="V016",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"参数网服务器网卡总数 {required} 超过 Leaf 下行总容量 {capacity}",
+            affected_items=["param"],
+            recommendation="增加参数 Leaf 交换机数量或降低每服务器网卡数",
+        ))
+
+    # 存储网
+    total_servers = int(ctx.config.get('total_servers', num_servers) or 0)
+    storage_ports = int(ctx.config.get('storage_ports_per_server', 1) or 1)
+    storage_leaf = int(ctx.config.get('storage_leaf_count', 0) or 0)
+    storage_dl = int(ctx.config.get('storage_dl', 0) or 0)
+    s_required = total_servers * storage_ports
+    s_capacity = storage_leaf * storage_dl
+    if s_capacity > 0 and s_required > s_capacity:
+        issues.append(ValidationIssue(
+            rule_id="V016",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"存储网网卡总数 {s_required} 超过 Leaf 下行总容量 {s_capacity}",
+            affected_items=["storage"],
+            recommendation="增加存储 Leaf 交换机数量",
+        ))
+    return issues
+
+
+def _rule_optical_module_match(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V017: 光模块封装/距离匹配校验
+
+    - OOB 管理网为短距场景, 不应使用 MPO/AOC 光纤(长距模块), 推荐网线/铜缆
+    - Scale-Up 网应使用协议专用线缆 (如 UALink-Cable)
+    """
+    issues = []
+    for conn in ctx.connections:
+        net = conn.get("network_type", "") or conn.get("networkType", "")
+        cable = conn.get("cableType", "") or conn.get("cable_type", "") or ""
+        src = conn.get("source", "")
+        tgt = conn.get("target", "")
+        name = conn.get("name", "") or f"{src}->{tgt}"
+        if net == "oob" and cable.upper() in ("MPO", "AOC"):
+            issues.append(ValidationIssue(
+                rule_id="V017",
+                severity=Severity.WARNING,
+                category="兼容性规则",
+                message=f"OOB 管理网链路 {name} 使用 {cable} 光纤, 短距管理网推荐网线/铜缆",
+                affected_items=[name],
+                recommendation="OOB 管理网改用网线/铜缆, 降低成本并匹配短距传输",
+            ))
+        if net == "scale_up" and cable and not cable.endswith("-Cable"):
+            issues.append(ValidationIssue(
+                rule_id="V017",
+                severity=Severity.WARNING,
+                category="兼容性规则",
+                message=f"Scale-Up 链路 {name} 线缆 {cable} 与协议不匹配, 应使用协议专用线缆",
+                affected_items=[name],
+                recommendation="Scale-Up 网使用协议专用线缆 (如 NVLink/UALink/UB Cable)",
+            ))
+    return issues
+
+
+def _rule_pod_domain_scale(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V018: Pod/域规模合理性校验
+
+    - 参数网 Pod 服务器数不应超过单 Pod (2-tier) 容量
+    - Scale-Up 单域规模不应超过协议上限 (NVLink 72 / UALink 1024 / UB 384)
+    """
+    issues = []
+
+    # 参数网 Pod 规模
+    servers_per_pod = int(ctx.config.get('param_servers_per_pod', 0) or 0)
+    max_2tier = int(ctx.config.get('max_2tier', 0) or 0)
+    if max_2tier > 0 and servers_per_pod > max_2tier:
+        issues.append(ValidationIssue(
+            rule_id="V018",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"参数网 Pod 服务器数 {servers_per_pod} 超过单 Pod 容量 {max_2tier}",
+            affected_items=["param"],
+            recommendation=f"单个 Pod 服务器数应 ≤ {max_2tier}, 超限时应增加 Pod 数量",
+        ))
+
+    # Scale-Up 域规模
+    su = ctx.config.get("scale_up")
+    if su and isinstance(su, dict):
+        protocol = su.get('protocol', '')
+        num_gpus = int(su.get('num_gpus', 0) or 0)
+        domain_limits = {'NVLink': 72, 'UALink': 1024, 'UB': 384}
+        limit = domain_limits.get(protocol, 1024)
+        domain_size = int(su.get('domain_size', 0) or 0) or num_gpus
+        if domain_size > limit:
+            issues.append(ValidationIssue(
+                rule_id="V018",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"Scale-Up 域规模 {domain_size} 超过 {protocol} 协议上限 {limit}",
+                affected_items=["scale_up"],
+                recommendation=f"{protocol} 单域 GPU 数应 ≤ {limit}, 增大 domain_size 配置无效, 应降低单域规模",
+            ))
+    return issues
+
+
+def _rule_total_power_supply(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V019: 整机房功率 vs 供电容量校验
+
+    所有机柜总功耗不得超过总供电容量 (Σ power_limit)。
+    """
+    issues = []
+    total_power = 0
+    total_capacity = 0
+    for cab in ctx.cabinets:
+        # engine cabinets_ctx: 功率记录含 power_watts/power_limit, U 位记录不含
+        if "power_watts" in cab:
+            total_power += cab.get("power_watts", 0) or 0
+            total_capacity += cab.get("power_limit", 0) or 0
+    if total_capacity > 0 and total_power > total_capacity:
+        issues.append(ValidationIssue(
+            rule_id="V019",
+            severity=Severity.ERROR,
+            category="物理规则",
+            message=f"整机房总功率 {total_power}W 超过供电容量 {total_capacity}W (超限 {total_power - total_capacity}W)",
+            affected_items=[],
+            recommendation="增加机柜数量/供电容量, 或降低设备功耗配置 (如降低功率预设)",
+        ))
+    return issues
+
+
 def _rule_rail_consistency(ctx: ValidationContext) -> List[ValidationIssue]:
     """V007: Rail-Optimized 一致性校验
 
@@ -548,4 +694,9 @@ def create_default_engine() -> ValidationEngine:
     # V2.9.3: 机柜物理合理性校验
     engine.register_rule("V014", "物理规则", _rule_gpu_cabinet_overload)
     engine.register_rule("V015", "物理规则", _rule_cabinet_utilization)
+    # V2.9.3-T5: 硬规则 (容量/光模块/规模/供电)
+    engine.register_rule("V016", "拓扑规则", _rule_server_nic_capacity)
+    engine.register_rule("V017", "兼容性规则", _rule_optical_module_match)
+    engine.register_rule("V018", "拓扑规则", _rule_pod_domain_scale)
+    engine.register_rule("V019", "物理规则", _rule_total_power_supply)
     return engine

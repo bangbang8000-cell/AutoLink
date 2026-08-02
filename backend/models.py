@@ -13,13 +13,19 @@ class NetworkObject:
 
     def __init__(self, name, obj_type, group=None, max_ports=64, podid=None,
                  device_profile=None, power_watts=0, u_height=1, layer_hint=None,
-                 rail_id=None, rail_role="none"):
+                 rail_id=None, rail_role="none", domain_id=None, protocol="",
+                 network_type=""):
         self.name = name
         self.obj_type = obj_type  # 'server', 'param_leaf', 'param_spine', 'param_core', 'storage_leaf', 'storage_spine'
         self.group = group
         self.podid = podid
         self.connections = []
         self.max_ports = max_ports
+
+        # V2.9.3-T2: Scale-Up GPU 节点字段
+        self.domain_id = domain_id       # Scale-Up 域 ID
+        self.protocol = protocol         # NVLink / UALink / UB
+        self.network_type = network_type # 'scale_up'
 
         # 设备档案信息 (V2.1新增)
         self.device_profile = device_profile  # LibraryDevice or None
@@ -36,6 +42,10 @@ class NetworkObject:
         self.downlink_prefix: str = ""
         self.uplink_prefix: str = ""
         self.port_prefix: str = ""
+        # V2.9.3-T7: 各类网络独立端口命名前缀 (服务器网卡)
+        self.storage_prefix: Optional[str] = None
+        self.oob_prefix: Optional[str] = None
+        self.biz_prefix: Optional[str] = None
 
         # V2.4.2: 布局层级提示，显式指定拓扑图Y轴分层
         # 取值: 'core'(L5) / 'spine'(L4) / 'leaf'(L3) / 'server'(L2) / 'access'(L1) / 'agg'(L0)

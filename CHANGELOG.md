@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## [2.9.3] - 2026-08-02
+
+### 能力补强收口（3.0 前收官 · 第三阶段）
+
+v2.9.3 是 3.0 前收官最后阶段：Scale-Up 双栈转正、校验硬规则扩到 19 条、PDF 报告修复完善、端口前缀解析补齐、UEC/模板一致性治理（PRD 见 `docs/v2.9/v2.9.1-2.9.3_质量与体验_PRD.md`）。
+
+#### Scale-Up 配置层（T1）
+- JSON 顶层 `scale_up` 段 + INI `[scale_up]` section，`bandwidth` 兼容旧命名 `bandwidth_per_link_gbps`
+- 旧配置缺失该段 → `scale_up_config=None` 不报错；INI→JSON 迁移保留 scale_up
+- `project_config.validate_config` 新增可选 scale_up 校验（protocol 枚举 + 数值类型）
+
+#### Scale-Up 生成层（T2）
+- designer 主流程接入：GPU 以 `NetworkObject(obj_type='scaleup_gpu', network_type='scale_up', domain_id, protocol)` 纳入体系
+- 域内全对等边双向挂接 Connection，`scale_up_connections` 按无向 pair 去重
+
+#### Scale-Up 机柜层（T3）
+- RackAllocator 新增 `CABINET_TYPE_SCALEUP`，GPU 节点 1 台/柜独占，域内柜号相邻
+- engine 输出 scale_up 节点（domainId/protocol/networkType）与 summary.scaleUp
+
+#### Scale-Up 前端与报告（T4）
+- TopologyTab/RackTab 消费 scale_up 数据：拓扑边渲染、机柜类型 scaleup（琥珀色）
+- 报告概览/架构/机柜章节含 Scale-Up 汇总
+
+#### 校验硬规则 V016-V019（T5）
+- V016 服务器网卡容量、V017 光模块封装/距离匹配、V018 Pod/域规模、V019 整机房功率，规则数 15→19
+
+#### PDF 报告修复与完善（T6）
+- 项目名称取 meta.name（修 bug）、机柜表全量渲染（repeatRows=1）、BOM 按型号聚合
+- 新增设备清单/收敛比章节，收敛比读 estimation 计算值（非硬编码）
+
+#### 端口前缀解析补齐（T7）
+- `_resolve_device_port_prefixes` 实现 storage/oob/biz 命名前缀（接口模型驱动 + 默认值兜底）
+- `_wire_storage` / OOB / 业务网连线端口按对应前缀命名
+
+#### UEC/模板一致性（T8）
+- `validate_config` 接受 UEC 协议（IB/RoCE/UEC），与 designer 自动选型一致
+- ualink_1_0_1024 / cloudmatrix_384 / NVL72-单架 三模板补 scale_up 配置（名实相符：UALink 1024 / UB 384 / NVLink 72 单域）
+
+#### 版本与回归（T9）
+- 版本号 2.9.2 → 2.9.3（package.json / VERSION / package-lock.json）
+- 全量回归：pytest（新增 15 个用例）、tsc、eslint、vitest 全绿
+
 ## [2.9.2] - 2026-08-02
 
 ### 体验精细打磨（3.0 前收官 · 第二阶段）

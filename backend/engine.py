@@ -18,6 +18,7 @@ import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from designer import NetworkDesignerV2
+from topology import calc_max_2tier
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
     export_cabling_guide, export_bom, generate_report_data, export_pdf_report,
@@ -280,6 +281,12 @@ def handle_design(params):
         "railCount": getattr(designer, 'rail_count', 8),
         # V2.7.2: 参数网协议
         "paramProtocol": getattr(designer, 'param_protocol', 'RoCE'),
+        # V2.9.3-T2: Scale-Up 配置与统计
+        "scaleUp": {
+            "enabled": bool(getattr(designer, 'scale_up_config', None)),
+            "config": getattr(designer, 'scale_up_config', None),
+            "stats": getattr(designer, 'scale_up_stats', {}),
+        },
     }
 
     # Build topology data for visualization
@@ -341,6 +348,21 @@ def handle_design(params):
     for sw in designer.oob_agg:
         nodes.append(_sw_node(sw))
 
+    # V2.9.3-T2: Scale-Up GPU 节点
+    for gpu in getattr(designer, 'scale_up_gpus', []):
+        nodes.append({
+            "id": gpu.name, "type": gpu.obj_type, "group": gpu.group,
+            "podid": gpu.podid,
+            "domainId": gpu.domain_id,
+            "protocol": gpu.protocol,
+            "networkType": gpu.network_type,
+            "network_type": gpu.network_type,
+            "layerHint": gpu.layer_hint,
+            "cabinetId": gpu.cabinet_id, "cabinetName": gpu.cabinet_name,
+            "startU": gpu.start_u, "endU": gpu.end_u,
+            "powerWatts": gpu.power_watts, "uHeight": gpu.u_height,
+        })
+
     # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
     # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
     all_switches = (
@@ -348,7 +370,7 @@ def handle_design(params):
         designer.storage_leaves + designer.storage_spines + designer.storage_cores +
         designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
     )
-    all_devices = designer.servers + all_switches
+    all_devices = designer.servers + all_switches + getattr(designer, 'scale_up_gpus', [])
     seen_conns = set()
     for dev in all_devices:
         for conn in dev.connections:
@@ -456,6 +478,17 @@ def handle_design(params):
         # V2.9.3: 机柜配置 (供 V014/V015 读取)
         "rack_type": getattr(designer, 'rack_type', 42),
         "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+        # V2.9.3-T5: V016/V018 容量与规模校验数据
+        "num_servers": designer.num_servers,
+        "total_servers": designer.total_servers,
+        "param_leaf_count": getattr(designer, 'param_leaf_count', 0),
+        "param_dl": getattr(designer, 'param_dl', 0),
+        "storage_leaf_count": getattr(designer, 'storage_leaf_count', 0),
+        "storage_dl": getattr(designer, 'storage_dl', 0),
+        "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
+        "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
+        "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
+        "scale_up": getattr(designer, 'scale_up_config', None),
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
@@ -542,7 +575,8 @@ def handle_report(params):
         return {"error": error}
 
     designer = NetworkDesignerV2(config_file)
-    return generate_report_data(designer)
+    estimation = _estimate_design(designer, params.get('estimateParams', {}))
+    return generate_report_data(designer, estimation)
 
 
 def _calculate_power_summary(designer):
@@ -649,6 +683,8 @@ def handle_export(params):
     results = []
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     mode = designer.downlink_mode
+    # V2.9.3-T6: 报告数据复用 estimation(收敛比等)
+    estimation = _estimate_design(designer, params.get('estimateParams', {}))
 
     if 'connections' in output_types:
         fn = os.path.join(output_dir, f"AI智算网络_{mode}模式_{ts}.xlsx")
@@ -686,7 +722,7 @@ def handle_export(params):
     # V2.4: PDF 报告数据（直接返回数据，不导出文件）
     if 'reportData' in output_types:
         try:
-            report_data = generate_report_data(designer)
+            report_data = generate_report_data(designer, estimation)
             results.append({"type": "reportData", "data": report_data, "status": "success"})
         except Exception as e:
             results.append({"type": "reportData", "status": "error", "error": str(e)})

@@ -21,6 +21,68 @@ def _extract_number(s):
     return int(match.group()) if match else 0
 
 
+def _parse_speed_gbps(speed_str: str) -> float:
+    """将速率字符串（如 '400G'）解析为 Gbps 数值 (V2.9.3-T6)"""
+    if not speed_str:
+        return 400.0
+    s = str(speed_str).strip().upper()
+    for unit, factor in (('GB', 1.0), ('G', 1.0), ('TB', 1000.0), ('T', 1000.0)):
+        if s.endswith(unit):
+            try:
+                return float(s[:-len(unit)]) * factor
+            except ValueError:
+                break
+    try:
+        return float(s)
+    except ValueError:
+        return 400.0
+
+
+def _conv_to_dict(r):
+    """ConvergenceResult -> dict (V2.9.3-T6)"""
+    return {
+        'networkType': r.network_type,
+        'downlinkBwGbps': r.downlink_bw_gbps,
+        'uplinkBwGbps': r.uplink_bw_gbps,
+        'convergenceRatio': r.convergence_ratio,
+        'isBlocking': r.is_blocking,
+        'targetRatio': r.target_ratio,
+        'meetsTarget': r.meets_target,
+        'recommendation': r.recommendation,
+    }
+
+
+def _compute_convergence(designer) -> dict:
+    """V2.9.3-T6: 计算参数/存储/业务网收敛比(与 engine._estimate_design 一致)"""
+    from estimation import calc_convergence_ratio
+
+    convergence = {}
+    if designer.param_leaf_count > 0:
+        param_dl = getattr(designer, 'param_dl', 0) or 0
+        param_ul = max(designer.param_switch_ports - param_dl, 0)
+        convergence['param'] = _conv_to_dict(calc_convergence_ratio(
+            'param', param_dl, param_ul,
+            _parse_speed_gbps(designer.param_speed),
+            designer.param_leaf_count,
+        ))
+    if designer.storage_leaf_count > 0:
+        storage_dl = getattr(designer, 'storage_dl', 0) or 0
+        storage_ul = max(designer.storage_switch_ports - storage_dl, 0)
+        convergence['storage'] = _conv_to_dict(calc_convergence_ratio(
+            'storage', storage_dl, storage_ul,
+            _parse_speed_gbps(designer.storage_speed),
+            designer.storage_leaf_count,
+        ))
+    if getattr(designer, 'biz_enabled', True) and getattr(designer, 'biz_access', None):
+        biz_ports = getattr(designer, 'biz_access_ports', 48)
+        biz_uplinks = getattr(designer, 'biz_access_uplinks', 8)
+        biz_speed = _parse_speed_gbps(getattr(designer, 'biz_port_speed', '25G'))
+        convergence['biz'] = _conv_to_dict(calc_convergence_ratio(
+            'biz', biz_ports, biz_uplinks, biz_speed, len(designer.biz_access),
+        ))
+    return convergence
+
+
 def _get_iface_weight(port_str):
     """获取服务器接口类型排序权重: 参数网卡=1, 存储=2, OOB=3, 业务=4"""
     if '参数' in port_str:
@@ -142,7 +204,8 @@ def generate_switch_view(designer):
 
 
 # V2.9.1: 机柜类型显示标签 (与 rack_allocation.CABINET_TYPE_* 对应)
-_RACK_TYPE_LABELS = {'gpu': 'GPU柜', 'compute': '通算柜', 'storage': '存储柜', 'network': '网络柜'}
+_RACK_TYPE_LABELS = {'gpu': 'GPU柜', 'compute': '通算柜', 'storage': '存储柜', 'network': '网络柜',
+                     'scaleup': 'Scale-Up柜'}  # V2.9.3-T4
 
 
 def generate_summary_data(designer):
@@ -169,6 +232,13 @@ def generate_summary_data(designer):
 
     param_tier_info = "3层(Leaf-Spine-Core)" if designer.param_3tier_needed else "2层(Leaf-Spine)"
     storage_tier_info = "3层(Leaf-Spine-Core)" if designer.storage_3tier_needed else "2层(Leaf-Spine)"
+
+    # V2.9.3-T6: 收敛比读 estimation 计算值, 不再硬编码
+    convergence = _compute_convergence(designer)
+    param_conv = convergence.get('param', {})
+    storage_conv = convergence.get('storage', {})
+    param_conv_str = f"1:{param_conv['convergenceRatio']:.2f}" if param_conv else ("1:1:1" if designer.param_3tier_needed else "1:1")
+    storage_conv_str = f"1:{storage_conv['convergenceRatio']:.2f}" if storage_conv else ("1:1:1" if designer.storage_3tier_needed else "1:1")
 
     if designer.param_3tier_needed:
         param_group_info = f"{designer.param_pods}个POD, 每个POD{designer.param_servers_per_pod}台"
@@ -198,7 +268,7 @@ def generate_summary_data(designer):
         ["服务器分组", param_group_info],
         ["下行端口使用率", param_downlink_usage],
         ["上行端口使用率", param_uplink_usage],
-        ["收敛比例", "1:1:1" if designer.param_3tier_needed else "1:1"],
+        ["收敛比例", param_conv_str],
         ["", ""],
         ["存储网络设计", ""],
         ["交换机端口数", designer.storage_switch_ports],
@@ -209,7 +279,7 @@ def generate_summary_data(designer):
         ["服务器分组", storage_group_info],
         ["下行端口使用率", storage_downlink_usage],
         ["上行端口使用率", storage_uplink_usage],
-        ["收敛比例", "1:1:1" if designer.storage_3tier_needed else "1:1"],
+        ["收敛比例", storage_conv_str],
         ["", ""],
         ["网络速度配置", ""],
         ["参数网络速度", designer.param_speed],
@@ -709,30 +779,41 @@ def export_bom(designer, filename):
 
     rows = []
 
-    # 1. 服务器
+    # 1. 服务器 (V2.9.3-T6: 按型号聚合, 替代逐台一行)
+    server_agg = {}
     for server in designer.servers:
         dev = None
         if library and getattr(server, 'device_profile', None):
             # V2.9.3: 传入 id 而非 LibraryDevice 对象(对象不可哈希导致 TypeError)
             dev = library.get(getattr(server.device_profile, 'id', '')) or None
         price = getattr(dev, 'price_range', None) if dev else None
+        category = 'GPU服务器' if 'GPU' in (server.name + getattr(dev, 'description', '') or '') else '服务器'
+        model = getattr(dev, 'id', '') if dev else ''
+        desc = getattr(dev, 'description', '') if dev else server.obj_type
+        lead = LEAD_TIME_MAP.get(price or '', '')
+        key = (category, model, desc, price, lead)
+        if key not in server_agg:
+            server_agg[key] = {'power': server.power_watts or 0, 'count': 0}
+        server_agg[key]['count'] += 1
+    for (category, model, desc, price, lead), info in server_agg.items():
         rows.append({
-            '类别': 'GPU服务器' if 'GPU' in (server.name + getattr(dev, 'description', '') or '') else '服务器',
-            '设备名称': server.name,
-            '设备型号': getattr(dev, 'id', '') if dev else '',
-            '描述': getattr(dev, 'description', '') if dev else server.obj_type,
-            '数量': 1,
-            '单位功率(W)': server.power_watts or 0,
+            '类别': category,
+            '设备名称': model or desc,
+            '设备型号': model,
+            '描述': desc,
+            '数量': info['count'],
+            '单位功率(W)': info['power'],
             '价格区间': price or '',
-            '供货周期': LEAD_TIME_MAP.get(price or '', ''),
+            '供货周期': lead,
         })
 
-    # 2. 交换机
+    # 2. 交换机 (V2.9.3-T6: 按型号聚合)
     all_switches = (
         designer.param_leaves + designer.param_spines + designer.param_cores +
         designer.storage_leaves + designer.storage_spines + designer.storage_cores +
         designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
     )
+    switch_agg = {}
     for sw in all_switches:
         dev = None
         if library and getattr(sw, 'device_profile', None):
@@ -743,15 +824,23 @@ def export_bom(designer, filename):
                   '存储网交换机' if '存储' in sw.name else \
                   'OOB交换机' if 'OOB' in sw.name else \
                   '业务交换机' if '业务' in sw.name else '交换机'
+        model = getattr(dev, 'id', '') if dev else ''
+        desc = getattr(dev, 'description', '') if dev else sw.obj_type
+        lead = LEAD_TIME_MAP.get(price or '', '')
+        key = (sw_type, model, desc, price, lead)
+        if key not in switch_agg:
+            switch_agg[key] = {'power': sw.power_watts or 0, 'count': 0}
+        switch_agg[key]['count'] += 1
+    for (sw_type, model, desc, price, lead), info in switch_agg.items():
         rows.append({
             '类别': sw_type,
-            '设备名称': sw.name,
-            '设备型号': getattr(dev, 'id', '') if dev else '',
-            '描述': getattr(dev, 'description', '') if dev else sw.obj_type,
-            '数量': 1,
-            '单位功率(W)': sw.power_watts or 0,
+            '设备名称': model or desc,
+            '设备型号': model,
+            '描述': desc,
+            '数量': info['count'],
+            '单位功率(W)': info['power'],
             '价格区间': price or '',
-            '供货周期': LEAD_TIME_MAP.get(price or '', ''),
+            '供货周期': lead,
         })
 
     # 3. 光模块（按型号汇总）
@@ -834,7 +923,7 @@ def export_bom(designer, filename):
     return df
 
 
-def generate_report_data(designer):
+def generate_report_data(designer, estimation=None):
     """V2.4: 生成 PDF 报告所需的完整数据（字典格式）
 
     返回包含以下章节的数据：
@@ -846,11 +935,16 @@ def generate_report_data(designer):
     6. 布线汇总
     7. 成本估算
     8. 校验结果
+
+    V2.9.3-T6: 项目名称取自配置 meta.name; 收敛比优先读 estimation 值
     """
     from optical_selector import select_module_for_connection, estimate_module_cost
 
     # 1. 项目概览
+    pc = getattr(designer, '_project_config', None) or {}
+    project_name = pc.get('meta', {}).get('name', '') or 'AutoLink 项目'
     overview = {
+        '项目名称': project_name,
         'GPU服务器数': designer.num_servers,
         '存储服务器数': designer.additional_storage,
         '通算服务器数': designer.additional_compute,
@@ -859,6 +953,14 @@ def generate_report_data(designer):
         '存储网速率': designer.storage_speed,
         '下行模式': designer.downlink_mode,
     }
+    # V2.9.3-T4: Scale-Up 概览
+    su_cfg = getattr(designer, 'scale_up_config', None)
+    if su_cfg:
+        su_stats = getattr(designer, 'scale_up_stats', {})
+        overview['Scale-Up协议'] = su_cfg.get('protocol', '')
+        overview['Scale-Up GPU节点数'] = len(getattr(designer, 'scale_up_gpus', []))
+        overview['Scale-Up域数'] = su_stats.get('num_domains', 0)
+        overview['Scale-Up总链路数'] = su_stats.get('total_connections', 0)
 
     # 2. 网络架构
     all_switches = (
@@ -878,6 +980,8 @@ def generate_report_data(designer):
         '业务接入': len(designer.biz_access),
         '业务汇聚': len(designer.biz_agg),
         '交换机总数': len(all_switches),
+        # V2.9.3-T4: Scale-Up
+        'Scale-Up GPU节点': len(getattr(designer, 'scale_up_gpus', [])),
     }
 
     # 3. 功耗
@@ -928,7 +1032,7 @@ def generate_report_data(designer):
     # 7. 机柜规划 (V2.9.1: 机柜清单,含交换机; 类型来自 rack_allocation 分配)
     rack_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
     rack_cabs = {}
-    for dev in designer.servers + all_switches:
+    for dev in designer.servers + all_switches + getattr(designer, 'scale_up_gpus', []):
         if dev.cabinet_id is None:
             continue
         cid = dev.cabinet_id
@@ -963,6 +1067,9 @@ def generate_report_data(designer):
         'modules': module_stats,
         'cost': cost,
         'racks': racks,
+        # V2.9.3-T6: 设备清单(按型号聚合) + 收敛比(优先读 estimation)
+        'devices': generate_device_list(designer),
+        'convergence': (estimation or {}).get('convergence', {}) if estimation else _compute_convergence(designer),
         'generated_at': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
@@ -1148,7 +1255,8 @@ def export_pdf_report(designer, filename):
 
     # V2.7.4-T8: 目录
     story.append(Paragraph('目录', h2_style))
-    toc_items = ['1. 项目概览', '2. 网络架构', '3. 功耗与散热', '4. 光模块汇总', '5. 成本估算', '6. 机柜规划', '7. 校验结果']
+    toc_items = ['1. 项目概览', '2. 网络架构', '3. 设备清单', '4. 收敛比',
+                 '5. 功耗与散热', '6. 光模块汇总', '7. 成本估算', '8. 机柜规划', '9. 校验结果']
     for item in toc_items:
         story.append(Paragraph(item, toc_style))
     story.append(PageBreak())
@@ -1195,8 +1303,71 @@ def export_pdf_report(designer, filename):
     story.append(arch_table)
     story.append(Spacer(1, 4 * mm))
 
-    # 3. 功耗与散热
-    story.append(Paragraph('3. 功耗与散热', h2_style))
+    # V2.9.3-T6: 3. 设备清单 (按型号聚合)
+    story.append(Paragraph('3. 设备清单', h2_style))
+    devices = data.get('devices', [])
+    if isinstance(devices, pd.DataFrame):
+        devices = devices.to_dict('records') if not devices.empty else []
+    if devices:
+        dev_rows = [[Paragraph('设备类型', cell_style), Paragraph('厂商', cell_style),
+                     Paragraph('型号', cell_style), Paragraph('数量', cell_style),
+                     Paragraph('单机功耗(W)', cell_style), Paragraph('U位', cell_style)]]
+        for d in devices:
+            dev_rows.append([
+                Paragraph(str(d.get('设备类型', '')), cell_style),
+                Paragraph(str(d.get('厂商', '')), cell_style),
+                Paragraph(str(d.get('型号', '')), cell_style),
+                Paragraph(str(d.get('数量', '')), cell_style),
+                Paragraph(str(d.get('单机功耗(W)', '')), cell_style),
+                Paragraph(str(d.get('U位高度', '')), cell_style),
+            ])
+        dev_table = Table(dev_rows, colWidths=[28 * mm, 24 * mm, 40 * mm, 14 * mm, 22 * mm, 14 * mm],
+                          repeatRows=1)
+        dev_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10b981')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(dev_table)
+        story.append(Spacer(1, 4 * mm))
+    else:
+        story.append(Paragraph('无设备数据', normal_style))
+
+    # V2.9.3-T6: 4. 收敛比 (读 estimation 计算值)
+    story.append(Paragraph('4. 收敛比', h2_style))
+    convergence = data.get('convergence', {})
+    if convergence:
+        conv_rows = [[Paragraph('网络', cell_style), Paragraph('收敛比', cell_style),
+                      Paragraph('下行带宽(Gbps)', cell_style), Paragraph('上行带宽(Gbps)', cell_style),
+                      Paragraph('状态', cell_style)]]
+        net_labels = {'param': '参数网', 'storage': '存储网', 'biz': '业务网'}
+        for net, info in convergence.items():
+            ratio = info.get('convergenceRatio', 1)
+            conv_rows.append([
+                Paragraph(net_labels.get(net, net), cell_style),
+                Paragraph(f"1:{ratio:.2f}", cell_style),
+                Paragraph(str(info.get('downlinkBwGbps', '')), cell_style),
+                Paragraph(str(info.get('uplinkBwGbps', '')), cell_style),
+                Paragraph('无阻塞' if info.get('meetsTarget') else '有收敛', cell_style),
+            ])
+        conv_table = Table(conv_rows, colWidths=[24 * mm, 22 * mm, 32 * mm, 32 * mm, 22 * mm])
+        conv_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0ea5e9')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(conv_table)
+        story.append(Spacer(1, 4 * mm))
+    else:
+        story.append(Paragraph('无收敛比数据', normal_style))
+
+    # 5. 功耗与散热
+    story.append(Paragraph('5. 功耗与散热', h2_style))
     pw = data['power']
     pw_rows = [[Paragraph('项目', cell_style), Paragraph('数值', cell_style)]]
     for k, v in pw.items():
@@ -1220,8 +1391,8 @@ def export_pdf_report(designer, filename):
 
     story.append(PageBreak())
 
-    # 4. 光模块汇总
-    story.append(Paragraph('4. 光模块汇总', h2_style))
+    # 6. 光模块汇总
+    story.append(Paragraph('6. 光模块汇总', h2_style))
     mods = data['modules']
     if mods:
         mod_rows = [[Paragraph('型号', cell_style), Paragraph('数量', cell_style),
@@ -1252,8 +1423,8 @@ def export_pdf_report(designer, filename):
         story.append(Paragraph('无光模块数据', normal_style))
     story.append(Spacer(1, 4 * mm))
 
-    # 5. 成本估算
-    story.append(Paragraph('5. 成本估算', h2_style))
+    # 7. 成本估算
+    story.append(Paragraph('7. 成本估算', h2_style))
     cost = data['cost']
     cost_rows = [[Paragraph('项目', cell_style), Paragraph('数值', cell_style)]]
     for k, v in cost.items():
@@ -1268,15 +1439,15 @@ def export_pdf_report(designer, filename):
     story.append(cost_table)
     story.append(Spacer(1, 4 * mm))
 
-    # V2.9.1: 6. 机柜规划（机柜清单，含交换机）
-    story.append(Paragraph('6. 机柜规划', h2_style))
+    # V2.9.1: 8. 机柜规划（机柜清单，含交换机；V2.9.3-T6: 全量渲染不分页截断）
+    story.append(Paragraph('8. 机柜规划', h2_style))
     racks = data.get('racks', [])
     if racks:
         rack_rows = [[Paragraph('柜号', cell_style), Paragraph('类型', cell_style),
                       Paragraph('设备数', cell_style), Paragraph('总功率(W)', cell_style),
                       Paragraph('上限(W)', cell_style), Paragraph('利用率', cell_style),
                       Paragraph('超限', cell_style)]]
-        for r in racks[:60]:
+        for r in racks:
             rack_rows.append([
                 Paragraph(str(r['柜号']), cell_style),
                 Paragraph(str(r['类型']), cell_style),
@@ -1286,12 +1457,8 @@ def export_pdf_report(designer, filename):
                 Paragraph(f"{r['利用率(%)']}%", cell_style),
                 Paragraph('是' if r['超限'] else '否', cell_style),
             ])
-        if len(racks) > 60:
-            rack_rows.append([Paragraph('...', cell_style), Paragraph('', cell_style),
-                              Paragraph('', cell_style), Paragraph('', cell_style),
-                              Paragraph('', cell_style), Paragraph('', cell_style),
-                              Paragraph('', cell_style)])
-        rack_table = Table(rack_rows, colWidths=[30 * mm, 18 * mm, 18 * mm, 24 * mm, 22 * mm, 18 * mm, 16 * mm])
+        rack_table = Table(rack_rows, colWidths=[30 * mm, 18 * mm, 18 * mm, 24 * mm, 22 * mm, 18 * mm, 16 * mm],
+                           repeatRows=1)
         rack_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0ea5e9')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -1304,8 +1471,8 @@ def export_pdf_report(designer, filename):
         story.append(Paragraph('无机柜数据', normal_style))
     story.append(Spacer(1, 4 * mm))
 
-    # 7. 校验结果
-    story.append(Paragraph('7. 校验结果', h2_style))
+    # 9. 校验结果
+    story.append(Paragraph('9. 校验结果', h2_style))
     val = data['validation']
     status = '通过' if val.get('valid') else '失败'
     story.append(Paragraph(f"校验状态：<b>{status}</b>", normal_style))

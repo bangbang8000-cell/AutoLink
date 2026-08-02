@@ -48,7 +48,9 @@ DEFAULT_PROJECT_CONFIG = {
         "rack_type": 42,
         "power_limit_per_rack": 6000,
         "naming_prefix": "机柜",
-    }
+    },
+    # V2.9.3-T1: 可选 Scale-Up 配置段 (未启用时为空对象)
+    "scale_up": {}
 }
 
 REQUIRED_TOP_KEYS = {'meta', 'networks', 'topology', 'device_refs', 'rack_config'}
@@ -172,8 +174,9 @@ def validate_config(config: dict) -> str | None:
               'biz_downlink_limit', 'oob_downlink_limit']:
         if not isinstance(topo.get(k), (int, float)):
             return f"topology.{k} 必须是数值"
-    if topo.get('param_protocol') not in ('IB', 'RoCE'):
-        return f"topology.param_protocol 必须是 'IB' 或 'RoCE'"
+    # V2.7.6-T2 + V2.9.3-T8: 支持 UEC (Ultra Ethernet) 协议
+    if topo.get('param_protocol') not in ('IB', 'RoCE', 'UEC'):
+        return f"topology.param_protocol 必须是 'IB' / 'RoCE' / 'UEC'"
     if topo.get('downlink_mode') not in ('full', 'custom'):
         return f"topology.downlink_mode 必须是 'full' 或 'custom'"
 
@@ -182,6 +185,17 @@ def validate_config(config: dict) -> str | None:
     missing_rack = REQUIRED_RACK_KEYS - set(rack.keys())
     if missing_rack:
         return f"rack_config 缺少字段: {', '.join(sorted(missing_rack))}"
+
+    # V2.9.3-T1: 可选 scale_up 段校验 (缺失/为空对象视为未启用)
+    su = config.get('scale_up')
+    if su is not None:
+        if not isinstance(su, dict):
+            return "scale_up 必须是 JSON 对象"
+        for k in ['num_gpus', 'gpus_per_node', 'domain_size']:
+            if k in su and not isinstance(su.get(k), (int, float)):
+                return f"scale_up.{k} 必须是数值"
+        if 'protocol' in su and su['protocol'] not in ('NVLink', 'UALink', 'UB'):
+            return f"scale_up.protocol 必须是 'NVLink' / 'UALink' / 'UB'"
 
     return None  # 校验通过
 

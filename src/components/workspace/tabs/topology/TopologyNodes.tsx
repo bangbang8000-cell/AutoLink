@@ -33,6 +33,8 @@ export const NODE_LABELS: Record<string, string> = {
   biz_agg: '业务汇聚',
   // V2.7.6-T5: Scale-Up 双栈联合视图 GPU 节点
   gpu: 'GPU/NPU',
+  // V2.9.3-T4: Scale-Up 生成层 GPU 节点
+  scaleup_gpu: 'Scale-Up GPU',
 }
 
 export const EDGE_COLORS: Record<string, string> = {
@@ -229,7 +231,7 @@ function GpuNodeComponent({ data, selected }: NodeProps) {
           {d.label}
         </span>
         <span className="text-3xs text-gray-400 dark:text-gray-500 leading-tight">
-          {NODE_LABELS.gpu || 'GPU/NPU'}
+          {NODE_LABELS[d.nodeType] || NODE_LABELS.gpu || 'GPU/NPU'}
         </span>
       </div>
       <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />

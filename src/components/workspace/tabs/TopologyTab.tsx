@@ -479,7 +479,9 @@ function TopologyFlowInner() {
     const posMap = new Map(layoutNodes.map((p) => [p.id, p]))
     const nodes: Node[] = filteredNodes.map((node) => {
       const pos = posMap.get(node.id)
-      const isSwitch = node.type !== 'server'
+      // V2.9.3-T4: Scale-Up GPU 节点复用 GPU/NPU 节点组件
+      const isGpu = node.type === 'scaleup_gpu'
+      const isSwitch = !isGpu && node.type !== 'server'
       const data: TopologyNodeData = {
         label: node.id,
         nodeType: node.type,
@@ -494,7 +496,7 @@ function TopologyFlowInner() {
       }
       return {
         id: node.id,
-        type: isSwitch ? 'switch' : 'server',
+        type: isGpu ? 'gpu' : (isSwitch ? 'switch' : 'server'),
         position: {
           x: saved?.[node.id]?.x ?? pos?.x ?? 0,
           y: saved?.[node.id]?.y ?? pos?.y ?? 260,

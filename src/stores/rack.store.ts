@@ -13,7 +13,7 @@ export interface RackDevice {
   power_watts: number
 }
 
-export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom'
+export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom' | 'scaleup'
 
 // V2.9.1-T4: 拓扑节点机柜字段（与后端 NetworkObject 分配结果对齐）
 export interface RackTopologyNode {
@@ -36,10 +36,14 @@ export const CABINET_TYPE_LABELS: Record<CabinetType, string> = {
   compute: '通算柜',
   security: '安全柜',
   custom: '自定义',
+  // V2.9.3-T4: Scale-Up GPU 节点柜
+  scaleup: 'Scale-Up柜',
 }
 
 // V2.9.2: 从拓扑节点推断机柜类型（服务器按 group 分类，交换机归为网络柜）
 export function toCabinetType(node: { type?: string; group?: string }): CabinetType {
+  // V2.9.3-T4: Scale-Up GPU 节点 → Scale-Up 柜
+  if (node.type === 'scaleup_gpu') return 'scaleup'
   if (node.type !== 'server') return 'network'
   const g = node.group || ''
   if (g.includes('存储')) return 'storage'
@@ -55,6 +59,8 @@ export const RACK_TYPE_COLORS: Record<CabinetType, { bg: string; text: string; b
   compute: { bg: '#fef9c3', text: '#a16207', border: '#facc15' },    // 黄
   security: { bg: '#f3e8ff', text: '#7e22ce', border: '#c084fc' },   // 紫
   custom: { bg: '#f1f5f9', text: '#475569', border: '#94a3b8' },     // 灰
+  // V2.9.3-T4: Scale-Up 柜 (琥珀色, 与 scale_up 网络色一致)
+  scaleup: { bg: '#fef3c7', text: '#b45309', border: '#f59e0b' },    // 琥珀
 }
 
 export interface RackCabinet {

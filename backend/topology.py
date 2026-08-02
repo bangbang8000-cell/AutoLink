@@ -474,8 +474,13 @@ class AccessAggTopology:
 
             try:
                 sw_port = sw.get_downlink_port()
-                # 使用服务器端口命名前缀
-                srv_prefix = server.port_prefix or f"{self.network_name}口"
+                # V2.9.3-T7: 按网络类型选择服务器端口前缀 (OOB/业务/参数)
+                if self.network_type == 'oob':
+                    srv_prefix = server.oob_prefix or f"{self.network_name}口"
+                elif self.network_type == 'biz':
+                    srv_prefix = server.biz_prefix or f"{self.network_name}口"
+                else:
+                    srv_prefix = server.port_prefix or f"{self.network_name}口"
                 srv_port = f"{srv_prefix}1"
 
                 conn_down = Connection(
@@ -522,7 +527,13 @@ class AccessAggTopology:
             for port_idx, sw in enumerate([sw_a, sw_b], 1):
                 try:
                     sw_port = sw.get_downlink_port()
-                    srv_prefix = server.port_prefix or f"{self.network_name}口"
+                    # V2.9.3-T7: 按网络类型选择服务器端口前缀 (OOB/业务/参数)
+                    if self.network_type == 'oob':
+                        srv_prefix = server.oob_prefix or f"{self.network_name}口"
+                    elif self.network_type == 'biz':
+                        srv_prefix = server.biz_prefix or f"{self.network_name}口"
+                    else:
+                        srv_prefix = server.port_prefix or f"{self.network_name}口"
                     srv_port = f"{srv_prefix}{port_idx}"
 
                     conn_down = Connection(

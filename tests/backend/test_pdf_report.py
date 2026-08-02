@@ -11,7 +11,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
 
 from designer import NetworkDesignerV2
-from exporter import export_pdf_report, generate_report_data
+from exporter import export_pdf_report, generate_report_data, export_bom, generate_summary_data
 
 
 def _create_test_project(num_servers=20):
@@ -96,6 +96,71 @@ class TestPdfReport:
                 content = f.read()
                 # PDF 文件应包含中文字体嵌入或文本
                 assert len(content) > 1000, "PDF 内容过少"
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir)
+
+
+class TestPdfReportV293:
+    """V2.9.3-T6: PDF 报告修复与完善"""
+
+    def test_report_project_name_and_new_chapters(self):
+        """项目名称取自配置 meta.name; 新增设备清单/收敛比章节"""
+        config_path, tmpdir = _create_test_project(20)
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            cfg['meta'] = {"name": "测试项目A", "description": "", "version": 1}
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f)
+            designer = NetworkDesignerV2(config_path)
+            data = generate_report_data(designer)
+            assert data['overview']['项目名称'] == '测试项目A'
+            assert 'devices' in data
+            assert 'convergence' in data
+            assert 'param' in data['convergence']
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir)
+
+    def test_report_without_meta_name(self):
+        """无 meta.name → 项目名称回落默认, 不报错"""
+        config_path, tmpdir = _create_test_project(20)
+        try:
+            designer = NetworkDesignerV2(config_path)
+            data = generate_report_data(designer)
+            assert data['overview']['项目名称']
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir)
+
+    def test_bom_aggregated_by_model(self):
+        """BOM 服务器按型号聚合 (数量 > 1, 行数远小于服务器数)"""
+        config_path, tmpdir = _create_test_project(20)
+        try:
+            designer = NetworkDesignerV2(config_path)
+            bom_path = os.path.join(tmpdir, "bom.xlsx")
+            df = export_bom(designer, bom_path)
+            assert len(df) > 0
+            # 服务器行: 聚合后同一型号仅一行
+            server_rows = df[df['类别'] == 'GPU服务器']
+            if len(server_rows) > 0:
+                assert server_rows['数量'].sum() == 20
+                assert len(server_rows) <= len(set(server_rows['设备型号']))
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir)
+
+    def test_summary_convergence_from_estimation(self):
+        """摘要收敛比读计算值 (非硬编码 1:1)"""
+        config_path, tmpdir = _create_test_project(20)
+        try:
+            designer = NetworkDesignerV2(config_path)
+            df = generate_summary_data(designer)
+            conv_row = df[df['项目'] == '收敛比例']
+            assert len(conv_row) >= 1
+            for val in conv_row['值']:
+                assert ':' in str(val), f"收敛比格式错误: {val}"
         finally:
             import shutil
             shutil.rmtree(tmpdir)

@@ -148,6 +148,30 @@ def ini_to_project_config(ini_path: str, project_name: str = None) -> dict:
         if ini.has_option('rack', 'naming_prefix'):
             config['rack_config']['naming_prefix'] = ini.get('rack', 'naming_prefix')
 
+    # --- V2.9.3-T1: 迁移 scale_up section (可选) ---
+    if ini.has_section('scale_up'):
+        scale_up = {}
+        if ini.has_option('scale_up', 'protocol'):
+            scale_up['protocol'] = ini.get('scale_up', 'protocol')
+        for key in ('num_gpus', 'gpus_per_node', 'domain_size'):
+            if ini.has_option('scale_up', key):
+                try:
+                    scale_up[key] = ini.getint('scale_up', key)
+                except (ValueError, TypeError):
+                    pass
+        # bandwidth (兼容旧命名 bandwidth_per_link_gbps)
+        bw = None
+        for bw_key in ('bandwidth', 'bandwidth_per_link_gbps'):
+            if ini.has_option('scale_up', bw_key):
+                try:
+                    bw = ini.getfloat('scale_up', bw_key)
+                    break
+                except (ValueError, TypeError):
+                    continue
+        if bw is not None:
+            scale_up['bandwidth'] = bw
+        config['scale_up'] = scale_up
+
     # --- 迁移默认 device_refs ---
     config['device_refs'] = _get_default_device_refs(config)
 

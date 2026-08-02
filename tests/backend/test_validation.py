@@ -356,8 +356,8 @@ class TestEngineBasics:
     """引擎基础功能"""
 
     def test_default_engine_has_15_rules(self, engine):
-        """默认引擎含 15 条规则 (V001-V015, V2.9.3 新增 V014/V015 机柜规则)"""
-        assert engine.get_rule_count() == 15
+        """默认引擎含 19 条规则 (V001-V019, V2.9.3-T5 新增 V016-V019 硬规则)"""
+        assert engine.get_rule_count() == 19
 
     def test_rule_exception_becomes_error_issue(self, engine):
         """规则函数抛异常时应转为 ERROR issue"""
@@ -480,3 +480,147 @@ class TestV013DomesticRatio:
         ctx = ValidationContext()
         issues = engine.validate(ctx)
         assert len([i for i in issues if i.rule_id == "V013"]) == 0
+
+
+class TestV016ServerNicCapacity:
+    """V016: 服务器网卡总数 vs Leaf 下行容量 (V2.9.3-T5)"""
+
+    def test_passes_when_capacity_ok(self, engine):
+        """正例:网卡需求 ≤ Leaf 容量"""
+        ctx = ValidationContext(config={
+            "num_servers": 100, "param_ports_per_server": 8,
+            "param_leaf_count": 16, "param_dl": 64,
+            "total_servers": 110, "storage_ports_per_server": 1,
+            "storage_leaf_count": 4, "storage_dl": 40,
+        })
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V016"]) == 0
+
+    def test_errors_when_param_nic_exceeds(self, engine):
+        """反例:参数网网卡总数超过 Leaf 容量 → ERROR"""
+        ctx = ValidationContext(config={
+            "num_servers": 100, "param_ports_per_server": 8,
+            "param_leaf_count": 8, "param_dl": 32,  # 容量 256 < 需求 800
+            "total_servers": 100, "storage_ports_per_server": 1,
+            "storage_leaf_count": 4, "storage_dl": 40,
+        })
+        issues = engine.validate(ctx)
+        v016 = [i for i in issues if i.rule_id == "V016"]
+        assert len(v016) == 1
+        assert v016[0].severity == Severity.ERROR
+        assert "参数网" in v016[0].message
+
+    def test_errors_when_storage_nic_exceeds(self, engine):
+        """反例:存储网网卡总数超过 Leaf 容量 → ERROR"""
+        ctx = ValidationContext(config={
+            "num_servers": 100, "param_ports_per_server": 8,
+            "param_leaf_count": 16, "param_dl": 64,
+            "total_servers": 200, "storage_ports_per_server": 2,
+            "storage_leaf_count": 4, "storage_dl": 20,  # 容量 80 < 需求 400
+        })
+        issues = engine.validate(ctx)
+        v016 = [i for i in issues if i.rule_id == "V016"]
+        assert len(v016) == 1
+        assert "存储网" in v016[0].message
+
+
+class TestV017OpticalModuleMatch:
+    """V017: 光模块封装/距离匹配 (V2.9.3-T5)"""
+
+    def test_passes_when_appropriate(self, engine):
+        """正例:OOB 用网线, scale_up 用协议线缆"""
+        ctx = ValidationContext(connections=[
+            {"source": "S1", "target": "O1", "network_type": "oob",
+             "cableType": "网线", "name": "S1->O1"},
+            {"source": "GPU_0", "target": "GPU_1", "network_type": "scale_up",
+             "cableType": "UALink-Cable", "name": "GPU_0->GPU_1"},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V017"]) == 0
+
+    def test_warns_oob_with_fiber(self, engine):
+        """反例:OOB 用 MPO 光纤 → WARNING"""
+        ctx = ValidationContext(connections=[
+            {"source": "S1", "target": "O1", "network_type": "oob",
+             "cableType": "MPO", "name": "S1->O1"},
+        ])
+        issues = engine.validate(ctx)
+        v017 = [i for i in issues if i.rule_id == "V017"]
+        assert len(v017) == 1
+        assert v017[0].severity == Severity.WARNING
+
+    def test_warns_scale_up_wrong_cable(self, engine):
+        """反例:Scale-Up 用非协议线缆 → WARNING"""
+        ctx = ValidationContext(connections=[
+            {"source": "GPU_0", "target": "GPU_1", "network_type": "scale_up",
+             "cableType": "MPO", "name": "GPU_0->GPU_1"},
+        ])
+        issues = engine.validate(ctx)
+        v017 = [i for i in issues if i.rule_id == "V017"]
+        assert len(v017) == 1
+
+
+class TestV018PodDomainScale:
+    """V018: Pod/域规模合理性 (V2.9.3-T5)"""
+
+    def test_passes_when_scales_ok(self, engine):
+        """正例:Pod 与域规模均在协议范围内"""
+        ctx = ValidationContext(config={
+            "param_servers_per_pod": 256, "max_2tier": 512,
+            "scale_up": {"protocol": "UALink", "num_gpus": 1024, "domain_size": 1024},
+        })
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V018"]) == 0
+
+    def test_warns_pod_exceeds(self, engine):
+        """反例:Pod 服务器数超单 Pod 容量 → WARNING"""
+        ctx = ValidationContext(config={
+            "param_servers_per_pod": 600, "max_2tier": 512,
+        })
+        issues = engine.validate(ctx)
+        v018 = [i for i in issues if i.rule_id == "V018"]
+        assert len(v018) == 1
+        assert v018[0].severity == Severity.WARNING
+
+    def test_errors_scaleup_domain_exceeds(self, engine):
+        """反例:Scale-Up 域规模超协议上限 (UB 384) → ERROR"""
+        ctx = ValidationContext(config={
+            "scale_up": {"protocol": "UB", "num_gpus": 768, "domain_size": 768},
+        })
+        issues = engine.validate(ctx)
+        v018 = [i for i in issues if i.rule_id == "V018"]
+        assert len(v018) == 1
+        assert v018[0].severity == Severity.ERROR
+        assert "UB" in v018[0].message
+
+
+class TestV019TotalPowerSupply:
+    """V019: 整机房功率 vs 供电容量 (V2.9.3-T5)"""
+
+    def test_passes_when_within_supply(self, engine):
+        """正例:总功率 ≤ 总供电容量"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "C1", "power_watts": 8000, "power_limit": 12000},
+            {"name": "C2", "power_watts": 9000, "power_limit": 12000},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V019"]) == 0
+
+    def test_errors_when_exceeds_supply(self, engine):
+        """反例:总功率超过总供电容量 → ERROR"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "C1", "power_watts": 13000, "power_limit": 12000},
+            {"name": "C2", "power_watts": 12000, "power_limit": 12000},
+        ])
+        issues = engine.validate(ctx)
+        v019 = [i for i in issues if i.rule_id == "V019"]
+        assert len(v019) == 1
+        assert v019[0].severity == Severity.ERROR
+
+    def test_skips_u_records(self, engine):
+        """正例:U 位记录(无 power_watts)不参与统计"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "C1", "device_name": "S1", "start_u": 1, "end_u": 2},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V019"]) == 0

@@ -4,6 +4,7 @@ AutoLink V2.1 - 统一网络设计协调层
 支持 project_config.json (V2.1) 和 network_config.ini (V2.0) 两种配置格式
 """
 import math, os, json, configparser
+from typing import Optional
 from models import NetworkObject, Connection
 from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier
 from device_library import get_device_library, LibraryDevice, InterfaceModel
@@ -45,6 +46,10 @@ class NetworkDesignerV2:
         self.oob_access, self.oob_agg, self.oob_info = [], [], {}
         self.biz_access, self.biz_agg, self.biz_info = [], [], {}
         self.server_groups, self.switch_groups, self.podid_map = {}, {}, {}
+        # V2.9.3-T2: Scale-Up GPU 节点与连接
+        self.scale_up_gpus = []
+        self.scale_up_connections = []
+        self.scale_up_stats = {}
 
         # --- 执行设计 ---
         self.calc_network_hierarchy()
@@ -238,7 +243,34 @@ class NetworkDesignerV2:
         self._param_switch_uplink_prefix = None
         self._storage_switch_downlink_prefix = None
         self._storage_switch_uplink_prefix = None
+        # V2.9.3-T7: 存储/OOB/业务网卡前缀
+        self._server_storage_prefix = None
+        self._server_oob_prefix = None
+        self._server_biz_prefix = None
         self._resolve_device_port_prefixes()
+
+        # --- Scale-Up 配置 (V2.9.3-T1, 可选段; 无此段时 scale_up_config=None) ---
+        self.scale_up_config = self._parse_scale_up_config(pc.get('scale_up'))
+
+    def _parse_scale_up_config(self, su) -> Optional[dict]:
+        """解析 scale_up 配置段, 非法/缺失时返回 None
+
+        JSON 顶层 `scale_up` 段或 INI `[scale_up]` section:
+          protocol (NVLink/UALink/UB) / num_gpus / gpus_per_node /
+          domain_size / bandwidth (兼容旧命名 bandwidth_per_link_gbps)
+        """
+        if not su or not isinstance(su, dict):
+            return None
+        try:
+            return {
+                'protocol': str(su.get('protocol', 'UALink')),
+                'num_gpus': int(su.get('num_gpus', 0)),
+                'gpus_per_node': int(su.get('gpus_per_node', 8)),
+                'domain_size': int(su.get('domain_size', 0)),
+                'bandwidth': float(su.get('bandwidth', su.get('bandwidth_per_link_gbps', 0))),
+            }
+        except (ValueError, TypeError):
+            return None
 
     def _resolve_device_port_prefixes(self):
         """从设备档案中解析端口命名前缀"""
@@ -248,11 +280,14 @@ class NetworkDesignerV2:
                     if im.network_type == 'param':
                         self._server_port_prefix = im.downlink_prefix or '参数网卡'
                     elif im.network_type == 'storage':
-                        pass  # 存储网卡前缀
+                        # V2.9.3-T7: 存储网卡前缀
+                        self._server_storage_prefix = im.downlink_prefix or '存储网卡'
                     elif im.network_type == 'oob':
-                        pass
+                        # V2.9.3-T7: OOB 网卡前缀
+                        self._server_oob_prefix = im.downlink_prefix or 'OOB网卡'
                     elif im.network_type == 'biz':
-                        pass
+                        # V2.9.3-T7: 业务网卡前缀
+                        self._server_biz_prefix = im.downlink_prefix or '业务网卡'
             elif device.is_switch():
                 if device.downlink_prefix:
                     if 'param_switch' in key or 'param' in key.lower():
@@ -264,6 +299,11 @@ class NetworkDesignerV2:
 
         # V2.7.2-T11: 从设备档案读取 OOB/业务网下联口数(覆盖硬编码)
         self._apply_device_port_overrides()
+
+        # V2.9.3-T7: 无服务器档案时也保证三类前缀有默认值
+        self._server_storage_prefix = self._server_storage_prefix or '存储网卡'
+        self._server_oob_prefix = self._server_oob_prefix or 'OOB网卡'
+        self._server_biz_prefix = self._server_biz_prefix or '业务网卡'
 
     def _apply_device_port_overrides(self):
         """V2.7.2-T11: 从设备档案读取 OOB/业务网端口数,覆盖硬编码 48/32"""
@@ -321,6 +361,19 @@ class NetworkDesignerV2:
             auto_sw = self._auto_select_param_switch(self.param_speed)
             if auto_sw:
                 self._device_profiles['param_switch'] = auto_sw
+
+        # --- Scale-Up 配置 (V2.9.3-T1, 可选 [scale_up] section; 无此段时 scale_up_config=None) ---
+        if self.config.has_section('scale_up'):
+            self.scale_up_config = self._parse_scale_up_config({
+                'protocol': self.config.get('scale_up', 'protocol', fallback='UALink'),
+                'num_gpus': self.config.get('scale_up', 'num_gpus', fallback='0'),
+                'gpus_per_node': self.config.get('scale_up', 'gpus_per_node', fallback='8'),
+                'domain_size': self.config.get('scale_up', 'domain_size', fallback='0'),
+                'bandwidth': self.config.get('scale_up', 'bandwidth',
+                                             fallback=self.config.get('scale_up', 'bandwidth_per_link_gbps', fallback='0')),
+            })
+        else:
+            self.scale_up_config = None
 
     def _load_common_ini_config(self):
         """加载 INI 格式通用配置 (向后兼容)"""
@@ -388,6 +441,10 @@ class NetworkDesignerV2:
         self._param_switch_uplink_prefix = None
         self._storage_switch_downlink_prefix = None
         self._storage_switch_uplink_prefix = None
+        # V2.9.3-T7: 存储/OOB/业务网卡前缀 (INI 旧格式使用默认值)
+        self._server_storage_prefix = '存储网卡'
+        self._server_oob_prefix = 'OOB网卡'
+        self._server_biz_prefix = '业务网卡'
 
     # ================================================================
     #  下行端口解析
@@ -565,12 +622,21 @@ class NetworkDesignerV2:
                               device_profile=profile,
                               power_watts=power, u_height=u)
             if profile and profile.interface_models:
-                # 从接口模型获取端口前缀
+                # 从接口模型获取端口前缀 (V2.9.3-T7: 含存储/OOB/业务网卡)
                 for im in profile.interface_models:
                     if im.network_type == 'param':
                         s.port_prefix = im.downlink_prefix or '参数网卡'
+                    elif im.network_type == 'storage':
+                        s.storage_prefix = im.downlink_prefix or '存储网卡'
+                    elif im.network_type == 'oob':
+                        s.oob_prefix = im.downlink_prefix or 'OOB网卡'
+                    elif im.network_type == 'biz':
+                        s.biz_prefix = im.downlink_prefix or '业务网卡'
             else:
                 s.port_prefix = self._server_port_prefix or '参数网卡'
+                s.storage_prefix = self._server_storage_prefix or '存储网卡'
+                s.oob_prefix = self._server_oob_prefix or 'OOB网卡'
+                s.biz_prefix = self._server_biz_prefix or '业务网卡'
             return s
 
         # GPU服务器
@@ -624,12 +690,88 @@ class NetworkDesignerV2:
         if self.storage_enabled:
             self._create_storage_switches(storage_switch_profile)
 
+        # V2.9.3-T2: Scale-Up GPU 节点 (需在机柜分配前创建, T3 将其纳入 RackAllocator)
+        self._create_scale_up_objects()
+
         # V2.9.0: 多约束机柜分配（服务器 + param/storage 交换机）
         self._allocate_rack_servers()
 
     # ================================================================
     #  机柜分配 (V2.9.0: 多约束装箱, 替代简单轮转)
     # ================================================================
+    def _create_scale_up_objects(self):
+        """V2.9.3-T2: 生成 Scale-Up GPU 节点与域内全对等连接
+
+        当 scale_up_config 启用 (num_gpus > 0) 时:
+          - 通过 scaleup_topology.ScaleUpTopology 规划 Scale-Up 域并生成全对等边
+          - GPU 以 NetworkObject (obj_type='scaleup_gpu') 纳入对象体系
+          - 边以 Connection (network_type='scale_up') 双向挂接
+        未配置时保持空列表, 不影响既有设计流程。
+        """
+        self.scale_up_gpus = []
+        self.scale_up_connections = []
+        self.scale_up_stats = {}
+
+        su = getattr(self, 'scale_up_config', None)
+        if not su or int(su.get('num_gpus', 0)) <= 0:
+            return
+
+        from scaleup_topology import ScaleUpConfig, ScaleUpTopology, ScaleUpProtocol
+
+        protocol_map = {
+            'NVLink': ScaleUpProtocol.NVLINK,
+            'UALink': ScaleUpProtocol.UALINK,
+            'UB': ScaleUpProtocol.UB,
+        }
+        protocol_str = su.get('protocol', 'UALink')
+        protocol = protocol_map.get(protocol_str, ScaleUpProtocol.UALINK)
+
+        sc = ScaleUpConfig(
+            protocol=protocol,
+            num_gpus=int(su.get('num_gpus', 0)),
+            gpus_per_node=int(su.get('gpus_per_node', 8)),
+            domain_size=int(su.get('domain_size', 0)),
+            bandwidth_per_link_gbps=float(su.get('bandwidth', 0)),
+        )
+        topo = ScaleUpTopology(sc)
+        topo.plan_domains()
+        edges = topo.to_dict_list()
+        self.scale_up_stats = topo.get_stats()
+
+        # GPU NetworkObject
+        num_gpus = sc.num_gpus
+        domain_size = sc.domain_size if sc.domain_size > 0 else num_gpus
+        for i in range(num_gpus):
+            gpu = NetworkObject(
+                name=f"GPU_{i}", obj_type='scaleup_gpu',
+                group=protocol_str,
+                podid=i // domain_size if domain_size > 0 else 0,
+                domain_id=i // domain_size if domain_size > 0 else 0,
+                protocol=protocol_str, network_type='scale_up',
+            )
+            self.scale_up_gpus.append(gpu)
+
+        # 全对等连接 (双向挂接)
+        name_to_obj = {g.name: g for g in self.scale_up_gpus}
+        for e in edges:
+            a = name_to_obj.get(e['source'])
+            z = name_to_obj.get(e['target'])
+            if not a or not z:
+                continue
+            bw = e.get('bandwidth_gbps', 0)
+            self._add_conn(a, e.get('source_port', ''), bw,
+                           z, e.get('target_port', ''), bw,
+                           e.get('cable_type', ''), e.get('description', ''),
+                           network_type='scale_up')
+        self.scale_up_connections = []
+        seen_pairs = set()
+        for g in self.scale_up_gpus:
+            for c in g.connections:
+                key = tuple(sorted([c.a_device, c.z_device]))
+                if key not in seen_pairs:
+                    seen_pairs.add(key)
+                    self.scale_up_connections.append(c)
+
     def _allocate_rack_servers(self):
         """V2.9.0: 服务器 + param/storage 交换机机柜分配（多约束装箱）
 
@@ -648,6 +790,15 @@ class NetworkDesignerV2:
                 device_type=infer_device_type(s.obj_type, s.group),
             )
             slots.append((s, d))
+        # V2.9.3-T3: Scale-Up GPU 节点 (1 台/柜, 类型 scaleup; 域内柜号相邻)
+        for g in self.scale_up_gpus:
+            d = DeviceSlot(
+                name=g.name, obj_type=g.obj_type, group=g.group,
+                power_watts=0, u_height=1,
+                device_type=infer_device_type(g.obj_type, g.group),
+                scaleup_domain=g.domain_id if g.domain_id is not None else -1,
+            )
+            slots.append((g, d))
         for sw in (self.param_leaves + self.param_spines + self.param_cores +
                    self.storage_leaves + self.storage_spines + self.storage_cores):
             slots.append((sw, self._make_switch_slot(sw)))
@@ -961,7 +1112,9 @@ class NetworkDesignerV2:
                 leaf = self.storage_leaves[li]
                 try:
                     lp = leaf.get_downlink_port()
-                    self._add_conn(server, f"存储网卡{pi}", self.storage_speed,
+                    # V2.9.3-T7: 存储网卡前缀取自接口模型
+                    srv_port = f"{server.storage_prefix or '存储网卡'}{pi}"
+                    self._add_conn(server, srv_port, self.storage_speed,
                                    leaf, lp, self.storage_speed,
                                    self.cable_types['storage']['server_leaf'],
                                    "服务器到存储Leaf",

@@ -32,6 +32,7 @@ CABINET_TYPE_GPU = 'gpu'
 CABINET_TYPE_COMPUTE = 'compute'
 CABINET_TYPE_STORAGE = 'storage'
 CABINET_TYPE_NETWORK = 'network'
+CABINET_TYPE_SCALEUP = 'scaleup'   # V2.9.3-T3: Scale-Up GPU 节点柜
 
 # 交换机 obj_type 前缀 → 网段
 _NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_')
@@ -40,7 +41,8 @@ _NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_')
 GPU_DEDICATE_RATIO = 0.5
 
 # 机柜类型全集（分桶索引用，v2.9.1-T6）
-_CABINET_TYPES = (CABINET_TYPE_GPU, CABINET_TYPE_COMPUTE, CABINET_TYPE_STORAGE, CABINET_TYPE_NETWORK)
+_CABINET_TYPES = (CABINET_TYPE_GPU, CABINET_TYPE_COMPUTE, CABINET_TYPE_STORAGE,
+                  CABINET_TYPE_NETWORK, CABINET_TYPE_SCALEUP)
 
 
 @dataclass
@@ -53,6 +55,8 @@ class DeviceSlot:
     u_height: int = 1
     device_type: str = DEVICE_TYPE_GPU   # gpu/compute/storage/network
     network: str = ''                    # 网段标识 (param/storage/oob/biz)，网络设备用
+    # V2.9.3-T3: Scale-Up GPU 域 ID (-1=非 Scale-Up 节点)
+    scaleup_domain: int = -1
     # 分配结果
     cabinet_id: int = 0
     cabinet_name: str = ''
@@ -89,6 +93,9 @@ class CabinetAllocation:
 
 def infer_device_type(obj_type: str, group: str = '') -> str:
     """根据 obj_type + group 推断设备类型"""
+    # V2.9.3-T3: Scale-Up GPU 节点 → GPU 类型 (走 GPU 分配逻辑)
+    if obj_type == 'scaleup_gpu':
+        return DEVICE_TYPE_GPU
     if obj_type != 'server':
         return DEVICE_TYPE_NETWORK
     g = group or ''
@@ -161,9 +168,15 @@ class RackAllocator:
     # ------------------------------------------------------------------
     def _assign_gpu(self, device: DeviceSlot) -> None:
         """GPU 服务器分配：
+        - Scale-Up GPU 节点 (scaleup_domain >= 0) → 独占机柜 (1 台/柜, 类型 scaleup)
         - gpu_dedicated 或 功率 ≥ 上限*ratio → 独占机柜 (1 台/柜)
         - 否则 → GPU 柜功率装箱 (可多台共柜)
         """
+        if device.scaleup_domain >= 0:
+            # V2.9.3-T3: 1 台/柜; 输入顺序(域内 GPU 连续)保证域内柜号相邻
+            cab = self._new_cabinet(CABINET_TYPE_SCALEUP)
+            self._place(cab, device)
+            return
         dedicated = self.gpu_dedicated or device.power_watts >= self.power_limit * GPU_DEDICATE_RATIO
         if dedicated:
             cab = self._new_cabinet(CABINET_TYPE_GPU)
