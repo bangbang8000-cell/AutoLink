@@ -1,0 +1,8 @@
+{
+  "id": "cloudmatrix_384",
+  "name": "昇腾 CloudMatrix 384 超节点",
+  "description": "384颗昇腾910C NPU + 192颗鲲鹏CPU，UB总线全对等互联，单卡2800Gbps scale-up带宽，面向万亿参数大模型训练",
+  "scenario": "CloudMatrix-384",
+  "tags": ["昇腾910C", "CloudMatrix", "384台", "UB总线", "超节点", "国产化", "大模型"],
+  "updatedAt": "2026-08-02"
+}

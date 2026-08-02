@@ -420,6 +420,54 @@ def _rule_liquid_cooling_interface(ctx: ValidationContext) -> List[ValidationIss
     return issues
 
 
+# V2.7.5-T7: 信创比例阈值（百分比的设备数量占比）
+DOMESTIC_RATIO_INFO = 0.3     # < 30% 时报 INFO 提示
+DOMESTIC_RATIO_WARN = 0.5     # < 50% 时报 WARNING
+
+
+def _rule_domestic_ratio(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V013: 信创比例校验
+
+    统计拓扑中国产设备（origin='domestic'）占比，提示信创合规情况。
+    - < 30%: INFO 提示国产化率偏低
+    - < 50%: WARNING 建议提升国产化率
+    - >= 50%: 通过
+    """
+    issues: List[ValidationIssue] = []
+    all_devices = list(ctx.servers) + list(ctx.switches)
+    if not all_devices:
+        return issues
+
+    domestic_count = 0
+    imported_count = 0
+    unknown_count = 0
+
+    for dev in all_devices:
+        origin = (dev.get('origin') or '').lower()
+        if origin == 'domestic':
+            domestic_count += 1
+        elif origin == 'imported':
+            imported_count += 1
+        else:
+            unknown_count += 1
+
+    total = len(all_devices)
+    ratio = domestic_count / total if total > 0 else 0.0
+
+    if ratio < DOMESTIC_RATIO_WARN:
+        severity = Severity.INFO if ratio < DOMESTIC_RATIO_INFO else Severity.WARNING
+        issues.append(ValidationIssue(
+            rule_id="V013",
+            severity=severity,
+            category="合规规则",
+            message=f"国产设备占比 {ratio*100:.1f}% ({domestic_count}/{total})，"
+                    f"进口 {imported_count}，未标注 {unknown_count}",
+            affected_items=[],
+            recommendation="增加国产设备（昇腾/海光/寒武纪）比例以满足信创合规要求（建议 ≥ 50%）",
+        ))
+    return issues
+
+
 def create_default_engine() -> ValidationEngine:
     """创建默认校验引擎（包含所有内置规则）"""
     engine = ValidationEngine()
@@ -436,4 +484,6 @@ def create_default_engine() -> ValidationEngine:
     # V2.7.4-T6/T4: 新增合规校验规则
     engine.register_rule("V011", "合规规则", _rule_pue_compliance)
     engine.register_rule("V012", "合规规则", _rule_liquid_cooling_interface)
+    # V2.7.5-T7: 信创比例校验
+    engine.register_rule("V013", "合规规则", _rule_domestic_ratio)
     return engine

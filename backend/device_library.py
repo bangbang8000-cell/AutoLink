@@ -58,6 +58,9 @@ class DeviceProfile:
     vendors: List[str] = field(default_factory=list)
     # V2.7.4 光模块技术路线字段（可选，向后兼容）
     tech_route: Optional[str] = None     # '硅光' | 'LPO' | 'EML' | '薄膜铌酸锂' | None(传统可插拔)
+    # V2.7.5 信创字段（可选，向后兼容）
+    origin: Optional[str] = None         # 'domestic' | 'imported' | 'mixed' (国产/进口/混合)
+    lead_time: Optional[str] = None      # 供货周期，如 '8-12周'
 
     def is_server(self) -> bool:
         return len(self.interface_models) > 0
@@ -210,6 +213,9 @@ class DeviceLibrary:
             vendors=data.get("vendors", []),
             # V2.7.4 光模块技术路线
             tech_route=data.get("tech_route"),
+            # V2.7.5 信创字段
+            origin=data.get("origin"),
+            lead_time=data.get("lead_time"),
         )
 
     def get(self, device_id: str) -> Optional[LibraryDevice]:
@@ -295,6 +301,10 @@ class DeviceLibrary:
             distance_m=getattr(device, 'distance_m', None),
             fiber_type=getattr(device, 'fiber_type', None),
             vendors=getattr(device, 'vendors', []),
+            # V2.7.4-V2.7.5 新增字段
+            tech_route=getattr(device, 'tech_route', None),
+            origin=getattr(device, 'origin', None),
+            lead_time=getattr(device, 'lead_time', None),
         )
         return merged
 

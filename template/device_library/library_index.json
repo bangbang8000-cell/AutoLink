@@ -16,6 +16,7 @@
         "nvidia_l40s_8u",
         "huawei_atlas_900",
         "huawei_atlas_800t_a2",
+        "ascend_910c",
         "hygon_k100_ai",
         "cambricon_mlu590_8u",
         "fusionserver_v8_liquid",
@@ -98,6 +99,8 @@
         "ruijie_rg_s6990_64oc2xs",
         "ruijie_rg_s9910_128oc2vs",
         "ruijie_rg_s6980_64qc",
+        "h3c_s12500r_cpo_51_2t",
+        "ruijie_s6910_32oc2vs_1_6t",
         "generic_64p_400g"
       ]
     },

@@ -1,0 +1,8 @@
+{
+  "id": "cambricon_mlu_cluster",
+  "name": "寒武纪 MLU 集群方案",
+  "description": "128台寒武纪MLU590服务器（8卡/台），RoCE 200G参数面，面向国产化AI训练与推理场景",
+  "scenario": "Cambricon-MLU-128",
+  "tags": ["寒武纪", "MLU", "590", "128台", "国产化", "信创", "RoCE", "200G"],
+  "updatedAt": "2026-08-02"
+}

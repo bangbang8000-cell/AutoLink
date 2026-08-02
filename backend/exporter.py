@@ -930,6 +930,113 @@ def generate_report_data(designer):
     }
 
 
+def export_compliance_report(designer, filename):
+    """V2.7.5-T8: 导出信创合规报告
+
+    统计国产/进口/未标注设备清单与占比，导出 Excel 报告。
+    """
+    from device_library import get_device_library
+
+    try:
+        library = get_device_library()
+    except Exception:
+        library = None
+
+    def _get_origin(device_profile):
+        """从设备档案获取 origin 字段"""
+        if device_profile is None:
+            return 'unknown'
+        # LibraryDevice 对象
+        origin = getattr(device_profile, 'origin', None)
+        if origin:
+            return origin
+        # 尝试从 library 查询
+        pid = getattr(device_profile, 'id', None)
+        if pid and library:
+            dev = library.get(pid)
+            if dev and dev.origin:
+                return dev.origin
+        return 'unknown'
+
+    def _origin_label(origin):
+        return {'domestic': '国产', 'imported': '进口', 'mixed': '混合', 'unknown': '未标注'}.get(origin, '未标注')
+
+    rows = []
+
+    # 服务器
+    for server in designer.servers:
+        profile = getattr(server, 'device_profile', None)
+        origin = _get_origin(profile)
+        rows.append({
+            '设备名称': server.name,
+            '设备类型': getattr(server, 'group', '') or 'GPU服务器',
+            '厂商': getattr(profile, 'vendor', '') if profile else '',
+            '型号': getattr(profile, 'model', '') if profile else '',
+            '属性': _origin_label(origin),
+            'origin': origin,
+            '数量': 1,
+        })
+
+    # 交换机
+    all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
+                    designer.storage_leaves + designer.storage_spines + designer.storage_cores +
+                    designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg)
+    for sw in all_switches:
+        profile = getattr(sw, 'device_profile', None)
+        origin = _get_origin(profile)
+        rows.append({
+            '设备名称': sw.name,
+            '设备类型': getattr(sw, 'obj_type', ''),
+            '厂商': getattr(profile, 'vendor', '') if profile else '',
+            '型号': getattr(profile, 'model', '') if profile else '',
+            '属性': _origin_label(origin),
+            'origin': origin,
+            '数量': 1,
+        })
+
+    df = pd.DataFrame(rows)
+
+    # 汇总统计
+    total = len(df)
+    domestic = len(df[df['origin'] == 'domestic'])
+    imported = len(df[df['origin'] == 'imported'])
+    unknown = len(df[df['origin'] == 'unknown'])
+    domestic_ratio = domestic / total * 100 if total > 0 else 0
+
+    summary = pd.DataFrame([
+        ['信创合规报告', ''],
+        ['生成时间', pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')],
+        ['', ''],
+        ['统计汇总', ''],
+        ['设备总数', total],
+        ['国产设备数', domestic],
+        ['进口设备数', imported],
+        ['未标注设备数', unknown],
+        ['国产化率', f'{domestic_ratio:.1f}%'],
+        ['信创合规', '达标 (≥50%)' if domestic_ratio >= 50 else '未达标 (<50%)'],
+        ['', ''],
+        ['说明', '国产化率 = 国产设备数 / 设备总数 × 100%'],
+        ['合规标准', '国产化率 ≥ 50% 为信创合规达标'],
+    ], columns=['项目', '值'])
+
+    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+        summary.to_excel(writer, sheet_name='信创汇总', index=False)
+        if not df.empty:
+            df_sorted = df.sort_values(by=['origin', '设备类型', '设备名称'])
+            df_sorted.drop(columns=['origin']).to_excel(writer, sheet_name='设备清单', index=False)
+
+    apply_excel_formatting(filename)
+    print(f"已导出信创合规报告: {filename}")
+    return {
+        'total': total,
+        'domestic': domestic,
+        'imported': imported,
+        'unknown': unknown,
+        'domestic_ratio': round(domestic_ratio, 1),
+        'compliant': domestic_ratio >= 50,
+    }
+
+
 def export_pdf_report(designer, filename):
     """V2.4.6: 生成 PDF 设计报告
 
