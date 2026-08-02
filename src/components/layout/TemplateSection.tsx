@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Folder, LayoutTemplate, Loader2, Upload } from 'lucide-react'
+import { Folder, HeartPulse, LayoutTemplate, Loader2, Search, Upload } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
 import { EditTemplateModal } from '@/components/layout/EditTemplateModal'
+import { TemplateHealthModal } from '@/components/layout/TemplateHealthModal'
 import { TreeNode } from '@/components/layout/TreeNode'
 import type { ContextMenuItem } from '@/components/ui/ContextMenu'
 import type { FileTreeNode, GroupKey } from '@/types/file-tree'
@@ -59,6 +60,19 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; description: string; scenario: string; tags: string[]; isBuiltin?: boolean } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showHealth, setShowHealth] = useState(false)
+
+  // V2.9.8-T4: 模板列表筛选（场景/标签/名称搜索 + 内置/用户）
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'builtin' | 'user'>('all')
+
+  const filteredTemplates = templates.filter((tpl) => {
+    if (typeFilter === 'builtin' && !tpl.isBuiltin) return false
+    if (typeFilter === 'user' && tpl.isBuiltin) return false
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+    return [tpl.name, tpl.scenario || '', (tpl.tags || []).join(' ')].join(' ').toLowerCase().includes(q)
+  })
 
   // T11: 首次展开拉取结构并缓存到 store
   const toggleTemplateExpand = useCallback(async (tplName: string) => {
@@ -108,9 +122,9 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
   // V2.9.7-T3: 模板预览方案
   const [previewTarget, setPreviewTarget] = useState<TemplateItem | null>(null)
 
-  const handlePreviewTemplate = useCallback((tpl: TemplateItem) => {
+  const handlePreviewTemplate = (tpl: TemplateItem) => {
     setPreviewTarget(tpl)
-  }, [])
+  }
 
   const handleExportTemplate = useCallback(async (tplName: string) => {
     if (busy) return
@@ -192,17 +206,49 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
         icon={<Folder size={14} />}
         sectionKey="templates"
         actions={
-          <button
-            onClick={handleImportTemplate}
-            disabled={busy}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50"
-            title={t('common:template.importZip', '导入模板 ZIP')}
-          >
-            {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-          </button>
+          <>
+            {/* V2.9.8-T2: 模板健康检查 */}
+            <button
+              onClick={() => setShowHealth(true)}
+              disabled={busy}
+              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50"
+              title={t('common:template.health.title', '模板健康检查')}
+            >
+              <HeartPulse size={12} />
+            </button>
+            <button
+              onClick={handleImportTemplate}
+              disabled={busy}
+              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50"
+              title={t('common:template.importZip', '导入模板 ZIP')}
+            >
+              {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            </button>
+          </>
         }
       >
-        {templates.map((tpl) => {
+        {/* V2.9.8-T4: 筛选行（场景/标签/名称搜索 + 内置/用户） */}
+        <div className="flex items-center gap-1 px-2 py-1">
+          <div className="flex items-center flex-1 min-w-0 rounded bg-gray-100 dark:bg-app-hover px-1.5">
+            <Search size={11} className="text-gray-400 shrink-0" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('common:template.filter.searchPlaceholder', '搜索场景/标签/名称...')}
+              className="flex-1 min-w-0 bg-transparent px-1 py-0.5 text-2xs outline-none placeholder:text-gray-400"
+            />
+          </div>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as 'all' | 'builtin' | 'user')}
+            className="shrink-0 text-2xs rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-app-elevated text-gray-600 dark:text-gray-300 px-1 py-0.5 outline-none"
+          >
+            <option value="all">{t('common:template.filter.all', '全部模板')}</option>
+            <option value="builtin">{t('common:template.filter.builtin', '内置模板')}</option>
+            <option value="user">{t('common:template.filter.user', '用户模板')}</option>
+          </select>
+        </div>
+        {filteredTemplates.map((tpl) => {
           const isExpanded = expandedTemplates[tpl.name]
           const structure = templateStructures[tpl.name] || []
           return (
@@ -309,6 +355,11 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
             handleEditTemplate({ id: name, name, isBuiltin })
           }}
         />
+      )}
+
+      {/* V2.9.8-T2: 模板健康检查弹窗 */}
+      {showHealth && (
+        <TemplateHealthModal onClose={() => setShowHealth(false)} />
       )}
     </>
   )

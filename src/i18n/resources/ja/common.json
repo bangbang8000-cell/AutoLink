@@ -114,6 +114,24 @@
       "errorList": "検証エラー",
       "edit": "編集へ",
       "createProject": "このテンプレートからプロジェクトを作成"
+    },
+    "health": {
+      "title": "テンプレート健全性チェック",
+      "checking": "テンプレートの健全性を確認中...",
+      "summary": "{{checked}} 個のテンプレートを確認：健全 {{healthy}} 個、異常 {{unhealthy}} 個",
+      "allHealthy": "すべてのテンプレートは健全です",
+      "failed": "健全性チェックに失敗しました。後でもう一度お試しください。",
+      "issueMissingJson": "project_config.json がありません",
+      "issueInvalidJson": "project_config.json の解析に失敗",
+      "issueInvalidConfig": "設定の検証に失敗",
+      "issueBadRef": "デバイス参照に library_id がありません",
+      "issueUnresolvedRef": "解決できないデバイス参照"
+    },
+    "filter": {
+      "searchPlaceholder": "シナリオ/タグ/名前を検索...",
+      "all": "すべてのテンプレート",
+      "builtin": "組み込み",
+      "user": "ユーザー"
     }
   },
   "menu": {

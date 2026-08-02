@@ -19,3 +19,5 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build:renderer
+      # V2.9.8-T3: 模板验证纳入 CI — 16 内置模板损坏时构建失败
+      - run: python scripts/validate_templates.py

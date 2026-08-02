@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## [2.9.8] - 2026-08-02
+
+### 模板生命周期管理（项目模板生命周期打通 · 第五阶段）
+
+v2.9.8 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第五阶段：导入强校验、模板健康检查、列表筛选增强、模板验证纳入 CI（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+
+#### 模板 ZIP 导入强校验（T1）
+- `template:importZip` 导入后强校验：无 `project_config.json` 时自动调用 Python 迁移（`migrate` action）补全；含 JSON 时执行 `validate_config` 校验
+- 校验失败（JSON 非法/配置语义非法/两者皆无）→ 明确抛错并**回滚删除**已导入的模板目录，杜绝残留损坏模板
+
+#### 模板健康检查（T2）
+- 新增 `template:healthCheck` IPC：扫描内置+用户全部模板，逐项检查缺 JSON / JSON 非法 / 配置语义非法（validate_config）/ 选型引用失效（device_refs 引用的设备不在设备库）
+- 前端工具栏新增 ❤ 健康检查按钮 + `TemplateHealthModal` 结果弹窗：健康/异常汇总 + 逐项错误详情（含内置徽标）
+
+#### CI 门禁（T3）
+- `.github/workflows/ci.yml` 新增 `python scripts/validate_templates.py` 步骤——内置模板损坏时 CI 失败
+
+#### 模板列表增强（T4）
+- 模板中心新增筛选行：场景/标签/名称实时搜索 + 内置/用户类型下拉，复用 v2.9.7 规模摘要
+
+#### 用户指南（T5）
+- `docs/user_guide/user_guide.md` 增补 2.5 模板分享（导入/导出 ZIP 结构与强校验行为）与 2.6 模板健康检查章节
+
+#### 缓存与测试（T6）
+- `project.store` 新增 `templateHealth` 缓存与 `fetchTemplateHealth`/`clearTemplateHealth`；模板增删改（导入/编辑/删除/转模板）后缓存失效
+- 新增 5 语言 `common.template.health.*`（12 keys）与 `common.template.filter.*`（4 keys）
+- 新增 `template-health-modal.test.tsx` 4 个 RTL 用例：全健康/异常清单/失败/关闭
+
+#### 版本与回归
+- 版本号 2.9.7 → 2.9.8（package.json / VERSION / package-lock.json）
+- 全量回归：pytest 560 passed、vitest 354 passed（+4）、tsc 0 error、eslint 0 error（38 个既有 warning）、模板验证 16/16 通过
+
 ## [2.9.7] - 2026-08-02
 
 ### 模板预览与派生文件（项目模板生命周期打通 · 第四阶段）

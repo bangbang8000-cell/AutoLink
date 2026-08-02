@@ -114,6 +114,24 @@
       "errorList": "校驗錯誤",
       "edit": "去編輯",
       "createProject": "以此範本建立專案"
+    },
+    "health": {
+      "title": "範本健康檢查",
+      "checking": "正在檢查範本健康狀態...",
+      "summary": "共檢查 {{checked}} 個範本，健康 {{healthy}} 個，異常 {{unhealthy}} 個",
+      "allHealthy": "所有範本均健康",
+      "failed": "健康檢查失敗，請稍後重試",
+      "issueMissingJson": "缺少 project_config.json",
+      "issueInvalidJson": "project_config.json 解析失敗",
+      "issueInvalidConfig": "設定驗證失敗",
+      "issueBadRef": "選型參照缺少 library_id",
+      "issueUnresolvedRef": "選型參照失效"
+    },
+    "filter": {
+      "searchPlaceholder": "搜尋場景/標籤/名稱...",
+      "all": "全部範本",
+      "builtin": "內建範本",
+      "user": "使用者範本"
     }
   },
   "menu": {

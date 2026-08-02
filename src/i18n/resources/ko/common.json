@@ -114,6 +114,24 @@
       "errorList": "검증 오류",
       "edit": "편집하기",
       "createProject": "이 템플릿으로 프로젝트 만들기"
+    },
+    "health": {
+      "title": "템플릿 상태 점검",
+      "checking": "템플릿 상태를 확인하는 중...",
+      "summary": "{{checked}}개 템플릿 확인: 정상 {{healthy}}개, 이상 {{unhealthy}}개",
+      "allHealthy": "모든 템플릿이 정상입니다",
+      "failed": "상태 점검에 실패했습니다. 나중에 다시 시도해 주세요.",
+      "issueMissingJson": "project_config.json 누락",
+      "issueInvalidJson": "project_config.json 파싱 실패",
+      "issueInvalidConfig": "설정 검증 실패",
+      "issueBadRef": "장치 참조에 library_id 누락",
+      "issueUnresolvedRef": "확인할 수 없는 장치 참조"
+    },
+    "filter": {
+      "searchPlaceholder": "시나리오/태그/이름 검색...",
+      "all": "전체 템플릿",
+      "builtin": "기본 제공",
+      "user": "사용자"
     }
   },
   "menu": {

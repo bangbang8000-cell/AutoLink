@@ -118,6 +118,24 @@
       "errorList": "Validation Errors",
       "edit": "Edit",
       "createProject": "Create Project from Template"
+    },
+    "health": {
+      "title": "Template Health Check",
+      "checking": "Checking template health...",
+      "summary": "Checked {{checked}} templates: {{healthy}} healthy, {{unhealthy}} unhealthy",
+      "allHealthy": "All templates are healthy",
+      "failed": "Health check failed. Please try again later.",
+      "issueMissingJson": "Missing project_config.json",
+      "issueInvalidJson": "project_config.json parse failed",
+      "issueInvalidConfig": "Config validation failed",
+      "issueBadRef": "Device ref missing library_id",
+      "issueUnresolvedRef": "Unresolved device ref"
+    },
+    "filter": {
+      "searchPlaceholder": "Search scenario/tag/name...",
+      "all": "All Templates",
+      "builtin": "Built-in",
+      "user": "User"
     }
   },
   "menu": {

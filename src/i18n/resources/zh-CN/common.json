@@ -118,6 +118,24 @@
       "errorList": "校验错误",
       "edit": "去编辑",
       "createProject": "基于此模板创建项目"
+    },
+    "health": {
+      "title": "模板健康检查",
+      "checking": "正在检查模板健康状态...",
+      "summary": "共检查 {{checked}} 个模板，健康 {{healthy}} 个，异常 {{unhealthy}} 个",
+      "allHealthy": "所有模板均健康",
+      "failed": "健康检查失败，请稍后重试",
+      "issueMissingJson": "缺少 project_config.json",
+      "issueInvalidJson": "project_config.json 解析失败",
+      "issueInvalidConfig": "配置校验失败",
+      "issueBadRef": "选型引用缺少 library_id",
+      "issueUnresolvedRef": "选型引用失效"
+    },
+    "filter": {
+      "searchPlaceholder": "搜索场景/标签/名称...",
+      "all": "全部模板",
+      "builtin": "内置模板",
+      "user": "用户模板"
     }
   },
   "menu": {

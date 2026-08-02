@@ -50,6 +50,7 @@ const electronAPI = {
     list: () => ipcRenderer.invoke('template:list'),
     preview: (templateName: string) =>
       ipcRenderer.invoke('template:preview', templateName),
+    healthCheck: () => ipcRenderer.invoke('template:healthCheck'),
     create: (projectName: string, meta: unknown) =>
       ipcRenderer.invoke('template:create', projectName, meta),
     delete: (templateName: string) =>

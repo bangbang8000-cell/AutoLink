@@ -1277,6 +1277,68 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
   }))
 
+  // V2.9.8-T2: 模板健康检查 — 扫描内置+用户模板，定位损坏模板
+  // 检查项：缺 JSON / JSON 非法 / 配置语义非法（validate_config）/ 选型引用失效
+  ipcMain.handle('template:healthCheck', wrapHandler(async () => {
+    const deviceIds = new Set(loadDeviceLibrary().categories.flatMap((c) => c.devices.map((d) => d.id)))
+
+    const checkTemplate = async (tplDir: string, id: string): Promise<{ type: string; detail: string }[]> => {
+      const issues: { type: string; detail: string }[] = []
+      const jsonPath = path.join(tplDir, 'project_config.json')
+      if (!fs.existsSync(jsonPath)) {
+        issues.push({ type: 'missing_json', detail: '缺少 project_config.json（仅含 INI，无法预览/完整校验）' })
+        return issues
+      }
+
+      let cfg: Record<string, unknown>
+      try {
+        cfg = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+      } catch (e) {
+        issues.push({ type: 'invalid_json', detail: `project_config.json 解析失败: ${(e as Error).message}` })
+        return issues
+      }
+
+      // 配置语义校验（复用 project_config_to_ini 的 validate_config 逻辑）
+      const checkResult = await pythonService.call('project_config_to_ini', { config: cfg }) as {
+        valid?: boolean
+        error?: string | null
+      }
+      if (!checkResult?.valid) {
+        issues.push({ type: 'invalid_config', detail: `配置校验失败: ${checkResult?.error || '未知错误'}` })
+      }
+
+      // 选型引用失效：device_refs.library_id 必须在设备库中存在
+      const refs = (cfg.device_refs || {}) as Record<string, { library_id?: string }>
+      for (const [key, ref] of Object.entries(refs)) {
+        const libId = ref?.library_id
+        if (!libId) {
+          issues.push({ type: 'bad_ref', detail: `device_refs.${key} 缺少 library_id` })
+        } else if (!deviceIds.has(libId)) {
+          issues.push({ type: 'unresolved_ref', detail: `device_refs.${key} 引用的设备不存在: ${libId}` })
+        }
+      }
+      return issues
+    }
+
+    const results: { id: string; name: string; isBuiltin: boolean; issues: { type: string; detail: string }[] }[] = []
+    const scanDir = async (baseDir: string, isBuiltin: boolean) => {
+      if (!fs.existsSync(baseDir)) return
+      for (const e of fs.readdirSync(baseDir, { withFileTypes: true })) {
+        if (!e.isDirectory() || e.name.startsWith('.')) continue
+        const tplDir = path.join(baseDir, e.name)
+        results.push({ id: e.name, name: e.name, isBuiltin, issues: await checkTemplate(tplDir) })
+      }
+    }
+    await scanDir(getTemplatePath(), true)
+    await scanDir(getUserTemplatePath(), false)
+
+    return {
+      checked: results.length,
+      healthyCount: results.filter((r) => r.issues.length === 0).length,
+      unhealthy: results.filter((r) => r.issues.length > 0),
+    }
+  }))
+
   // V2.4.1: 模板导出为 ZIP - 显示保存对话框
   ipcMain.handle('template:exportZip', wrapHandler(async (_event, templateName: string) => {
     sanitizeName(templateName)
@@ -1293,6 +1355,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   // V2.4.1: 模板导入 ZIP - 显示打开对话框
+  // V2.9.8-T1: 导入强校验 — 无 project_config.json 时自动调用 Python 迁移补全；
+  //            含 JSON 时 validate_config 校验；任一失败则回滚删除并明确抛错
   ipcMain.handle('template:importZip', wrapHandler(async (_event, options?: { templateName?: string; zipPath?: string }) => {
     let zipPath = options?.zipPath
     if (!zipPath) {
@@ -1307,6 +1371,42 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       zipPath = result.filePaths[0]
     }
     const finalName = await projectIOService.importTemplateZip(zipPath, options?.templateName)
+    const destDir = path.join(getUserTemplatePath(), finalName)
+    const jsonPath = path.join(destDir, 'project_config.json')
+    const iniPath = path.join(destDir, 'network_config.ini')
+    try {
+      // 无 JSON：若含 INI 则自动迁移补全（旧模板包兼容），两者皆无时拒绝
+      if (!fs.existsSync(jsonPath)) {
+        if (!fs.existsSync(iniPath)) {
+          throw new Error('模板 ZIP 未包含 project_config.json 或 network_config.ini，无法导入')
+        }
+        const migrateResult = await pythonService.call('migrate', { projectDir: destDir }) as {
+          migrated?: boolean
+          warnings?: string[]
+        }
+        if (!migrateResult?.migrated) {
+          throw new Error(`模板配置自动迁移失败: ${(migrateResult?.warnings || []).join('; ') || '未知错误'}`)
+        }
+      }
+      // 校验 JSON：语法 + validate_config（复用 project_config_to_ini 的校验逻辑）
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+      } catch (e) {
+        throw new Error(`模板 project_config.json 不是合法 JSON: ${(e as Error).message}`)
+      }
+      const checkResult = await pythonService.call('project_config_to_ini', { config: parsed }) as {
+        valid?: boolean
+        error?: string | null
+      }
+      if (!checkResult?.valid) {
+        throw new Error(`模板配置校验失败: ${checkResult?.error || '未知错误'}`)
+      }
+    } catch (err) {
+      // 校验失败：回滚已导入的模板目录，避免残留损坏模板
+      fs.rmSync(destDir, { recursive: true, force: true })
+      throw err
+    }
     return { canceled: false, templateName: finalName }
   }))
 

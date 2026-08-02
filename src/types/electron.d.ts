@@ -54,6 +54,16 @@ interface Window {
           convergence: Array<{ networkType?: string; convergenceRatio?: number; meetsTarget?: boolean; recommendation?: string }> | null
         }
       }>
+      healthCheck: () => Promise<{
+        checked: number
+        healthyCount: number
+        unhealthy: Array<{
+          id: string
+          name: string
+          isBuiltin: boolean
+          issues: { type: 'missing_json' | 'invalid_json' | 'invalid_config' | 'bad_ref' | 'unresolved_ref'; detail: string }[]
+        }>
+      }>
       create: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
       delete: (templateName: string) => Promise<void>
       update: (templateName: string, updates: {

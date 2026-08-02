@@ -43,6 +43,18 @@ export interface TemplateInfo {
   } | null
 }
 
+// V2.9.8-T2: 模板健康检查结果（缓存于 store，模板增删改后失效）
+export interface TemplateHealthResult {
+  checked: number
+  healthyCount: number
+  unhealthy: Array<{
+    id: string
+    name: string
+    isBuiltin: boolean
+    issues: { type: 'missing_json' | 'invalid_json' | 'invalid_config' | 'bad_ref' | 'unresolved_ref'; detail: string }[]
+  }>
+}
+
 interface ProjectState {
   projects: ProjectInfo[]
   selectedProject: ProjectInfo | null
@@ -77,6 +89,9 @@ interface ProjectState {
   }) => Promise<void>
   exportTemplate: (templateName: string) => Promise<{ canceled: boolean; zipPath: string }>
   importTemplate: (options?: { templateName?: string; zipPath?: string }) => Promise<{ canceled: boolean; templateName: string }>
+  templateHealth: TemplateHealthResult | null
+  fetchTemplateHealth: () => Promise<TemplateHealthResult>
+  clearTemplateHealth: () => void
 }
 
 const builtinTemplates: TemplateInfo[] = [
@@ -123,6 +138,7 @@ export const useProjectStore = create<ProjectState>()(
       selectedProjectName: null,
       projectStatuses: {},
       templates: builtinTemplates,
+      templateHealth: null,
       favoriteProjects: [],
       recentProjects: [],
 
@@ -298,12 +314,16 @@ export const useProjectStore = create<ProjectState>()(
         await get().fetchTemplates()
         // 清理已删除模板的浏览器展开状态
         useExplorerStore.getState().cleanupTemplate(name)
+        // V2.9.8-T6: 模板变更后 health 摘要缓存失效
+        get().clearTemplateHealth()
       },
 
       convertToTemplate: async (projectName, meta) => {
         ensureIPC()
         await window.electron.template.create(projectName, meta)
         await get().fetchTemplates()
+        // V2.9.8-T6: 模板变更后 health 摘要缓存失效
+        get().clearTemplateHealth()
       },
 
       updateTemplate: async (templateName, updates) => {
@@ -313,6 +333,8 @@ export const useProjectStore = create<ProjectState>()(
         }
         await window.electron.template.update(templateName, updates)
         await get().fetchTemplates()
+        // V2.9.8-T6: 模板变更后 health 摘要缓存失效
+        get().clearTemplateHealth()
       },
 
       exportTemplate: async (templateName) => {
@@ -331,8 +353,24 @@ export const useProjectStore = create<ProjectState>()(
         const result = await window.electron.template.importZip(options)
         if (!result.canceled && result.templateName) {
           await get().fetchTemplates()
+          // V2.9.8-T6: 模板变更后 health 摘要缓存失效
+          get().clearTemplateHealth()
         }
         return result
+      },
+
+      fetchTemplateHealth: async () => {
+        ensureIPC()
+        if (!window.electron.template?.healthCheck) {
+          throw new Error('模板健康检查接口未就绪')
+        }
+        const result = await window.electron.template.healthCheck()
+        set({ templateHealth: result })
+        return result
+      },
+
+      clearTemplateHealth: () => {
+        set({ templateHealth: null })
       },
     }),
     {
