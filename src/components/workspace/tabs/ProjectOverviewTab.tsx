@@ -9,6 +9,7 @@ import { useDesignStore, type TopologyNode } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useToastStore } from '@/stores/toast.store'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 /* -------------------------------------------------- */
 /*  Props                                             */
@@ -112,14 +113,14 @@ export function ProjectOverviewTab({ projectName }: Props) {
   }, [topology, initFromTopology])
 
   const handleOpenDesign = useCallback(() => {
-    openTab({ type: 'design', title: '设计', closable: false })
-  }, [openTab])
+    openTab({ type: 'design', title: '设计', closable: false, projectName: projectName ?? undefined })
+  }, [openTab, projectName])
 
   // T10: 一键渲染方案 A — 跳转工作台 + toast 提示(真正渲染由工作台触发)
   const handleQuickRender = useCallback(() => {
-    openTab({ type: 'workbench', title: '工作台', closable: false })
+    openTab({ type: 'workbench', title: '工作台', closable: false, projectName: projectName ?? undefined })
     addToast('info', t('common:toast.renderHint'))
-  }, [openTab, addToast])
+  }, [openTab, addToast, projectName])
 
   // No project name
   if (!projectName) {
@@ -228,8 +229,8 @@ export function ProjectOverviewTab({ projectName }: Props) {
               </div>
             ) : (
               <EmptyState
-                icon={<Server size={28} />}
-                text="请先进入设计面板生成拓扑"
+                icon={Server}
+                title="请先进入设计面板生成拓扑"
                 action={{ label: '打开设计', onClick: handleOpenDesign }}
               />
             )}
@@ -285,8 +286,8 @@ export function ProjectOverviewTab({ projectName }: Props) {
               </div>
             ) : (
               <EmptyState
-                icon={<GitBranch size={28} />}
-                text="暂无拓扑数据"
+                icon={GitBranch}
+                title="暂无拓扑数据"
                 action={{ label: '打开设计', onClick: handleOpenDesign }}
               />
             )}
@@ -325,8 +326,8 @@ export function ProjectOverviewTab({ projectName }: Props) {
               </div>
             ) : (
               <EmptyState
-                icon={<HardDrive size={28} />}
-                text="暂无数据"
+                icon={HardDrive}
+                title="暂无数据"
                 action={topology?.nodes ? { label: '从拓扑初始化', onClick: handleInitRack } : undefined}
               />
             )}
@@ -359,7 +360,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
                 ))}
               </div>
             ) : (
-              <EmptyState icon={<FileText size={28} />} text="暂无输出文件" />
+              <EmptyState icon={FileText} title="暂无输出文件" />
             )}
           </SectionCard>
         </div>
@@ -416,27 +417,6 @@ function SectionCard({ title, icon, children }: {
         <span>{title}</span>
       </div>
       <div className="p-3">{children}</div>
-    </div>
-  )
-}
-
-function EmptyState({ icon, text, action }: {
-  icon: React.ReactNode
-  text: string
-  action?: { label: string; onClick: () => void }
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-6 text-center">
-      <div className="text-gray-300 dark:text-gray-600 mb-2">{icon}</div>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{text}</p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="px-3 py-1 text-2xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
-        >
-          {action.label}
-        </button>
-      )}
     </div>
   )
 }

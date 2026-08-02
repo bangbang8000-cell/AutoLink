@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Check, Table2, FileSpreadsheet } from 'lucide-react'
+import { Copy, Check, Table2, FileSpreadsheet, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { ExcelTable } from '@/components/workspace/ExcelTable'
-import { getCachedExcel, setCachedExcel } from '@/utils/excel-cache'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { getCachedExcel, setCachedExcel, parseWorkbookChunked } from '@/utils/excel-cache'
 import { IMAGE_MIME, getFileExt, getImageMime, splitProjectFilePath } from '@/utils/file-type'
 
 interface Props {
@@ -22,6 +23,8 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // V2.9.2-T5: Excel 分片解析进度(0-100), null 表示未在解析
+  const [parseProgress, setParseProgress] = useState<number | null>(null)
 
   const displayPath = isTemplate && templateName && filePath
     ? `${templateName}/${filePath}`
@@ -49,10 +52,9 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
             const base64 = await window.electron.project.getFileBinary(parts.projectName, parts.relPath)
             if (base64) {
               const wb = XLSX.read(base64, { type: 'base64' })
-              dataMap = {}
-              for (const name of wb.SheetNames) {
-                dataMap[name] = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[name], { header: 1 })
-              }
+              // V2.9.2-T5: 分片解析 + 真实进度
+              setParseProgress(0)
+              dataMap = await parseWorkbookChunked(wb, (p) => setParseProgress(p))
               setCachedExcel(cacheKey, dataMap)
             }
           }
@@ -92,6 +94,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
       setError((err as Error).message)
     } finally {
       setLoading(false)
+      setParseProgress(null)
     }
   }, [filePath, templateName, isTemplate, isExcel, isImage])
 
@@ -115,7 +118,17 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
   const renderContent = () => {
     if (excelData) return renderExcel()
     if (imageSrc) return renderImage()
-    if (content === null) return null
+    if (content === null) {
+      return (
+        <div className="h-full">
+          <EmptyState
+            icon={FileText}
+            title={t('emptyFile', '文件内容为空')}
+            description={t('emptyFileHint', '该文件没有任何可显示的内容')}
+          />
+        </div>
+      )
+    }
     return renderText()
   }
 
@@ -191,8 +204,22 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-sm text-gray-400 dark:text-gray-500">
         {t('loading')}
+        {parseProgress !== null && (
+          <div className="w-48 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span>{t('parsing')}</span>
+              <span>{parseProgress}%</span>
+            </div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+              <div
+                className="h-full bg-primary-500 transition-all duration-150"
+                style={{ width: `${parseProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     )
   }

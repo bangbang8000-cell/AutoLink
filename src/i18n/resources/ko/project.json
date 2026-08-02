@@ -13,5 +13,15 @@
   "confirm": "확인",
   "noProjects": "프로젝트가 없습니다. +를 클릭하여 생성하세요",
   "favorites": "즐겨찾기",
-  "recent": "최근"
+  "recent": "최근",
+  "wizard": {
+    "nameRequired": "프로젝트 이름을 입력하세요",
+    "nameTooLong": "프로젝트 이름은 50자 이내여야 합니다",
+    "nameExists": "같은 이름의 프로젝트가 이미 존재합니다",
+    "networkRequired": "네트워크 유형을 하나 이상 선택하세요",
+    "devicesMissing": "다음 장치가 선택되지 않았습니다: {{list}}",
+    "powerRequired": "랙당 전력 상한을 설정하세요",
+    "powerExceeds": "현재 냉각 방식에서 전력 상한은 {{max}}W를 초과할 수 없습니다",
+    "countExceeds": "서버 유형당 최대 2048대"
+  }
 }

@@ -352,7 +352,7 @@ export function Topology3DTab() {
         shadows
         className="w-full h-full"
       >
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">加载 3D 场景...</div>}>
           <Topology3DScene />
         </Suspense>
       </Canvas>

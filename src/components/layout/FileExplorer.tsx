@@ -61,7 +61,7 @@ function DesignExplorer() {
       await generate(selectedProjectName)
       const topology = useDesignStore.getState().topology
       if (topology?.nodes?.length) {
-        openTab({ type: 'visualization', title: `${t('common:menu.topology')} - ${selectedProjectName}`, closable: true })
+        openTab({ type: 'visualization', title: `${t('common:menu.topology')} - ${selectedProjectName}`, closable: true, projectName: selectedProjectName })
         initFromTopology(topology.nodes)
       }
       const err = useDesignStore.getState().error
@@ -70,7 +70,7 @@ function DesignExplorer() {
   }
 
   const handleOpenFullDesign = () => {
-    openTab({ type: 'design', title: t('common:menu.design'), closable: true })
+    openTab({ type: 'design', title: t('common:menu.design'), closable: true, projectName: selectedProjectName ?? undefined })
   }
 
   if (!selectedProjectName) {
@@ -255,7 +255,7 @@ function VisualizationExplorer() {
   const openTab = useWorkspaceStore((s) => s.openTab)
 
   const handleOpenFullVisualization = () => {
-    openTab({ type: 'visualization', title: t('common:explorer.visualization.title'), closable: false })
+    openTab({ type: 'visualization', title: t('common:explorer.visualization.title'), closable: false, projectName: selectedProjectName ?? undefined })
   }
 
   if (!selectedProjectName) {

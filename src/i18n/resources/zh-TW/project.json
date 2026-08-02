@@ -13,5 +13,15 @@
   "confirm": "確認",
   "noProjects": "暫無專案，點擊 + 建立",
   "favorites": "收藏",
-  "recent": "最近"
+  "recent": "最近",
+  "wizard": {
+    "nameRequired": "請輸入專案名稱",
+    "nameTooLong": "專案名稱不能超過 50 個字元",
+    "nameExists": "專案名稱已存在",
+    "networkRequired": "請至少選擇一種網路類型",
+    "devicesMissing": "以下設備尚未選擇：{{list}}",
+    "powerRequired": "請設定單機櫃功率上限",
+    "powerExceeds": "目前散熱方式下單櫃功率上限不能超過 {{max}}W",
+    "countExceeds": "單類伺服器數量上限 2048"
+  }
 }

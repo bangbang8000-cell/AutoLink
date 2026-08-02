@@ -8,11 +8,13 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Building2, Settings2, ChevronDown, ChevronRight, Download } from 'lucide-react'
+import { Building2, Settings2, ChevronDown, ChevronRight, Download, Loader2 } from 'lucide-react'
 import { useRackStore } from '@/stores/rack.store'
 import { useDataCenterStore } from '@/stores/datacenter.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Input } from '@/components/ui/Input'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { DataCenterStats } from '@/components/datacenter/DataCenterStats'
 import { exportSvgFile, exportSvgAsPng, makeTimestampedFilename } from '@/utils/exportSvg'
@@ -28,6 +30,8 @@ export function DataCenterTab() {
   const [showSettings, setShowSettings] = useState(false)
   const svgContainerRef = useRef<HTMLDivElement>(null)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  // V2.9.2-T5: PNG 导出中状态
+  const [exporting, setExporting] = useState(false)
 
   // 自动从拓扑初始化机柜
   useEffect(() => {
@@ -64,6 +68,8 @@ export function DataCenterTab() {
       addToast('error', t('common:toast.noRackDataToExport'))
       return
     }
+    if (exporting) return
+    setExporting(true)
     addToast('info', t('common:toast.generatingPng'))
     try {
       const filename = makeTimestampedFilename('机房平面布局', 'png')
@@ -71,15 +77,20 @@ export function DataCenterTab() {
       addToast('success', t('common:toast.exportedToOutput', { filename }))
     } catch (err) {
       addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
+    } finally {
+      setExporting(false)
     }
     setShowExportMenu(false)
   }
 
   if (!selectedProjectName) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-app-elevated">
-        <Building2 size={48} className="text-gray-300 dark:text-gray-600 mb-3" />
-        <p className="text-sm text-gray-400">{t('datacenter:noProject', '请先选择项目')}</p>
+      <div className="h-full">
+        <EmptyState
+          icon={Building2}
+          title={t('datacenter:noProject', '请先选择项目')}
+          description="从左侧项目列表选择一个项目后查看机房平面布局"
+        />
       </div>
     )
   }
@@ -100,6 +111,8 @@ export function DataCenterTab() {
           <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
+              aria-label="导出布局图"
+              aria-expanded={showExportMenu}
               className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500"
             >
               <Download size={12} />
@@ -118,8 +131,10 @@ export function DataCenterTab() {
                   </button>
                   <button
                     onClick={handleExportPng}
-                    className="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
+                    disabled={exporting}
+                    className="flex items-center gap-1.5 w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
+                    {exporting ? <Loader2 size={12} className="animate-spin" /> : null}
                     导出 PNG
                   </button>
                 </div>
@@ -143,46 +158,46 @@ export function DataCenterTab() {
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
             <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetsPerRow', '每排机柜数')}</span>
-              <input
+              <Input
                 type="number"
                 min={4}
                 max={16}
                 value={params.cabinetsPerRow}
                 onChange={(e) => setParams({ cabinetsPerRow: Math.max(4, Math.min(16, Number(e.target.value) || 8)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
+                className="px-2 py-1 text-xs"
               />
             </label>
             <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetWidth', '机柜宽度(px)')}</span>
-              <input
+              <Input
                 type="number"
                 min={40}
                 max={120}
                 value={params.cabinetWidth}
                 onChange={(e) => setParams({ cabinetWidth: Math.max(40, Math.min(120, Number(e.target.value) || 60)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
+                className="px-2 py-1 text-xs"
               />
             </label>
             <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:cabinetHeight', '机柜高度(px)')}</span>
-              <input
+              <Input
                 type="number"
                 min={60}
                 max={200}
                 value={params.cabinetHeight}
                 onChange={(e) => setParams({ cabinetHeight: Math.max(60, Math.min(200, Number(e.target.value) || 100)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
+                className="px-2 py-1 text-xs"
               />
             </label>
             <label className="text-2xs">
               <span className="block text-gray-500 mb-0.5">{t('datacenter:rowGap', '排间距(px)')}</span>
-              <input
+              <Input
                 type="number"
                 min={30}
                 max={120}
                 value={params.rowGap}
                 onChange={(e) => setParams({ rowGap: Math.max(30, Math.min(120, Number(e.target.value) || 60)) })}
-                className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app"
+                className="px-2 py-1 text-xs"
               />
             </label>
           </div>

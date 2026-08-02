@@ -9,6 +9,10 @@ export interface WorkspaceTab {
   type: TabType
   title: string
   closable: boolean
+  /** 所属项目 (V2.9.2-T4: 项目隔离, 无则视为全局 Tab) */
+  projectName?: string
+  /** 未保存标记 (V2.9.2-T4: 关闭时需确认) */
+  dirty?: boolean
   /** Extra state for specific tab types (cabinetId, fileName, etc.) */
   state?: Record<string, unknown>
 }
@@ -28,7 +32,11 @@ interface WorkspaceState {
   /** Find an existing tab by type and optional state predicate */
   findTab: (type: TabType, stateMatch?: Record<string, unknown>) => WorkspaceTab | undefined
   /** Update an existing tab's title / state in-place (without creating a new tab) */
-  updateTab: (id: string, updates: Partial<Pick<WorkspaceTab, 'title' | 'state'>>) => void
+  updateTab: (id: string, updates: Partial<Pick<WorkspaceTab, 'title' | 'state' | 'dirty'>>) => void
+  /** V2.9.2-T4: 切换项目时清理非当前项目的项目级 Tab */
+  setProjectTabs: (projectName: string | null) => void
+  /** V2.9.2-T4: 删除项目时清理其持久化 Tab */
+  clearTabsForProjects: (names: string[]) => void
 }
 
 let _idCounter = 0
@@ -66,10 +74,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       openTab: (tab) => {
-        const { tabs, findTab } = get()
+        const { tabs } = get()
 
-        // Deduplication logic
-        const existing = findTab(tab.type, tab.state)
+        // Deduplication: 项目级 Tab 需 projectName 相同才复用 (V2.9.2-T4)
+        const existing = tabs.find((t) =>
+          t.type === tab.type &&
+          (tab.projectName ? t.projectName === tab.projectName : true) &&
+          stateMatches(tab.state, t.state)
+        )
         if (existing) {
           set({ activeTabId: existing.id })
           return existing.id
@@ -182,12 +194,40 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           ),
         }))
       },
+
+      // V2.9.2-T4: 切换项目时清理非当前项目的项目级 Tab（保留全局 Tab）
+      setProjectTabs: (projectName) => {
+        set((s) => {
+          const newTabs = s.tabs.filter((t) => !t.projectName || t.projectName === projectName)
+          const newIds = new Set(newTabs.map((t) => t.id))
+          const nextActive = s.activeTabId && newIds.has(s.activeTabId)
+            ? s.activeTabId
+            : newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null
+          return { tabs: newTabs, activeTabId: nextActive }
+        })
+      },
+
+      // V2.9.2-T4: 删除项目时清理其持久化 Tab
+      clearTabsForProjects: (names) => {
+        set((s) => {
+          const removed = new Set(names)
+          const newTabs = s.tabs.filter((t) => !(t.projectName && removed.has(t.projectName)))
+          const newIds = new Set(newTabs.map((t) => t.id))
+          const nextActive = s.activeTabId && newIds.has(s.activeTabId)
+            ? s.activeTabId
+            : newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null
+          return { tabs: newTabs, activeTabId: nextActive }
+        })
+      },
     }),
     {
       name: 'autolink-workspace',
-      version: 1,
-      migrate: (persistedState) => {
+      version: 2,
+      migrate: (persistedState, version) => {
         const state = persistedState as { tabs?: WorkspaceTab[]; activeTabId?: string | null }
+        if (version < 2 && state.tabs) {
+          // V2.9.2-T4: 旧持久化 Tab 无 projectName，保持原样(视为全局)即可
+        }
         if (state.tabs) {
           state.tabs = state.tabs.map((t) => {
             // Fix: design and deviceLibrary tabs should always be closable

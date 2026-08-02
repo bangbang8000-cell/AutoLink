@@ -6,6 +6,7 @@ import { useProjectStore } from '@/stores/project.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useToastStore } from '@/stores/toast.store'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
 import { RenameProjectModal } from '@/components/layout/RenameProjectModal'
 import { TreeNode } from '@/components/layout/TreeNode'
@@ -54,6 +55,7 @@ export function ProjectExplorer() {
         type: 'projectOverview',
         title: t('common:explorer.toast.projectOverviewTitle', { name }),
         closable: true,
+        projectName: name,
         state: { projectName: name },
       })
     }
@@ -124,6 +126,7 @@ export function ProjectExplorer() {
         type: 'topology',
         title: t('common:menu.topology'),
         closable: true,
+        projectName: projectName,
       })
       return
     }
@@ -131,6 +134,7 @@ export function ProjectExplorer() {
       type: 'fileViewer',
       title: node.name,
       closable: true,
+      projectName: projectName,
       state: { filePath: node.path, projectName, isTemplate: false },
     })
   }, [openTab, selectProject, projects, t])
@@ -141,6 +145,7 @@ export function ProjectExplorer() {
       type: 'fileViewer',
       title: file.name,
       closable: true,
+      projectName: _projectName,
       state: { filePath: file.path, projectName: _projectName, isTemplate: false },
     })
   }, [openTab])
@@ -462,7 +467,16 @@ export function ProjectExplorer() {
       <div className="flex-1 overflow-auto py-1">
         {/* Projects section */}
         <Section title={t('common:explorer.allProjects')} icon={<Folder size={14} />} sectionKey="projects">
-          {sortedProjects.map((p) => {
+          {sortedProjects.length === 0 ? (
+            <div className="py-2">
+              <EmptyState
+                icon={Folder}
+                title={projects.length === 0 ? t('common:explorer.noProjects', '暂无项目') : t('common:explorer.noSearchResults', '未找到匹配的项目')}
+                description={projects.length === 0 ? t('common:explorer.createProjectHint', '点击上方 + 按钮创建新项目') : t('common:explorer.changeSearchQuery', '尝试更换搜索关键词')}
+              />
+            </div>
+          ) : (
+          sortedProjects.map((p) => {
             const isFavorite = favoriteSet.has(p.name)
             const isExpanded = expandedProjects[p.name]
             const structure = projectStructures[p.name] || []
@@ -518,7 +532,8 @@ export function ProjectExplorer() {
                 )}
               </div>
             )
-          })}
+          })
+          )}
         </Section>
 
         {/* Output Section */}

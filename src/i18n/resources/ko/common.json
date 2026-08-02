@@ -6,6 +6,7 @@
   "save": "저장",
   "processing": "처리 중...",
   "loading": "로딩 중...",
+  "parsing": "파싱 중...",
   "noData": "데이터 없음",
   "tabs": {
     "workbench": "워크벤치",
@@ -475,7 +476,11 @@
     "closeTab": "닫기",
     "closeOthers": "다른 탭 닫기",
     "closeRight": "오른쪽 탭 닫기",
-    "closeAll": "모두 닫기"
+    "closeAll": "모두 닫기",
+    "closeTabAria": "{{name}} 닫기",
+    "dirtyCloseTitle": "저장되지 않은 변경 사항",
+    "dirtyCloseMessage": "「{{title}}」에 저장되지 않은 변경 사항이 있습니다. 닫으면 손실됩니다. 그래도 닫으시겠습니까？",
+    "dirtyCloseConfirm": "닫기"
   },
   "guide": {
     "title": "사용자 가이드",
@@ -484,13 +489,27 @@
     "notFound": "사용자 가이드 문서를 찾을 수 없습니다",
     "toc": "목차"
   },
+  "onboarding": {
+    "title": "AutoLink에 오신 것을 환영합니다",
+    "step1Title": "프로젝트 생성",
+    "step1Desc": "왼쪽의 «+»로 새 프로젝트를 만들거나 템플릿에서 시작하세요",
+    "step2Title": "설계 구성",
+    "step2Desc": "설계 탭에서 서버·스위치 매개변수를 조정하고 토폴로지를 생성하세요",
+    "step3Title": "시각화 및 전달",
+    "step3Desc": "토폴로지와 랙 계획을 확인하고 보고서와 장치 목록을 내보내세요",
+    "start": "시작하기",
+    "skip": "건너뛰기",
+    "prev": "이전",
+    "next": "다음"
+  },
   "fileViewer": {
     "cannotRead": "파일을 읽을 수 없습니다",
     "unsupportedType": "지원되지 않는 파일 형식: {{type}}",
     "emptyTable": "빈 테이블",
     "cannotPreview": "이 파일을 미리 볼 수 없습니다",
     "copy": "복사",
-    "copied": "복사됨"
+    "copied": "복사됨",
+    "loadFailed": "파일 로딩 실패: {{error}}"
   },
   "toast": {
     "projectCreated": "프로젝트가 성공적으로 생성되었습니다",

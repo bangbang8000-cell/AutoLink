@@ -5,6 +5,7 @@ import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useToastStore } from '@/stores/toast.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 
 export interface ProjectInfo {
   id: number
@@ -161,6 +162,8 @@ export const useProjectStore = create<ProjectState>()(
         for (const name of names) {
           cleanupProject(name)
         }
+        // V2.9.2-T4: 清理已删除项目的持久化 Tab
+        useWorkspaceStore.getState().clearTabsForProjects(names)
       },
 
       duplicateProject: async (sourceName, targetName) => {
@@ -235,6 +238,8 @@ export const useProjectStore = create<ProjectState>()(
           selectedProject: project,
           selectedProjectName: project?.name ?? null,
         })
+        // V2.9.2-T4: 切换项目时清理旧项目的项目级 Tab，避免数据串扰
+        useWorkspaceStore.getState().setProjectTabs(project?.name ?? null)
         if (project) {
           get().trackRecent(project.name)
           // T6.4: 统一加载入口 — 切换项目时预加载配置/拓扑/机柜数据

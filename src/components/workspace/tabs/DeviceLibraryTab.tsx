@@ -10,6 +10,8 @@ import { useDeviceLibraryStore, type DeviceCategoryFilter } from '@/stores/devic
 import type { LibraryDevice } from '@/types/device-profile'
 import { isServerDevice } from '@/types/device-profile'
 import { DEVICE_CATEGORY_LABELS, NETWORK_TYPE_LABELS } from '@/constants/labels'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 
 /* -------------------------------------------------- */
 /*  DeviceLibraryTab                                  */
@@ -112,17 +114,18 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
             {/* Search + vendor filter */}
             <div className="p-2 space-y-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
               <div className="relative">
-                <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
+                <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
+                <Input
                   type="text"
                   value={filter.search}
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder="搜索设备型号/厂商..."
-                  className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="pl-7 pr-7 py-1.5 text-xs"
                 />
                 {filter.search && (
                   <button
                     onClick={() => handleSearch('')}
+                    aria-label="清除搜索"
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     <X size={12} />
@@ -130,16 +133,15 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
                 )}
               </div>
               {vendors.length > 0 && (
-                <select
+                <Select
                   value={filter.vendor}
                   onChange={(e) => handleVendorFilter(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">全部厂商</option>
-                  {vendors.map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: '全部厂商' },
+                    ...vendors.map((v) => ({ value: v, label: v })),
+                  ]}
+                  className="px-2 py-1.5 text-xs"
+                />
               )}
             </div>
 

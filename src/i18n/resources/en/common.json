@@ -10,6 +10,7 @@
   "save": "Save",
   "processing": "Processing...",
   "loading": "Loading...",
+  "parsing": "Parsing...",
   "noData": "No data",
   "tabs": {
     "workbench": "Workbench",
@@ -487,7 +488,11 @@
     "closeTab": "Close",
     "closeOthers": "Close Others",
     "closeRight": "Close to the Right",
-    "closeAll": "Close All"
+    "closeAll": "Close All",
+    "closeTabAria": "Close {{name}}",
+    "dirtyCloseTitle": "Unsaved Changes",
+    "dirtyCloseMessage": "The tab \"{{title}}\" has unsaved changes that will be lost. Close anyway?",
+    "dirtyCloseConfirm": "Close Anyway"
   },
   "guide": {
     "title": "User Guide",
@@ -496,13 +501,27 @@
     "notFound": "User guide document not found",
     "toc": "Table of Contents"
   },
+  "onboarding": {
+    "title": "Welcome to AutoLink",
+    "step1Title": "Create a Project",
+    "step1Desc": "Create a new project with \"+\" on the left, or start from a template",
+    "step2Title": "Configure the Design",
+    "step2Desc": "Adjust server and switch parameters in the Design tab, then generate the topology",
+    "step3Title": "Visualize & Deliver",
+    "step3Desc": "Review topology and rack planning, then export reports and device lists",
+    "start": "Get Started",
+    "skip": "Skip",
+    "prev": "Previous",
+    "next": "Next"
+  },
   "fileViewer": {
     "cannotRead": "Cannot read file",
     "unsupportedType": "Unsupported file type: {{type}}",
     "emptyTable": "Empty table",
     "cannotPreview": "Cannot preview this file",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "loadFailed": "Failed to load file: {{error}}"
   },
   "toast": {
     "projectCreated": "Project created successfully",

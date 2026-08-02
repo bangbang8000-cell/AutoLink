@@ -30,7 +30,7 @@ import '@xyflow/react/dist/style.css'
 import {
   Download, Filter, Network, X, Activity, RotateCcw, Save, Maximize2,
   Search, MousePointer2, Box, Undo2, Redo2, AlignStartHorizontal, AlignEndHorizontal,
-  AlignStartVertical, AlignEndVertical, Trash2, Tags,
+  AlignStartVertical, AlignEndVertical, Trash2, Tags, Loader2,
 } from 'lucide-react'
 import { useDesignStore, type TopologyNode, type TopologyEdge } from '@/stores/design.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -194,6 +194,8 @@ function TopologyFlowInner() {
   const [selectionMode, setSelectionMode] = useState(false)
   // v2.8.1-T8: 布局是否有未保存的调整
   const [layoutDirty, setLayoutDirty] = useState(false)
+  // V2.9.2-T5: PNG 导出中状态
+  const [exportingPng, setExportingPng] = useState(false)
   // v2.8.2-T1: 节点 hover
   const [hoverNodeId, setHoverNodeId] = useState<string | null>(null)
   // v2.8.2-T2/T7: 链路 hover / 选中
@@ -786,6 +788,8 @@ function TopologyFlowInner() {
       addToast('error', t('common:toast.noTopologyToExport'))
       return
     }
+    if (exportingPng) return
+    setExportingPng(true)
     addToast('info', t('common:toast.generatingTopologyPng'))
     try {
       const base64 = await exportTopologyPng(topology.nodes, topology.edges)
@@ -799,8 +803,10 @@ function TopologyFlowInner() {
     } catch (err) {
       console.error('Export topology PNG failed:', err)
       addToast('error', t('common:toast.exportFailed', { error: err instanceof Error ? err.message : t('common:toast.unknownError') }))
+    } finally {
+      setExportingPng(false)
     }
-  }, [topology, selectedProjectName, addToast])
+  }, [topology, selectedProjectName, exportingPng, addToast])
 
   const nodeConnectionCount = useMemo(() => {
     if (!selectedNode || !topology) return 0
@@ -1030,8 +1036,13 @@ function TopologyFlowInner() {
             <Trash2 size={14} />
           </button>
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
-          <button onClick={handleExportPng} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500" title={t('topology:exportPng')}>
-            <Download size={14} />
+          <button
+            onClick={handleExportPng}
+            disabled={exportingPng}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50 disabled:cursor-wait"
+            title={t('topology:exportPng')}
+          >
+            {exportingPng ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
           {layoutComputing && (
             <span className="flex items-center gap-1 px-2 py-1 text-2xs text-primary-500">

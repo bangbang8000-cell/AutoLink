@@ -20,6 +20,7 @@ import { WorkspaceErrorBoundary } from '@/components/workspace/WorkspaceErrorBou
 import { ServerProfileForm } from '@/components/device/ServerProfileForm'
 import { SwitchProfileForm } from '@/components/device/SwitchProfileForm'
 import { DeviceImportModal } from '@/components/device/DeviceImportModal'
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 import { DeviceExportModal } from '@/components/device/DeviceExportModal'
 import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
 import { matchShortcut } from '@/utils/shortcuts'
@@ -224,6 +225,8 @@ export default function App() {
       </div>
       <StatusBar />
       <ToastContainer />
+      {/* V2.9.2-T7: 首次启动引导 */}
+      <OnboardingModal />
       {showShortcutsDialog && <ShortcutsDialog onClose={() => setShowShortcutsDialog(false)} />}
       <ServerProfileForm />
       <SwitchProfileForm />

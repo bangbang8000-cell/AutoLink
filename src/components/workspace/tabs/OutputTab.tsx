@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
 import { ExcelTable } from '@/components/workspace/ExcelTable'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { getImageMime } from '@/utils/file-type'
+import { parseWorkbookChunked } from '@/utils/excel-cache'
+import { FileText } from 'lucide-react'
 
 interface Props {
   fileName?: string | null
@@ -17,6 +20,8 @@ export function OutputTab({ fileName, fileType }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [sheets, setSheets] = useState<Record<string, string[][]>>({})
   const [imageSrc, setImageSrc] = useState<string | null>(null)
+  // V2.9.2-T5: Excel 分片解析进度(0-100), null 表示未在解析
+  const [parseProgress, setParseProgress] = useState<number | null>(null)
 
   useEffect(() => {
     if (!fileName) return
@@ -44,11 +49,9 @@ export function OutputTab({ fileName, fileType }: Props) {
           return
         }
         const wb = XLSX.read(base64, { type: 'base64' })
-        const sheetsData: Record<string, string[][]> = {}
-        wb.SheetNames.forEach((name) => {
-          const ws = wb.Sheets[name]
-          sheetsData[name] = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })
-        })
+        // V2.9.2-T5: 分片解析 + 真实进度
+        setParseProgress(0)
+        const sheetsData = await parseWorkbookChunked(wb, (p) => setParseProgress(p))
         setSheets(sheetsData)
       } else if (getImageMime(lowerName)) {
         // v2.8.0-T6: 图片预览(含 SVG),MIME 由扩展名映射,避免大小写脆弱
@@ -61,16 +64,31 @@ export function OutputTab({ fileName, fileType }: Props) {
         setError(t('common:fileViewer.unsupportedType', { type: fileType || '' }))
       }
     } catch (err) {
-      setError((err as Error).message)
+      setError(t('common:fileViewer.loadFailed', { error: (err as Error).message }))
     } finally {
       setLoading(false)
+      setParseProgress(null)
     }
   }
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-sm text-gray-400 dark:text-gray-500">
         {t('common:loading')}
+        {parseProgress !== null && (
+          <div className="w-48 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span>{t('common:parsing')}</span>
+              <span>{parseProgress}%</span>
+            </div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+              <div
+                className="h-full bg-primary-500 transition-all duration-150"
+                style={{ width: `${parseProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -102,8 +120,12 @@ export function OutputTab({ fileName, fileType }: Props) {
   }
 
   return (
-    <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-      {t('common:fileViewer.cannotPreview')}
+    <div className="h-full">
+      <EmptyState
+        icon={FileText}
+        title={t('common:fileViewer.cannotPreview')}
+        description="该文件类型暂不支持在线预览，可通过导出功能查看"
+      />
     </div>
   )
 }

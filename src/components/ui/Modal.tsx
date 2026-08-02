@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -44,6 +44,7 @@ export function Modal({
   bodyClassName = 'p-6',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
 
   // ESC 关闭 + body 滚动锁定
   useEffect(() => {
@@ -90,12 +91,13 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
       >
         {/* Header */}
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-default shrink-0">
             {title && (
-              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+              <h2 id={titleId} className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
             )}
             {showCloseButton && (
               <button

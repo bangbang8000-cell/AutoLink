@@ -6,6 +6,7 @@
   "save": "保存",
   "processing": "処理中...",
   "loading": "読み込み中...",
+  "parsing": "解析中...",
   "noData": "データなし",
   "tabs": {
     "workbench": "ワークベンチ",
@@ -475,7 +476,11 @@
     "closeTab": "閉じる",
     "closeOthers": "他を閉じる",
     "closeRight": "右側を閉じる",
-    "closeAll": "すべて閉じる"
+    "closeAll": "すべて閉じる",
+    "closeTabAria": "{{name}} を閉じる",
+    "dirtyCloseTitle": "保存されていない変更",
+    "dirtyCloseMessage": "「{{title}}」には保存されていない変更があります。閉じると失われます。それでも閉じますか？",
+    "dirtyCloseConfirm": "閉じる"
   },
   "guide": {
     "title": "ユーザーガイド",
@@ -484,13 +489,27 @@
     "notFound": "ユーザーガイドのドキュメントが見つかりません",
     "toc": "目次"
   },
+  "onboarding": {
+    "title": "AutoLink へようこそ",
+    "step1Title": "プロジェクトを作成",
+    "step1Desc": "左側の「+」から新規プロジェクトを作成するか、テンプレートから開始します",
+    "step2Title": "設計を設定",
+    "step2Desc": "設計タブでサーバー・スイッチのパラメータを調整し、トポロジを生成します",
+    "step3Title": "可視化と納品",
+    "step3Desc": "トポロジとラック計画を確認し、レポートと機器リストをエクスポートします",
+    "start": "はじめる",
+    "skip": "スキップ",
+    "prev": "前へ",
+    "next": "次へ"
+  },
   "fileViewer": {
     "cannotRead": "ファイルを読み込めません",
     "unsupportedType": "サポートされていないファイル形式です: {{type}}",
     "emptyTable": "空のテーブル",
     "cannotPreview": "このファイルはプレビューできません",
     "copy": "コピー",
-    "copied": "コピー済み"
+    "copied": "コピー済み",
+    "loadFailed": "ファイルの読み込みに失敗しました: {{error}}"
   },
   "toast": {
     "projectCreated": "プロジェクトが正常に作成されました",

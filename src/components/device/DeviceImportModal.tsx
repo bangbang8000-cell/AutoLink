@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Upload, Download, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Upload, Download, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import type { LibraryDevice, InterfaceModel, NetworkType } from '@/types/device-profile'
 import * as XLSX from 'xlsx'
@@ -161,6 +162,8 @@ export function DeviceImportModal() {
   const [fileName, setFileName] = useState('')
   const [importing, setImporting] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  // V2.9.2-T5: 分片解析进度(0-100), null 表示未在解析
+  const [parseProgress, setParseProgress] = useState<number | null>(null)
 
   const handleFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,6 +172,7 @@ export function DeviceImportModal() {
 
       setFileName(file.name)
       setParseError(null)
+      setParsedRows([])
       try {
         const data = await file.arrayBuffer()
         const wb = XLSX.read(data, { type: 'array' })
@@ -176,22 +180,33 @@ export function DeviceImportModal() {
         const sheet = wb.Sheets[sheetName]
         const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet)
 
-        const parsed: ParsedRow[] = rows.map((row) => {
-          const type = activeTab
-          if (type === 'server') {
-            const result = parseServerRow(row)
-            return { type: 'server', raw: row, valid: result.valid, errors: result.errors, device: result.device }
-          } else {
-            const result = parseSwitchRow(row)
-            return { type: 'switch', raw: row, valid: result.valid, errors: result.errors, device: result.device }
-          }
-        })
+        // V2.9.2-T5: 分片解析, 每片让出主线程以更新进度条
+        const parsed: ParsedRow[] = new Array(rows.length)
+        const CHUNK = 200
+        setParseProgress(0)
+        for (let i = 0; i < rows.length; i += CHUNK) {
+          const chunk = rows.slice(i, i + CHUNK)
+          chunk.forEach((row, j) => {
+            const idx = i + j
+            if (activeTab === 'server') {
+              const result = parseServerRow(row)
+              parsed[idx] = { type: 'server', raw: row, valid: result.valid, errors: result.errors, device: result.device }
+            } else {
+              const result = parseSwitchRow(row)
+              parsed[idx] = { type: 'switch', raw: row, valid: result.valid, errors: result.errors, device: result.device }
+            }
+          })
+          setParseProgress(Math.min(100, Math.round(((i + chunk.length) / rows.length) * 100)))
+          await new Promise((r) => setTimeout(r, 0))
+        }
 
         setParsedRows(parsed)
       } catch (err) {
         console.error('Parse file error:', err)
         setParsedRows([])
         setParseError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setParseProgress(null)
       }
     },
     [activeTab],
@@ -201,8 +216,14 @@ export function DeviceImportModal() {
     const validDevices = parsedRows.filter((r) => r.valid && r.device).map((r) => r.device!)
     if (validDevices.length === 0) return
     setImporting(true)
-    await importDevices(validDevices)
-    setImporting(false)
+    setParseError(null)
+    try {
+      await importDevices(validDevices)
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setImporting(false)
+    }
   }
 
   const downloadTemplate = () => {
@@ -220,131 +241,15 @@ export function DeviceImportModal() {
   if (!showImportModal) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={closeImportModal}>
-      <div
-        className="bg-white dark:bg-app-surface rounded-lg shadow-xl w-[680px] max-h-[85vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-subtle">
-          <h3 className="text-sm font-semibold">{t('import.title')}</h3>
-          <button onClick={closeImportModal} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Tabs */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => { setActiveTab('server'); setParsedRows([]); setFileName(''); setParseError(null) }}
-              className={clsx(
-                'px-3 py-1.5 text-xs rounded',
-                activeTab === 'server'
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400',
-              )}
-            >
-              {t('import.serverTab')}
-            </button>
-            <button
-              onClick={() => { setActiveTab('switch'); setParsedRows([]); setFileName(''); setParseError(null) }}
-              className={clsx(
-                'px-3 py-1.5 text-xs rounded',
-                activeTab === 'switch'
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400',
-              )}
-            >
-              {t('import.switchTab')}
-            </button>
-          </div>
-
-          {/* Upload area */}
-          <div
-            className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-primary-400 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload size={24} className="mx-auto text-gray-400 mb-2" />
-            <div className="text-xs text-gray-500">{t('import.uploadHint')}</div>
-            <div className="text-2xs text-gray-400 mt-1">{fileName || '未选择文件'}</div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={handleFile}
-              className="hidden"
-            />
-          </div>
-
-          <button
-            onClick={downloadTemplate}
-            className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            <Download size={12} /> {t('import.downloadTemplate')}
-          </button>
-
-          {/* Parse error */}
-          {parseError && (
-            <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-2">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-              <div>
-                <div className="font-medium">{t('import.parseFailed')}</div>
-                <div className="mt-0.5 break-all">{parseError}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Preview */}
-          {parsedRows.length > 0 && (
-            <div>
-              <div className="flex items-center gap-3 mb-2 text-xs">
-                <span>{t('import.total', { count: parsedRows.length })}</span>
-                <span className="text-gray-500 flex items-center gap-0.5">
-                  <CheckCircle size={12} /> {t('import.valid', { count: validCount })}
-                </span>
-                {invalidCount > 0 && (
-                  <span className="text-gray-500 flex items-center gap-0.5">
-                    <AlertTriangle size={12} /> {t('import.invalid', { count: invalidCount })}
-                  </span>
-                )}
-              </div>
-
-              <div className="max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-50 dark:bg-app sticky top-0">
-                    <tr>
-                      <th className="px-2 py-1 text-left">厂商</th>
-                      <th className="px-2 py-1 text-left">型号</th>
-                      <th className="px-2 py-1 text-left">状态</th>
-                      <th className="px-2 py-1 text-left">错误</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedRows.map((row, idx) => (
-                      <tr key={idx} className="border-t border-gray-100 dark:border-edge-subtle">
-                        <td className="px-2 py-1">{row.raw['厂商'] || '-'}</td>
-                        <td className="px-2 py-1">{row.raw['型号'] || '-'}</td>
-                        <td className="px-2 py-1">
-                          {row.valid ? (
-                            <span className="text-gray-500">✓</span>
-                          ) : (
-                            <span className="text-gray-400">✗</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-gray-500">{row.errors.join(', ')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-edge-subtle">
+    <Modal
+      open={showImportModal}
+      onClose={closeImportModal}
+      title={t('import.title')}
+      width={680}
+      maxHeight="85vh"
+      bodyClassName="p-4 space-y-4"
+      footer={(
+        <div className="flex justify-end gap-2">
           <button
             onClick={closeImportModal}
             className="px-3 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-app-hover"
@@ -364,8 +269,131 @@ export function DeviceImportModal() {
             {importing ? '导入中...' : t('import.confirm')}
           </button>
         </div>
+      )}
+    >
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setActiveTab('server'); setParsedRows([]); setFileName(''); setParseError(null) }}
+          className={clsx(
+            'px-3 py-1.5 text-xs rounded',
+            activeTab === 'server'
+              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+              : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400',
+          )}
+        >
+          {t('import.serverTab')}
+        </button>
+        <button
+          onClick={() => { setActiveTab('switch'); setParsedRows([]); setFileName(''); setParseError(null) }}
+          className={clsx(
+            'px-3 py-1.5 text-xs rounded',
+            activeTab === 'switch'
+              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+              : 'bg-gray-100 dark:bg-app text-gray-600 dark:text-gray-400',
+          )}
+        >
+          {t('import.switchTab')}
+        </button>
       </div>
-    </div>
+
+      {/* Upload area */}
+      <div
+        className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-primary-400 transition-colors"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+        <div className="text-xs text-gray-500">{t('import.uploadHint')}</div>
+        <div className="text-2xs text-gray-400 mt-1">{fileName || '未选择文件'}</div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          onChange={handleFile}
+          className="hidden"
+        />
+      </div>
+
+      {/* V2.9.2-T5: 分片解析进度 */}
+      {parseProgress !== null && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>{t('import.parsing', '正在解析...')}</span>
+            <span>{parseProgress}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+            <div
+              className="h-full bg-primary-500 transition-all duration-150"
+              style={{ width: `${parseProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={downloadTemplate}
+        className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+      >
+        <Download size={12} /> {t('import.downloadTemplate')}
+      </button>
+
+      {/* Parse error */}
+      {parseError && (
+        <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-2">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <div>
+            <div className="font-medium">{t('import.parseFailed')}</div>
+            <div className="mt-0.5 break-all">{parseError}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview */}
+      {parsedRows.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-2 text-xs">
+            <span>{t('import.total', { count: parsedRows.length })}</span>
+            <span className="text-gray-500 flex items-center gap-0.5">
+              <CheckCircle size={12} /> {t('import.valid', { count: validCount })}
+            </span>
+            {invalidCount > 0 && (
+              <span className="text-gray-500 flex items-center gap-0.5">
+                <AlertTriangle size={12} /> {t('import.invalid', { count: invalidCount })}
+              </span>
+            )}
+          </div>
+
+          <div className="max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 dark:bg-app sticky top-0">
+                <tr>
+                  <th className="px-2 py-1 text-left">厂商</th>
+                  <th className="px-2 py-1 text-left">型号</th>
+                  <th className="px-2 py-1 text-left">状态</th>
+                  <th className="px-2 py-1 text-left">错误</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parsedRows.map((row, idx) => (
+                  <tr key={idx} className="border-t border-gray-100 dark:border-edge-subtle">
+                    <td className="px-2 py-1">{row.raw['厂商'] || '-'}</td>
+                    <td className="px-2 py-1">{row.raw['型号'] || '-'}</td>
+                    <td className="px-2 py-1">
+                      {row.valid ? (
+                        <span className="text-gray-500">✓</span>
+                      ) : (
+                        <span className="text-gray-400">✗</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-1 text-gray-500">{row.errors.join(', ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 

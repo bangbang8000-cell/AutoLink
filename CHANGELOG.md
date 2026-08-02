@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## [2.9.2] - 2026-08-02
+
+### 体验精细打磨（3.0 前收官 · 第二阶段）
+
+v2.9.2 聚焦使用体验的精细打磨：统一空态/弹窗/组件、工作区 Tab 项目隔离与未保存确认、长操作真实进度反馈、表单校验完善、首次引导与无障碍（PRD 见 `docs/v2.9/v2.9.1-2.9.3_质量与体验_PRD.md`）。
+
+#### EmptyState 统一落地（T1）
+- RackTab/Topology3DTab/OutputTab/ProjectListPanel/DataCenterTab/FileViewerTab 无数据场景统一 `ui/EmptyState`（图标 + 标题 + 描述 + 可选操作）
+- 删除 ProjectOverviewTab 本地 EmptyState 副本，改为复用 ui 组件
+
+#### 弹窗统一 ui/Modal（T2）
+- DeviceImportModal / DeviceExportModal / ImportCabinetsModal 统一走 `ui/Modal`（ESC 关闭 / 焦点陷阱 / 滚动锁定 / aria-labelledby）
+- 导入解析失败、导出失败在弹窗内展示错误；导出增加 try/catch 与 exporting 状态
+
+#### ui/ 组件库业务落地（T3）
+- DataCenterTab 布局参数、DeviceLibraryTab 搜索/厂商筛选、DesignTab 数字输入与开关全部切换为 `ui/Input`、`ui/Select`、`ui/NumberInput`、`ui/Toggle`
+
+#### 工作区 Tab 项目隔离 + 未保存确认（T4）
+- Tab 状态携带 `projectName`（persist 版本 v1→v2），切换项目自动清理旧项目 Tab，删除项目清理其持久化 Tab
+- Design/Rack Tab 配置变更标记 `dirty`，关闭时弹确认（标题 + 文案 + 仍要关闭）
+- Tab 栏无障碍：`role=tab` / `aria-selected` / 键盘 Enter 激活 / 关闭按钮 `aria-label`，dirty 圆点指示
+- OutputTab 错误信息 i18n 化（`fileViewer.loadFailed`）
+
+#### loading 真实化（T5）
+- DeviceImportModal / FileViewerTab / OutputTab Excel 解析改分片（`parseWorkbookChunked`）+ 真实进度条
+- TopologyTab / DataCenterTab PNG 导出按钮转圈 + 禁用（导出中防重复点击）
+
+#### 表单校验完善（T6）
+- ProjectWizard 分步校验：名称必填/长度/去重、网络必选、设备必选、机柜功率上限按散热方式联动校验，按钮下方 inline 错误
+- WizardStepBasic 名称错误态（红框 + 文案 + maxLength=50 + 重名提示）
+- WizardStepDevices 服务器数量上限（≤2048）红框提示
+- WizardStepRack 切换散热方式自动收敛功率上限
+
+#### 首次引导 + 无障碍（T7）
+- 首启 3 步 OnboardingModal（创建项目 → 配置设计 → 可视化与交付），看过一次不再弹出
+- 搜索清除 / 导出按钮补 `aria-label`
+
+#### i18n 与版本（T8）
+- 新增 key：dirty 关闭确认、解析进度、wizard 校验、onboarding 引导，5 语言同步补齐
+- 版本号 2.9.1 → 2.9.2（package.json / VERSION / package-lock.json）
+
 ## [2.9.1] - 2026-08-02
 
 ### 质量工程闭环（3.0 前收官 · 第一阶段）

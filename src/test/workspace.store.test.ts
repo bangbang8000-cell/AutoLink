@@ -200,4 +200,57 @@ describe('WorkspaceStore', () => {
       expect(s.closedTabHistory).toEqual([])
     })
   })
+
+  describe('V2.9.2-T4: 项目级 Tab 隔离', () => {
+    it('openTab 项目级 Tab 需 projectName 相同才复用', () => {
+      const id1 = useWorkspaceStore.getState().openTab({ type: 'design', title: '设计A', closable: true, projectName: 'projA' })
+      const id2 = useWorkspaceStore.getState().openTab({ type: 'design', title: '设计A', closable: true, projectName: 'projA' })
+      const id3 = useWorkspaceStore.getState().openTab({ type: 'design', title: '设计B', closable: true, projectName: 'projB' })
+      expect(id2).toBe(id1) // 同项目复用
+      expect(id3).not.toBe(id1) // 不同项目不复用
+      expect(useWorkspaceStore.getState().tabs).toHaveLength(2)
+    })
+
+    it('updateTab 应支持设置 dirty 标记', () => {
+      const id = useWorkspaceStore.getState().openTab({ type: 'design', title: '设计', closable: true, projectName: 'p' })
+      useWorkspaceStore.getState().updateTab(id, { dirty: true })
+      expect(useWorkspaceStore.getState().tabs[0].dirty).toBe(true)
+      useWorkspaceStore.getState().updateTab(id, { dirty: false })
+      expect(useWorkspaceStore.getState().tabs[0].dirty).toBe(false)
+    })
+
+    it('setProjectTabs 应保留当前项目 Tab 与全局 Tab, 清理其他项目 Tab', () => {
+      useWorkspaceStore.getState().openTab({ type: 'workbench', title: 'WB', closable: false })
+      useWorkspaceStore.getState().openTab({ type: 'design', title: 'A', closable: true, projectName: 'projA' })
+      const bId = useWorkspaceStore.getState().openTab({ type: 'design', title: 'B', closable: true, projectName: 'projB' })
+      useWorkspaceStore.getState().setActiveTab(bId)
+      useWorkspaceStore.getState().setProjectTabs('projA')
+      const s = useWorkspaceStore.getState()
+      expect(s.tabs.map((t) => t.projectName)).toEqual([undefined, 'projA'])
+      expect(s.activeTabId).toBe(s.tabs[1].id) // 激活 Tab 被清理后修复为最后一个保留 Tab
+    })
+
+    it('setProjectTabs(null) 应清理所有项目级 Tab', () => {
+      useWorkspaceStore.getState().openTab({ type: 'design', title: 'A', closable: true, projectName: 'projA' })
+      useWorkspaceStore.getState().setProjectTabs(null)
+      expect(useWorkspaceStore.getState().tabs).toHaveLength(0)
+    })
+
+    it('clearTabsForProjects 应清理删除项目的 Tab, 保留其他项目与全局 Tab', () => {
+      useWorkspaceStore.getState().openTab({ type: 'workbench', title: 'WB', closable: false })
+      useWorkspaceStore.getState().openTab({ type: 'design', title: 'A', closable: true, projectName: 'projA' })
+      useWorkspaceStore.getState().openTab({ type: 'design', title: 'B', closable: true, projectName: 'projB' })
+      useWorkspaceStore.getState().clearTabsForProjects(['projA'])
+      const tabs = useWorkspaceStore.getState().tabs
+      expect(tabs).toHaveLength(2)
+      expect(tabs.map((t) => t.projectName)).toEqual([undefined, 'projB'])
+    })
+
+    it('clearTabsForProjects 激活 Tab 被清理后应修复 activeTabId', () => {
+      useWorkspaceStore.getState().openTab({ type: 'design', title: 'A', closable: true, projectName: 'projA' })
+      useWorkspaceStore.getState().clearTabsForProjects(['projA'])
+      expect(useWorkspaceStore.getState().tabs).toHaveLength(0)
+      expect(useWorkspaceStore.getState().activeTabId).toBeNull()
+    })
+  })
 })

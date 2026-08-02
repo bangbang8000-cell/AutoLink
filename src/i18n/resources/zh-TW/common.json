@@ -6,6 +6,7 @@
   "save": "儲存",
   "processing": "處理中...",
   "loading": "載入中...",
+  "parsing": "正在解析...",
   "noData": "無資料",
   "tabs": {
     "workbench": "工作台",
@@ -475,7 +476,11 @@
     "closeTab": "關閉",
     "closeOthers": "關閉其他",
     "closeRight": "關閉右側",
-    "closeAll": "關閉全部"
+    "closeAll": "關閉全部",
+    "closeTabAria": "關閉 {{name}}",
+    "dirtyCloseTitle": "未儲存的變更",
+    "dirtyCloseMessage": "「{{title}}」有未儲存的變更，關閉後將遺失。是否確定關閉？",
+    "dirtyCloseConfirm": "仍要關閉"
   },
   "guide": {
     "title": "使用者指南",
@@ -484,13 +489,27 @@
     "notFound": "使用者指南文件不存在",
     "toc": "目錄"
   },
+  "onboarding": {
+    "title": "歡迎使用 AutoLink",
+    "step1Title": "建立專案",
+    "step1Desc": "從左側「+」新建專案，或基於範本快速開始",
+    "step2Title": "設定設計",
+    "step2Desc": "在設計頁調整伺服器、交換器參數，點擊產生拓撲",
+    "step3Title": "視覺化與交付",
+    "step3Desc": "檢視拓撲與機櫃規劃，匯出報告與設備清單",
+    "start": "開始使用",
+    "skip": "跳過",
+    "prev": "上一步",
+    "next": "下一步"
+  },
   "fileViewer": {
     "cannotRead": "無法讀取檔案",
     "unsupportedType": "不支援的檔案類型: {{type}}",
     "emptyTable": "空表格",
     "cannotPreview": "無法預覽此檔案",
     "copy": "複製",
-    "copied": "已複製"
+    "copied": "已複製",
+    "loadFailed": "檔案載入失敗: {{error}}"
   },
   "toast": {
     "projectCreated": "專案建立成功",

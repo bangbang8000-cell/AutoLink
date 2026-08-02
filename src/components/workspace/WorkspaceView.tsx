@@ -5,6 +5,7 @@ import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
 import { useToastStore } from '@/stores/toast.store'
+import { Modal } from '@/components/ui/Modal'
 
 // v2.7.3-T8: Tab 懒加载,首屏仅加载当前 Tab 代码
 const WorkbenchTab = lazy(() => import('./tabs/WorkbenchTab').then(m => ({ default: m.WorkbenchTab })))
@@ -57,6 +58,25 @@ export function WorkspaceView() {
   // Context menu for tabs
   const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
+
+  // V2.9.2-T4: dirty Tab 关闭前确认
+  const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null)
+  const pendingCloseTab = pendingCloseTabId ? tabs.find((t) => t.id === pendingCloseTabId) : undefined
+
+  // 单个 Tab 关闭: dirty 需确认, 其余直接关闭
+  const requestCloseTab = useCallback((id: string) => {
+    const target = tabs.find((t) => t.id === id)
+    if (target?.dirty) {
+      setPendingCloseTabId(id)
+    } else {
+      closeTab(id)
+    }
+  }, [tabs, closeTab])
+
+  const handleConfirmDirtyClose = useCallback(() => {
+    if (pendingCloseTabId) closeTab(pendingCloseTabId)
+    setPendingCloseTabId(null)
+  }, [pendingCloseTabId, closeTab])
 
   useEffect(() => {
     const handler = () => setContextMenu(null)
@@ -156,7 +176,7 @@ export function WorkspaceView() {
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button
-            onClick={() => { closeTab(contextMenu.tabId); setContextMenu(null) }}
+            onClick={() => { requestCloseTab(contextMenu.tabId); setContextMenu(null) }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
             {t('welcome.closeTab')}
@@ -182,6 +202,33 @@ export function WorkspaceView() {
           </button>
         </div>
       )}
+
+      {/* V2.9.2-T4: dirty Tab 关闭确认 */}
+      <Modal
+        open={pendingCloseTabId !== null}
+        onClose={() => setPendingCloseTabId(null)}
+        title={t('welcome.dirtyCloseTitle')}
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setPendingCloseTabId(null)}
+              className="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={handleConfirmDirtyClose}
+              className="px-3 py-1.5 text-xs rounded-md bg-error-500 hover:bg-error-600 text-white transition-colors"
+            >
+              {t('welcome.dirtyCloseConfirm')}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {t('welcome.dirtyCloseMessage', { title: pendingCloseTab?.title ?? '' })}
+        </p>
+      </Modal>
 
       {/* Tab Content */}
       <div className="flex-1 overflow-auto bg-white dark:bg-app-elevated">

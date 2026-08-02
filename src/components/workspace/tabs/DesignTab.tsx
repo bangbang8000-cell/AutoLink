@@ -7,9 +7,10 @@ import {
   Settings2,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
-import { useDesignStore, type DesignSummary, type EstimateParams } from '@/stores/design.store'
+import { useDesignStore, type DesignConfig, type DesignSummary, type EstimateParams } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useRackStore } from '@/stores/rack.store'
+import { NumberInput, Toggle } from '@/components/ui'
 import { PUEEstimatePanel } from './PUEEstimatePanel'
 import { ReportViewPanel } from './ReportViewPanel'
 import { ValidationPanel } from './ValidationPanel'
@@ -36,23 +37,6 @@ function FormSection({ title, icon, defaultOpen = true, children }: {
   )
 }
 
-function NumberInput({ label, value, onChange, min = 0, max = 99999, step = 1, className = '' }: {
-  label: string; value: number; onChange: (v: number) => void
-  min?: number; max?: number; step?: number; className?: string
-}) {
-  return (
-    <div className={className}>
-      <label className="block text-2xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-      <input
-        type="number" min={min} max={max} step={step}
-        value={value}
-        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(v) }}
-        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
-      />
-    </div>
-  )
-}
-
 function SelectInput({ label, value, onChange, options }: {
   label: string; value: string; onChange: (v: string) => void
   options: { value: string; label: string }[]
@@ -70,25 +54,6 @@ function SelectInput({ label, value, onChange, options }: {
         ))}
       </select>
     </div>
-  )
-}
-
-function ToggleSwitch({ label, checked, onChange }: {
-  label: string; checked: boolean; onChange: (v: boolean) => void
-}) {
-  return (
-    <label className="flex items-center gap-2 cursor-pointer">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative w-8 h-4 rounded-full transition-colors ${checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-      >
-        <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${checked ? 'left-4' : 'left-0.5'}`} />
-      </button>
-      <span className="text-2xs text-gray-600 dark:text-gray-400">{label}</span>
-    </label>
   )
 }
 
@@ -182,6 +147,24 @@ export function DesignTab() {
   const openTab = useWorkspaceStore((s) => s.openTab)
   const initFromTopology = useRackStore((s) => s.initFromTopology)
 
+  // V2.9.2-T4: 配置变更标记 dirty(关闭需确认); 重置后清除
+  const activeTabId = useWorkspaceStore((s) => s.activeTabId)
+  const updateTab = useWorkspaceStore((s) => s.updateTab)
+
+  const markDirty = useCallback(() => {
+    if (activeTabId) updateTab(activeTabId, { dirty: true })
+  }, [activeTabId, updateTab])
+
+  const clearDirty = useCallback(() => {
+    if (activeTabId) updateTab(activeTabId, { dirty: false })
+  }, [activeTabId, updateTab])
+
+  // 统一入口: 先标记 dirty 再更新配置
+  const handleUpdateConfig = useCallback((patch: Partial<DesignConfig>) => {
+    markDirty()
+    updateConfig(patch)
+  }, [markDirty, updateConfig])
+
   useEffect(() => {
     if (selectedProjectName) {
       loadConfig(selectedProjectName).then(() => {
@@ -198,7 +181,7 @@ export function DesignTab() {
     // Auto-open topology tab and init rack on success
     const state = useDesignStore.getState()
     if (state.topology && state.topology.nodes.length > 0) {
-      openTab({ type: 'visualization', title: `拓扑视图 - ${selectedProjectName}`, closable: true })
+      openTab({ type: 'visualization', title: `拓扑视图 - ${selectedProjectName}`, closable: true, projectName: selectedProjectName })
       initFromTopology(state.topology.nodes)
     }
   }, [selectedProjectName, generate, openTab, initFromTopology])
@@ -237,7 +220,7 @@ export function DesignTab() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { resetConfig(); clearResults() }}
+            onClick={() => { resetConfig(); clearResults(); clearDirty() }}
             className="flex items-center gap-1 px-2.5 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
           >
             <RefreshCw size={12} />
@@ -254,7 +237,7 @@ export function DesignTab() {
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">{t('design:mode')}</label>
             <div className="flex gap-1 bg-gray-100 dark:bg-app-surface rounded-lg p-0.5 max-w-md">
               <button
-                onClick={() => updateConfig({ downlink_mode: 'full' })}
+                onClick={() => handleUpdateConfig({ downlink_mode: 'full' })}
                 className={`flex-1 py-2 text-sm rounded-md transition-colors ${config.downlink_mode === 'full'
                   ? 'bg-white dark:bg-app-hover text-gray-800 dark:text-gray-200 shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
@@ -264,7 +247,7 @@ export function DesignTab() {
                 {t('design:modeFull')}
               </button>
               <button
-                onClick={() => updateConfig({ downlink_mode: 'custom' })}
+                onClick={() => handleUpdateConfig({ downlink_mode: 'custom' })}
                 className={`flex-1 py-2 text-sm rounded-md transition-colors ${config.downlink_mode === 'custom'
                   ? 'bg-white dark:bg-app-hover text-gray-800 dark:text-gray-200 shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
@@ -283,15 +266,15 @@ export function DesignTab() {
           <FormSection title={t('design:serverConfig')} icon={<Server size={13} />}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <NumberInput label={t('design:gpuServers')} value={config.num_servers}
-                onChange={(v) => updateConfig({ num_servers: v })} min={1} />
+                onChange={(v) => handleUpdateConfig({ num_servers: v })} min={1} />
               <NumberInput label={t('design:paramPortsPerServer')} value={config.param_ports_per_server}
-                onChange={(v) => updateConfig({ param_ports_per_server: v })} min={1} max={32} />
+                onChange={(v) => handleUpdateConfig({ param_ports_per_server: v })} min={1} max={32} />
               <NumberInput label={t('design:storageServers')} value={config.additional_storage_servers}
-                onChange={(v) => updateConfig({ additional_storage_servers: v })} min={0} />
+                onChange={(v) => handleUpdateConfig({ additional_storage_servers: v })} min={0} />
               <NumberInput label={t('design:computeServers')} value={config.additional_compute_servers}
-                onChange={(v) => updateConfig({ additional_compute_servers: v })} min={0} />
+                onChange={(v) => handleUpdateConfig({ additional_compute_servers: v })} min={0} />
               <NumberInput label={t('design:storagePortsPerServer')} value={config.storage_ports_per_server}
-                onChange={(v) => updateConfig({ storage_ports_per_server: v })} min={1} max={8} />
+                onChange={(v) => handleUpdateConfig({ storage_ports_per_server: v })} min={1} max={8} />
             </div>
           </FormSection>
 
@@ -299,13 +282,13 @@ export function DesignTab() {
           <FormSection title={t('design:switchConfig')} icon={<HardDrive size={13} />}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <NumberInput label={t('design:paramSwitchPorts')} value={config.param_switch_ports}
-                onChange={(v) => updateConfig({ param_switch_ports: v })} min={8} step={8} />
+                onChange={(v) => handleUpdateConfig({ param_switch_ports: v })} min={8} step={8} />
               <NumberInput label={t('design:storageSwitchPorts')} value={config.storage_switch_ports}
-                onChange={(v) => updateConfig({ storage_switch_ports: v })} min={8} step={8} />
+                onChange={(v) => handleUpdateConfig({ storage_switch_ports: v })} min={8} step={8} />
               <SelectInput label={t('design:paramSpeed')} value={config.param_speed}
-                onChange={(v) => updateConfig({ param_speed: v })} options={speedOptions} />
+                onChange={(v) => handleUpdateConfig({ param_speed: v })} options={speedOptions} />
               <SelectInput label={t('design:storageSpeed')} value={config.storage_speed}
-                onChange={(v) => updateConfig({ storage_speed: v })} options={speedOptions} />
+                onChange={(v) => handleUpdateConfig({ storage_speed: v })} options={speedOptions} />
             </div>
           </FormSection>
 
@@ -315,7 +298,7 @@ export function DesignTab() {
               <SelectInput
                 label="Rail 模式"
                 value={config.rail_mode}
-                onChange={(v) => updateConfig({ rail_mode: v as 'standard' | 'rail_optimized' })}
+                onChange={(v) => handleUpdateConfig({ rail_mode: v as 'standard' | 'rail_optimized' })}
                 options={[
                   { value: 'standard', label: 'Standard (Fat-Tree)' },
                   { value: 'rail_optimized', label: 'Rail-Optimized (SuperPOD)' },
@@ -325,14 +308,14 @@ export function DesignTab() {
                 <NumberInput
                   label="Rail 数量"
                   value={config.rail_count}
-                  onChange={(v) => updateConfig({ rail_count: v })}
+                  onChange={(v) => handleUpdateConfig({ rail_count: v })}
                   min={2} max={16} step={1}
                 />
               )}
               <SelectInput
                 label="参数网协议"
                 value={config.param_protocol}
-                onChange={(v) => updateConfig({ param_protocol: v as 'IB' | 'RoCE' })}
+                onChange={(v) => handleUpdateConfig({ param_protocol: v as 'IB' | 'RoCE' })}
                 options={[
                   { value: 'RoCE', label: 'RoCE (以太网)' },
                   { value: 'IB', label: 'InfiniBand' },
@@ -351,23 +334,23 @@ export function DesignTab() {
             <FormSection title={t('design:downlinkConfig')} icon={<Network size={13} />}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <NumberInput label={t('design:paramDownlink')} value={config.param_downlink_limit}
-                  onChange={(v) => updateConfig({ param_downlink_limit: v })} min={1} />
+                  onChange={(v) => handleUpdateConfig({ param_downlink_limit: v })} min={1} />
                 <NumberInput label={t('design:storageDownlink')} value={config.storage_downlink_limit}
-                  onChange={(v) => updateConfig({ storage_downlink_limit: v })} min={1} />
+                  onChange={(v) => handleUpdateConfig({ storage_downlink_limit: v })} min={1} />
                 <NumberInput label={t('design:bizDownlink')} value={config.biz_downlink_limit}
-                  onChange={(v) => updateConfig({ biz_downlink_limit: v })} min={1} />
+                  onChange={(v) => handleUpdateConfig({ biz_downlink_limit: v })} min={1} />
                 <NumberInput label={t('design:oobDownlink')} value={config.oob_downlink_limit}
-                  onChange={(v) => updateConfig({ oob_downlink_limit: v })} min={1} />
+                  onChange={(v) => handleUpdateConfig({ oob_downlink_limit: v })} min={1} />
               </div>
             </FormSection>
           )}
 
           {/* Toggles */}
           <div className="flex items-center gap-6 px-1">
-            <ToggleSwitch label={t('design:oobEnabled')} checked={config.oob_enabled}
-              onChange={(v) => updateConfig({ oob_enabled: v })} />
-            <ToggleSwitch label={t('design:bizEnabled')} checked={config.biz_enabled}
-              onChange={(v) => updateConfig({ biz_enabled: v })} />
+            <Toggle label={t('design:oobEnabled')} checked={config.oob_enabled}
+              onChange={(v) => handleUpdateConfig({ oob_enabled: v })} />
+            <Toggle label={t('design:bizEnabled')} checked={config.biz_enabled}
+              onChange={(v) => handleUpdateConfig({ biz_enabled: v })} />
           </div>
 
           {/* Action buttons */}

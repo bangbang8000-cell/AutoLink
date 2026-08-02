@@ -13,5 +13,15 @@
   "confirm": "Confirm",
   "noProjects": "No projects yet. Click + to create one.",
   "favorites": "Favorites",
-  "recent": "Recent"
+  "recent": "Recent",
+  "wizard": {
+    "nameRequired": "Please enter a project name",
+    "nameTooLong": "Project name cannot exceed 50 characters",
+    "nameExists": "A project with this name already exists",
+    "networkRequired": "Please select at least one network type",
+    "devicesMissing": "The following devices are not selected: {{list}}",
+    "powerRequired": "Please set the power limit per rack",
+    "powerExceeds": "Power limit cannot exceed {{max}}W with the current cooling method",
+    "countExceeds": "Maximum 2048 servers per category"
+  }
 }

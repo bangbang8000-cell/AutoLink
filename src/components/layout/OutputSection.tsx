@@ -66,6 +66,7 @@ export function OutputSection({ projects, openTab }: {
       type: 'fileViewer',
       title: fileName,
       closable: true,
+      projectName,
       state: { filePath, projectName, isTemplate: false },
     })
   }, [openTab])

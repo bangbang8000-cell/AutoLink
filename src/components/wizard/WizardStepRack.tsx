@@ -1,4 +1,5 @@
 import { useWizardStore } from '@/stores/wizard.store'
+import { useTranslation } from 'react-i18next'
 import { Layers, Snowflake, Cpu } from 'lucide-react'
 import clsx from 'clsx'
 import type { RackCoolingMethod } from '@/types/project-config'
@@ -24,7 +25,15 @@ const COOLING_OPTIONS: { value: RackCoolingMethod; label: string; hint: string }
   { value: 'immersion', label: '浸没式液冷', hint: '≤100KW/柜' },
 ]
 
+// V2.9.2-T6: 散热方式对应单柜功率上限(W), 与 ProjectWizard 校验一致
+const POWER_MAX_BY_COOLING: Record<RackCoolingMethod, number> = {
+  air: 15000,
+  cold_plate: 60000,
+  immersion: 100000,
+}
+
 export function WizardStepRack() {
+  const { t } = useTranslation('project')
   const { config, updateRackConfig } = useWizardStore()
   const rack = config.rack_config
 
@@ -33,6 +42,21 @@ export function WizardStepRack() {
 
   const applyPreset = (id: string, value: number) =>
     updateRackConfig({ power_preset: id, power_limit_per_rack: value })
+
+  // V2.9.2-T6: 切换散热方式时, 若功率超上限则自动收敛到该方式上限
+  const selectCooling = (method: RackCoolingMethod) => {
+    const maxPower = POWER_MAX_BY_COOLING[method]
+    const nextLimit = rack.power_limit_per_rack > maxPower ? maxPower : rack.power_limit_per_rack
+    updateRackConfig({
+      cooling_method: method,
+      power_preset: '',
+      power_limit_per_rack: nextLimit,
+    })
+  }
+
+  const cooling = rack.cooling_method ?? 'air'
+  const coolingMax = POWER_MAX_BY_COOLING[cooling]
+  const powerExceeds = rack.power_limit_per_rack > coolingMax
 
   return (
     <div className="space-y-4">
@@ -106,6 +130,12 @@ export function WizardStepRack() {
         <p className="text-2xs text-gray-400 mt-1">
           12KW/16KW 机柜下，DGX H100/H200（10~12KW）将自动独占机柜（1 台/柜）
         </p>
+        {/* V2.9.2-T6: 功率超当前散热方式上限提示 */}
+        {powerExceeds && (
+          <p className="text-2xs text-error-500 dark:text-error-400 mt-1" role="alert">
+            {t('wizard.powerExceeds', '当前散热方式下单柜功率上限不能超过 {{max}}W', { max: coolingMax })}
+          </p>
+        )}
       </div>
 
       {/* Cooling method (V2.9.1) */}
@@ -117,7 +147,7 @@ export function WizardStepRack() {
           {COOLING_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => updateRackConfig({ cooling_method: opt.value })}
+              onClick={() => selectCooling(opt.value)}
               className={clsx(
                 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 text-xs font-medium transition-colors',
                 rack.cooling_method === opt.value

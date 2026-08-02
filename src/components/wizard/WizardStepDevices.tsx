@@ -178,7 +178,7 @@ function getDefaultRefs(protocol: ParamProtocol, gpuLibraryId?: string): Record<
 /* ---------- component ---------- */
 
 export function WizardStepDevices() {
-  useTranslation('device')
+  const { t } = useTranslation('project')
   const { config, updateDeviceRefs, updateTopology, removeDeviceRef } = useWizardStore()
   const { allDevices } = useDeviceLibraryStore()
 
@@ -383,17 +383,26 @@ export function WizardStepDevices() {
 
                         {/* Server count */}
                         {count !== undefined && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-2xs text-gray-400">数量</span>
-                            <input
-                              type="number"
-                              min={0}
-                              value={count}
-                              onChange={(e) =>
-                                updateTopology({ [countKey]: Math.max(0, parseInt(e.target.value) || 0) } as Partial<typeof config.topology>)
-                              }
-                              className="w-20 px-2 py-1 text-xs text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
-                            />
+                          <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            <div className="flex items-center gap-1">
+                              <span className="text-2xs text-gray-400">数量</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={2048}
+                                value={count}
+                                onChange={(e) =>
+                                  updateTopology({ [countKey]: Math.max(0, parseInt(e.target.value) || 0) } as Partial<typeof config.topology>)
+                                }
+                                className={`w-20 px-2 py-1 text-xs text-center rounded border bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 ${count > 2048 ? 'border-error-400 dark:border-error-500' : 'border-gray-300 dark:border-gray-600'}`}
+                              />
+                            </div>
+                            {/* V2.9.2-T6: 数量上限提示 */}
+                            {count > 2048 && (
+                              <span className="text-2xs text-error-500 dark:text-error-400">
+                                {t('wizard.countExceeds', '单类服务器数量上限 2048')}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

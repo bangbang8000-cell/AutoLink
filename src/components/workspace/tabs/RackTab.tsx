@@ -1,9 +1,11 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useRackStore, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
 import { RackPowerHeatView } from '@/components/rack/RackPowerHeatView'
 import { RackMultiCompareView } from '@/components/rack/RackMultiCompareView'
 import { RackIsometricView } from '@/components/rack/RackIsometricView'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid } from 'lucide-react'
 
 type ViewMode = 'basic' | 'power-heat' | 'multi-compare' | 'isometric'
@@ -53,6 +55,13 @@ export function RackTab({ cabinetId }: Props) {
   const [cabinetDropdownOpen, setCabinetDropdownOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('basic')
 
+  // V2.9.2-T4: 上架/移除设备标记 dirty(关闭需确认)
+  const activeTabId = useWorkspaceStore((s) => s.activeTabId)
+  const updateTab = useWorkspaceStore((s) => s.updateTab)
+  const markDirty = useCallback(() => {
+    if (activeTabId) updateTab(activeTabId, { dirty: true })
+  }, [activeTabId, updateTab])
+
   // Find the target cabinet
   const cabinet = cabinetId != null ? cabinets.find((c) => c.id === cabinetId) : cabinets.find((c) => c.id === selectedCabinetId) || cabinets[0]
 
@@ -99,13 +108,17 @@ export function RackTab({ cabinetId }: Props) {
     if (!unplaced) return
     if (getSlotConflicts(uNumber, unplaced)) return
     const success = placeDevice(cabinet.id, unplaced, uNumber)
-    if (success) setSelectedUnplaced(null)
-  }, [selectedUnplaced, cabinet, unplacedDevices, getSlotConflicts, placeDevice])
+    if (success) {
+      setSelectedUnplaced(null)
+      markDirty()
+    }
+  }, [selectedUnplaced, cabinet, unplacedDevices, getSlotConflicts, placeDevice, markDirty])
 
   const handleRemoveDevice = useCallback((deviceId: string) => {
     if (!cabinet) return
     removeDevice(cabinet.id, deviceId)
-  }, [cabinet, removeDevice])
+    markDirty()
+  }, [cabinet, removeDevice, markDirty])
 
   const handleSelectCabinet = useCallback((id: number) => {
     selectCabinet(id)
@@ -138,8 +151,12 @@ export function RackTab({ cabinetId }: Props) {
 
   if (!cabinet) {
     return (
-      <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-        请先选择一个机柜
+      <div className="h-full">
+        <EmptyState
+          icon={LayoutGrid}
+          title="暂无机柜数据"
+          description="请先生成拓扑或导入机柜布局，再查看机柜视图"
+        />
       </div>
     )
   }

@@ -13,5 +13,15 @@
   "confirm": "確認",
   "noProjects": "プロジェクトがありません。+をクリックして作成",
   "favorites": "お気に入り",
-  "recent": "最近"
+  "recent": "最近",
+  "wizard": {
+    "nameRequired": "プロジェクト名を入力してください",
+    "nameTooLong": "プロジェクト名は50文字以内で入力してください",
+    "nameExists": "同じ名前のプロジェクトが既に存在します",
+    "networkRequired": "ネットワークタイプを1つ以上選択してください",
+    "devicesMissing": "以下のデバイスが未選択です：{{list}}",
+    "powerRequired": "ラックあたりの電力上限を設定してください",
+    "powerExceeds": "現在の冷却方式では電力上限は {{max}}W を超えられません",
+    "countExceeds": "サーバー種類あたりの上限は2048台です"
+  }
 }
