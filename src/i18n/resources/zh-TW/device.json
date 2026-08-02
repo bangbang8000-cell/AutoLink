@@ -76,7 +76,8 @@
     "total": "共 {{count}} 筆",
     "valid": "有效 {{count}} 筆",
     "invalid": "無效 {{count}} 筆",
-    "errors": "匯入錯誤"
+    "errors": "匯入錯誤",
+    "parseFailed": "檔案解析失敗"
   },
   "export": {
     "title": "匯出裝置",

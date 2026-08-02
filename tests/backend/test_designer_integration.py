@@ -129,6 +129,41 @@ biz_enabled = False
             # 512台服务器，64口交换机，8网卡/服务器 → 2层最大128台 → 需要3层
             assert designer.param_3tier_needed is True
 
+    def test_large_scale_2048_3tier(self):
+        """超大-2048 台 3层组网集成用例 (v2.9.1-T5)"""
+        import time
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini = self._create_ini(tmpdir, """[DEFAULT]
+num_servers = 2048
+param_switch_ports = 64
+param_ports_per_server = 8
+param_speed = 400G
+storage_ports_per_server = 1
+storage_switch_ports = 48
+storage_speed = 200G
+oob_enabled = False
+biz_enabled = False
+""")
+            start = time.perf_counter()
+            designer = NetworkDesignerV2(ini)
+            elapsed = time.perf_counter() - start
+
+            assert len(designer.servers) == 2048
+            assert designer.param_3tier_needed is True
+            # 64口交换机、8网卡/服务器 → 2层最大 64^2/(4*8)=128 台 → 16 个 Pod
+            assert designer.param_pods == 16
+            assert designer.param_servers_per_pod == 128
+            assert len(designer.param_leaves) > 0
+            assert len(designer.param_spines) > 0
+            # 3层拓扑应有 Core 层
+            assert len(designer.param_cores) > 0
+
+            result = designer.validate_topology()
+            assert result["valid"] is True, result["errors"]
+
+            # 性能基线: T6 优化目标 <2s, CI 环境留 10 倍余量防抖动
+            assert elapsed < 20.0, f"2048台设计耗时 {elapsed:.2f}s 超出基线"
+
 
 class TestDesignerProjectConfig:
     """project_config.json 格式测试"""

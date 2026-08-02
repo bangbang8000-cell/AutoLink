@@ -156,10 +156,16 @@ class ProjectIOService {
   }
 
   /**
-   * 从 ZIP 导入项目
-   * @returns 最终使用的项目名
+   * V2.9.1-T2: ZIP 解压公共流程（项目/模板导入共用）
+   * 校验 → 命名冲突后缀 → 白名单解压 → 元数据同步
    */
-  async importProjectZip(zipPath: string, projectName?: string): Promise<string> {
+  private extractZipCommon(
+    zipPath: string,
+    destBaseDir: string,
+    baseName: string | undefined,
+    kind: string,
+    syncMeta: (destDir: string, finalName: string) => void,
+  ): string {
     if (!fs.existsSync(zipPath)) {
       throw new Error(`ZIP 文件不存在: ${zipPath}`)
     }
@@ -178,32 +184,31 @@ class ProjectIOService {
       }
     }
 
-    // 校验 ZIP 中必须包含项目配置文件
+    // 校验 ZIP 中必须包含配置文件
     const hasConfig = entries.some(
       (e) => !e.isDirectory && (e.entryName === 'network_config.ini' || e.entryName === 'project_config.json'),
     )
     if (!hasConfig) {
-      throw new Error('ZIP 中未找到 network_config.ini 或 project_config.json，不是有效的项目包')
+      throw new Error(`ZIP 中未找到 network_config.ini 或 project_config.json，不是有效的${kind}包`)
     }
 
-    const wsp = getWorkspacePath()
-    let finalName = projectName?.trim() || path.basename(zipPath, '.zip')
+    let finalName = baseName?.trim() || path.basename(zipPath, '.zip')
     if (!finalName || finalName === '.' || finalName === '..') {
-      throw new Error('无效的项目名')
+      throw new Error(`无效的${kind}名`)
     }
     // 名称冲突时自动追加 _导入 / _导入2 ...
-    if (fs.existsSync(path.join(wsp, finalName))) {
+    if (fs.existsSync(path.join(destBaseDir, finalName))) {
       let suffix = 1
       let candidate = `${finalName}_导入`
-      while (fs.existsSync(path.join(wsp, candidate))) {
+      while (fs.existsSync(path.join(destBaseDir, candidate))) {
         suffix++
         candidate = `${finalName}_导入${suffix}`
       }
       finalName = candidate
     }
 
-    const projectDir = path.join(wsp, finalName)
-    fs.mkdirSync(projectDir, { recursive: true })
+    const destDir = path.join(destBaseDir, finalName)
+    fs.mkdirSync(destDir, { recursive: true })
 
     // 解压白名单文件
     const allowed = new Set(ALLOWED_TOP_LEVEL)
@@ -213,9 +218,9 @@ class ProjectIOService {
       const top = entry.entryName.split('/')[0]
       if (!allowed.has(top)) continue
 
-      // 防止解压到项目目录外
-      const targetPath = path.resolve(projectDir, entry.entryName)
-      if (!targetPath.startsWith(projectDir + path.sep) && targetPath !== projectDir) {
+      // 防止解压到目标目录外
+      const targetPath = path.resolve(destDir, entry.entryName)
+      if (!targetPath.startsWith(destDir + path.sep) && targetPath !== destDir) {
         continue
       }
 
@@ -227,27 +232,36 @@ class ProjectIOService {
       fs.writeFileSync(targetPath, entry.getData())
     }
 
-    // 确保 output 目录存在
-    const outputDir = path.join(projectDir, 'output')
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true })
-    }
-
-    // 同步更新 project.json 的 name 字段
-    const metaPath = path.join(projectDir, 'project.json')
-    if (fs.existsSync(metaPath)) {
-      try {
-        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-        meta.name = finalName
-        meta.updatedAt = new Date().toISOString()
-        meta.importedAt = new Date().toISOString()
-        fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
-      } catch {
-        // 忽略元数据损坏，不阻断导入
-      }
-    }
-
+    syncMeta(destDir, finalName)
     return finalName
+  }
+
+  /**
+   * 从 ZIP 导入项目
+   * @returns 最终使用的项目名
+   */
+  async importProjectZip(zipPath: string, projectName?: string): Promise<string> {
+    return this.extractZipCommon(zipPath, getWorkspacePath(), projectName, '项目', (destDir, finalName) => {
+      // 确保 output 目录存在
+      const outputDir = path.join(destDir, 'output')
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true })
+      }
+
+      // 同步更新 project.json 的 name 字段
+      const metaPath = path.join(destDir, 'project.json')
+      if (fs.existsSync(metaPath)) {
+        try {
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+          meta.name = finalName
+          meta.updatedAt = new Date().toISOString()
+          meta.importedAt = new Date().toISOString()
+          fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+        } catch {
+          // 忽略元数据损坏，不阻断导入
+        }
+      }
+    })
   }
 
   /**
@@ -278,94 +292,30 @@ class ProjectIOService {
    * @returns 最终使用的模板名（目录名）
    */
   async importTemplateZip(zipPath: string, templateName?: string): Promise<string> {
-    if (!fs.existsSync(zipPath)) {
-      throw new Error(`ZIP 文件不存在: ${zipPath}`)
-    }
-
-    const zip = new AdmZip(zipPath)
-    const entries = zip.getEntries()
-
-    if (entries.length === 0) {
-      throw new Error('ZIP 文件为空')
-    }
-
-    for (const entry of entries) {
-      if (isUnsafeName(entry.entryName)) {
-        throw new Error(`ZIP 包含不安全的路径: ${entry.entryName}`)
-      }
-    }
-
-    // 校验 ZIP 中必须包含配置文件
-    const hasConfig = entries.some(
-      (e) => !e.isDirectory && (e.entryName === 'network_config.ini' || e.entryName === 'project_config.json'),
-    )
-    if (!hasConfig) {
-      throw new Error('ZIP 中未找到 network_config.ini 或 project_config.json，不是有效的模板包')
-    }
-
     // 导入模板写入用户模板目录（可读写），内置模板目录只读
     const tplPath = getUserTemplatePath()
     if (!fs.existsSync(tplPath)) {
       fs.mkdirSync(tplPath, { recursive: true })
     }
-
-    let finalName = templateName?.trim() || path.basename(zipPath, '.zip')
-    if (!finalName || finalName === '.' || finalName === '..') {
-      throw new Error('无效的模板名')
-    }
-    // 名称冲突时自动追加后缀
-    if (fs.existsSync(path.join(tplPath, finalName))) {
-      let suffix = 1
-      let candidate = `${finalName}_导入`
-      while (fs.existsSync(path.join(tplPath, candidate))) {
-        suffix++
-        candidate = `${finalName}_导入${suffix}`
+    return this.extractZipCommon(zipPath, tplPath, templateName, '模板', (destDir, finalName) => {
+      // 同步 template.json：更新 name 为目录名，标记为非内置
+      const metaPath = path.join(destDir, 'template.json')
+      let meta: Record<string, unknown> = {}
+      if (fs.existsSync(metaPath)) {
+        try {
+          meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+        } catch {
+          meta = {}
+        }
       }
-      finalName = candidate
-    }
-
-    const destDir = path.join(tplPath, finalName)
-    fs.mkdirSync(destDir, { recursive: true })
-
-    const allowed = new Set(ALLOWED_TOP_LEVEL)
-    for (const entry of entries) {
-      if (entry.isDirectory) continue
-
-      const top = entry.entryName.split('/')[0]
-      if (!allowed.has(top)) continue
-
-      const targetPath = path.resolve(destDir, entry.entryName)
-      if (!targetPath.startsWith(destDir + path.sep) && targetPath !== destDir) {
-        continue
+      meta.name = finalName
+      meta.isBuiltin = false
+      meta.importedAt = new Date().toISOString()
+      if (!meta.createdAt) {
+        meta.createdAt = new Date().toISOString()
       }
-
-      const parentDir = path.dirname(targetPath)
-      if (!fs.existsSync(parentDir)) {
-        fs.mkdirSync(parentDir, { recursive: true })
-      }
-
-      fs.writeFileSync(targetPath, entry.getData())
-    }
-
-    // 同步 template.json：更新 name 为目录名，标记为非内置
-    const metaPath = path.join(destDir, 'template.json')
-    let meta: Record<string, unknown> = {}
-    if (fs.existsSync(metaPath)) {
-      try {
-        meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-      } catch {
-        meta = {}
-      }
-    }
-    meta.name = finalName
-    meta.isBuiltin = false
-    meta.importedAt = new Date().toISOString()
-    if (!meta.createdAt) {
-      meta.createdAt = new Date().toISOString()
-    }
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
-
-    return finalName
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+    })
   }
 }
 

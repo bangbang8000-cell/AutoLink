@@ -46,14 +46,49 @@ interface FileTreeNode {
   children?: FileTreeNode[]
 }
 
+/**
+ * V2.9.1-T2: 公共文件树遍历（project/template 结构共用）
+ * 过滤隐藏文件与常见非业务目录，统一输出 FileTreeNode
+ */
+function walkDir(dir: string, basePath: string): FileTreeNode[] {
+  const isHidden = (n: string) => n.startsWith('.')
+  const isExcludedDir = (n: string) => n === 'node_modules' || n === '.git'
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  return entries
+    .filter((e) => !isHidden(e.name) && !(e.isDirectory() && isExcludedDir(e.name)))
+    .map((e) => {
+      const nodePath = basePath ? `${basePath}/${e.name}` : e.name
+      if (e.isDirectory()) {
+        return {
+          name: e.name,
+          type: 'directory' as const,
+          path: nodePath,
+          children: walkDir(path.join(dir, e.name), nodePath),
+        }
+      }
+      const fullPath = path.join(dir, e.name)
+      const stat = fs.statSync(fullPath)
+      return {
+        name: e.name,
+        type: 'file' as const,
+        path: nodePath,
+        size: stat.size,
+        updatedAt: stat.mtime.toISOString(),
+      }
+    })
+}
+
 // ===== Security Helpers =====
-function sanitizePath(segments: string[]): string {
-  const wsp = getWorkspacePath()
-  const resolved = path.resolve(wsp, ...segments)
-  if (!resolved.startsWith(wsp + path.sep) && resolved !== wsp) {
+function sanitizeUnderBase(base: string, ...segments: string[]): string {
+  const resolved = path.resolve(base, ...segments)
+  if (!resolved.startsWith(base + path.sep) && resolved !== base) {
     throw new Error('路径遍历攻击被阻止')
   }
   return resolved
+}
+
+function sanitizePath(segments: string[]): string {
+  return sanitizeUnderBase(getWorkspacePath(), ...segments)
 }
 
 function sanitizeName(name: string): string {
@@ -300,9 +335,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const t = config.topology
     iniLines.push(`downlink_mode = ${t.downlink_mode || 'custom'}`)
     iniLines.push(`num_gpu_servers = ${t.num_gpu_servers || 0}`)
-    const totalStorage = (t as any).num_all_flash_storage != null
-      ? ((t as any).num_all_flash_storage || 0) + ((t as any).num_hybrid_flash_storage || 0)
-      : (t as any).num_storage_servers || 0
+    // V2.9.1-T4: 存储数量字段双 schema 兼容（v1 全闪/混闪拆分 vs v2 单一字段）
+    const storageCount = t as { num_all_flash_storage?: number; num_hybrid_flash_storage?: number; num_storage_servers?: number }
+    const totalStorage = storageCount.num_all_flash_storage != null
+      ? (storageCount.num_all_flash_storage || 0) + (storageCount.num_hybrid_flash_storage || 0)
+      : storageCount.num_storage_servers || 0
     iniLines.push(`num_storage_servers = ${totalStorage}`)
     iniLines.push(`num_compute_servers = ${t.num_compute_servers || 0}`)
     if (config.networks.param_network) {
@@ -431,36 +468,6 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     sanitizeName(name)
     const projectDir = path.join(getWorkspacePath(), name)
     if (!fs.existsSync(projectDir)) return []
-
-    // 隐藏文件/目录 + 常见非业务目录过滤(与 template 统一)
-    const isHidden = (n: string) => n.startsWith('.')
-    const isExcludedDir = (n: string) => n === 'node_modules' || n === '.git'
-
-    function walkDir(dir: string, basePath: string): FileTreeNode[] {
-      const entries = fs.readdirSync(dir, { withFileTypes: true })
-      return entries
-        .filter((e) => !isHidden(e.name) && !(e.isDirectory() && isExcludedDir(e.name)))
-        .map((e) => {
-          const nodePath = basePath ? `${basePath}/${e.name}` : e.name
-          if (e.isDirectory()) {
-            return {
-              name: e.name,
-              type: 'directory' as const,
-              path: nodePath,
-              children: walkDir(path.join(dir, e.name), nodePath),
-            }
-          }
-          const fullPath = path.join(dir, e.name)
-          const stat = fs.statSync(fullPath)
-          return {
-            name: e.name,
-            type: 'file' as const,
-            path: nodePath,
-            size: stat.size,
-            updatedAt: stat.mtime.toISOString(),
-          }
-        })
-    }
     return walkDir(projectDir, '')
   }))
 
@@ -966,35 +973,6 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const builtinTplDir = path.join(getTemplatePath(), templateName)
     const tplDir = fs.existsSync(userTplDir) ? userTplDir : builtinTplDir
     if (!fs.existsSync(tplDir)) return []
-
-    const isHidden = (n: string) => n.startsWith('.')
-    const isExcludedDir = (n: string) => n === 'node_modules' || n === '.git'
-
-    function walkDir(dir: string, basePath: string): FileTreeNode[] {
-      const entries = fs.readdirSync(dir, { withFileTypes: true })
-      return entries
-        .filter((e) => !isHidden(e.name) && !(e.isDirectory() && isExcludedDir(e.name)))
-        .map((e) => {
-          const nodePath = basePath ? `${basePath}/${e.name}` : e.name
-          if (e.isDirectory()) {
-            return {
-              name: e.name,
-              type: 'directory' as const,
-              path: nodePath,
-              children: walkDir(path.join(dir, e.name), nodePath),
-            }
-          }
-          const fullPath = path.join(dir, e.name)
-          const stat = fs.statSync(fullPath)
-          return {
-            name: e.name,
-            type: 'file' as const,
-            path: nodePath,
-            size: stat.size,
-            updatedAt: stat.mtime.toISOString(),
-          }
-        })
-    }
     return walkDir(tplDir, '')
   }))
 
@@ -1004,10 +982,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const userTplDir = getUserTemplatePath()
     const builtinTplDir = getTemplatePath()
     const baseDir = fs.existsSync(path.join(userTplDir, templateName)) ? userTplDir : builtinTplDir
-    const fullPath = path.resolve(baseDir, templateName, filePath)
-    if (!fullPath.startsWith(baseDir + path.sep) && fullPath !== baseDir) {
-      throw new Error('路径遍历攻击被阻止')
-    }
+    const fullPath = sanitizeUnderBase(baseDir, templateName, filePath)
     if (!fs.existsSync(fullPath)) return null
     return fs.readFileSync(fullPath, 'utf-8')
   }))

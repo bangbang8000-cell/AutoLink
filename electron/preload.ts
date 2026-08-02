@@ -113,7 +113,7 @@ const electronAPI = {
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
     onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
-      const handler = (_event: any, isMaximized: boolean) => callback(isMaximized)
+      const handler = (_event: IpcRendererEvent, isMaximized: boolean) => callback(isMaximized)
       ipcRenderer.on('window:maximizeChange', handler)
       return () => ipcRenderer.removeListener('window:maximizeChange', handler)
     },
@@ -131,7 +131,7 @@ const electronAPI = {
       ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
   },
   onLogOutput: (callback: (data: { message: string; level?: string }) => void) => {
-    const handler = (_event: any, data: { message: string; level?: string }) => callback(data)
+    const handler = (_event: IpcRendererEvent, data: { message: string; level?: string }) => callback(data)
     ipcRenderer.on('log:output', handler)
     return () => ipcRenderer.removeListener('log:output', handler)
   },

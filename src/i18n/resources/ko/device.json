@@ -76,7 +76,8 @@
     "total": "총 {{count}}건",
     "valid": "유효 {{count}}건",
     "invalid": "무효 {{count}}건",
-    "errors": "가져오기 오류"
+    "errors": "가져오기 오류",
+    "parseFailed": "파일 파싱 실패"
   },
   "export": {
     "title": "장치 내보내기",

@@ -63,8 +63,8 @@ export function MenuBar() {
     try {
       await useDesignStore.getState().saveConfig(selectedProjectName)
       addToast('success', t('menu.toast.configSaved'))
-    } catch (e: any) {
-      addToast('error', t('menu.toast.saveFailed', { error: e?.message || String(e) }))
+    } catch (e) {
+      addToast('error', t('menu.toast.saveFailed', { error: e instanceof Error ? e.message : String(e) }))
     }
   }, [selectedProjectName, addToast, t])
 
@@ -144,8 +144,8 @@ export function MenuBar() {
       addToast('info', t('menu.toast.validating'))
       await useDesignStore.getState().validate(selectedProjectName)
       addToast('success', t('menu.toast.validatePassed'))
-    } catch (e: any) {
-      addToast('error', t('menu.toast.validateFailed', { error: e?.message || String(e) }))
+    } catch (e) {
+      addToast('error', t('menu.toast.validateFailed', { error: e instanceof Error ? e.message : String(e) }))
     }
   }, [selectedProjectName, addToast, t])
 
@@ -169,8 +169,8 @@ export function MenuBar() {
       addToast('info', t('menu.toast.exportingRackTable'))
       const filePath = await useRackStore.getState().exportToExcel(selectedProjectName)
       addToast('success', t('menu.toast.rackTableExported', { path: filePath }))
-    } catch (e: any) {
-      addToast('error', t('menu.toast.exportFailed', { error: e?.message || String(e) }))
+    } catch (e) {
+      addToast('error', t('menu.toast.exportFailed', { error: e instanceof Error ? e.message : String(e) }))
     }
   }, [selectedProjectName, addToast, t])
 
@@ -187,8 +187,8 @@ export function MenuBar() {
         // Refresh projects to show new files
         useProjectStore.getState().fetchProjects()
       }
-    } catch (e: any) {
-      addToast('error', t('menu.toast.exportFailed', { error: e?.message || String(e) }))
+    } catch (e) {
+      addToast('error', t('menu.toast.exportFailed', { error: e instanceof Error ? e.message : String(e) }))
     }
   }, [selectedProjectName, addToast, t])
 

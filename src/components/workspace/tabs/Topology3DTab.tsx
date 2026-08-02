@@ -24,7 +24,7 @@
  *   - 支持节点点击高亮 + 邻居高亮
  *   - 增加 GizmoHelper 显示坐标系
  */
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useMemo, useRef, type ElementRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Line, Text, Box, Octahedron, Grid } from '@react-three/drei'
 import { useTranslation } from 'react-i18next'
@@ -277,7 +277,7 @@ export function Topology3DTab() {
   const { t } = useTranslation()
   const topology = useDesignStore((s) => s.topology)
   const addToast = useToastStore((s) => s.addToast)
-  const controlsRef = useRef<any>(null)
+  const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null)
 
   const handleResetView = () => {
     if (controlsRef.current) {

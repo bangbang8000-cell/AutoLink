@@ -160,6 +160,7 @@ export function DeviceImportModal() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
   const [fileName, setFileName] = useState('')
   const [importing, setImporting] = useState(false)
+  const [parseError, setParseError] = useState<string | null>(null)
 
   const handleFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +168,7 @@ export function DeviceImportModal() {
       if (!file) return
 
       setFileName(file.name)
+      setParseError(null)
       try {
         const data = await file.arrayBuffer()
         const wb = XLSX.read(data, { type: 'array' })
@@ -188,6 +190,8 @@ export function DeviceImportModal() {
         setParsedRows(parsed)
       } catch (err) {
         console.error('Parse file error:', err)
+        setParsedRows([])
+        setParseError(err instanceof Error ? err.message : String(err))
       }
     },
     [activeTab],
@@ -234,7 +238,7 @@ export function DeviceImportModal() {
           {/* Tabs */}
           <div className="flex gap-2">
             <button
-              onClick={() => { setActiveTab('server'); setParsedRows([]); setFileName('') }}
+              onClick={() => { setActiveTab('server'); setParsedRows([]); setFileName(''); setParseError(null) }}
               className={clsx(
                 'px-3 py-1.5 text-xs rounded',
                 activeTab === 'server'
@@ -245,7 +249,7 @@ export function DeviceImportModal() {
               {t('import.serverTab')}
             </button>
             <button
-              onClick={() => { setActiveTab('switch'); setParsedRows([]); setFileName('') }}
+              onClick={() => { setActiveTab('switch'); setParsedRows([]); setFileName(''); setParseError(null) }}
               className={clsx(
                 'px-3 py-1.5 text-xs rounded',
                 activeTab === 'switch'
@@ -280,6 +284,17 @@ export function DeviceImportModal() {
           >
             <Download size={12} /> {t('import.downloadTemplate')}
           </button>
+
+          {/* Parse error */}
+          {parseError && (
+            <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-2">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <div>
+                <div className="font-medium">{t('import.parseFailed')}</div>
+                <div className="mt-0.5 break-all">{parseError}</div>
+              </div>
+            </div>
+          )}
 
           {/* Preview */}
           {parsedRows.length > 0 && (

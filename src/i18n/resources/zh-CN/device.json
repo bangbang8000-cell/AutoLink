@@ -76,7 +76,8 @@
     "total": "共 {{count}} 条",
     "valid": "有效 {{count}} 条",
     "invalid": "无效 {{count}} 条",
-    "errors": "导入错误"
+    "errors": "导入错误",
+    "parseFailed": "文件解析失败"
   },
   "export": {
     "title": "导出设备",

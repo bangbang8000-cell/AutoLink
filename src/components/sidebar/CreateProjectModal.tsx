@@ -40,8 +40,8 @@ export function CreateProjectModal({ templates, onClose }: Props) {
         ...(selectedTemplate === 'empty' ? { empty: true } : {}),
       })
       onClose()
-    } catch (err: any) {
-      setError(err?.message ?? '创建失败')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '创建失败')
     } finally {
       setCreating(false)
     }

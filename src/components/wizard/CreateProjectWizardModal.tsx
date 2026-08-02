@@ -30,8 +30,8 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
       closeWizard()
       onClose()
       addToast('success', t('common:toast.projectCreated'))
-    } catch (err: any) {
-      addToast('error', t('common:toast.projectCreateFailed', { error: err?.message || err }))
+    } catch (err) {
+      addToast('error', t('common:toast.projectCreateFailed', { error: err instanceof Error ? err.message : String(err) }))
       console.error('[Wizard] create project failed:', err)
     }
   }

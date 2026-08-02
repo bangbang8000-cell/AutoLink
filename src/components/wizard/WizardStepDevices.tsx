@@ -390,7 +390,7 @@ export function WizardStepDevices() {
                               min={0}
                               value={count}
                               onChange={(e) =>
-                                updateTopology({ [countKey]: Math.max(0, parseInt(e.target.value) || 0) } as any)
+                                updateTopology({ [countKey]: Math.max(0, parseInt(e.target.value) || 0) } as Partial<typeof config.topology>)
                               }
                               className="w-20 px-2 py-1 text-xs text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400"
                             />

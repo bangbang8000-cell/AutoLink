@@ -4,6 +4,7 @@ import type { ProjectConfig } from '@/types/project-config'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useExplorerStore } from '@/stores/explorer.store'
+import { useToastStore } from '@/stores/toast.store'
 
 export interface ProjectInfo {
   id: number
@@ -125,6 +126,7 @@ export const useProjectStore = create<ProjectState>()(
         } catch (err) {
           console.error('[ProjectStore] fetchProjects failed:', err)
           // Keep existing projects list on error, don't wipe it
+          useToastStore.getState().addToast('warning', '项目列表刷新失败，显示上次加载结果', 5000)
         }
       },
 

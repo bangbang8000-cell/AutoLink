@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useToastStore } from './toast.store'
 
 /* ---------- types ---------- */
 
@@ -41,6 +42,7 @@ export interface DesignSummary {
   storageSpeed: string
   paramDownlink: number
   storageDownlink: number
+  paramPortsPerServer?: number
 }
 
 export interface TopologyNode {
@@ -447,6 +449,7 @@ export const useDesignStore = create<DesignState>()(
         }
       } catch (saveErr) {
         console.error('[design.store] save topology.json failed:', saveErr)
+        useToastStore.getState().addToast('error', '拓扑数据保存失败，请检查磁盘写入权限', 5000)
       }
     } catch (err) {
       set({ error: (err as Error).message })
@@ -473,6 +476,7 @@ export const useDesignStore = create<DesignState>()(
       set({ layout, layoutSaved: true })
     } catch (err) {
       console.error('[design.store] saveLayout failed:', err)
+      useToastStore.getState().addToast('error', '拓扑布局保存失败', 5000)
       throw err
     }
   },
@@ -489,6 +493,7 @@ export const useDesignStore = create<DesignState>()(
       set({ layout: null, layoutSaved: false })
     } catch (err) {
       console.error('[design.store] clearLayout failed:', err)
+      useToastStore.getState().addToast('error', '拓扑布局重置失败', 5000)
       throw err
     }
   },

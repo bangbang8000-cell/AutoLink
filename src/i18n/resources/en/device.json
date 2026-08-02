@@ -76,7 +76,8 @@
     "total": "{{count}} total",
     "valid": "{{count}} valid",
     "invalid": "{{count}} invalid",
-    "errors": "Import Errors"
+    "errors": "Import Errors",
+    "parseFailed": "File parse failed"
   },
   "export": {
     "title": "Export Devices",

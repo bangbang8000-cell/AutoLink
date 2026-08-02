@@ -239,8 +239,8 @@ export function WorkspaceView() {
                       try {
                         const result = await importProject()
                         if (!result.canceled) addToast('success', t('common:toast.projectImported', { name: result.projectName }))
-                      } catch (err: any) {
-                        addToast('error', t('common:toast.importFailed', { error: err?.message || err }))
+                      } catch (err) {
+                        addToast('error', t('common:toast.importFailed', { error: err instanceof Error ? err.message : String(err) }))
                       }
                     }}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"

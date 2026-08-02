@@ -79,8 +79,8 @@ export function AboutDialog({ onClose }: Props) {
         // 3 秒后回到空闲态
         latestTimerRef.current = setTimeout(() => setUpdateState('idle'), 3000)
       }
-    } catch (err: any) {
-      setUpdateError(err?.message || String(err))
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : String(err))
       setUpdateState('error')
     }
   }
@@ -92,9 +92,9 @@ export function AboutDialog({ onClose }: Props) {
     try {
       await window.electron?.app?.downloadUpdate?.()
       setUpdateState('downloaded')
-    } catch (err: any) {
+    } catch (err) {
       // T2: 下载失败时保留错误信息,UI 会显示「手动下载」按钮作为降级方案
-      setUpdateError(err?.message || String(err))
+      setUpdateError(err instanceof Error ? err.message : String(err))
       setUpdateState('error')
     }
   }

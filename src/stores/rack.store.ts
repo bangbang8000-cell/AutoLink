@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import * as XLSX from 'xlsx'
+import { useToastStore } from './toast.store'
 
 export interface RackDevice {
   id: string
@@ -13,6 +14,20 @@ export interface RackDevice {
 }
 
 export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom'
+
+// V2.9.1-T4: 拓扑节点机柜字段（与后端 NetworkObject 分配结果对齐）
+export interface RackTopologyNode {
+  id: string
+  type: string
+  group: string
+  podid: string
+  cabinetId?: number
+  cabinetName?: string
+  startU?: number
+  endU?: number
+  powerWatts?: number
+  uHeight?: number
+}
 
 export const CABINET_TYPE_LABELS: Record<CabinetType, string> = {
   gpu: 'GPU柜',
@@ -68,7 +83,7 @@ interface RackState {
   editingDevice: string | null
 
   initDefault: (serverCount: number, rackType?: number, powerLimit?: number) => void
-  initFromTopology: (topologyNodes: { id: string; type: string; group: string; podid: string }[], rackType?: number, powerLimit?: number) => void
+  initFromTopology: (topologyNodes: RackTopologyNode[], rackType?: number, powerLimit?: number) => void
   loadRackLayout: (projectName: string) => Promise<void>
   saveRackLayout: (projectName: string) => Promise<void>
   addCabinet: (totalU?: number, type?: CabinetType, powerLimit?: number) => void
@@ -128,7 +143,7 @@ export const useRackStore = create<RackState>()(
   initFromTopology: (topologyNodes, rackType = 42, powerLimit = 6000) => {
     // V2.9.2: 优先采用后端分配(cabinetId/type/startU/endU/power/uHeight)，
     // 服务器按 group 分类(gpu/storage/compute)，交换机归为网络柜
-    const nodes = (topologyNodes as any[]).filter(
+    const nodes = topologyNodes.filter(
       (n) => n.cabinetId != null || n.type === 'server',
     )
     if (nodes.length === 0) {
@@ -143,7 +158,7 @@ export const useRackStore = create<RackState>()(
     for (const node of nodes) {
       const uHeight: number = node.uHeight || 4
       const powerWatts: number = node.powerWatts || 0
-      const cabinetId: number = node.cabinetId
+      const cabinetId: number | undefined = node.cabinetId
       if (cabinetId == null) {
         // 无分配信息（旧数据）→ 待分配池
         unplacedDevices.push({
@@ -226,6 +241,7 @@ export const useRackStore = create<RackState>()(
       }
     } catch (err) {
       console.error('loadRackLayout:', err)
+      useToastStore.getState().addToast('error', '机柜布局加载失败，已重置为空状态', 5000)
     }
     // V2.9.2: 无布局文件 → 空状态（不虚构机柜），渲染拓扑后由 initFromTopology 填充
     set({ cabinets: [], unplacedDevices: [], selectedCabinetId: null, addDeviceMode: false })
@@ -247,6 +263,7 @@ export const useRackStore = create<RackState>()(
       }
     } catch (err) {
       console.error('saveRackLayout:', err)
+      useToastStore.getState().addToast('error', '机柜布局保存失败', 5000)
     }
   },
 

@@ -34,8 +34,11 @@ export async function exportTopologyPng(
 ): Promise<string> {
   // Dynamically import echarts
   const echarts = await import('echarts')
-  // ECharts 6 exports named functions directly
-  const ecInit = (echarts as any).init || (echarts as any).default?.init
+  // ECharts 6 exports named functions directly (兼容 default 导出形态)
+  const ecInit =
+    echarts.init ??
+    (echarts as unknown as { default?: { init: typeof echarts.init } }).default?.init ??
+    echarts.init
 
   // Build category list
   const types = new Set(nodes.map((n) => n.type))
@@ -51,7 +54,24 @@ export async function exportTopologyPng(
     nodesByType[t].push(node)
   }
 
-  const graphNodes: any[] = []
+  // V2.9.1-T4: 图节点结构类型化（ECharts graph series data）
+  interface GraphNodeData {
+    id: string
+    name: string
+    x: number
+    y: number
+    category: number
+    symbolSize: number
+    label?: {
+      show: boolean
+      fontSize: number
+      position: string
+      formatter?: (p: { name: string }) => string
+    }
+    itemStyle?: { borderRadius: number }
+    fixed: boolean
+  }
+  const graphNodes: GraphNodeData[] = []
   const spacing = 40
   const layerSpacing = 200
   const colWidth = 60
@@ -78,7 +98,7 @@ export async function exportTopologyPng(
           show: type !== 'server',
           fontSize: 9,
           position: 'right',
-          formatter: (p: any) => (p.name.length > 15 ? p.name.slice(0, 15) + '...' : p.name),
+          formatter: (p: { name: string }) => (p.name.length > 15 ? p.name.slice(0, 15) + '...' : p.name),
         },
         itemStyle: { borderRadius: 4 },
         fixed: true,

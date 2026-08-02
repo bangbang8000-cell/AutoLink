@@ -369,3 +369,114 @@ class TestEngineBasics:
         assert len(v999) == 1
         assert v999[0].severity == Severity.ERROR
         assert "boom" in v999[0].message
+
+
+class TestV011PUECompliance:
+    """V011: PUE ≤ 1.3 政策合规校验 (V2.9.1 补缺)"""
+
+    def test_passes_when_pue_at_1_3(self, engine):
+        """正例:PUE 恰好 1.3 不超合规阈值"""
+        ctx = ValidationContext(pue_result={"pue": 1.3})
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V011"]) == 0
+
+    def test_warns_when_pue_over_1_3(self, engine):
+        """反例:PUE 1.45 超过合规阈值 1.3"""
+        ctx = ValidationContext(pue_result={"pue": 1.45})
+        issues = engine.validate(ctx)
+        v011 = [i for i in issues if i.rule_id == "V011"]
+        assert len(v011) == 1
+        assert v011[0].severity == Severity.WARNING
+        assert "1.3" in v011[0].message
+
+    def test_skips_without_pue_result(self, engine):
+        """正例:无 PUE 结果不校验"""
+        ctx = ValidationContext(pue_result=None)
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V011"]) == 0
+
+
+class TestV012LiquidCoolingInterface:
+    """V012: 液冷 OCP 冷板标准接口校验 (V2.9.1 补缺)"""
+
+    def test_passes_air_cooled(self, engine):
+        """正例:风冷设备不触发 OCP 校验"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "cooling_method": "air"},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V012"]) == 0
+
+    def test_passes_ocp_compatible_coolant(self, engine):
+        """正例:冷板液冷 + OCP 兼容冷却液 (PG25)"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "cooling_method": "cold_plate", "coolant": "PG25"},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V012"]) == 0
+
+    def test_warns_incompatible_coolant(self, engine):
+        """反例:冷板液冷 + 不兼容冷却液"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "cooling_method": "cold_plate", "coolant": "FC-777"},
+        ])
+        issues = engine.validate(ctx)
+        v012 = [i for i in issues if i.rule_id == "V012"]
+        assert len(v012) == 1
+        assert v012[0].severity == Severity.WARNING
+
+    def test_skips_unknown_coolant(self, engine):
+        """正例:冷板液冷但未指定冷却液 → 不告警(仅 INFO 层面容忍)"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "cooling_method": "cold_plate", "coolant": ""},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V012"]) == 0
+
+
+class TestV013DomesticRatio:
+    """V013: 信创比例校验 (V2.9.1 补缺)"""
+
+    def test_passes_when_ratio_over_50(self, engine):
+        """正例:国产设备占比 ≥50% 无提示"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "origin": "domestic"},
+            {"name": "S2", "origin": "domestic"},
+            {"name": "S3", "origin": "imported"},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V013"]) == 0
+
+    def test_info_when_ratio_under_30(self, engine):
+        """反例:国产占比 <30% → INFO"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "origin": "domestic"},
+            {"name": "S2", "origin": "imported"},
+            {"name": "S3", "origin": "imported"},
+            {"name": "S4", "origin": "imported"},
+        ])
+        issues = engine.validate(ctx)
+        v013 = [i for i in issues if i.rule_id == "V013"]
+        assert len(v013) == 1
+        assert v013[0].severity == Severity.INFO
+        assert "25.0%" in v013[0].message
+
+    def test_warning_when_ratio_between_30_50(self, engine):
+        """反例:国产占比 30%~50% → WARNING"""
+        ctx = ValidationContext(servers=[
+            {"name": "S1", "origin": "domestic"},
+            {"name": "S2", "origin": "domestic"},
+            {"name": "S3", "origin": "imported"},
+            {"name": "S4", "origin": "imported"},
+            {"name": "S5", "origin": ""},  # 未标注计入总数
+        ])
+        issues = engine.validate(ctx)
+        v013 = [i for i in issues if i.rule_id == "V013"]
+        assert len(v013) == 1
+        assert v013[0].severity == Severity.WARNING
+
+    def test_skips_no_devices(self, engine):
+        """正例:无设备不校验"""
+        ctx = ValidationContext()
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V013"]) == 0

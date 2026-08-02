@@ -34,7 +34,7 @@ function groupDevices(nodes: TopologyNode[]): DeviceGroup[] {
     const key = node.group || node.type
     const entry = map.get(key) || { count: 0, totalPower: 0 }
     entry.count++
-    entry.totalPower += (node as any).powerWatts || 2000
+    entry.totalPower += node.powerWatts || 2000
     map.set(key, entry)
   }
   const result: DeviceGroup[] = []
@@ -265,7 +265,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
                       <span className="text-gray-500 dark:text-gray-400">端口使用率</span>
                       <span className="font-medium text-gray-800 dark:text-gray-200">
                         {summary.paramDownlink && summary.paramLeafCount
-                          ? `${Math.round(((summary.numServers * (summary as any).paramPortsPerServer || 8) / (summary.paramDownlink * summary.paramLeafCount)) * 100)}%`
+                          ? `${Math.round(((summary.numServers * (summary.paramPortsPerServer || 8)) / (summary.paramDownlink * summary.paramLeafCount)) * 100)}%`
                           : '-'}
                       </span>
                     </div>

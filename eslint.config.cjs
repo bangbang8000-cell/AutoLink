@@ -26,7 +26,7 @@ module.exports = [
     rules: {
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       // react-hooks v7+ stricter rules — demote to warnings
       'react-hooks/set-state-in-effect': 'warn',
@@ -34,6 +34,13 @@ module.exports = [
       'react-hooks/immutability': 'warn',
     },
     settings: { react: { version: 'detect' } },
+  },
+  {
+    // V2.9.1-T4: 测试文件中 mock 数据/状态注入使用 any 是合理用法, 豁免 no-explicit-any
+    files: ['src/test/**'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
   },
   {
     // V2.7.6-T9: three.js JSX 元素属性 (position/intensity/args 等) 是合法 DOM 属性,

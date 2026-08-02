@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { X, Upload, FileSpreadsheet, Download, AlertTriangle } from 'lucide-react'
 import { parseCabinetCSV, parseCabinetXLSX, generateCabinetTemplateCSV } from '@/utils/cabinet-import'
 import type { ParseResult } from '@/utils/cabinet-import'
-import { useRackStore } from '@/stores/rack.store'
+import { useRackStore, type CabinetType } from '@/stores/rack.store'
 interface Props {
   open: boolean
   onClose: () => void
@@ -52,12 +52,12 @@ export function ImportCabinetsModal({ open, onClose }: Props) {
         updateCabinet(exists.id, {
           name: imp.name,
           totalU: imp.totalU,
-          type: imp.type as any,
+          type: imp.type as CabinetType,
           power_limit: imp.powerLimit,
         })
       } else {
         // Add new
-        addCabinet(imp.totalU, imp.type as any, imp.powerLimit)
+        addCabinet(imp.totalU, imp.type as CabinetType, imp.powerLimit)
       }
     }
 

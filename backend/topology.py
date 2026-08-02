@@ -142,6 +142,9 @@ class FatTreeTopology:
         if servers_per_group <= 0:
             servers_per_group = 1
 
+        # v2.9.1-T6: name → 对象 索引，消除每端口 O(leaves) 线性扫描
+        leaf_map = {l.name: l for l in self.leaves}
+
         for server in servers:
             parts = server.name.split('_')
             if len(parts) < 2:
@@ -160,7 +163,7 @@ class FatTreeTopology:
                 leaf_idx = group_index * self.ports_per_server + port_idx
                 leaf_name = f"{self.prefix}Leaf_P{pod_id}_{leaf_idx}"
 
-                leaf = next((l for l in self.leaves if l.name == leaf_name), None)
+                leaf = leaf_map.get(leaf_name)
                 if not leaf:
                     continue
 
@@ -170,7 +173,7 @@ class FatTreeTopology:
                         if backup_idx == leaf_idx:
                             continue
                         backup_name = f"{self.prefix}Leaf_P{pod_id}_{backup_idx}"
-                        backup_leaf = next((l for l in self.leaves if l.name == backup_name), None)
+                        backup_leaf = leaf_map.get(backup_name)
                         if backup_leaf and backup_leaf.downlink_counter <= backup_leaf.downlink_limit:
                             leaf = backup_leaf
                             backup_found = True
@@ -220,6 +223,9 @@ class FatTreeTopology:
         if num_pods <= 0 or not self.spines:
             return
 
+        # v2.9.1-T6: name → 对象 索引，消除每 Leaf O(spines) 线性扫描
+        spine_map = {s.name: s for s in self.spines}
+
         for leaf in self.leaves:
             pod_match = re.search(r"P(\d+)", leaf.name)
             leaf_idx_match = re.search(r'_(\d+)$', leaf.name)
@@ -240,7 +246,7 @@ class FatTreeTopology:
             for i in range(connections_per_leaf):
                 spine_idx = start_spine + (spine_offset + i) % spines_for_pod
                 spine_name = f"{self.prefix}Spine_{spine_idx}"
-                spine = next((s for s in self.spines if s.name == spine_name), None)
+                spine = spine_map.get(spine_name)
                 if not spine:
                     continue
 

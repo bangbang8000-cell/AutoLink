@@ -949,22 +949,25 @@ class NetworkDesignerV2:
 
     def _wire_storage(self):
         """存储网络: 所有服务器→Leaf + Leaf→Spine (+ Spine→Core 当 3-tier)"""
-        # Server → Leaf: 轮转分配
+        # Server → Leaf: 轮转分配, 每服务器 storage_ports_per_server 条连接
+        # (v2.9.1-T7 修复: 此前固定 1 条, storage_ports_per_server=2 时只连一半)
         servers_per_leaf = math.ceil(self.total_servers / self.storage_leaf_count)
+        ports_per_leaf_block = max(1, servers_per_leaf * self.storage_ports_per_server)
         for si, server in enumerate(self.servers):
-            li = si // servers_per_leaf
-            if li >= len(self.storage_leaves):
-                li = len(self.storage_leaves) - 1
-            leaf = self.storage_leaves[li]
-            try:
-                lp = leaf.get_downlink_port()
-                self._add_conn(server, "存储网卡1", self.storage_speed,
-                               leaf, lp, self.storage_speed,
-                               self.cable_types['storage']['server_leaf'],
-                               "服务器到存储Leaf",
-                               network_type='storage')
-            except ValueError:
-                continue
+            for pi in range(1, self.storage_ports_per_server + 1):
+                li = (si * self.storage_ports_per_server + (pi - 1)) // ports_per_leaf_block
+                if li >= len(self.storage_leaves):
+                    li = len(self.storage_leaves) - 1
+                leaf = self.storage_leaves[li]
+                try:
+                    lp = leaf.get_downlink_port()
+                    self._add_conn(server, f"存储网卡{pi}", self.storage_speed,
+                                   leaf, lp, self.storage_speed,
+                                   self.cable_types['storage']['server_leaf'],
+                                   "服务器到存储Leaf",
+                                   network_type='storage')
+                except ValueError:
+                    continue
 
         # Leaf → Spine
         uplink_avail = self.storage_switch_ports - self.storage_dl

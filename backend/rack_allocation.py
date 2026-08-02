@@ -39,6 +39,9 @@ _NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_')
 # GPU 独占阈值: 功率 ≥ 上限 * GPU_DEDICATE_RATIO 时独占机柜
 GPU_DEDICATE_RATIO = 0.5
 
+# 机柜类型全集（分桶索引用，v2.9.1-T6）
+_CABINET_TYPES = (CABINET_TYPE_GPU, CABINET_TYPE_COMPUTE, CABINET_TYPE_STORAGE, CABINET_TYPE_NETWORK)
+
 
 @dataclass
 class DeviceSlot:
@@ -114,6 +117,8 @@ class RackAllocator:
         self.naming_prefix = naming_prefix or '机柜'
         self.gpu_dedicated = bool(gpu_dedicated)
         self.cabinets: List[CabinetAllocation] = []
+        # v2.9.1-T6: 按机柜类型分桶索引（保持创建顺序），U 位满的柜惰性移除
+        self._buckets: dict = {t: [] for t in _CABINET_TYPES}
 
     # ------------------------------------------------------------------
     # 对外接口
@@ -146,6 +151,10 @@ class RackAllocator:
     def seed(self, cabinets: List[CabinetAllocation]) -> None:
         """预置已有机柜，用于分阶段分配（保持机柜编号连续）"""
         self.cabinets = list(cabinets)
+        self._buckets = {t: [] for t in _CABINET_TYPES}
+        for c in self.cabinets:
+            if c.used_u < self.rack_type:
+                self._buckets[c.type].append(c)
 
     # ------------------------------------------------------------------
     # GPU 分配
@@ -178,9 +187,7 @@ class RackAllocator:
     def _assign_network(self, device: DeviceSlot) -> None:
         """网络设备装箱：严格按网段聚柜（不同网段不混柜，运维隔离常见做法）"""
         if device.network:
-            for c in self.cabinets:
-                if c.type != CABINET_TYPE_NETWORK:
-                    continue
+            for c in self._buckets.get(CABINET_TYPE_NETWORK, []):
                 if any(d.network == device.network for d in c.devices):
                     if self._can_fit(c, device):
                         self._place(c, device)
@@ -205,6 +212,7 @@ class RackAllocator:
             power_limit=self.power_limit,
         )
         self.cabinets.append(cab)
+        self._buckets[cab.type].append(cab)
         return cab
 
     def _can_fit(self, cab: CabinetAllocation, device: DeviceSlot) -> bool:
@@ -216,10 +224,12 @@ class RackAllocator:
         return True
 
     def _find_fit_cabinet(self, cabinet_type: str, device: DeviceSlot):
-        """找第一个可放入的同类型柜（功率 + U 位双约束）"""
-        for c in self.cabinets:
-            if c.type != cabinet_type:
-                continue
+        """找第一个可放入的同类型柜（功率 + U 位双约束）
+
+        v2.9.1-T6: 只扫描该类型的活跃桶（U 位已满柜已移除），替代全量线性扫描。
+        语义与原实现完全一致（first-fit，保持创建顺序）。
+        """
+        for c in self._buckets.get(cabinet_type, []):
             if not self._can_fit(c, device):
                 continue
             return c
@@ -234,3 +244,8 @@ class RackAllocator:
         cab.used_u += device.u_height
         cab.total_power += device.power_watts
         cab.devices.append(device)
+        # v2.9.1-T6: U 位已满 → 从活跃桶移除（任何设备都无法再放入）
+        if cab.used_u >= self.rack_type:
+            bucket = self._buckets.get(cab.type)
+            if bucket and cab in bucket:
+                bucket.remove(cab)

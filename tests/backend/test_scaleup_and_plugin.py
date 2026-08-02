@@ -280,6 +280,40 @@ class TestNetworkPlugins:
         assert topo["network_type"] == "storage"
         assert topo["stats"]["convergence_ratio"] > 0
 
+    def test_biz_plugin(self):
+        """V2.9.1: biz 业务网插件默认配置/校验/拓扑生成"""
+        plugin = get_plugin("biz")
+        cfg = plugin.get_default_config()
+        assert cfg["speed"] == "25G"
+        assert cfg["protocol"] == "Ethernet"
+        assert plugin.validate_config(cfg) == []
+        # 不支持的协议/速率
+        assert any("不支持的协议" in e for e in plugin.validate_config(
+            {"num_servers": 8, "switch_ports": 48, "speed": "25G", "protocol": "RoCEv2"}))
+        assert any("不支持的速率" in e for e in plugin.validate_config(
+            {"num_servers": 8, "switch_ports": 48, "speed": "400G", "protocol": "Ethernet"}))
+        topo = plugin.generate_topology(cfg)
+        assert topo["network_type"] == "biz"
+        assert len(topo["nodes"]) > 0
+        assert len(topo["edges"]) > 0
+        assert topo["stats"]["convergence_ratio"] > 0
+
+    def test_oob_plugin(self):
+        """V2.9.1: oob 带外管理网插件默认配置/校验/拓扑生成"""
+        plugin = get_plugin("oob")
+        cfg = plugin.get_default_config()
+        assert cfg["speed"] == "1G"
+        assert cfg["protocol"] == "Ethernet"
+        assert plugin.validate_config(cfg) == []
+        # 1G 端口 + 48 端口 → 收敛比 > 1 (管理网收敛)
+        topo = plugin.generate_topology(cfg)
+        assert topo["network_type"] == "oob"
+        assert len(topo["nodes"]) > 0
+        assert len(topo["edges"]) > 0
+        # 无效配置: 空 num_servers
+        assert any("num_servers" in e for e in plugin.validate_config(
+            {"num_servers": 0, "switch_ports": 48, "speed": "1G", "protocol": "Ethernet"}))
+
     def test_scale_up_plugin(self):
         plugin = get_plugin("scale_up")
         cfg = plugin.get_default_config()

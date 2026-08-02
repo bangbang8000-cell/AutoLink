@@ -8,6 +8,19 @@ import { useRenderStore } from '@/stores/render.store'
 import { useToastStore } from '@/stores/toast.store'
 import { exportTopologyPng } from '@/utils/exportTopology'
 
+// V2.9.1-T4: IPC 动态返回结构类型化（避免 any）
+interface RenderProgressData {
+  status?: 'start' | 'complete' | 'error'
+  message?: string
+  progress?: number
+}
+
+interface ExportConnectionsResult {
+  data?: {
+    results?: { type?: string; file?: string }[]
+  }
+}
+
 export function WorkbenchActionCard() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
@@ -36,13 +49,14 @@ export function WorkbenchActionCard() {
   // Subscribe to IPC render:progress events
   useEffect(() => {
     if (!window.electron?.render?.onProgress) return
-    const unsub = window.electron.render.onProgress((data: any) => {
-      if (data?.status === 'start') {
-        setProgress({ message: data.message || '开始渲染...' })
-      } else if (data?.status === 'complete') {
-        setProgress({ status: 'complete', message: data.message || '渲染完成', progress: 100 })
-      } else if (data?.status === 'error') {
-        setProgress({ status: 'error', message: data.message || '渲染失败', error: data.message })
+    const unsub = window.electron.render.onProgress((data) => {
+      const d = data as RenderProgressData
+      if (d?.status === 'start') {
+        setProgress({ message: d.message || '开始渲染...' })
+      } else if (d?.status === 'complete') {
+        setProgress({ status: 'complete', message: d.message || '渲染完成', progress: 100 })
+      } else if (d?.status === 'error') {
+        setProgress({ status: 'error', message: d.message || '渲染失败', error: d.message })
       }
     })
     cleanupRef.current = unsub
@@ -90,7 +104,7 @@ export function WorkbenchActionCard() {
           setProgress({ message: `[${projectName}] 生成连接关系表...` })
           try {
             const result = await window.electron.render.exportConnections(projectName, ['connections'])
-            const data = result as any
+            const data = result as ExportConnectionsResult
             const file = data?.data?.results?.[0]?.file || `${projectName}/output/连接关系表.xlsx`
             addResult({
               type: 'connections',
@@ -166,8 +180,8 @@ export function WorkbenchActionCard() {
           setProgress({ message: `[${projectName}] 生成设备清单...` })
           try {
             const result = await window.electron.render.exportConnections(projectName, ['deviceList'])
-            const data = result as any
-            const file = data?.data?.results?.find((r: any) => r.type === 'deviceList')?.file
+            const data = result as ExportConnectionsResult
+            const file = data?.data?.results?.find((r) => r.type === 'deviceList')?.file
             addResult({
               type: 'deviceList',
               file: file || `${projectName}/output/设备清单.xlsx`,

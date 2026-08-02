@@ -19,7 +19,7 @@ export function LogPanel() {
     // Listen for log events from main process
     if (!window.electron) return
     
-    const unsub = (window.electron as any).onLogOutput?.((data: { message: string; level?: string }) => {
+    const unsub = window.electron.onLogOutput?.((data: { message: string; level?: string }) => {
       setLogs((prev) => {
         const entry: LogEntry = {
           timestamp: new Date().toLocaleTimeString('zh-CN', { hour12: false }),

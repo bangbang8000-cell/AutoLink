@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## [2.9.1] - 2026-08-02
+
+### 质量工程闭环（3.0 前收官 · 第一阶段）
+
+v2.9.1 是 3.0 前"质量工程闭环"首个子版本，聚焦工程质量与性能基线（PRD 见 `docs/v2.9/v2.9.1-2.9.3_质量与体验_PRD.md`）。
+
+#### 死代码清理与重复合并（T1/T2）
+- 删除 `src/components/sidebar/` 下 7 个零引用死文件（Explorer/Output/Design/DeviceLibrary/Rack/Topology/Workbench Panel）
+- `handlers.ts` 两处 `walkDir` 文件树遍历合并为公共函数，project/template 结构查询共用
+- `template:getFile` 复用通用路径防护 `sanitizeUnderBase`
+- `project-io.service.ts` `importProjectZip`/`importTemplateZip` 抽取公共 `extractZipCommon`（安全校验→命名冲突后缀→白名单解压→元数据同步）
+
+#### 错误反馈补齐（T3）
+- 拓扑保存/机柜布局保存/项目列表刷新失败均有 toast 提示（design.store / rack.store / project.store）
+- 设备 Excel 导入解析失败在弹窗内红色错误提示（parseError），切换 Tab 清空
+- 存储数量字段双 schema 兼容替代 `as any`
+
+#### any 类型治理（T4）
+- 修复 10+ 处 `catch (e: any)` / 强转链：MenuBar、AboutDialog、WorkspaceView、CreateProjectWizard、WorkbenchActionCard、Topology3DTab、ImportCabinetsModal、exportTopology、preload、WizardStepDevices 等
+- `eslint no-explicit-any` 恢复 **error**（`src/test/**` 测试 mock 数据豁免）
+- eslint 从 10 errors → **0 errors**
+
+#### 测试补缺（T5）
+- 新建 `test_ub_topology.py`（25 用例）：UBConfig 默认值/域划分/全对等连接数/端口命名/统计/engine schema 兼容
+- `test_validation.py` 追加 V011（PUE≤1.3 合规）/V012（OCP 冷板接口）/V013（信创比例≥50%）正反例（9 用例）
+- `test_scaleup_and_plugin.py` 追加 biz/oob 插件 generate_topology 用例
+- `test_designer_integration.py` 追加超大-2048（3-tier）集成用例：16 Pod×128 台、三层 Core 存在、拓扑自检通过
+
+#### 性能优化（T6）
+- `topology.py`：Leaf/Spine 查找从 O(n) 线性扫描改为 name→对象 dict 索引，消除 2048 台场景约 840 万次无效迭代
+- `rack_allocation.py`：按机柜类型分桶索引 + U 位满柜惰性移除，`_find_fit_cabinet` 不再全量扫描
+- **2048 台全流程设计耗时 1.29s → 0.51s**（含拓扑自检，目标 <2s）
+
+#### 模板验证扩展（T7）
+- `validate_templates.py` 自动发现并覆盖**全部 16 模板**（原 7 个），新增机柜分配/功率超限/U 位重叠/上架覆盖率检查
+- **修复存储网络连接 bug**：`_wire_storage` 每台服务器固定生成 1 条存储连接，`storage_ports_per_server=2` 时只连一半（cambricon/cloudmatrix/hygon/ualink/uec 5 模板受影响）→ 按端口数生成多条并轮转分配 Leaf，16/16 模板通过
+
+#### 回归
+- tsc 0 errors、eslint 0 errors、vitest 335 passed、pytest 495 passed、16/16 模板验证通过
+
 ## [2.9.0] - 2026-08-02
 
 ### 机柜规划与上架逻辑重构
