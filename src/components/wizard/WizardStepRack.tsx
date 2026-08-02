@@ -1,15 +1,38 @@
 import { useWizardStore } from '@/stores/wizard.store'
-import { Layers } from 'lucide-react'
+import { Layers, Snowflake, Cpu } from 'lucide-react'
 import clsx from 'clsx'
+import type { RackCoolingMethod } from '@/types/project-config'
 
 const RACK_TYPE_OPTIONS = [
   { value: 42 as const, label: '42U' },
   { value: 49 as const, label: '49U' },
 ]
 
+// V2.9.1: 功率预设（快速设置单柜功率上限）
+const POWER_PRESETS = [
+  { id: '6kw', label: '6KW', value: 6000 },
+  { id: '12kw', label: '12KW', value: 12000 },
+  { id: '16kw', label: '16KW', value: 16000 },
+  { id: '30kw', label: '30KW', value: 30000 },
+  { id: '60kw', label: '60KW', value: 60000 },
+]
+
+// V2.9.1: 散热方式选项
+const COOLING_OPTIONS: { value: RackCoolingMethod; label: string; hint: string }[] = [
+  { value: 'air', label: '风冷', hint: '≤15KW/柜' },
+  { value: 'cold_plate', label: '冷板液冷', hint: '≤60KW/柜' },
+  { value: 'immersion', label: '浸没式液冷', hint: '≤100KW/柜' },
+]
+
 export function WizardStepRack() {
   const { config, updateRackConfig } = useWizardStore()
   const rack = config.rack_config
+
+  const isPresetActive = (value: number) =>
+    rack.power_limit_per_rack === value && !rack.power_preset
+
+  const applyPreset = (id: string, value: number) =>
+    updateRackConfig({ power_preset: id, power_limit_per_rack: value })
 
   return (
     <div className="space-y-4">
@@ -18,7 +41,7 @@ export function WizardStepRack() {
           机柜配置
         </h3>
         <p className="text-xs text-gray-400">
-          配置机柜基本参数
+          配置机柜类型、功率上限与散热方式，机柜分配将按功率 + U 位双约束自动装箱
         </p>
       </div>
 
@@ -46,23 +69,96 @@ export function WizardStepRack() {
         </div>
       </div>
 
-      {/* Power limit */}
+      {/* Power limit presets (V2.9.1) */}
       <div>
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
           单机柜功率上限 (W)
         </label>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {POWER_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => applyPreset(p.id, p.value)}
+              className={clsx(
+                'px-3 py-1.5 rounded-md border text-xs font-medium transition-colors',
+                isPresetActive(p.value)
+                  ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                  : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500',
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
         <input
           type="number"
           min={0}
           step={100}
           value={rack.power_limit_per_rack}
           onChange={(e) =>
-            updateRackConfig({ power_limit_per_rack: Math.max(0, parseInt(e.target.value) || 0) })
+            updateRackConfig({
+              power_preset: '',
+              power_limit_per_rack: Math.max(0, parseInt(e.target.value) || 0),
+            })
           }
           className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
         />
         <p className="text-2xs text-gray-400 mt-1">
-          默认 6000W，用于机柜电力容量规划
+          12KW/16KW 机柜下，DGX H100/H200（10~12KW）将自动独占机柜（1 台/柜）
+        </p>
+      </div>
+
+      {/* Cooling method (V2.9.1) */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
+          散热方式
+        </label>
+        <div className="flex gap-2">
+          {COOLING_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => updateRackConfig({ cooling_method: opt.value })}
+              className={clsx(
+                'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 text-xs font-medium transition-colors',
+                rack.cooling_method === opt.value
+                  ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                  : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500',
+              )}
+            >
+              <Snowflake size={14} />
+              {opt.label}
+              <span className="text-2xs text-gray-400">{opt.hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* GPU dedicated (V2.9.1) */}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <button
+            role="switch"
+            aria-checked={!!rack.gpu_dedicated}
+            onClick={() => updateRackConfig({ gpu_dedicated: !rack.gpu_dedicated })}
+            className={clsx(
+              'relative w-9 h-5 rounded-full transition-colors',
+              rack.gpu_dedicated ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600',
+            )}
+          >
+            <span
+              className={clsx(
+                'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all',
+                rack.gpu_dedicated ? 'left-[18px]' : 'left-0.5',
+              )}
+            />
+          </button>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-200">
+            <Cpu size={14} />
+            GPU 服务器独占机柜（1 台/柜）
+          </span>
+        </label>
+        <p className="text-2xs text-gray-400 mt-1 ml-11">
+          开启后所有 GPU 服务器均独占机柜；关闭时高功率 GPU（≥50% 上限）仍自动独占
         </p>
       </div>
 

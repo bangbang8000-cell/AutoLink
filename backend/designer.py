@@ -226,6 +226,10 @@ class NetworkDesignerV2:
         self.rack_type = rack.get('rack_type', 42)  # 42U or 49U
         self.power_limit_per_rack = rack.get('power_limit_per_rack', 6000)
         self.naming_prefix = rack.get('naming_prefix', '机柜')
+        # V2.9.1: 机柜配置扩展
+        self.cooling_method = rack.get('cooling_method', 'air')  # air/cold_plate/immersion
+        self.gpu_dedicated = bool(rack.get('gpu_dedicated', False))
+        self.power_preset = rack.get('power_preset', '')  # 可选预设标识
 
         # --- 从设备档案中提取端口命名前缀 (V2.1新增) ---
         self._server_port_prefix = None
@@ -372,6 +376,10 @@ class NetworkDesignerV2:
         self.rack_type = 42
         self.power_limit_per_rack = 6000
         self.naming_prefix = '机柜'
+        # V2.9.1: 机柜配置扩展 (INI 旧格式使用默认值)
+        self.cooling_method = 'air'
+        self.gpu_dedicated = False
+        self.power_preset = ''
 
         # 端口前缀 (旧格式使用默认值)
         self._server_port_prefix = None
@@ -575,8 +583,6 @@ class NetworkDesignerV2:
             group_name = f"GPU服务器组{group_id}"
             podid = f"pod-gpu-{group_id}"
             s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
-            # 分配机柜 (简单轮转: 每10台GPU服务器一个机柜)
-            self._assign_cabinet(s, server_idx)
             self.servers.append(s)
             self.server_groups[s.name] = group_name
             self.podid_map[s.name] = podid
@@ -584,7 +590,6 @@ class NetworkDesignerV2:
         # 额外存储服务器
         for i in range(1, self.additional_storage + 1):
             s = _make_server(f"存储服务器_{i}", "存储服务器组", "pod-storage", storage_profile, default_power=300, default_u=2)
-            self._assign_cabinet(s, self.num_servers + i)
             self.servers.append(s)
             self.server_groups[s.name] = s.group
             self.podid_map[s.name] = s.podid
@@ -592,7 +597,6 @@ class NetworkDesignerV2:
         # 额外通算服务器
         for i in range(1, self.additional_compute + 1):
             s = _make_server(f"通算服务器_{i}", "通算服务器组", "pod-general", compute_profile, default_power=400, default_u=2)
-            self._assign_cabinet(s, self.num_servers + self.additional_storage + i)
             self.servers.append(s)
             self.server_groups[s.name] = s.group
             self.podid_map[s.name] = s.podid
@@ -620,15 +624,125 @@ class NetworkDesignerV2:
         if self.storage_enabled:
             self._create_storage_switches(storage_switch_profile)
 
-    def _assign_cabinet(self, server, index):
-        """为服务器分配机柜和U位 (简单轮转)"""
-        servers_per_cabinet = max(1, self.rack_type // 2)  # 每U约2台服务器(按2U高)
-        cab_id = (index - 1) // servers_per_cabinet + 1
-        slot_in_cab = (index - 1) % servers_per_cabinet
-        server.cabinet_id = cab_id
-        server.cabinet_name = f"{self.naming_prefix}{cab_id}"
-        server.start_u = slot_in_cab * 2 + 1
-        server.end_u = server.start_u + server.u_height - 1
+        # V2.9.0: 多约束机柜分配（服务器 + param/storage 交换机）
+        self._allocate_rack_servers()
+
+    # ================================================================
+    #  机柜分配 (V2.9.0: 多约束装箱, 替代简单轮转)
+    # ================================================================
+    def _allocate_rack_servers(self):
+        """V2.9.0: 服务器 + param/storage 交换机机柜分配（多约束装箱）
+
+        规则:
+          - GPU 高功率(≥50%上限)独占机柜, 覆盖 DGX H100/H200 单柜 1 台
+          - 通算/存储 功率+U位装箱, 多台共柜
+          - 交换机按网段聚柜(网络柜), 功率+U位装箱
+        """
+        from rack_allocation import RackAllocator, DeviceSlot, infer_device_type
+
+        slots = []
+        for s in self.servers:
+            d = DeviceSlot(
+                name=s.name, obj_type=s.obj_type, group=s.group,
+                power_watts=s.power_watts or 0, u_height=s.u_height or 1,
+                device_type=infer_device_type(s.obj_type, s.group),
+            )
+            slots.append((s, d))
+        for sw in (self.param_leaves + self.param_spines + self.param_cores +
+                   self.storage_leaves + self.storage_spines + self.storage_cores):
+            slots.append((sw, self._make_switch_slot(sw)))
+
+        allocator = RackAllocator(
+            rack_type=self.rack_type,
+            power_limit=self.power_limit_per_rack,
+            naming_prefix=self.naming_prefix,
+            gpu_dedicated=getattr(self, 'gpu_dedicated', False),
+        )
+        allocator.allocate([d for _, d in slots])
+        for obj, d in slots:
+            self._apply_slot(obj, d)
+        self._rack_cabinets = allocator.cabinets
+
+    def _allocate_rack_switches(self, switches):
+        """V2.9.0: 追加分配交换机（oob/biz）到网络柜，保持机柜编号连续，并回填连接机柜字段"""
+        from rack_allocation import RackAllocator
+
+        if not switches:
+            return
+        slots = [(sw, self._make_switch_slot(sw)) for sw in switches]
+        allocator = RackAllocator(
+            rack_type=self.rack_type,
+            power_limit=self.power_limit_per_rack,
+            naming_prefix=self.naming_prefix,
+            gpu_dedicated=getattr(self, 'gpu_dedicated', False),
+        )
+        allocator.seed(getattr(self, '_rack_cabinets', []) or [])
+        allocator.allocate([d for _, d in slots])
+        for obj, d in slots:
+            self._apply_slot(obj, d)
+        self._rack_cabinets = allocator.cabinets
+        self._backfill_switch_connections(switches)
+
+    def _make_switch_slot(self, sw):
+        """构造交换机 DeviceSlot（oob/biz 未绑定档案时从设备档案补充功率/U位）"""
+        from rack_allocation import DeviceSlot, infer_network
+        power = sw.power_watts or 0
+        u = sw.u_height or 1
+        if power <= 0:
+            profile = self._switch_profile_for(sw.obj_type)
+            if profile:
+                power = profile.power_watts or 0
+                u = profile.u_height or u
+        return DeviceSlot(
+            name=sw.name, obj_type=sw.obj_type, group=sw.group,
+            power_watts=power, u_height=u,
+            device_type='network', network=infer_network(sw.obj_type),
+        )
+
+    def _switch_profile_for(self, obj_type):
+        """交换机 obj_type → 设备档案 key"""
+        key = None
+        if obj_type.startswith('param_'):
+            key = 'param_switch'
+        elif obj_type.startswith('storage_'):
+            key = 'storage_switch'
+        elif obj_type.startswith('oob_'):
+            key = 'oob_access_switch' if obj_type.endswith('access') else 'oob_agg_switch'
+        elif obj_type.startswith('biz_'):
+            key = 'biz_access_switch' if obj_type.endswith('access') else 'biz_agg_switch'
+        if key:
+            return self._device_profiles.get(key)
+        return None
+
+    def _apply_slot(self, obj, d):
+        """将 DeviceSlot 分配结果回填到 NetworkObject"""
+        obj.cabinet_id = d.cabinet_id
+        obj.cabinet_name = d.cabinet_name
+        obj.start_u = d.start_u
+        obj.end_u = d.end_u
+
+    def _backfill_switch_connections(self, switches):
+        """交换机分配机柜后，回填其参与连接的机柜字段（连接生成时交换机机柜未分配）"""
+        name_to_sw = {sw.name: sw for sw in switches}
+        seen = set()
+        for sw in switches:
+            for conn in sw.connections:
+                key = (conn.a_device, conn.z_device, conn.a_port)
+                if key in seen:
+                    continue
+                seen.add(key)
+                a_sw = name_to_sw.get(conn.a_device)
+                if a_sw:
+                    conn.a_cabinet_id = a_sw.cabinet_id
+                    conn.a_cabinet_name = a_sw.cabinet_name
+                    conn.a_start_u = a_sw.start_u
+                    conn.a_end_u = a_sw.end_u
+                z_sw = name_to_sw.get(conn.z_device)
+                if z_sw:
+                    conn.z_cabinet_id = z_sw.cabinet_id
+                    conn.z_cabinet_name = z_sw.cabinet_name
+                    conn.z_start_u = z_sw.start_u
+                    conn.z_end_u = z_sw.end_u
 
     def _apply_switch_port_prefixes(self, switches, profile=None):
         """为交换机设置端口命名前缀"""
@@ -935,6 +1049,8 @@ class NetworkDesignerV2:
         self.oob_agg = topo.agg_switches
         self.switch_groups.update(topo.switch_groups)
         self.podid_map.update(topo.podid_map)
+        # V2.9.0: OOB 交换机机柜分配（网络柜）并回填连接机柜字段
+        self._allocate_rack_switches(self.oob_access + self.oob_agg)
 
     def _calc_biz_chassis_frames(self):
         """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数
@@ -975,6 +1091,8 @@ class NetworkDesignerV2:
         self.biz_agg = topo.agg_switches
         self.switch_groups.update(topo.switch_groups)
         self.podid_map.update(topo.podid_map)
+        # V2.9.0: 业务交换机机柜分配（网络柜）并回填连接机柜字段
+        self._allocate_rack_switches(self.biz_access + self.biz_agg)
 
     # ================================================================
     #  拓扑验证

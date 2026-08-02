@@ -7,7 +7,8 @@
  *   - 顶部显示机柜总功率与热力图例
  */
 import { useMemo } from 'react'
-import { useRackStore, type RackDevice, type RackCabinet } from '@/stores/rack.store'
+import { useRackStore, RACK_TYPE_COLORS, CABINET_TYPE_LABELS, type RackDevice, type RackCabinet } from '@/stores/rack.store'
+import { useTranslation } from 'react-i18next'
 import { Flame } from 'lucide-react'
 
 interface Props {
@@ -32,6 +33,7 @@ function getHeatColor(powerWatts: number, uCount: number): {
 }
 
 export function RackPowerHeatView({ cabinet }: Props) {
+  const { t } = useTranslation()
   const removeDevice = useRackStore((s) => s.removeDevice)
 
   const uSlots = useMemo(() => {
@@ -73,6 +75,17 @@ export function RackPowerHeatView({ cabinet }: Props) {
             <Flame size={13} className="text-orange-500" />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
               {cabinet.name} · 功率热力
+            </span>
+            {/* V2.9.2: 机柜类型标签 */}
+            <span
+              className="px-1.5 py-0.5 rounded text-2xs font-semibold"
+              style={{
+                background: RACK_TYPE_COLORS[cabinet.type]?.bg,
+                color: RACK_TYPE_COLORS[cabinet.type]?.text,
+                border: `1px solid ${RACK_TYPE_COLORS[cabinet.type]?.border}`,
+              }}
+            >
+              {t(`rack.cabinetTypes.${cabinet.type}`, CABINET_TYPE_LABELS[cabinet.type] || cabinet.type)}
             </span>
           </div>
           <span className="text-xs font-bold text-orange-600 dark:text-orange-400">

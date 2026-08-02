@@ -521,5 +521,19 @@
     "exportedToOutput": "已匯出到 output/{{filename}}",
     "generatingPng": "正在產生 PNG...",
     "renderHint": "請在工作台點擊\"一鍵算繪\"開始算繪"
+  },
+  "rack": {
+    "cabinetTypes": {
+      "gpu": "GPU櫃",
+      "network": "網路櫃",
+      "storage": "儲存櫃",
+      "compute": "通算櫃",
+      "security": "安全櫃",
+      "custom": "自訂"
+    },
+    "powerHeat": "功率熱力",
+    "cabinetPower": "機櫃功率",
+    "powerExceeded": "功率超限",
+    "noCabinetData": "暫無機櫃資料，請先算繪拓撲"
   }
 }

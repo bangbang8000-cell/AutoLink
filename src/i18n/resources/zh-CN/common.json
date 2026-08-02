@@ -533,5 +533,19 @@
     "exportedToOutput": "已导出到 output/{{filename}}",
     "generatingPng": "正在生成 PNG...",
     "renderHint": "请在工作台点击\"一键渲染\"开始渲染"
+  },
+  "rack": {
+    "cabinetTypes": {
+      "gpu": "GPU柜",
+      "network": "网络柜",
+      "storage": "存储柜",
+      "compute": "通算柜",
+      "security": "安全柜",
+      "custom": "自定义"
+    },
+    "powerHeat": "功率热力",
+    "cabinetPower": "机柜功率",
+    "powerExceeded": "功率超限",
+    "noCabinetData": "暂无机柜数据，请先渲染拓扑"
   }
 }

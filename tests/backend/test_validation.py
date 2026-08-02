@@ -71,6 +71,69 @@ class TestV002CabinetPower:
         assert len(v002) == 0
 
 
+class TestV014GpuCabinetOverload:
+    """V014: GPU 高功率柜多台设备告警 (V2.9.3)"""
+
+    def test_passes_when_gpu_cabinet_single_device(self, engine):
+        """正例:GPU 柜单台设备(独占)不告警"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "G1", "type": "gpu", "power_watts": 10200, "power_limit": 12000,
+             "items": [{"device_name": "GPU1", "start_u": 1, "end_u": 8}]},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V014"]) == 0
+
+    def test_passes_when_low_power_gpu_multi(self, engine):
+        """正例:低功率 GPU 多台共柜且未超 80% 不告警"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "G1", "type": "gpu", "power_watts": 6000, "power_limit": 12000,
+             "items": [{"device_name": "GPU1", "start_u": 1, "end_u": 4},
+                       {"device_name": "GPU2", "start_u": 5, "end_u": 8}]},
+        ])
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V014"]) == 0
+
+    def test_warns_when_high_power_gpu_multi(self, engine):
+        """反例:高功率 GPU 多台共柜且超上限 80% 应告警"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "G1", "type": "gpu", "power_watts": 10200, "power_limit": 12000,
+             "items": [{"device_name": "GPU1", "start_u": 1, "end_u": 8},
+                       {"device_name": "GPU2", "start_u": 9, "end_u": 16}]},
+        ])
+        issues = engine.validate(ctx)
+        v014 = [i for i in issues if i.rule_id == "V014"]
+        assert len(v014) == 1
+        assert v014[0].severity == Severity.WARNING
+
+
+class TestV015CabinetUtilization:
+    """V015: 机柜利用率过低提示 (V2.9.3)"""
+
+    def test_passes_when_utilized(self, engine):
+        """正例:利用率 ≥30% 不提示"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "C1", "items": [{"device_name": "D1", "start_u": 1, "end_u": 20}]},
+        ], config={"rack_type": 42})
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V015"]) == 0
+
+    def test_info_when_underutilized(self, engine):
+        """反例:利用率 <30% 提示 INFO"""
+        ctx = ValidationContext(cabinets=[
+            {"name": "C1", "items": [{"device_name": "D1", "start_u": 1, "end_u": 8}]},
+        ], config={"rack_type": 42})
+        issues = engine.validate(ctx)
+        v015 = [i for i in issues if i.rule_id == "V015"]
+        assert len(v015) == 1
+        assert v015[0].severity == Severity.INFO
+
+    def test_skips_empty_cabinet(self, engine):
+        """空柜不提示"""
+        ctx = ValidationContext(cabinets=[{"name": "C1", "items": []}], config={"rack_type": 42})
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V015"]) == 0
+
+
 class TestV003PUETarget:
     """V003: PUE 达标校验"""
 
@@ -292,9 +355,9 @@ class TestV010ParamOversubscription:
 class TestEngineBasics:
     """引擎基础功能"""
 
-    def test_default_engine_has_13_rules(self, engine):
-        """默认引擎含 13 条规则 (V001-V013, V2.7.5 新增 V013)"""
-        assert engine.get_rule_count() == 13
+    def test_default_engine_has_15_rules(self, engine):
+        """默认引擎含 15 条规则 (V001-V015, V2.9.3 新增 V014/V015 机柜规则)"""
+        assert engine.get_rule_count() == 15
 
     def test_rule_exception_becomes_error_issue(self, engine):
         """规则函数抛异常时应转为 ERROR issue"""

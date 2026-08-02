@@ -533,5 +533,19 @@
     "exportedToOutput": "Exported to output/{{filename}}",
     "generatingPng": "Generating PNG...",
     "renderHint": "Click \"One-Click Render\" in the workbench to start rendering"
+  },
+  "rack": {
+    "cabinetTypes": {
+      "gpu": "GPU Cabinet",
+      "network": "Network Cabinet",
+      "storage": "Storage Cabinet",
+      "compute": "Compute Cabinet",
+      "security": "Security Cabinet",
+      "custom": "Custom"
+    },
+    "powerHeat": "Power Heatmap",
+    "cabinetPower": "Cabinet Power",
+    "powerExceeded": "Power Exceeded",
+    "noCabinetData": "No cabinet data. Render topology first"
   }
 }

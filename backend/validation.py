@@ -105,21 +105,27 @@ def _rule_convergence_ratio(ctx: ValidationContext) -> List[ValidationIssue]:
 
 
 def _rule_cabinet_power(ctx: ValidationContext) -> List[ValidationIssue]:
-    """V002: 机柜功率密度校验"""
+    """V002: 机柜功率密度校验
+
+    V2.9.0: 阈值取 min(散热方式上限, power_limit_per_rack)，
+    使机柜功率上限与 rack_config 配置一致（默认 6000W 机柜不再等 15000W 才报警）。
+    """
     issues = []
     for cab in ctx.cabinets:
         power = cab.get("power_watts", 0)
         cab_name = cab.get("name", cab.get("cabinet_name", "未知"))
         cooling = cab.get("cooling_method", "air")
-        threshold = {"air": 15000, "cold_plate": 60000, "immersion": 100000}.get(cooling, 15000)
+        cooling_threshold = {"air": 15000, "cold_plate": 60000, "immersion": 100000}.get(cooling, 15000)
+        rack_limit = cab.get("power_limit") or ctx.config.get("power_limit_per_rack") or 0
+        threshold = min(cooling_threshold, rack_limit) if rack_limit else cooling_threshold
         if power > threshold:
             issues.append(ValidationIssue(
                 rule_id="V002",
                 severity=Severity.ERROR,
                 category="物理规则",
-                message=f"机柜 {cab_name} 功率 {power}W 超过 {cooling} 散热上限 {threshold}W",
+                message=f"机柜 {cab_name} 功率 {power}W 超过机柜上限 {threshold}W",
                 affected_items=[cab_name],
-                recommendation="升级散热方式或减少机柜内设备",
+                recommendation="升级散热方式、提高单柜功率上限或减少机柜内设备",
             ))
     return issues
 
@@ -261,6 +267,59 @@ def _rule_u_position_conflict(ctx: ValidationContext) -> List[ValidationIssue]:
                         affected_items=[cab_name, name1, name2],
                         recommendation="调整设备U位分配，消除重叠",
                     ))
+    return issues
+
+
+def _rule_gpu_cabinet_overload(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V014: GPU 高功率柜多台设备告警 (V2.9.3)
+
+    高功率 GPU(如 DGX H100/H200 10~12KW)应独占机柜；
+    若 GPU 柜含 ≥2 台设备且总功率超过上限 80%，提示建议独占。
+    """
+    issues = []
+    for cab in ctx.cabinets:
+        if cab.get("type") != "gpu":
+            continue
+        items = cab.get("items", [])
+        if len(items) < 2:
+            continue
+        power = cab.get("power_watts", 0)
+        limit = cab.get("power_limit") or ctx.config.get("power_limit_per_rack") or 0
+        if limit and power > limit * 0.8:
+            cab_name = cab.get("name", "未知")
+            issues.append(ValidationIssue(
+                rule_id="V014",
+                severity=Severity.WARNING,
+                category="物理规则",
+                message=f"GPU 柜 {cab_name} 含 {len(items)} 台设备且功率 {power}W 达上限 {int(limit * 0.8)}W 以上，建议独占机柜",
+                affected_items=[cab_name] + [it.get("device_name", "") for it in items],
+                recommendation="高功率 GPU 服务器应独占机柜(1 台/柜)，或开启 GPU 独占策略",
+            ))
+    return issues
+
+
+def _rule_cabinet_utilization(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V015: 机柜利用率过低提示 (V2.9.3)
+
+    机柜 U 位利用率 <30% 且非空时提示，帮助发现低效机柜布局。
+    """
+    issues = []
+    rack_type = ctx.config.get("rack_type", 42) or 42
+    for cab in ctx.cabinets:
+        items = cab.get("items", [])
+        if not items:
+            continue
+        used_u = max((it.get("end_u") or 0) for it in items)
+        if rack_type > 0 and used_u / rack_type < 0.3:
+            cab_name = cab.get("name", "未知")
+            issues.append(ValidationIssue(
+                rule_id="V015",
+                severity=Severity.INFO,
+                category="物理规则",
+                message=f"机柜 {cab_name} U 位利用率 {used_u}/{rack_type}U 低于 30%，存在布局优化空间",
+                affected_items=[cab_name],
+                recommendation="合并低利用率机柜设备或调整上架方案，提高机柜密度",
+            ))
     return issues
 
 
@@ -486,4 +545,7 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V012", "合规规则", _rule_liquid_cooling_interface)
     # V2.7.5-T7: 信创比例校验
     engine.register_rule("V013", "合规规则", _rule_domestic_ratio)
+    # V2.9.3: 机柜物理合理性校验
+    engine.register_rule("V014", "物理规则", _rule_gpu_cabinet_overload)
+    engine.register_rule("V015", "物理规则", _rule_cabinet_utilization)
     return engine

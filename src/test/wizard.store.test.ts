@@ -115,6 +115,29 @@ describe('WizardStore', () => {
       expect(rack.power_limit_per_rack).toBe(12000)
       expect(rack.naming_prefix).toBe('机柜') // 未更新字段保留
     })
+
+    it('updateRackConfig 应支持 V2.9.1 扩展字段 (散热方式/独占开关/功率预设)', () => {
+      useWizardStore.getState().updateRackConfig({
+        cooling_method: 'cold_plate',
+        gpu_dedicated: true,
+        power_preset: '16kw',
+        power_limit_per_rack: 16000,
+      })
+      const rack = useWizardStore.getState().config.rack_config
+      expect(rack.cooling_method).toBe('cold_plate')
+      expect(rack.gpu_dedicated).toBe(true)
+      expect(rack.power_preset).toBe('16kw')
+      expect(rack.power_limit_per_rack).toBe(16000)
+      // 默认值保留
+      expect(rack.rack_type).toBe(42)
+    })
+
+    it('默认机柜配置含 V2.9.1 扩展字段', () => {
+      const rack = useWizardStore.getState().config.rack_config
+      expect(rack.cooling_method).toBe('air')
+      expect(rack.gpu_dedicated).toBe(false)
+      expect(rack.power_preset).toBe('')
+    })
   })
 
   describe('设备引用管理', () => {

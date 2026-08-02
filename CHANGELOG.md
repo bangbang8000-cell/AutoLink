@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## [2.9.0] - 2026-08-02
+
+### 机柜规划与上架逻辑重构
+
+v2.9.0 系列让机柜规划从"简单轮转"升级为"物理约束装箱"，贴近真实机房上架规则（PRD 见 `docs/v2.9/v2.9.X_PRD.md`）。
+
+#### 机柜核心算法（v2.9.0）
+- **多约束装箱算法**: 新建 `backend/rack_allocation.py`，功率 + U 位双约束 + 设备类型区分（GPU/通算/存储/网络）；GPU 高功率（≥50% 上限）独占机柜，128×DGX H100（10.2KW）在 12/16KW 柜自动 **1 台/柜**；通算/存储 15 台/柜；网络设备按网段聚柜
+- **交换机机柜分配**: param/storage/oob/biz 交换机全部参与上架（网络柜），拓扑连线机柜字段补齐，oob/biz 分配后回填连接机柜信息
+- **机柜功率汇总含交换机**: `_calculate_power_summary` 遍历全部设备，输出每柜 type/设备数/功率/利用率/超限标记
+- **V002 校验升级**: 阈值取 `min(散热方式上限, power_limit_per_rack)`，6000W 柜不再等 15000W 才报警
+- **功率密度联动**: 机柜数含网络柜，密度估算与分配一致
+
+#### 机柜配置与报告（v2.9.1）
+- `rack_config` 扩展：`cooling_method`（air/cold_plate/immersion）、`gpu_dedicated`（独占开关）、`power_preset`（功率预设）
+- `WizardStepRack` 增强：功率预设快速按钮（6/12/16/30/60KW）、散热方式选择、GPU 独占开关
+- 报告/PDF 新增"机柜规划"章节（柜号/类型/设备数/功率/利用率/超限），功率密度与散热配置一致性提示
+
+#### 前端机柜体验（v2.9.2）
+- `rack.store` 重构：`initFromTopology` 优先后端分配并按类型分类（gpu/storage/compute/network），`loadRackLayout` 无布局回退空状态（不再虚构 4 柜）
+- 机柜类型着色：机架视图类型徽章 + 机房平面图类型角标（GPU 红/网络蓝/存储绿/通算黄）
+- i18n：新增 rack 命名空间 5 语言 + key 完整性测试
+
+#### 双栈与智能分组（v2.9.3）
+- Scale-Up 域聚柜验证：GPU 服务器组（域）输入有序 → 柜号连续
+- 新校验规则 **V014**（GPU 高功率柜多台共柜告警）、**V015**（机柜利用率 <30% 提示）
+- 修复 `scripts/test_export.py` TypeError（`library.get(profile)` 传入不可哈希的 LibraryDevice → 改传 `profile.id`）
+- 回归测试: tsc 0 errors、eslint 0 errors、vitest 335 passed、pytest 456 passed
+
 ## [2.8.0] - 2026-08-02
 
 ### 体验与性能

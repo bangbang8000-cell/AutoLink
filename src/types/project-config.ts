@@ -46,11 +46,20 @@ export interface ProjectTopology {
   oob_downlink_limit: number
 }
 
+/** 机柜散热方式 */
+export type RackCoolingMethod = 'air' | 'cold_plate' | 'immersion'
+
 /** 机柜配置 */
 export interface ProjectRackConfig {
   rack_type: 42 | 49
   power_limit_per_rack: number
   naming_prefix: string
+  /** V2.9.1: 机柜散热方式 (air/cold_plate/immersion) */
+  cooling_method?: RackCoolingMethod
+  /** V2.9.1: GPU 服务器独占机柜开关 (默认 false = 按功率自然装箱) */
+  gpu_dedicated?: boolean
+  /** V2.9.1: 功率预设标识 (可选) */
+  power_preset?: string
   cabinet_list?: string  // CSV file path or inline data
 }
 
@@ -102,6 +111,9 @@ export function createDefaultProjectConfig(name: string): ProjectConfig {
       rack_type: 42,
       power_limit_per_rack: 6000,
       naming_prefix: '机柜',
+      cooling_method: 'air',
+      gpu_dedicated: false,
+      power_preset: '',
     },
   }
 }

@@ -23,6 +23,25 @@ export const CABINET_TYPE_LABELS: Record<CabinetType, string> = {
   custom: '自定义',
 }
 
+// V2.9.2: 从拓扑节点推断机柜类型（服务器按 group 分类，交换机归为网络柜）
+export function toCabinetType(node: { type?: string; group?: string }): CabinetType {
+  if (node.type !== 'server') return 'network'
+  const g = node.group || ''
+  if (g.includes('存储')) return 'storage'
+  if (g.includes('通算')) return 'compute'
+  return 'gpu'
+}
+
+// V2.9.2: 机柜类型配色（机架视图/机房平面图按类型区分）
+export const RACK_TYPE_COLORS: Record<CabinetType, { bg: string; text: string; border: string }> = {
+  gpu: { bg: '#fee2e2', text: '#b91c1c', border: '#f87171' },        // 红
+  network: { bg: '#dbeafe', text: '#1d4ed8', border: '#60a5fa' },    // 蓝
+  storage: { bg: '#dcfce7', text: '#15803d', border: '#4ade80' },    // 绿
+  compute: { bg: '#fef9c3', text: '#a16207', border: '#facc15' },    // 黄
+  security: { bg: '#f3e8ff', text: '#7e22ce', border: '#c084fc' },   // 紫
+  custom: { bg: '#f1f5f9', text: '#475569', border: '#94a3b8' },     // 灰
+}
+
 export interface RackCabinet {
   id: number
   name: string
@@ -78,81 +97,85 @@ export const useRackStore = create<RackState>()(
   editingDevice: null,
 
   initDefault: (serverCount, rackType = 42, powerLimit = 6000) => {
-    const baseServers = Math.min(serverCount, 134)
-    const cabsNeeded = Math.ceil(baseServers / rackType)
-
+    // V2.9.2: 按真实 GPU 服务器参数生成 (8U 高, 功率≈上限85%), GPU 独占机柜 1 台/柜
+    const gpuPower = Math.max(1, Math.round((powerLimit * 0.85) / 100) * 100)
+    const gpuU = 8
     const cabinets: RackCabinet[] = []
-    for (let i = 0; i < cabsNeeded; i++) {
+    const unplacedDevices: UnplacedDevice[] = []
+    for (let i = 1; i <= serverCount; i++) {
+      const cabId = i
+      const col = String.fromCharCode(65 + ((i - 1) % 26))
+      const row = Math.floor((i - 1) / 26) + 1
       cabinets.push({
-        id: i + 1,
-        name: `机柜 ${String.fromCharCode(65 + i)}`,
+        id: cabId,
+        name: `机柜 ${col}${row}`,
         totalU: rackType,
         type: 'gpu',
         power_limit: powerLimit,
         devices: [],
       })
-    }
-
-    // Create default devices
-    const unplacedDevices: UnplacedDevice[] = []
-    for (let i = 1; i <= baseServers; i++) {
       unplacedDevices.push({
         id: `gpu-${i}`,
         name: `GPU服务器_${i}`,
         type: 'GPU Server',
-        height: 4,
-        power_watts: 2000,
+        height: gpuU,
+        power_watts: gpuPower,
       })
     }
-
     set({ cabinets, unplacedDevices, selectedCabinetId: cabinets.length > 0 ? 1 : null })
   },
 
   initFromTopology: (topologyNodes, rackType = 42, powerLimit = 6000) => {
-    // Extract server-type devices from topology data, using real cabinet assignments
-    const serverNodes = topologyNodes.filter((n: any) => n.type === 'server')
-    if (serverNodes.length === 0) {
-      get().initDefault(134, rackType, powerLimit)
+    // V2.9.2: 优先采用后端分配(cabinetId/type/startU/endU/power/uHeight)，
+    // 服务器按 group 分类(gpu/storage/compute)，交换机归为网络柜
+    const nodes = (topologyNodes as any[]).filter(
+      (n) => n.cabinetId != null || n.type === 'server',
+    )
+    if (nodes.length === 0) {
+      // 无有效节点 → 空状态（不虚构机柜，等待渲染拓扑）
+      set({ cabinets: [], unplacedDevices: [], selectedCabinetId: null, addDeviceMode: false })
       return
     }
 
-    // Group servers by cabinetId to respect topology's cabinet assignments
-    const cabinetMap = new Map<number, { id: number; name: string; devices: any[] }>()
+    const cabinetMap = new Map<number, { id: number; name: string; type: CabinetType; devices: RackDevice[] }>()
     const unplacedDevices: UnplacedDevice[] = []
 
-    for (let i = 0; i < serverNodes.length; i++) {
-      const node: any = serverNodes[i]
-      const cabinetId: number = node.cabinetId ?? (i % Math.ceil(serverNodes.length / Math.ceil(serverNodes.length / rackType)) + 1)
-      const cabinetName: string = node.cabinetName || `机柜 ${String.fromCharCode(64 + cabinetId)}`
-
-      if (!cabinetMap.has(cabinetId)) {
-        cabinetMap.set(cabinetId, {
-          id: cabinetId,
-          name: cabinetName,
-          devices: [],
-        })
-      }
-
-      const cab = cabinetMap.get(cabinetId)!
+    for (const node of nodes) {
       const uHeight: number = node.uHeight || 4
-      const powerWatts: number = node.powerWatts || 2000
+      const powerWatts: number = node.powerWatts || 0
+      const cabinetId: number = node.cabinetId
+      if (cabinetId == null) {
+        // 无分配信息（旧数据）→ 待分配池
+        unplacedDevices.push({
+          id: node.id,
+          name: node.id,
+          type: node.group || (node.type === 'server' ? 'GPU Server' : 'Switch'),
+          height: uHeight,
+          power_watts: powerWatts,
+        })
+        continue
+      }
+      const cabinetName: string = node.cabinetName || `机柜 ${cabinetId}`
+      const cabType = toCabinetType(node)
+      if (!cabinetMap.has(cabinetId)) {
+        cabinetMap.set(cabinetId, { id: cabinetId, name: cabinetName, type: cabType, devices: [] })
+      }
+      const cab = cabinetMap.get(cabinetId)!
       const startU: number = node.startU ?? (cab.devices.length * uHeight + 1)
-
       cab.devices.push({
         id: node.id,
         name: node.id,
-        type: node.group || 'GPU Server',
+        type: node.group || (node.type === 'server' ? 'GPU Server' : 'Switch'),
         cabinetId,
         startU,
-        endU: startU + uHeight - 1,
+        endU: node.endU ?? (startU + uHeight - 1),
         power_watts: powerWatts,
       })
-
-      // Also add to unplaced for manual placement flexibility
+      // 同时进入待分配池，便于手动调整
       unplacedDevices.push({
         id: node.id,
         name: node.id,
-        type: node.group || 'GPU Server',
+        type: node.group || (node.type === 'server' ? 'GPU Server' : 'Switch'),
         height: uHeight,
         power_watts: powerWatts,
       })
@@ -162,7 +185,7 @@ export const useRackStore = create<RackState>()(
       id: c.id,
       name: c.name,
       totalU: rackType,
-      type: 'gpu' as CabinetType,
+      type: c.type,
       power_limit: powerLimit,
       devices: c.devices,
     }))
@@ -201,12 +224,11 @@ export const useRackStore = create<RackState>()(
           }
         }
       }
-      // Fallback: init default layout
-      get().initDefault(134)
     } catch (err) {
       console.error('loadRackLayout:', err)
-      get().initDefault(134)
     }
+    // V2.9.2: 无布局文件 → 空状态（不虚构机柜），渲染拓扑后由 initFromTopology 填充
+    set({ cabinets: [], unplacedDevices: [], selectedCabinetId: null, addDeviceMode: false })
   },
 
   saveRackLayout: async (projectName) => {

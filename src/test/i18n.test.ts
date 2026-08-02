@@ -239,6 +239,17 @@ describe('i18n key 完整性(以 zh-CN 为基准)', () => {
     }
   })
 
+  it('rack 机柜命名空间应存在于所有语言(V2.9.2 机柜类型标签)', () => {
+    for (const { code, resources } of LANGUAGES) {
+      const langKeys = new Set(flattenKeys(resources as unknown as Record<string, unknown>))
+      expect(langKeys.has('common.rack.cabinetTypes.gpu'), `${code} 缺少 rack.cabinetTypes`).toBe(true)
+      expect(langKeys.has('common.rack.cabinetTypes.network'), `${code} 缺少 rack.cabinetTypes.network`).toBe(true)
+      expect(langKeys.has('common.rack.cabinetTypes.storage'), `${code} 缺少 rack.cabinetTypes.storage`).toBe(true)
+      expect(langKeys.has('common.rack.cabinetTypes.compute'), `${code} 缺少 rack.cabinetTypes.compute`).toBe(true)
+      expect(langKeys.has('common.rack.noCabinetData'), `${code} 缺少 rack.noCabinetData`).toBe(true)
+    }
+  })
+
   /** 按点路径取值 */
   function getAt(obj: unknown, path: string): unknown {
     return path.split('.').reduce<unknown>((acc, part) => {

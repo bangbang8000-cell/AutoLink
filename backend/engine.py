@@ -115,7 +115,9 @@ def _estimate_design(designer, params=None):
     it_power_kw = round(it_power_w / 1000.0, 2)
 
     # 2. 机柜数量与功率密度
-    cabinet_ids = {s.cabinet_id for s in designer.servers if s.cabinet_id is not None}
+    # V2.9.0: 机柜数含交换机(网络柜)，来自分配结果
+    cabinet_ids = {d.cabinet_id for d in all_switches + designer.servers
+                   if getattr(d, 'cabinet_id', None) is not None}
     num_cabinets = len(cabinet_ids) or 1
     density = estimate_cabinet_power_density(it_power_kw, num_cabinets)
 
@@ -180,6 +182,9 @@ def _estimate_design(designer, params=None):
         },
         'convergence': convergence,
         'cabinetDensity': density,
+        # V2.9.1: 功率密度推荐散热 vs 机柜配置散热一致性
+        'coolingConsistency': _check_cooling_consistency(
+            default_cooling, getattr(designer, 'cooling_method', 'air')),
         'inputs': {
             'cooling_method': pue_inp.cooling_method,
             'outdoor_temp_c': pue_inp.outdoor_temp_c,
@@ -203,6 +208,20 @@ def _conv_to_dict(r):
         'recommendation': r.recommendation,
     }
 
+
+def _check_cooling_consistency(recommended, configured):
+    """V2.9.1: 密度推荐散热 vs 机柜配置散热一致性提示
+
+    配置为默认 air 时不做提示（保守默认）；显式配置非 air 且与密度推荐不一致时提示。
+    """
+    if not configured or configured == 'air' or recommended == configured:
+        return {'consistent': True, 'message': ''}
+    return {
+        'consistent': False,
+        'message': f"机柜配置散热方式({configured})与功率密度推荐({recommended})不一致",
+        'recommended': recommended,
+        'configured': configured,
+    }
 
 def _get_config_file(params):
     """获取配置文件路径，优先使用 project_config.json"""
@@ -279,6 +298,13 @@ def handle_design(params):
             # V2.4.6: Rail 字段
             "railId": sw.rail_id,
             "railRole": sw.rail_role,
+            # V2.9.0: 交换机机柜字段 (接入 rack_allocation 分配)
+            "cabinetId": sw.cabinet_id,
+            "cabinetName": sw.cabinet_name,
+            "startU": sw.start_u,
+            "endU": sw.end_u,
+            "powerWatts": sw.power_watts,
+            "uHeight": sw.u_height,
         }
 
     for server in designer.servers:
@@ -358,23 +384,26 @@ def handle_design(params):
 
     # V2.7.2: 构造 ValidationContext,传入 validation.py 引擎
     # 1. 收集机柜信息(含设备 U 位用于 V006)
+    # V2.9.0: 统计范围含交换机,并标注机柜类型(来自 rack_allocation 分配)
+    cabinet_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
     cabinet_map = {}
-    for server in designer.servers:
-        if server.cabinet_id is None:
+    for dev in all_devices:
+        if dev.cabinet_id is None:
             continue
-        cid = server.cabinet_id
+        cid = dev.cabinet_id
         if cid not in cabinet_map:
             cabinet_map[cid] = {
-                "name": server.cabinet_name or f"机柜{cid}",
+                "name": dev.cabinet_name or f"机柜{cid}",
+                "type": cabinet_type_map.get(cid, 'gpu'),
                 "power_watts": 0,
                 "cooling_method": getattr(designer, '_default_cooling_method', 'air'),
                 "items": [],
             }
-        cabinet_map[cid]["power_watts"] += server.power_watts or 0
+        cabinet_map[cid]["power_watts"] += dev.power_watts or 0
         cabinet_map[cid]["items"].append({
-            "device_name": server.name,
-            "start_u": server.start_u or 0,
-            "end_u": server.end_u or 0,
+            "device_name": dev.name,
+            "start_u": dev.start_u or 0,
+            "end_u": dev.end_u or 0,
         })
 
     cabinets_ctx = []
@@ -384,6 +413,7 @@ def handle_design(params):
             "name": info["name"],
             "power_watts": info["power_watts"],
             "cooling_method": info["cooling_method"],
+            "power_limit": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
         })
         # V006: U 位冲突校验(每个设备一条记录)
         for item in info["items"]:
@@ -423,6 +453,9 @@ def handle_design(params):
         "param_ports_per_server": getattr(designer, 'param_ports_per_server', 8),
         "ports_per_server": getattr(designer, 'param_ports_per_server', 8),
         "oob_enabled": getattr(designer, 'oob_enabled', True),
+        # V2.9.3: 机柜配置 (供 V014/V015 读取)
+        "rack_type": getattr(designer, 'rack_type', 42),
+        "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
@@ -513,31 +546,40 @@ def handle_report(params):
 
 
 def _calculate_power_summary(designer):
-    """计算机柜功率使用情况"""
+    """V2.9.0: 计算机柜功率使用情况（含交换机，机柜类型来自分配结果）"""
     cabinets = {}
     power_limit = getattr(designer, 'power_limit_per_rack', 6000) or 6000
-    for server in designer.servers:
-        if server.cabinet_id is None:
+    cabinet_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
+    all_devices = list(designer.servers) + (
+        getattr(designer, 'param_leaves', []) + getattr(designer, 'param_spines', []) +
+        getattr(designer, 'param_cores', []) + getattr(designer, 'storage_leaves', []) +
+        getattr(designer, 'storage_spines', []) + getattr(designer, 'storage_cores', []) +
+        getattr(designer, 'oob_access', []) + getattr(designer, 'oob_agg', []) +
+        getattr(designer, 'biz_access', []) + getattr(designer, 'biz_agg', [])
+    )
+    for dev in all_devices:
+        if dev.cabinet_id is None:
             continue
-        cid = server.cabinet_id
+        cid = dev.cabinet_id
         if cid not in cabinets:
             cabinets[cid] = {
                 "cabinetId": cid,
-                "cabinetName": server.cabinet_name or f"机柜{cid}",
+                "cabinetName": dev.cabinet_name or f"机柜{cid}",
+                "type": cabinet_type_map.get(cid, 'gpu'),
                 "totalPower": 0,
                 "deviceCount": 0,
                 "powerLimit": power_limit,
                 "devices": [],
             }
-        server_power = server.power_watts or 0
-        cabinets[cid]["totalPower"] += server_power
+        dev_power = dev.power_watts or 0
+        cabinets[cid]["totalPower"] += dev_power
         cabinets[cid]["deviceCount"] += 1
         cabinets[cid]["devices"].append({
-            "name": server.name,
-            "power": server_power,
-            "uHeight": server.u_height or 1,
-            "startU": server.start_u,
-            "endU": server.end_u,
+            "name": dev.name,
+            "power": dev_power,
+            "uHeight": dev.u_height or 1,
+            "startU": dev.start_u,
+            "endU": dev.end_u,
         })
 
     cabinet_list = []

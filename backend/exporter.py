@@ -141,6 +141,10 @@ def generate_switch_view(designer):
     return {'参数网络': param_df, '存储网络': storage_df}
 
 
+# V2.9.1: 机柜类型显示标签 (与 rack_allocation.CABINET_TYPE_* 对应)
+_RACK_TYPE_LABELS = {'gpu': 'GPU柜', 'compute': '通算柜', 'storage': '存储柜', 'network': '网络柜'}
+
+
 def generate_summary_data(designer):
     """生成网络设计摘要数据"""
     half_ports = designer.param_switch_ports // 2
@@ -708,8 +712,9 @@ def export_bom(designer, filename):
     # 1. 服务器
     for server in designer.servers:
         dev = None
-        if library and hasattr(server, 'device_profile') and server.device_profile:
-            dev = library.get(server.device_profile)
+        if library and getattr(server, 'device_profile', None):
+            # V2.9.3: 传入 id 而非 LibraryDevice 对象(对象不可哈希导致 TypeError)
+            dev = library.get(getattr(server.device_profile, 'id', '')) or None
         price = getattr(dev, 'price_range', None) if dev else None
         rows.append({
             '类别': 'GPU服务器' if 'GPU' in (server.name + getattr(dev, 'description', '') or '') else '服务器',
@@ -730,8 +735,9 @@ def export_bom(designer, filename):
     )
     for sw in all_switches:
         dev = None
-        if library and hasattr(sw, 'device_profile') and sw.device_profile:
-            dev = library.get(sw.device_profile)
+        if library and getattr(sw, 'device_profile', None):
+            # V2.9.3: 传入 id 而非 LibraryDevice 对象(对象不可哈希导致 TypeError)
+            dev = library.get(getattr(sw.device_profile, 'id', '')) or None
         price = getattr(dev, 'price_range', None) if dev else None
         sw_type = '参数网交换机' if '参数' in sw.name else \
                   '存储网交换机' if '存储' in sw.name else \
@@ -919,6 +925,36 @@ def generate_report_data(designer):
         '光模块估价区间': f"¥{module_cost_lo:,} ~ ¥{module_cost_hi:,}",
     }
 
+    # 7. 机柜规划 (V2.9.1: 机柜清单,含交换机; 类型来自 rack_allocation 分配)
+    rack_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
+    rack_cabs = {}
+    for dev in designer.servers + all_switches:
+        if dev.cabinet_id is None:
+            continue
+        cid = dev.cabinet_id
+        if cid not in rack_cabs:
+            rack_cabs[cid] = {
+                '柜号': dev.cabinet_name or f"机柜{cid}",
+                '类型': _RACK_TYPE_LABELS.get(rack_type_map.get(cid, 'gpu'), rack_type_map.get(cid, 'gpu')),
+                '设备数': 0,
+                '总功率(W)': 0,
+                '功率上限(W)': designer.power_limit_per_rack,
+                '利用率(%)': 0,
+                '超限': False,
+                '设备': [],
+            }
+        rack_cabs[cid]['设备数'] += 1
+        rack_cabs[cid]['总功率(W)'] += dev.power_watts or 0
+        rack_cabs[cid]['设备'].append(
+            f"{dev.name}({dev.power_watts or 0}W/U{dev.start_u}-U{dev.end_u})"
+        )
+    racks = []
+    for cid in sorted(rack_cabs.keys()):
+        c = rack_cabs[cid]
+        c['利用率(%)'] = round(c['总功率(W)'] / c['功率上限(W)'] * 100, 1) if c['功率上限(W)'] else 0
+        c['超限'] = c['总功率(W)'] > c['功率上限(W)']
+        racks.append(c)
+
     return {
         'overview': overview,
         'architecture': architecture,
@@ -926,6 +962,7 @@ def generate_report_data(designer):
         'validation': validation,
         'modules': module_stats,
         'cost': cost,
+        'racks': racks,
         'generated_at': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
@@ -1111,7 +1148,7 @@ def export_pdf_report(designer, filename):
 
     # V2.7.4-T8: 目录
     story.append(Paragraph('目录', h2_style))
-    toc_items = ['1. 项目概览', '2. 网络架构', '3. 功耗与散热', '4. 光模块汇总', '5. 成本估算', '6. 校验结果']
+    toc_items = ['1. 项目概览', '2. 网络架构', '3. 功耗与散热', '4. 光模块汇总', '5. 成本估算', '6. 机柜规划', '7. 校验结果']
     for item in toc_items:
         story.append(Paragraph(item, toc_style))
     story.append(PageBreak())
@@ -1231,8 +1268,44 @@ def export_pdf_report(designer, filename):
     story.append(cost_table)
     story.append(Spacer(1, 4 * mm))
 
-    # 6. 校验结果
-    story.append(Paragraph('6. 校验结果', h2_style))
+    # V2.9.1: 6. 机柜规划（机柜清单，含交换机）
+    story.append(Paragraph('6. 机柜规划', h2_style))
+    racks = data.get('racks', [])
+    if racks:
+        rack_rows = [[Paragraph('柜号', cell_style), Paragraph('类型', cell_style),
+                      Paragraph('设备数', cell_style), Paragraph('总功率(W)', cell_style),
+                      Paragraph('上限(W)', cell_style), Paragraph('利用率', cell_style),
+                      Paragraph('超限', cell_style)]]
+        for r in racks[:60]:
+            rack_rows.append([
+                Paragraph(str(r['柜号']), cell_style),
+                Paragraph(str(r['类型']), cell_style),
+                Paragraph(str(r['设备数']), cell_style),
+                Paragraph(str(r['总功率(W)']), cell_style),
+                Paragraph(str(r['功率上限(W)']), cell_style),
+                Paragraph(f"{r['利用率(%)']}%", cell_style),
+                Paragraph('是' if r['超限'] else '否', cell_style),
+            ])
+        if len(racks) > 60:
+            rack_rows.append([Paragraph('...', cell_style), Paragraph('', cell_style),
+                              Paragraph('', cell_style), Paragraph('', cell_style),
+                              Paragraph('', cell_style), Paragraph('', cell_style),
+                              Paragraph('', cell_style)])
+        rack_table = Table(rack_rows, colWidths=[30 * mm, 18 * mm, 18 * mm, 24 * mm, 22 * mm, 18 * mm, 16 * mm])
+        rack_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0ea5e9')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(rack_table)
+    else:
+        story.append(Paragraph('无机柜数据', normal_style))
+    story.append(Spacer(1, 4 * mm))
+
+    # 7. 校验结果
+    story.append(Paragraph('7. 校验结果', h2_style))
     val = data['validation']
     status = '通过' if val.get('valid') else '失败'
     story.append(Paragraph(f"校验状态：<b>{status}</b>", normal_style))

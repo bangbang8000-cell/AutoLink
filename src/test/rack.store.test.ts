@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useRackStore } from '../stores/rack.store'
+import { useRackStore, toCabinetType } from '../stores/rack.store'
 import type { RackCabinet, RackDevice, CabinetType } from '../stores/rack.store'
 
 // Mock electron API
@@ -69,30 +69,52 @@ describe('RackStore', () => {
   })
 
   describe('initFromTopology', () => {
-    it('应该从拓扑数据初始化机柜', () => {
+    it('应优先采用后端分配的机柜信息并按类型分类', () => {
       const topoNodes = [
-        { id: 'GPU服务器_1', type: 'server', group: 'GPU组1', podid: 'pod-gpu-1' },
-        { id: 'GPU服务器_2', type: 'server', group: 'GPU组1', podid: 'pod-gpu-1' },
-        { id: 'GPU服务器_3', type: 'server', group: 'GPU组2', podid: 'pod-gpu-2' },
-        { id: '参数Leaf_G1_1', type: 'param_leaf', group: '参数Leaf组1', podid: 'pod-gpu-1' },
+        { id: 'GPU服务器_1', type: 'server', group: 'GPU服务器组1', podid: 'pod-gpu-1',
+          cabinetId: 1, cabinetName: '机柜1', startU: 1, endU: 8, powerWatts: 10200, uHeight: 8 },
+        { id: 'GPU服务器_2', type: 'server', group: 'GPU服务器组1', podid: 'pod-gpu-1',
+          cabinetId: 2, cabinetName: '机柜2', startU: 1, endU: 8, powerWatts: 10200, uHeight: 8 },
+        { id: '通算服务器_1', type: 'server', group: '通算服务器组', podid: 'pod-general',
+          cabinetId: 3, cabinetName: '机柜3', startU: 1, endU: 2, powerWatts: 800, uHeight: 2 },
+        { id: '参数Leaf_G1_1', type: 'param_leaf', group: '参数Leaf组1', podid: 'pod-gpu-1',
+          cabinetId: 4, cabinetName: '机柜4', startU: 1, endU: 1, powerWatts: 200, uHeight: 1 },
+      ]
+
+      useRackStore.getState().initFromTopology(topoNodes, 42, 12000)
+
+      const state = useRackStore.getState()
+      expect(state.cabinets.length).toBe(4)
+      expect(state.cabinets[0].type).toBe('gpu')
+      expect(state.cabinets[2].type).toBe('compute')
+      expect(state.cabinets[3].type).toBe('network')
+      expect(state.cabinets[0].devices.length).toBe(1)
+      expect(state.cabinets[0].devices[0].startU).toBe(1)
+      expect(state.unplacedDevices.length).toBe(4)
+    })
+
+    it('无 cabinetId 的旧数据节点应进入待分配池', () => {
+      const topoNodes = [
+        { id: 'GPU服务器_1', type: 'server', group: 'GPU服务器组1', podid: 'pod-gpu-1' },
+        { id: 'GPU服务器_2', type: 'server', group: 'GPU服务器组1', podid: 'pod-gpu-1' },
       ]
 
       useRackStore.getState().initFromTopology(topoNodes, 42, 8000)
 
       const state = useRackStore.getState()
-      expect(state.cabinets.length).toBeGreaterThan(0)
-      expect(state.unplacedDevices.length).toBe(3) // 3 servers
+      expect(state.cabinets.length).toBe(0)
+      expect(state.unplacedDevices.length).toBe(2)
     })
 
-    it('空拓扑数据应使用默认初始化', () => {
+    it('空拓扑数据应置为空状态（不虚构机柜）', () => {
       useRackStore.getState().initFromTopology([], 42, 8000)
 
       const state = useRackStore.getState()
-      // 无服务器时调用 initDefault(134, ...)
-      expect(state.unplacedDevices.length).toBe(134)
+      expect(state.cabinets.length).toBe(0)
+      expect(state.unplacedDevices.length).toBe(0)
     })
 
-    it('无服务器类型的拓扑应使用默认初始化', () => {
+    it('仅交换机且无 cabinetId 的拓扑应置为空状态', () => {
       const topoNodes = [
         { id: '参数Leaf_G1_1', type: 'param_leaf', group: '参数Leaf组1', podid: 'pod-gpu-1' },
       ]
@@ -100,7 +122,18 @@ describe('RackStore', () => {
       useRackStore.getState().initFromTopology(topoNodes, 42, 8000)
 
       const state = useRackStore.getState()
-      expect(state.unplacedDevices.length).toBe(134)
+      expect(state.cabinets.length).toBe(0)
+      expect(state.unplacedDevices.length).toBe(0)
+    })
+  })
+
+  describe('toCabinetType', () => {
+    it('服务器按 group 分类为 gpu/storage/compute', () => {
+      expect(toCabinetType({ type: 'server', group: 'GPU服务器组1' })).toBe('gpu')
+      expect(toCabinetType({ type: 'server', group: '存储服务器组' })).toBe('storage')
+      expect(toCabinetType({ type: 'server', group: '通算服务器组' })).toBe('compute')
+      expect(toCabinetType({ type: 'param_leaf', group: '参数Leaf组' })).toBe('network')
+      expect(toCabinetType({ type: 'oob_access', group: 'OOB接入组' })).toBe('network')
     })
   })
 

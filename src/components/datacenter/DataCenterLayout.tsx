@@ -8,7 +8,7 @@
  */
 import { useMemo, useEffect } from 'react'
 import { useDataCenterStore, getPowerColor } from '@/stores/datacenter.store'
-import { useRackStore } from '@/stores/rack.store'
+import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS, type CabinetType } from '@/stores/rack.store'
 import { useTranslation } from 'react-i18next'
 
 export function DataCenterLayout() {
@@ -86,6 +86,9 @@ export function DataCenterLayout() {
         {placements.map((p) => {
           const color = getPowerColor(p.powerUsage.percent)
           const isSelected = selectedId === p.id
+          // V2.9.2: 机柜类型配色
+          const typeColor = RACK_TYPE_COLORS[(p.type as CabinetType)] || RACK_TYPE_COLORS.custom
+          const typeLabel = t(`rack.cabinetTypes.${p.type}`, CABINET_TYPE_LABELS[(p.type as CabinetType)] || p.type || 'custom')
           return (
             <g
               key={p.id}
@@ -101,6 +104,13 @@ export function DataCenterLayout() {
                 strokeWidth={isSelected ? 2 : 1}
                 rx={2}
               />
+              {/* V2.9.2: 机柜类型角标 */}
+              <rect x={4} y={4} width={typeLabel.length * 7 + 6} height={11} rx={2}
+                fill={typeColor.bg} stroke={typeColor.border} strokeWidth={0.5} />
+              <text x={7 + typeLabel.length * 3.5} y={12} textAnchor="middle"
+                fontSize={6.5} fontWeight="bold" fill={typeColor.text}>
+                {typeLabel}
+              </text>
               {/* 机柜名称 */}
               <text
                 x={p.width / 2}
