@@ -1,6 +1,7 @@
 import { BrowserWindow, app, net } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { isVersionNewer } from '../utils/version.js'
 
 let autoUpdater: typeof import('electron-updater').autoUpdater | null = null
 
@@ -87,12 +88,14 @@ async function checkLatestYmlFallback(timeoutMs = 15000): Promise<CheckResult> {
         }
         const latestVersion = versionMatch[1].trim()
         const currentVersion = app.getVersion()
-        const isNewer = compareVersions(latestVersion, currentVersion) > 0
+        // V2.7.7: 统一使用 isVersionNewer, 线上版本 = 当前版本 或 当前版本无效时均不触发更新
+        const isNewer = isVersionNewer(latestVersion, currentVersion)
         console.log(`[UpdateService] Fallback check: latest=${latestVersion}, current=${currentVersion}, newer=${isNewer}`)
 
         // 解析 path 字段(当前平台安装包文件名),构造下载 URL 并缓存
+        // V2.7.7: 仅在有新版本时缓存下载信息, 避免相等/无效版本时污染 downloadUpdate 路径
         const pathMatch = body.match(/^path:\s*(.+)$/m)
-        if (pathMatch) {
+        if (isNewer && pathMatch) {
           const fileName = pathMatch[1].trim()
           const downloadUrl = `https://github.com/${PUBLISH_OWNER}/${PUBLISH_REPO}/releases/latest/download/${encodeURIComponent(fileName)}`
           cachedFallbackInfo = { version: latestVersion, downloadUrl, fileName }
@@ -116,18 +119,7 @@ async function checkLatestYmlFallback(timeoutMs = 15000): Promise<CheckResult> {
   })
 }
 
-/** 简单的 semver 比较:返回 -1/0/1 */
-function compareVersions(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('.').map(Number)
-  const pb = b.replace(/^v/, '').split('.').map(Number)
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const va = pa[i] || 0
-    const vb = pb[i] || 0
-    if (va > vb) return 1
-    if (va < vb) return -1
-  }
-  return 0
-}
+/** 简单的 semver 比较已移至 electron/utils/version.ts (isVersionNewer) */
 
 /**
  * 直接下载安装包到本地文件。
@@ -220,7 +212,8 @@ class UpdateService {
 
         const result = await updater.checkForUpdates()
         if (result?.updateInfo?.version) {
-          const isNewer = compareVersions(result.updateInfo.version, app.getVersion()) > 0
+          // V2.7.7: 统一使用 isVersionNewer, 线上版本 = 当前版本 时 (compareVersions=0) 不触发更新
+          const isNewer = isVersionNewer(result.updateInfo.version, app.getVersion())
           if (isNewer) {
             this.lastCheckUsedFallback = false
             this.mainWindow?.webContents.send('update:available', {

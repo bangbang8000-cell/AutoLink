@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2.7.7] - 2026-08-02
+
+### 修复
+
+- **更新检查误报修复**: 当 `app.getVersion()` 返回无法解析的值（如 "unknown"/空字符串）时，原 `compareVersions` 会误判为"线上有新版本"导致即使线上版本 = 当前版本仍触发更新提示。现统一使用严格比较 `isVersionNewer()`，线上版本 ≤ 当前版本或当前版本无效时一律不触发更新
+- 新增 `electron/utils/version.ts` 版本比较工具，主路径（electron-updater）与 fallback 通道统一复用
+- fallback 通道仅在确认有新版本时缓存下载信息，避免污染后续下载路径
+- 新增 10 个单元测试（`src/test/update-version.test.ts`）覆盖相等/大于/小于/无效版本场景
+- 回归测试: tsc 0 errors、eslint 0 errors、vitest 323 passed、pytest 424 passed
+
 ## [2.7.6] - 2026-08-02
 
 ### 双栈与标准
