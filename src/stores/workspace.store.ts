@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type TabType = 'workbench' | 'design' | 'visualization' | 'rack' | 'topology' | 'output' | 'deviceLibrary' | 'projectOverview' | 'fileViewer' | 'datacenter' | 'guide'
+// V2.7.6-T9: 新增 'topology3d' Tab 类型 (3D 拓扑可视化 PoC)
+export type TabType = 'workbench' | 'design' | 'visualization' | 'rack' | 'topology' | 'topology3d' | 'output' | 'deviceLibrary' | 'projectOverview' | 'fileViewer' | 'datacenter' | 'guide'
 
 export interface WorkspaceTab {
   id: string

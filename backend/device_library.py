@@ -92,7 +92,13 @@ class DeviceLibrary:
         self._loaded = False
 
     def load(self) -> None:
-        """加载设备库索引和所有设备文件"""
+        """加载设备库索引和所有设备文件
+
+        V2.7.6-T8: category 从 library_index.json 动态读取, 不硬编码
+          - 优先使用 category 中的 "directory" 字段 (相对 library_path 的子目录)
+          - 缺省时 fallback 到 category_id 本身 (扁平目录结构)
+          - 同时保留 _LEGACY_CATEGORY_PATHS 作为旧索引的向后兼容回退
+        """
         if self._loaded:
             return
 
@@ -105,8 +111,8 @@ class DeviceLibrary:
         with open(index_path, "r", encoding="utf-8") as f:
             index = json.load(f)
 
-        # Map flat category IDs to nested directory paths (must match Electron handlers.ts)
-        category_path_map = {
+        # V2.7.6-T8: 旧索引向后兼容映射 (新索引应在 category 中声明 "directory" 字段)
+        _LEGACY_CATEGORY_PATHS = {
             "gpu_servers": "gpu_servers",
             "compute_servers": "compute_servers",
             "storage_servers_all_flash": "storage_servers/all_flash",
@@ -123,7 +129,9 @@ class DeviceLibrary:
         for cat in index.get("categories", []):
             cat_id = cat["id"]
             self.categories[cat_id] = []
-            cat_dir = category_path_map.get(cat_id, cat_id)
+            # V2.7.6-T8: 优先使用 category 中声明的 directory 字段
+            # 缺省时按 _LEGACY_CATEGORY_PATHS 回退, 再缺省则使用 cat_id 本身
+            cat_dir = cat.get("directory") or _LEGACY_CATEGORY_PATHS.get(cat_id, cat_id)
 
             for device_id in cat.get("device_ids", []):
                 device_file = os.path.join(self.library_path, cat_dir, f"{device_id}.json")

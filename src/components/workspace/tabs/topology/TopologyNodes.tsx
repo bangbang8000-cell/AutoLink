@@ -1,10 +1,11 @@
 /**
  * AutoLink V2.4 — react-flow 自定义拓扑节点组件
- * 提供 Server / Switch 两类节点的渲染，支持选中高亮与暗色模式
+ * 提供 Server / Switch / GPU 三类节点的渲染，支持选中高亮与暗色模式
+ * V2.7.6-T5: 新增 GPU/NPU 节点类型用于 Scale-Up 双栈联合视图
  */
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Server, Network } from 'lucide-react'
+import { Server, Network, Cpu } from 'lucide-react'
 import {
   TOPOLOGY_NODE_STYLES,
   TOPOLOGY_NODE_DEFAULT_COLOR,
@@ -29,6 +30,8 @@ export const NODE_LABELS: Record<string, string> = {
   oob_agg: 'OOB汇聚',
   biz_access: '业务接入',
   biz_agg: '业务汇聚',
+  // V2.7.6-T5: Scale-Up 双栈联合视图 GPU 节点
+  gpu: 'GPU/NPU',
 }
 
 export const EDGE_COLORS: Record<string, string> = {
@@ -36,6 +39,8 @@ export const EDGE_COLORS: Record<string, string> = {
   storage: '#10B981',
   oob: '#6B7280',
   biz: '#8B5CF6',
+  // V2.7.6-T5: Scale-Up 双栈联合视图
+  scale_up: '#F59E0B',
 }
 
 /* ---------- 节点数据接口 ---------- */
@@ -131,7 +136,48 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
 export const ServerNode = memo(ServerNodeComponent)
 export const SwitchNode = memo(SwitchNodeComponent)
 
+/* ---------- GPU/NPU 节点 ----------
+ * V2.7.6-T5: Scale-Up 双栈联合视图专用 GPU/NPU 节点
+ *   - 用于显示 Scale-Up 域内的 GPU/NPU 节点
+ *   - 全四方向 Handle 支持全对等 (Full-Mesh) 互联
+ *   - 使用琥珀色 (amber) 边框以区别于普通服务器
+ */
+
+function GpuNodeComponent({ data, selected }: NodeProps) {
+  const d = data as TopologyNodeData
+  // GPU 节点使用 scale_up 网络色 (琥珀色)
+  const color = EDGE_COLORS.scale_up || TOPOLOGY_NODE_DEFAULT_COLOR
+  return (
+    <div
+      className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-app-elevated shadow-sm transition-shadow"
+      style={{
+        borderColor: selected ? '#f59e0b' : color,
+        boxShadow: selected ? '0 0 0 2px rgba(245,158,11,0.3)' : undefined,
+        minWidth: 70,
+        maxWidth: 120,
+      }}
+    >
+      <Handle id="up" type="target" position={Position.Top} style={{ background: color, width: 6, height: 6 }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ background: color, width: 5, height: 5 }} />
+      <Cpu size={11} className="shrink-0" style={{ color }} />
+      <div className="flex flex-col min-w-0">
+        <span className="text-3xs font-medium text-gray-700 dark:text-gray-200 truncate leading-tight">
+          {d.label}
+        </span>
+        <span className="text-3xs text-gray-400 dark:text-gray-500 leading-tight">
+          {NODE_LABELS.gpu || 'GPU/NPU'}
+        </span>
+      </div>
+      <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
+      <Handle id="down" type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
+    </div>
+  )
+}
+
+export const GpuNode = memo(GpuNodeComponent)
+
 export const topologyNodeTypes = {
   server: ServerNode,
   switch: SwitchNode,
+  gpu: GpuNode,
 }

@@ -69,7 +69,8 @@ class NetworkDesignerV2:
         except Exception as e:
             print(f"[Designer] 设备库加载失败: {e}")
 
-        # V2.7.2: 读取 param_protocol (IB | RoCE),用于自动设备选型
+        # V2.7.2: 读取 param_protocol (IB | RoCE | UEC),用于自动设备选型
+        # V2.7.6-T2: 新增 UEC (Ultra Ethernet Consortium) 协议支持
         topo = self._project_config.get('topology', {})
         self.param_protocol = topo.get('param_protocol', 'RoCE')
 
@@ -91,6 +92,9 @@ class NetworkDesignerV2:
 
         IB  → NVIDIA Quantum 系列 (按速度: 200G→MQM8790, 400G→MQM9700, 800G→Q3200)
         RoCE → H3C S9820 系列 (按速度: 400G→S9820-64H, 800G→S12500R)
+        UEC → CPO 硅光交换机 (按速度: 800G→H3C S12500R, 1600G→H3C 51.2T CPO, 400G→Ruijie 1.6T)
+        V2.7.6-T2: 新增 UEC (Ultra Ethernet Consortium) 协议支持
+          UEC 基于 Ethernet 扩展，使用 RoCEv2 传输层，但需选用支持 UEC 标准的高端交换机
         """
         if not self._device_library:
             return None
@@ -102,16 +106,24 @@ class NetworkDesignerV2:
                 '400G': 'nvidia_mqm9700_64_400g_ib',
                 '800G': 'nvidia_q3200_72_800g_ib',
             }
+            fallback_id = 'nvidia_mqm9700_64_400g_ib'
+        elif self.param_protocol == 'UEC':
+            # V2.7.6-T2: UEC 协议 - 优先选用大带宽 CPO/硅光交换机
+            # UEC 1.0 规范推荐 51.2T 及以上带宽交换机
+            candidates = {
+                '400G': 'ruijie_s6910_32oc2vs_1_6t',
+                '800G': 'h3c_s12500r_48_800g',
+                '1600G': 'h3c_s12500r_cpo_51_2t',
+            }
+            fallback_id = 'h3c_s12500r_cpo_51_2t'
         else:  # RoCE
             candidates = {
                 '200G': 'nvidia_sn5400_64_200g',
                 '400G': 'h3c_s9820_64h',
                 '800G': 'h3c_s12500r_48_800g',
             }
-        device_id = candidates.get(speed_norm)
-        if not device_id:
-            # 速度未匹配时,回退到 400G 默认
-            device_id = 'nvidia_mqm9700_64_400g_ib' if self.param_protocol == 'IB' else 'h3c_s9820_64h'
+            fallback_id = 'h3c_s9820_64h'
+        device_id = candidates.get(speed_norm) or fallback_id
         device = self._device_library.get(device_id)
         if device:
             print(f"[Designer] V2.7.2-T8: 自动选型 param_switch = {device_id} (protocol={self.param_protocol}, speed={speed_norm})")

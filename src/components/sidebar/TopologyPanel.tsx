@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GitBranch, Network, Maximize2 } from 'lucide-react'
+import { GitBranch, Network, Maximize2, Box } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -16,6 +16,15 @@ export function TopologyPanel() {
     openTab({
       type: 'topology',
       title: selectedProjectName ? `拓扑视图 - ${selectedProjectName}` : '拓扑视图',
+      closable: true,
+    })
+  }
+
+  // V2.7.6-T9: 打开 3D 拓扑视图 (PoC)
+  const handleOpen3DView = () => {
+    openTab({
+      type: 'topology3d',
+      title: selectedProjectName ? `3D 拓扑视图 - ${selectedProjectName}` : '3D 拓扑视图',
       closable: true,
     })
   }
@@ -80,13 +89,21 @@ export function TopologyPanel() {
           </div>
 
           {/* Open in workspace button */}
-          <div className="px-3 pb-3 mt-auto">
+          <div className="px-3 pb-3 mt-auto space-y-1.5">
             <button
               onClick={handleOpenWorkspace}
               className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
             >
               <Maximize2 size={13} />
               在工作区查看完整拓扑
+            </button>
+            {/* V2.7.6-T9: 3D 拓扑视图入口 (PoC) */}
+            <button
+              onClick={handleOpen3DView}
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+            >
+              <Box size={13} />
+              3D 拓扑视图 (PoC)
             </button>
           </div>
         </>

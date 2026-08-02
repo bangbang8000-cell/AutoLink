@@ -7,6 +7,7 @@ import { pythonService } from '../services/python.service.js'
 import { projectIOService } from '../services/project-io.service.js'
 
 // Shared category-to-directory mapping for device library
+// V2.7.6-T8: 旧索引向后兼容映射 (新索引应在 category 中声明 "directory" 字段)
 const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
   gpu_servers: 'gpu_servers',
   compute_servers: 'compute_servers',
@@ -19,6 +20,16 @@ const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
   switches_oob: 'switches/oob',
   optical_modules: 'optical_modules',
   custom: 'custom',
+}
+
+/**
+ * V2.7.6-T8: 从 category 解析目录路径 (动态化)
+ *  1. 优先使用 category.directory 字段
+ *  2. 缺省时回退到 DEVICE_CATEGORY_PATH_MAP (旧索引兼容)
+ *  3. 再缺省则使用 category.id 本身
+ */
+function resolveCategoryDir(cat: { id: string; directory?: string }): string {
+  return cat.directory || DEVICE_CATEGORY_PATH_MAP[cat.id] || path.basename(cat.id)
 }
 import { updateService } from '../services/update.service.js'
 
@@ -86,7 +97,7 @@ function loadDeviceLibrary(): { categories: DeviceCategory[] } {
     return { categories: [] }
   }
 
-  let index: { categories?: { id: string; name: string; description?: string; device_ids?: string[] }[] }
+  let index: { categories?: { id: string; name: string; description?: string; directory?: string; device_ids?: string[] }[] }
   try {
     index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'))
   } catch (err) {
@@ -94,11 +105,10 @@ function loadDeviceLibrary(): { categories: DeviceCategory[] } {
     return { categories: [] }
   }
 
-  // Map flat category IDs to nested directory paths
-
+  // V2.7.6-T8: 使用 resolveCategoryDir 动态解析目录路径 (优先 category.directory 字段)
   const categories: DeviceCategory[] = []
   for (const cat of index.categories || []) {
-    const catDir = DEVICE_CATEGORY_PATH_MAP[cat.id] || path.basename(cat.id)
+    const catDir = resolveCategoryDir(cat)
     const devices: { id: string }[] = []
     for (const deviceId of cat.device_ids || []) {
       const safeDeviceId = path.basename(deviceId)
@@ -123,12 +133,13 @@ function loadDeviceLibrary(): { categories: DeviceCategory[] } {
   return { categories }
 }
 
-function saveDeviceToFile(device: { id: string; category: string }): void {
+function saveDeviceToFile(device: { id: string; category: string; directory?: string }): void {
   const libPath = getDeviceLibraryPath()
   const safeCategory = path.basename(device.category)
   const safeId = path.basename(device.id)
 
-  const catDir = DEVICE_CATEGORY_PATH_MAP[device.category] || 'custom'
+  // V2.7.6-T8: 使用 resolveCategoryDir 动态解析目录 (优先 device.directory, 再回退映射表)
+  const catDir = resolveCategoryDir({ id: device.category, directory: device.directory })
 
   const deviceFile = path.join(libPath, catDir, `${safeId}.json`)
   const catDirFull = path.dirname(deviceFile)

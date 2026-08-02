@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [2.7.6] - 2026-08-02
+
+### 双栈与标准
+
+v2.7.6 支持 Scale-Up/Scale-Out 双栈规划，预置 UEC/UALink 新标准，预研插件化架构与 3D 可视化，完成 10 项任务。
+
+#### 双栈拓扑规划 (T1-T5)
+- **T1**: Scale-Up 拓扑规划（`backend/scaleup_topology.py`），支持 NVLink / UALink / UB 三种协议的 Pod 内全对等互联
+- **T2**: Scale-Out 拓扑规划扩展，`param_protocol` 新增 UEC（Ultra Ethernet Consortium）支持，自动选型 CPO/硅光交换机
+- **T3**: UEC 1.0 拓扑模板（`template/uec_1_0_cluster/`），1024 GPU 集群，RoCE 400G Scale-Out
+- **T4**: UALink 1.0 拓扑模板（`template/ualink_1_0_1024/`），1024 GPU Pod，Scale-Up 全对等互联 + Scale-Out RoCE 400G
+- **T5**: 双栈联合视图，拓扑视图支持 Scale-Up 网络类型（琥珀色连线 + GPU 节点可视化）
+
+#### 插件化架构 (T6-T8)
+- **T6**: 网络类型插件化接口（`backend/network_plugin.py`），定义 `NetworkPlugin` 抽象接口，内置 param/storage/biz/oob/scale_up 5 个插件
+- **T7**: `engine.py` action 注册表化，action 处理改为 decorator 注册（`@register_action`），新增 action 无需改主逻辑
+- **T8**: 设备库 category 动态化，从 `library_index.json` 动态读取目录（优先 `category.directory` 字段），新增 category 无需改代码
+
+#### 预研 (T9-T10)
+- **T9**: 3D 可视化 PoC（`src/components/workspace/tabs/Topology3DTab.tsx`），基于 react-three-fiber，分层摆放 + 彩色连接 + OrbitControls
+- **T10**: AI 辅助容量规划预研文档（`docs/v2.7/ai_capacity_planning_research.md`），调研 MoE/长上下文/FP8 训练负载反推带宽与收敛比
+
+#### 其他
+- 新增 `src/three-fiber.d.ts` 类型兼容声明，解决 @react-three/fiber v8 与 React 19 的 JSX 命名空间冲突
+- 新增测试 `tests/backend/test_scaleup_and_plugin.py`（26 用例），覆盖 Scale-Up 拓扑与插件化扩展性
+- 回归测试: tsc 0 errors、eslint 0 errors、vitest 313 passed、pytest 424 passed
+
 ## [2.7.5] - 2026-08-02
 
 ### 国产生态与信创

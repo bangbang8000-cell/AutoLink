@@ -35,4 +35,19 @@ module.exports = [
     },
     settings: { react: { version: 'detect' } },
   },
+  {
+    // V2.7.6-T9: three.js JSX 元素属性 (position/intensity/args 等) 是合法 DOM 属性,
+    // 与 DOM 属性 (className/style) 不同, 需豁免 react/no-unknown-property
+    files: ['src/components/workspace/tabs/Topology3DTab.tsx'],
+    rules: {
+      'react/no-unknown-property': 'off',
+    },
+  },
+  {
+    // V2.7.6-T9: three-fiber 类型兼容声明, 空扩展接口是类型合并手段, 豁免空对象类型告警
+    files: ['src/three-fiber.d.ts'],
+    rules: {
+      '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
 ];

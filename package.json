@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "2.7.5",
+  "version": "2.7.6",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -35,6 +35,8 @@
     "test:all": "npm run test && npm run test:backend"
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@tanstack/react-virtual": "^3.14.9",
     "@xyflow/react": "^12.11.2",
     "adm-zip": "^0.6.0",
@@ -51,12 +53,14 @@
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.12.2",
     "remark-gfm": "^4.0.1",
+    "three": "^0.185.1",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/typography": "^0.5.20",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.8",
@@ -64,6 +68,7 @@
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.185.3",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "@vitejs/plugin-react": "^6.0.4",

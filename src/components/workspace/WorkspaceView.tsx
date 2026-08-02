@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect, Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles } from 'lucide-react'
+import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles, Box } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -9,6 +9,8 @@ import { useToastStore } from '@/stores/toast.store'
 // v2.7.3-T8: Tab 懒加载,首屏仅加载当前 Tab 代码
 const WorkbenchTab = lazy(() => import('./tabs/WorkbenchTab').then(m => ({ default: m.WorkbenchTab })))
 const TopologyTab = lazy(() => import('./tabs/TopologyTab').then(m => ({ default: m.TopologyTab })))
+// V2.7.6-T9: 3D 拓扑可视化 PoC (懒加载, 避免影响首屏性能)
+const Topology3DTab = lazy(() => import('./tabs/Topology3DTab').then(m => ({ default: m.Topology3DTab })))
 const RackTab = lazy(() => import('./tabs/RackTab').then(m => ({ default: m.RackTab })))
 const OutputTab = lazy(() => import('./tabs/OutputTab').then(m => ({ default: m.OutputTab })))
 const ProjectOverviewTab = lazy(() => import('./tabs/ProjectOverviewTab').then(m => ({ default: m.ProjectOverviewTab })))
@@ -24,6 +26,8 @@ const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?
   visualization: Network,
   rack: Server,
   topology: GitBranch,
+  // V2.7.6-T9: 3D 拓扑可视化使用 Box 图标
+  topology3d: Box,
   output: FileOutput,
   deviceLibrary: Library,
   projectOverview: FolderOpen,
@@ -73,6 +77,8 @@ export function WorkspaceView() {
       case 'visualization': return <TopologyTab />
       case 'rack': return <RackTab cabinetId={activeTab?.state?.cabinetId as number | null | undefined} />
       case 'topology': return <TopologyTab />
+      // V2.7.6-T9: 3D 拓扑可视化 PoC
+      case 'topology3d': return <Topology3DTab />
       case 'output': {
         const state = activeTab?.state
         return <OutputTab fileName={state?.fileName as string | null} fileType={state?.fileType as string} />

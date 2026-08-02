@@ -3,6 +3,10 @@ AutoLink V2.1 - Python Engine
 统一引擎接口，供 Electron 主进程通过子进程调用
 通过 stdin 接收 JSON 请求，stdout 返回 JSON 响应
 支持 project_config.json (V2.1) 和 network_config.ini (V2.0) 两种格式
+
+V2.7.6-T7: action 处理改为 decorator 注册(@register_action('design'))
+  - 新增 action 不需改 main() 主逻辑
+  - 通过 @register_action('xxx') 装饰 handler 即可自动注册
 """
 
 import sys
@@ -24,6 +28,55 @@ from estimation import (
 )
 from validation import create_default_engine, ValidationContext, Severity
 import pandas as pd
+
+
+# ================================================================
+# V2.7.6-T7: Action 注册表
+# ================================================================
+
+# 全局 action 注册表: action_name -> handler callable
+_ACTION_REGISTRY: dict[str, callable] = {}
+
+
+def register_action(name: str):
+    """Action 注册装饰器
+
+    用法:
+        @register_action('design')
+        def handle_design(params):
+            ...
+
+    注册后, main() 会自动从 _ACTION_REGISTRY 查找并派发对应 handler。
+
+    Args:
+        name: action 名称 (如 'design' / 'validate' / 'export')
+
+    Returns:
+        装饰器函数
+    """
+    def decorator(func):
+        if name in _ACTION_REGISTRY:
+            print(f"[Engine] 警告: action '{name}' 已注册, 将被覆盖", file=sys.stderr)
+        _ACTION_REGISTRY[name] = func
+        return func
+    return decorator
+
+
+def get_action_handler(name: str):
+    """获取已注册的 action handler
+
+    Args:
+        name: action 名称
+
+    Returns:
+        handler 函数, 未注册时返回 None
+    """
+    return _ACTION_REGISTRY.get(name)
+
+
+def list_registered_actions() -> list:
+    """列出所有已注册的 action 名称 (主要用于调试)"""
+    return sorted(_ACTION_REGISTRY.keys())
 
 
 def _parse_speed_gbps(speed_str: str) -> float:
@@ -173,6 +226,7 @@ def _get_config_file(params):
     return config_file, None
 
 
+@register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""
     config_file, error = _get_config_file(params)
@@ -436,6 +490,7 @@ def handle_design(params):
     }
 
 
+@register_action('estimate')
 def handle_estimate(params):
     """V2.4: 参数化 PUE/收敛比估算（支持用户调整散热方式等参数）"""
     config_file, error = _get_config_file(params)
@@ -446,6 +501,7 @@ def handle_estimate(params):
     return _estimate_design(designer, params.get('estimateParams', {}))
 
 
+@register_action('report')
 def handle_report(params):
     """V2.4: 生成完整报告数据（供前端可视化展示）"""
     config_file, error = _get_config_file(params)
@@ -498,6 +554,7 @@ def _calculate_power_summary(designer):
     }
 
 
+@register_action('validate')
 def handle_validate(params):
     """处理拓扑验证请求"""
     config_file, error = _get_config_file(params)
@@ -509,6 +566,7 @@ def handle_validate(params):
     return {"valid": result["valid"]}
 
 
+@register_action('migrate')
 def handle_migrate(params):
     """V2.7.2-T10: 迁移 V2.0 INI 项目为 V2.1 JSON 格式
 
@@ -533,6 +591,7 @@ def handle_migrate(params):
     }
 
 
+@register_action('export')
 def handle_export(params):
     """处理渲染导出请求"""
     config_file, error = _get_config_file(params)
@@ -606,23 +665,20 @@ def handle_export(params):
 
 
 def main():
-    """主入口：从 stdin 读取 JSON，处理后输出到 stdout"""
+    """主入口：从 stdin 读取 JSON，处理后输出到 stdout
+
+    V2.7.6-T7: 使用 _ACTION_REGISTRY 注册表派发 action
+      - 所有 handler 通过 @register_action('xxx') 装饰器自动注册
+      - main() 仅负责从注册表查找并派发, 不再硬编码 action 列表
+    """
     try:
         raw = sys.stdin.read()
         request = json.loads(raw)
         action = request.get('action', '')
         params = request.get('params', {})
 
-        actions = {
-            'design': handle_design,
-            'validate': handle_validate,
-            'export': handle_export,
-            'estimate': handle_estimate,
-            'report': handle_report,
-            'migrate': handle_migrate,
-        }
-
-        handler = actions.get(action)
+        # V2.7.6-T7: 从注册表查找 handler
+        handler = get_action_handler(action)
         if not handler:
             response = {"success": False, "error": f"未知 action: {action}"}
         else:

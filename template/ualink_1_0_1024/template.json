@@ -1,0 +1,8 @@
+{
+  "id": "ualink_1_0_1024",
+  "name": "UALink 1.0 1024 GPU Pod",
+  "description": "基于 UALink 1.0 规范的 1024 GPU Pod，Scale-Up 全对等互联 + Scale-Out RoCE 400G，面向万亿参数模型训练",
+  "scenario": "UALink-1.0-1024",
+  "tags": ["UALink", "Scale-Up", "1024台", "400G", "全对等互联", "大模型"],
+  "updatedAt": "2026-08-02"
+}

@@ -1,11 +1,12 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-07-29",
+  "updated_at": "2026-08-02",
   "categories": [
     {
       "id": "gpu_servers",
       "name": "GPU服务器",
       "description": "GPU/NPU训练/推理服务器",
+      "directory": "gpu_servers",
       "device_ids": [
         "nvidia_dgx_h100",
         "nvidia_dgx_b200",
@@ -29,6 +30,7 @@
       "id": "storage_servers_all_flash",
       "name": "全闪存储服务器",
       "description": "全闪存NVMe存储服务器",
+      "directory": "storage_servers/all_flash",
       "device_ids": [
         "huawei_oceanstor_dorado_8000",
         "huawei_oceanstor_dorado_6000",
@@ -41,6 +43,7 @@
       "id": "storage_servers_hybrid_flash",
       "name": "混闪存储服务器",
       "description": "混合闪存(SSD+HDD)存储服务器",
+      "directory": "storage_servers/hybrid_flash",
       "device_ids": [
         "huawei_oceanstor_5310",
         "huawei_oceanstor_5510",
@@ -53,6 +56,7 @@
       "id": "storage_servers_parallel_fs",
       "name": "并行文件系统存储",
       "description": "并行文件系统存储节点（BeeGFS/IBM Scale/WekaIO/Lustre等）",
+      "directory": "storage_servers/parallel_fs",
       "device_ids": [
         "beegfs_storage_node",
         "ibm_spectrum_scale_node",
@@ -66,6 +70,7 @@
       "id": "compute_servers",
       "name": "通算服务器",
       "description": "通用计算/管理服务器",
+      "directory": "compute_servers",
       "device_ids": [
         "huawei_2288h_v7",
         "h3c_r4900_g7",
@@ -78,6 +83,7 @@
       "id": "switches_param",
       "name": "参数网络交换机",
       "description": "RoCEv2/IB 高速参数面交换机（含Leaf/Spine/Core，支持Rail-Optimized）",
+      "directory": "switches/param",
       "device_ids": [
         "nvidia_mqm9700_64_400g_ib",
         "nvidia_mqm9790_64_400g_ib",
@@ -108,6 +114,7 @@
       "id": "switches_storage",
       "name": "存储网络交换机",
       "description": "存储网络接入/汇聚交换机",
+      "directory": "switches/storage",
       "device_ids": [
         "huawei_ce6881_48s6cq",
         "nvidia_sn4600c",
@@ -119,6 +126,7 @@
       "id": "switches_biz",
       "name": "业务网络交换机",
       "description": "业务/带内管理网络交换机（含接入和汇聚）",
+      "directory": "switches/biz",
       "device_ids": [
         "h3c_s5560x_54s_ei",
         "h3c_s6520x_54qc_ei",
@@ -137,6 +145,7 @@
       "id": "switches_oob",
       "name": "带外管理交换机",
       "description": "带外管理网络交换机（含接入和汇聚）",
+      "directory": "switches/oob",
       "device_ids": [
         "h3c_s5130s_52p_ei",
         "h3c_s5130s_28p_ei",
@@ -152,6 +161,7 @@
       "id": "optical_modules",
       "name": "光模块",
       "description": "100G-1.6T 光模块/DAC/AOC（SR4/DR4/DR8/FR4/LR4/CWDM4等规格，1.6T含硅光/LPO/EML/TFLN多路线）",
+      "directory": "optical_modules",
       "device_ids": [
         "om_100g_qsfp28_sr4_100m",
         "om_100g_qsfp28_lr4_10km",

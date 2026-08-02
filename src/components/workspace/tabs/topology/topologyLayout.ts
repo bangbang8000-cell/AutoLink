@@ -78,7 +78,7 @@ const Y_CORE = 40
  *  类型定义
  * ================================================================ */
 
-export type LayerHint = 'core' | 'spine' | 'leaf' | 'server' | 'access' | 'agg'
+export type LayerHint = 'core' | 'spine' | 'leaf' | 'server' | 'access' | 'agg' | 'gpu'
 
 export interface LayoutNode {
   id: string
@@ -115,6 +115,8 @@ export interface LayoutResult {
 function getLayerHint(node: TopologyNode): LayerHint {
   if (node.layerHint) return node.layerHint as LayerHint
   const t = node.type
+  // V2.7.6-T5: GPU/NPU 节点 (Scale-Up 双栈联合视图)
+  if (t === 'gpu') return 'gpu'
   if (t === 'server') return 'server'
   if (t.includes('core')) return 'core'
   if (t.includes('spine')) return 'spine'
@@ -230,7 +232,8 @@ function groupNodes(nodes: TopologyNode[]): { pods: PodGroup[]; networks: Networ
       return podMap.get(pid)!
     }
 
-    if (hint === 'server') {
+    if (hint === 'server' || hint === 'gpu') {
+      // V2.7.6-T5: GPU/NPU 节点归入 POD 服务器区(按服务器布局)
       // superpod 归入虚拟全局 POD（实际场景下存储/通算 POD 也有 podid）
       const key = podid || '_global'
       getOrCreatePod(key).servers.push(node)

@@ -37,7 +37,7 @@ import { exportTopologyPng } from '@/utils/exportTopology'
 import { makeTimestampedFilename } from '@/utils/exportSvg'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 import {
-  ServerNode, SwitchNode, NODE_COLORS, NODE_LABELS, EDGE_COLORS,
+  ServerNode, SwitchNode, GpuNode, NODE_COLORS, NODE_LABELS, EDGE_COLORS,
   type TopologyNodeData,
 } from './topology/TopologyNodes'
 import {
@@ -52,13 +52,15 @@ import { useTopologyLayout } from '@/hooks/useTopologyLayout'
 const nodeTypes: NodeTypes = {
   server: ServerNode,
   switch: SwitchNode,
+  gpu: GpuNode,
   podGroup: PodGroupNode,
 }
 
 /* ---------- filter ---------- */
 
-type FilterType = '全部' | '参数网络' | '存储网络' | 'OOB' | '业务网络'
-const FILTER_OPTIONS: FilterType[] = ['全部', '参数网络', '存储网络', 'OOB', '业务网络']
+// V2.7.6-T5: 新增 'Scale-Up' 过滤器支持双栈联合视图
+type FilterType = '全部' | '参数网络' | '存储网络' | 'OOB' | '业务网络' | 'Scale-Up'
+const FILTER_OPTIONS: FilterType[] = ['全部', '参数网络', '存储网络', 'OOB', '业务网络', 'Scale-Up']
 
 /** V2.4.2: 过滤匹配，优先使用 networkType 字段，回退到 description/cableType */
 function matchFilter(description: string, cableType: string, networkType: string, filter: FilterType): boolean {
@@ -69,12 +71,21 @@ function matchFilter(description: string, cableType: string, networkType: string
     if (filter === '存储网络') return networkType === 'storage'
     if (filter === 'OOB') return networkType === 'oob'
     if (filter === '业务网络') return networkType === 'biz'
+    // V2.7.6-T5: Scale-Up 双栈联合视图
+    if (filter === 'Scale-Up') return networkType === 'scale_up'
   }
   // 回退到旧逻辑
   if (filter === '参数网络') return description.includes('参数') || cableType.includes('参数')
   if (filter === '存储网络') return description.includes('存储') || cableType.includes('存储')
   if (filter === 'OOB') return description.includes('OOB') || cableType.includes('OOB')
   if (filter === '业务网络') return description.includes('业务') || cableType.includes('业务')
+  // V2.7.6-T5: Scale-Up 回退匹配
+  if (filter === 'Scale-Up') {
+    return description.includes('Scale-Up') || description.includes('UALink') ||
+           description.includes('NVLink') || description.includes('UB') ||
+           cableType.includes('Scale-Up') || cableType.includes('UALink') ||
+           cableType.includes('NVLink') || cableType.includes('UB')
+  }
   return true
 }
 
@@ -85,12 +96,21 @@ function getEdgeColor(description: string, cableType: string, networkType: strin
     if (networkType === 'storage') return EDGE_COLORS.storage
     if (networkType === 'oob') return EDGE_COLORS.oob
     if (networkType === 'biz') return EDGE_COLORS.biz
+    // V2.7.6-T5: Scale-Up 双栈联合视图
+    if (networkType === 'scale_up') return EDGE_COLORS.scale_up
   }
   // 回退到旧逻辑
   if (description.includes('参数') || cableType.includes('参数')) return EDGE_COLORS.param
   if (description.includes('存储') || cableType.includes('存储')) return EDGE_COLORS.storage
   if (description.includes('OOB') || cableType.includes('OOB')) return EDGE_COLORS.oob
   if (description.includes('业务') || cableType.includes('业务')) return EDGE_COLORS.biz
+  // V2.7.6-T5: Scale-Up 回退匹配
+  if (description.includes('Scale-Up') || description.includes('UALink') ||
+      description.includes('NVLink') || description.includes('UB') ||
+      cableType.includes('Scale-Up') || cableType.includes('UALink') ||
+      cableType.includes('NVLink') || cableType.includes('UB')) {
+    return EDGE_COLORS.scale_up
+  }
   return '#d1d5db'
 }
 
