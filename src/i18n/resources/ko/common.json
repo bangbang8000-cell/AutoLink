@@ -69,6 +69,8 @@
     "design": "토폴로지 설계",
     "rack": "랙 계획",
     "topology": "토폴로지 보기",
+    "visualization": "시각화",
+    "deviceLibrary": "장치 라이브러리",
     "outputResults": "출력 결과",
     "settings": "설정",
     "hideSidebar": "사이드바 숨기기",
@@ -181,6 +183,8 @@
     "checking": "업데이트 확인 중...",
     "checkFailed": "업데이트 확인 실패",
     "newVersion": "새 버전이 있습니다",
+    "releaseNotes": "릴리스 노트",
+    "newVersionAvailable": "새 버전 v{{version}}을 발견했습니다. 오른쪽 상단 아이콘을 클릭하여 확인하세요",
     "download": "업데이트 다운로드",
     "downloading": "다운로드 중",
     "downloadFailed": "다운로드 실패",
@@ -484,7 +488,9 @@
     "cannotRead": "파일을 읽을 수 없습니다",
     "unsupportedType": "지원되지 않는 파일 형식: {{type}}",
     "emptyTable": "빈 테이블",
-    "cannotPreview": "이 파일을 미리 볼 수 없습니다"
+    "cannotPreview": "이 파일을 미리 볼 수 없습니다",
+    "copy": "복사",
+    "copied": "복사됨"
   },
   "toast": {
     "projectCreated": "프로젝트가 성공적으로 생성되었습니다",
@@ -502,6 +508,8 @@
     "validationFailed": "검증 실패: {{error}}",
     "nodeNotFound": "일치하는 노드를 찾을 수 없습니다",
     "topologyLayoutSaved": "토폴로지 레이아웃이 저장되었습니다",
+    "layoutSaveFailed": "레이아웃을 프로젝트에 저장하지 못했습니다",
+    "topologyNodesDeleted": "노드 {{count}}개가 삭제되었습니다",
     "layoutReset": "레이아웃이 재설정되었습니다",
     "noTopologyToExport": "내보낼 토폴로지 데이터가 없습니다",
     "generatingTopologyPng": "토폴로지 다이어그램 PNG 생성 중...",

@@ -197,3 +197,58 @@ describe('i18n 插值变量一致性', () => {
     }
   })
 })
+
+/**
+ * v2.8.3-T2: key 完整性测试
+ * 以 zh-CN 为基准,断言其余 4 语言不缺失任何 key(允许多余 key),防止编程 ID 回归
+ */
+describe('i18n key 完整性(以 zh-CN 为基准)', () => {
+  /** 递归展开对象为扁平 key 列表(如 common.menu.visualization) */
+  function flattenKeys(obj: unknown, prefix = ''): string[] {
+    if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return []
+    return Object.entries(obj as Record<string, unknown>).flatMap(([key, value]) => {
+      const full = prefix ? `${prefix}.${key}` : key
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return flattenKeys(value, full)
+      }
+      return [full]
+    })
+  }
+
+  const base = LANGUAGES.find((l) => l.code === 'zh-CN')!
+  const baseKeys = flattenKeys(base.resources as unknown as Record<string, unknown>)
+
+  it('zh-CN 基准应有非空 key 集合', () => {
+    expect(baseKeys.length).toBeGreaterThan(50)
+  })
+
+  for (const { code, resources } of LANGUAGES) {
+    if (code === 'zh-CN') continue
+    it(`${code} 不应缺失 zh-CN 中的任何 key`, () => {
+      const langKeys = new Set(flattenKeys(resources as unknown as Record<string, unknown>))
+      const missing = baseKeys.filter((k) => !langKeys.has(k))
+      expect(missing, `${code} 缺少 key(会导致界面显示编程 ID): ${missing.join(', ')}`).toEqual([])
+    })
+  }
+
+  it('menu.visualization 应存在于所有语言(ActivityBar 悬浮提示)', () => {
+    for (const { code, resources } of LANGUAGES) {
+      const key = 'common.menu.visualization'
+      const langKeys = new Set(flattenKeys(resources as unknown as Record<string, unknown>))
+      expect(langKeys.has(key), `${code} 缺少 ${key}`).toBe(true)
+    }
+  })
+
+  /** 按点路径取值 */
+  function getAt(obj: unknown, path: string): unknown {
+    return path.split('.').reduce<unknown>((acc, part) => {
+      if (acc && typeof acc === 'object') return (acc as Record<string, unknown>)[part]
+      return undefined
+    }, obj)
+  }
+
+  it('zh-CN 翻译值不应等于 key 本身(编程 ID 风格的占位)', () => {
+    const suspicious = baseKeys.filter((k) => getAt(base.resources, k) === k)
+    expect(suspicious).toEqual([])
+  })
+})

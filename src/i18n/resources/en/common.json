@@ -73,6 +73,7 @@
     "design": "Topology Design",
     "rack": "Rack Planning",
     "topology": "Topology View",
+    "visualization": "Visualization",
     "outputResults": "Output",
     "deviceLibrary": "Device Library",
     "settings": "Settings",
@@ -499,7 +500,9 @@
     "cannotRead": "Cannot read file",
     "unsupportedType": "Unsupported file type: {{type}}",
     "emptyTable": "Empty table",
-    "cannotPreview": "Cannot preview this file"
+    "cannotPreview": "Cannot preview this file",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "toast": {
     "projectCreated": "Project created successfully",
@@ -517,6 +520,8 @@
     "validationFailed": "Validation failed: {{error}}",
     "nodeNotFound": "No matching node found",
     "topologyLayoutSaved": "Topology layout saved",
+    "layoutSaveFailed": "Failed to save layout to project",
+    "topologyNodesDeleted": "Deleted {{count}} nodes",
     "layoutReset": "Layout reset",
     "noTopologyToExport": "No topology data to export",
     "generatingTopologyPng": "Generating topology PNG...",

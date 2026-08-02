@@ -1,6 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Copy, Check, Table2, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { ExcelTable } from '@/components/workspace/ExcelTable'
+import { getCachedExcel, setCachedExcel } from '@/utils/excel-cache'
+import { IMAGE_MIME, getFileExt, getImageMime, splitProjectFilePath } from '@/utils/file-type'
 
 interface Props {
   templateName?: string
@@ -9,8 +13,12 @@ interface Props {
 }
 
 export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
+  const { t } = useTranslation('common')
   const [content, setContent] = useState<string | null>(null)
-  const [excelData, setExcelData] = useState<{ sheets: string[]; current: string; data: string[][] } | null>(null)
+  // v2.8.0-T2: 一次加载全部 sheet 缓存(dataMap),切 sheet 由 ExcelTable 纯状态切换
+  const [excelData, setExcelData] = useState<Record<string, string[][]> | null>(null)
+  // v2.8.0-T5: 图片 data URL 预览(修复 PNG 按文本读取乱码)
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -19,9 +27,11 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
     ? `${templateName}/${filePath}`
     : filePath || templateName || ''
 
-  const ext = (filePath || '').split('.').pop()?.toLowerCase() || ''
+  const ext = getFileExt(filePath || '')
   const isExcel = ext === 'xlsx' || ext === 'xls'
   const isJson = ext === 'json'
+  // v2.8.0-T5: 图片类型判定
+  const isImage = ext in IMAGE_MIME
 
   const loadFile = useCallback(async () => {
     if (!filePath && !templateName) return
@@ -30,33 +40,38 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
     setError(null)
     try {
       if (isExcel) {
-        // Read binary and parse with xlsx
-        let buffer: Uint8Array | null = null
-        if (filePath) {
-          const firstSlash = filePath.indexOf('/')
-          if (firstSlash > 0) {
-            const projectName = filePath.substring(0, firstSlash)
-            const relPath = filePath.substring(firstSlash + 1)
-            const base64 = await window.electron.project.getFileBinary(projectName, relPath)
+        // v2.8.0-T2/T3: 一次解析全部 sheet 并缓存,消除 atob 逐字节解码
+        const parts = filePath ? splitProjectFilePath(filePath) : null
+        if (parts) {
+          const cacheKey = `${parts.projectName}/${parts.relPath}`
+          let dataMap = getCachedExcel(cacheKey)
+          if (!dataMap) {
+            const base64 = await window.electron.project.getFileBinary(parts.projectName, parts.relPath)
             if (base64) {
-              const binary = atob(base64)
-              buffer = new Uint8Array(binary.length)
-              for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i)
+              const wb = XLSX.read(base64, { type: 'base64' })
+              dataMap = {}
+              for (const name of wb.SheetNames) {
+                dataMap[name] = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[name], { header: 1 })
+              }
+              setCachedExcel(cacheKey, dataMap)
             }
           }
-        }
-        if (buffer) {
-          const wb = XLSX.read(buffer, { type: 'array' })
-          const sheetName = wb.SheetNames[0] || ''
-          const ws = wb.Sheets[sheetName]
-          const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })
-          setExcelData({
-            sheets: wb.SheetNames,
-            current: sheetName,
-            data: data as string[][],
-          })
+          if (dataMap) setExcelData(dataMap)
         }
         setContent(null)
+        setImageSrc(null)
+      } else if (isImage) {
+        // v2.8.0-T5: 图片走二进制读取 + data URL 渲染(修复乱码)
+        const parts = filePath ? splitProjectFilePath(filePath) : null
+        if (parts) {
+          const base64 = await window.electron.project.getFileBinary(parts.projectName, parts.relPath)
+          const mime = getImageMime(parts.relPath)
+          if (base64 && mime) {
+            setImageSrc(`data:${mime};base64,${base64}`)
+          }
+        }
+        setContent(null)
+        setExcelData(null)
       } else {
         // Text files
         let text: string | null = null
@@ -64,22 +79,21 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
           const fp = filePath || ''
           text = await window.electron.template.getFile(templateName, fp)
         } else if (filePath) {
-          const firstSlash = filePath.indexOf('/')
-          if (firstSlash > 0) {
-            const projectName = filePath.substring(0, firstSlash)
-            const relPath = filePath.substring(firstSlash + 1)
-            text = await window.electron.project.getFile(projectName, relPath)
+          const parts = splitProjectFilePath(filePath)
+          if (parts) {
+            text = await window.electron.project.getFile(parts.projectName, parts.relPath)
           }
         }
         setContent(text)
         setExcelData(null)
+        setImageSrc(null)
       }
     } catch (err) {
       setError((err as Error).message)
     } finally {
       setLoading(false)
     }
-  }, [filePath, templateName, isTemplate, isExcel])
+  }, [filePath, templateName, isTemplate, isExcel, isImage])
 
   useEffect(() => {
     loadFile()
@@ -96,92 +110,31 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
     }
   }, [content])
 
-  const switchSheet = useCallback((name: string) => {
-    if (!excelData || !filePath) return
-    setLoading(true)
-    ;(async () => {
-      try {
-        const firstSlash = filePath.indexOf('/')
-        if (firstSlash > 0) {
-          const projectName = filePath.substring(0, firstSlash)
-          const relPath = filePath.substring(firstSlash + 1)
-          const base64 = await window.electron.project.getFileBinary(projectName, relPath)
-          if (base64) {
-            const binary = atob(base64)
-            const buffer = new Uint8Array(binary.length)
-            for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i)
-            const wb = XLSX.read(buffer, { type: 'array' })
-            const ws = wb.Sheets[name]
-            const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })
-            setExcelData({ sheets: wb.SheetNames, current: name, data: data as string[][] })
-          }
-        }
-      } catch (err) {
-        setError((err as Error).message)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [excelData, filePath])
-
   /* ---------- render ---------- */
 
   const renderContent = () => {
     if (excelData) return renderExcel()
+    if (imageSrc) return renderImage()
     if (content === null) return null
     return renderText()
   }
 
+  // v2.8.0-T1: 统一 ExcelTable 组件(一次加载全 sheet,切 sheet 零重载)
   const renderExcel = () => {
     if (!excelData) return null
-    const { sheets, current, data } = excelData
-    if (data.length === 0) {
-      return <div className="p-4 text-sm text-gray-400">空表格</div>
-    }
+    return <ExcelTable sheetsData={excelData} />
+  }
 
+  // v2.8.0-T5: 图片预览(修复乱码)
+  const renderImage = () => {
+    if (!imageSrc) return null
     return (
-      <div className="flex-1 overflow-auto">
-        {/* Sheet tabs */}
-        {sheets.length > 1 && (
-          <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 shrink-0">
-            {sheets.map((s) => (
-              <button
-                key={s}
-                onClick={() => s !== current && switchSheet(s)}
-                className={`px-2.5 py-0.5 text-2xs rounded ${
-                  s === current
-                    ? 'bg-white dark:bg-app-hover text-gray-800 dark:text-gray-200 shadow-sm'
-                    : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-app-hover'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-        <table className="text-xs border-collapse">
-          <tbody>
-            {data.map((row, ri) => (
-              <tr key={ri} className={ri === 0 ? 'sticky top-0 z-10' : ''}>
-                {row.map((cell, ci) => {
-                  const CellTag = ri === 0 ? 'th' : 'td'
-                  return (
-                    <CellTag
-                      key={ci}
-                      className={`px-2 py-1 border border-gray-200 dark:border-edge-subtle whitespace-nowrap ${
-                        ri === 0
-                          ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200'
-                          : 'text-gray-600 dark:text-gray-400'
-                      }`}
-                    >
-                      {cell ?? ''}
-                    </CellTag>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="h-full flex items-center justify-center bg-white dark:bg-app-elevated p-4 overflow-auto">
+        <img
+          src={imageSrc}
+          alt={displayPath}
+          className="max-w-full max-h-full object-contain"
+        />
       </div>
     )
   }
@@ -239,7 +192,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-        加载中...
+        {t('loading')}
       </div>
     )
   }
@@ -268,7 +221,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
             className="flex items-center gap-1 px-2 py-0.5 text-xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400 shrink-0 ml-2"
           >
             {copied ? <Check size={12} /> : <Copy size={12} />}
-            <span>{copied ? '已复制' : '复制'}</span>
+            <span>{copied ? t('fileViewer.copied') : t('fileViewer.copy')}</span>
           </button>
         )}
       </div>

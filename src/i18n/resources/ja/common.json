@@ -69,6 +69,8 @@
     "design": "トポロジー設計",
     "rack": "ラック計画",
     "topology": "トポロジー表示",
+    "visualization": "可視化",
+    "deviceLibrary": "デバイスライブラリ",
     "outputResults": "出力結果",
     "settings": "設定",
     "hideSidebar": "サイドバーを隠す",
@@ -181,6 +183,8 @@
     "checking": "更新を確認中...",
     "checkFailed": "更新の確認に失敗しました",
     "newVersion": "新しいバージョンがあります",
+    "releaseNotes": "更新履歴",
+    "newVersionAvailable": "新しいバージョン v{{version}} が見つかりました。右上のアイコンをクリックして確認してください",
     "download": "更新をダウンロード",
     "downloading": "ダウンロード中",
     "downloadFailed": "ダウンロードに失敗しました",
@@ -484,7 +488,9 @@
     "cannotRead": "ファイルを読み込めません",
     "unsupportedType": "サポートされていないファイル形式です: {{type}}",
     "emptyTable": "空のテーブル",
-    "cannotPreview": "このファイルはプレビューできません"
+    "cannotPreview": "このファイルはプレビューできません",
+    "copy": "コピー",
+    "copied": "コピー済み"
   },
   "toast": {
     "projectCreated": "プロジェクトが正常に作成されました",
@@ -502,6 +508,8 @@
     "validationFailed": "検証に失敗しました: {{error}}",
     "nodeNotFound": "一致するノードが見つかりません",
     "topologyLayoutSaved": "トポロジレイアウトを保存しました",
+    "layoutSaveFailed": "レイアウトをプロジェクトに保存できませんでした",
+    "topologyNodesDeleted": "{{count}} 個のノードを削除しました",
     "layoutReset": "レイアウトをリセットしました",
     "noTopologyToExport": "エクスポートするトポロジデータがありません",
     "generatingTopologyPng": "トポロジ図 PNG を生成中...",

@@ -73,6 +73,7 @@
     "design": "拓扑设计",
     "rack": "机柜规划",
     "topology": "拓扑可视化",
+    "visualization": "可视化",
     "outputResults": "输出结果",
     "deviceLibrary": "设备库",
     "settings": "设置",
@@ -499,7 +500,9 @@
     "cannotRead": "无法读取文件",
     "unsupportedType": "不支持的文件类型: {{type}}",
     "emptyTable": "空表格",
-    "cannotPreview": "无法预览此文件"
+    "cannotPreview": "无法预览此文件",
+    "copy": "复制",
+    "copied": "已复制"
   },
   "toast": {
     "projectCreated": "项目创建成功",
@@ -517,6 +520,8 @@
     "validationFailed": "校验失败: {{error}}",
     "nodeNotFound": "未找到匹配的节点",
     "topologyLayoutSaved": "拓扑布局已保存",
+    "layoutSaveFailed": "布局保存到项目失败",
+    "topologyNodesDeleted": "已删除 {{count}} 个节点",
     "layoutReset": "布局已重置",
     "noTopologyToExport": "无拓扑数据可导出",
     "generatingTopologyPng": "正在生成拓扑图 PNG...",

@@ -69,6 +69,8 @@
     "design": "拓撲設計",
     "rack": "機櫃規劃",
     "topology": "拓撲可視化",
+    "visualization": "視覺化",
+    "deviceLibrary": "設備庫",
     "outputResults": "輸出結果",
     "settings": "設定",
     "hideSidebar": "隱藏側邊欄",
@@ -181,6 +183,8 @@
     "checking": "正在檢查更新...",
     "checkFailed": "檢查更新失敗",
     "newVersion": "發現新版本",
+    "releaseNotes": "更新日誌",
+    "newVersionAvailable": "發現新版本 v{{version}}，點擊右上角圖示檢視",
     "download": "下載更新",
     "downloading": "正在下載",
     "downloadFailed": "下載失敗",
@@ -484,7 +488,9 @@
     "cannotRead": "無法讀取檔案",
     "unsupportedType": "不支援的檔案類型: {{type}}",
     "emptyTable": "空表格",
-    "cannotPreview": "無法預覽此檔案"
+    "cannotPreview": "無法預覽此檔案",
+    "copy": "複製",
+    "copied": "已複製"
   },
   "toast": {
     "projectCreated": "專案建立成功",
@@ -502,6 +508,8 @@
     "validationFailed": "校驗失敗: {{error}}",
     "nodeNotFound": "未找到符合的節點",
     "topologyLayoutSaved": "拓撲佈局已儲存",
+    "layoutSaveFailed": "佈局儲存到專案失敗",
+    "topologyNodesDeleted": "已刪除 {{count}} 個節點",
     "layoutReset": "佈局已重置",
     "noTopologyToExport": "無拓撲資料可匯出",
     "generatingTopologyPng": "正在產生拓撲圖 PNG...",

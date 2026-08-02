@@ -69,5 +69,9 @@
   "coolingAir": "Air",
   "coolingColdPlate": "Cold Plate",
   "coolingImmersion": "Immersion",
-  "reportView": "Report View"
+  "reportView": "Report View",
+  "exportPdf": "Export PDF",
+  "exportingPdf": "Generating PDF report...",
+  "pdfExported": "PDF report exported to project output directory",
+  "pdfExportFailed": "PDF export failed"
 }

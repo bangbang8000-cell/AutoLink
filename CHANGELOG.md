@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## [2.8.0] - 2026-08-02
+
+### 体验与性能
+
+v2.8.0 系列聚焦文件加载、拓扑持久化与交互编辑三大体验升级，按 v2.8.0~v2.8.3 四个子版本交付（PRD 见 `docs/v2.8/v2.8.X_PRD.md`）。
+
+#### v2.8.0 文件加载与查看
+- **Excel 一次性加载**: 新增 `ExcelTable` 统一组件 + 模块级缓存（`excel-cache.ts`，容量 50），FileViewerTab 一次解析全部 sheet，切 sheet 纯状态切换零重载
+- **图片乱码修复**: 图片文件（png/jpg/gif/webp/svg）走 `getFileBinary` + MIME 归一渲染 `<img>`，不再按 UTF-8 文本读入 `<pre>`（`file-type.ts`）
+- **输出目录体验**: `listOutputFiles` type 小写归一、`listOutputBatches` 新增虚拟 `[根目录]` 批次（根目录文件如导出的拓扑 PNG 可见），根目录批次常展开且不可删除
+
+#### v2.8.1 拓扑持久化与可加载
+- **拓扑布局落盘**: topology.json schema 升级 v2（新增 `layout` 字段），保存布局写回项目输出文件，重新生成时保留已保存布局（过滤失效节点）
+- **原始拓扑可编辑**: 项目列表点击 topology.json 直接打开拓扑视图，继续编辑并可再次保存；新增 `removeTopologyNodes`/`restoreTopology` 删除与恢复
+- **未保存指示器**: 工具栏显示布局"已保存/未保存"状态，重置布局同步清理落盘文件
+
+#### v2.8.2 拓扑交互增强
+- **框选拖动**: 多选节点可整体拖动调整位置（selectionOnDrag），支持 Delete/Backspace 删除选中节点（撤销可恢复）、Esc 取消选区/退出框选、Space 临时平移
+- **悬浮信息**: 网元悬浮显示 id/类型/组/Pod/机柜/U位/功率/连接数（NodeToolbar）；链路悬浮高亮 + 详情面板（源端/目标端/速率/网络类型/缆型/描述）
+- **链路标签**: 边标签显示开关（缩放 <0.5 自动隐藏），对齐工具栏（左/右/上/下按选区边界对齐）
+- **撤销/重做升级**: 完整拓扑快照（positions+nodes+edges）替代纯位置快照，删除节点可恢复
+- **性能优化**: hover 仅目标节点新建对象，其余复用引用
+
+#### v2.8.3 文案与一致性
+- **i18n key 补全**: 5 语言（zh-CN/en/zh-TW/ja/ko）补齐 `menu.visualization`、`update.releaseNotes`、`menu.deviceLibrary`、`design.exportPdf`、PUE 估算、`workbench.cablingGuide/bom` 等缺失 key，修复编程 ID 泄漏
+- **topology.json 重写**: 新增 40+ key（viewTitle/nodes/connections/saveLayout/edgeLabels/alignLeft/nodeDetail 等），拓扑视图全面接入 i18n
+- **防回归测试**: 新增"i18n key 完整性（以 zh-CN 为基准）"测试（77 用例），4 语言缺失 key 将直接失败
+- 回归测试: tsc 0 errors、eslint 0 errors、vitest 330 passed
+
 ## [2.7.7] - 2026-08-02
 
 ### 修复

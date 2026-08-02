@@ -70,6 +70,35 @@ export interface TopologyEdge {
   networkType?: string
 }
 
+/** v2.8.1-T1: 用户调整的拓扑布局(落盘到 topology.json 的 layout 字段) */
+export interface TopologyLayout {
+  version: number
+  savedAt: string
+  /** 节点 id → 画布坐标 */
+  nodePositions: Record<string, { x: number; y: number }>
+}
+
+/**
+ * v2.8.1-T7: 校验 layout 结构,非法/缺失返回 null(旧 schema v1 文件平滑兼容)
+ */
+function sanitizeLayout(raw: unknown): TopologyLayout | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  if (!r.nodePositions || typeof r.nodePositions !== 'object') return null
+  const nodePositions: Record<string, { x: number; y: number }> = {}
+  for (const [id, pos] of Object.entries(r.nodePositions as Record<string, unknown>)) {
+    const p = pos as { x?: unknown; y?: unknown }
+    if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+      nodePositions[id] = { x: p.x, y: p.y }
+    }
+  }
+  return {
+    version: typeof r.version === 'number' ? r.version : 1,
+    savedAt: typeof r.savedAt === 'string' ? r.savedAt : new Date().toISOString(),
+    nodePositions,
+  }
+}
+
 /* ---------- V2.4 估算相关类型 ---------- */
 
 export interface PUEEstimate {
@@ -223,6 +252,9 @@ interface DesignState {
   validationIssues: ValidationIssue[]
   topology: { nodes: TopologyNode[]; edges: TopologyEdge[] } | null
   estimation: EstimationResult | null
+  // v2.8.1-T1: 已落盘到项目文件的布局(来自 topology.json 的 layout 字段)
+  layout: TopologyLayout | null
+  layoutSaved: boolean
   generating: boolean
   estimating: boolean
   error: string | null
@@ -237,6 +269,12 @@ interface DesignState {
   generate: (projectName: string) => Promise<void>
   validate: (projectName: string) => Promise<void>
   estimate: (projectName: string, params?: EstimateParams) => Promise<void>
+  // v2.8.1-T2/T6: 布局落盘/清除
+  saveLayout: (projectName: string, nodePositions: Record<string, { x: number; y: number }>) => Promise<void>
+  clearLayout: (projectName: string) => Promise<void>
+  // v2.8.2-T5/T6: 节点/链路增删与恢复(供 Delete 与撤销/重做使用)
+  removeTopologyNodes: (nodeIds: string[]) => void
+  restoreTopology: (nodes: TopologyNode[], edges: TopologyEdge[]) => void
   clearResults: () => void
 }
 
@@ -249,6 +287,8 @@ export const useDesignStore = create<DesignState>()(
   validationIssues: [] as ValidationIssue[],
   topology: null,
   estimation: null,
+  layout: null,
+  layoutSaved: false,
   generating: false,
   estimating: false,
   error: null,
@@ -288,12 +328,16 @@ export const useDesignStore = create<DesignState>()(
         const jsonStr = await window.electron.project.getFile(projectName, 'topology.json')
         if (jsonStr) {
           const data = JSON.parse(jsonStr)
+          // v2.8.1-T7: layout 缺失/非法时回退 null(旧 schema v1 平滑兼容)
+          const layout = sanitizeLayout(data.layout)
           set({
             summary: data.summary ?? null,
             topology: data.topology ?? null,
             valid: data.valid ?? null,
             validationIssues: data.validationIssues ?? [],
             estimation: data.estimation ?? null,
+            layout,
+            layoutSaved: layout !== null,
             projectName,
           })
         } else {
@@ -304,6 +348,8 @@ export const useDesignStore = create<DesignState>()(
             valid: null,
             validationIssues: [],
             estimation: null,
+            layout: null,
+            layoutSaved: false,
             projectName,
           })
         }
@@ -317,6 +363,8 @@ export const useDesignStore = create<DesignState>()(
         valid: null,
         validationIssues: [],
         estimation: null,
+        layout: null,
+        layoutSaved: false,
       })
     } finally {
       set({ generating: false })
@@ -348,12 +396,33 @@ export const useDesignStore = create<DesignState>()(
         estimation?: EstimationResult
       }
 
+      // v2.8.1-T4: 重新生成时保留已保存的 layout(仅保留仍存在的节点 id,失效 id 丢弃)
+      let preservedLayout = get().layout
+      if (!preservedLayout) {
+        try {
+          const existingStr = await window.electron.project.getFile(projectName, 'topology.json')
+          if (existingStr) {
+            preservedLayout = sanitizeLayout(JSON.parse(existingStr).layout)
+          }
+        } catch { /* ignore */ }
+      }
+      if (preservedLayout) {
+        const nodeIds = new Set((result.topology?.nodes ?? []).map((n) => n.id))
+        const filtered: Record<string, { x: number; y: number }> = {}
+        for (const [id, pos] of Object.entries(preservedLayout.nodePositions)) {
+          if (nodeIds.has(id)) filtered[id] = pos
+        }
+        preservedLayout = { ...preservedLayout, nodePositions: filtered }
+      }
+
       set({
         summary: result.summary ?? null,
         topology: result.topology ?? null,
         valid: result.valid ?? null,
         validationIssues: result.validationIssues ?? [],
         estimation: result.estimation ?? null,
+        layout: preservedLayout,
+        layoutSaved: preservedLayout !== null,
         projectName,
       })
 
@@ -362,7 +431,7 @@ export const useDesignStore = create<DesignState>()(
       try {
         if (window.electron?.project?.saveFile) {
           const payload = {
-            schema_version: 1,
+            schema_version: 2,
             project_name: projectName,
             generated_at: new Date().toISOString(),
             config_snapshot: config,
@@ -371,6 +440,8 @@ export const useDesignStore = create<DesignState>()(
             valid: result.valid ?? null,
             validationIssues: result.validationIssues ?? [],
             estimation: result.estimation ?? null,
+            // v2.8.1-T1: 布局落盘(与 topology 一起持久化)
+            layout: preservedLayout ?? null,
           }
           await window.electron.project.saveFile(projectName, 'topology.json', JSON.stringify(payload, null, 2))
         }
@@ -382,6 +453,59 @@ export const useDesignStore = create<DesignState>()(
     } finally {
       set({ generating: false })
     }
+  },
+
+  // v2.8.1-T2: 保存布局到项目 topology.json(localStorage 由 TopologyTab 保留为快速缓存)
+  saveLayout: async (projectName, nodePositions) => {
+    try {
+      const existingStr = await window.electron.project.getFile(projectName, 'topology.json')
+      let payload: Record<string, unknown> = {}
+      if (existingStr) {
+        try { payload = JSON.parse(existingStr) as Record<string, unknown> } catch { payload = {} }
+      }
+      const layout: TopologyLayout = { version: 1, savedAt: new Date().toISOString(), nodePositions }
+      payload.schema_version = 2
+      payload.layout = layout
+      // v2.8.2-T10: 保存时一并持久化当前拓扑(覆盖删除节点后的 topology)
+      const { topology } = get()
+      if (topology) payload.topology = topology
+      await window.electron.project.saveFile(projectName, 'topology.json', JSON.stringify(payload, null, 2))
+      set({ layout, layoutSaved: true })
+    } catch (err) {
+      console.error('[design.store] saveLayout failed:', err)
+      throw err
+    }
+  },
+
+  // v2.8.1-T6: 清除布局(重置为自动布局),落盘移除 layout 字段
+  clearLayout: async (projectName) => {
+    try {
+      const existingStr = await window.electron.project.getFile(projectName, 'topology.json')
+      if (existingStr) {
+        const payload = JSON.parse(existingStr) as Record<string, unknown>
+        payload.layout = null
+        await window.electron.project.saveFile(projectName, 'topology.json', JSON.stringify(payload, null, 2))
+      }
+      set({ layout: null, layoutSaved: false })
+    } catch (err) {
+      console.error('[design.store] clearLayout failed:', err)
+      throw err
+    }
+  },
+
+  // v2.8.2-T5: 删除节点及其关联链路(同步清理 edges,保持数据一致)
+  removeTopologyNodes: (nodeIds) => {
+    const { topology } = get()
+    if (!topology || nodeIds.length === 0) return
+    const idSet = new Set(nodeIds)
+    const nodes = topology.nodes.filter((n) => !idSet.has(n.id))
+    const edges = topology.edges.filter((e) => !idSet.has(e.source) && !idSet.has(e.target))
+    set({ topology: { nodes, edges } })
+  },
+
+  // v2.8.2-T6: 恢复拓扑数据(撤销删除)
+  restoreTopology: (nodes, edges) => {
+    set({ topology: { nodes, edges } })
   },
 
   estimate: async (projectName, params) => {

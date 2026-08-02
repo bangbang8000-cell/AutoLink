@@ -4,7 +4,8 @@
  * V2.7.6-T5: 新增 GPU/NPU 节点类型用于 Scale-Up 双栈联合视图
  */
 import { memo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { useTranslation } from 'react-i18next'
+import { Handle, NodeToolbar, Position, type NodeProps } from '@xyflow/react'
 import { Server, Network, Cpu } from 'lucide-react'
 import {
   TOPOLOGY_NODE_STYLES,
@@ -56,7 +57,66 @@ export interface TopologyNodeData {
   endU?: number
   powerWatts?: number
   connectionCount?: number
+  // v2.8.2-T1: hover 悬浮卡片可见标记(由 TopologyTab 控制)
+  hovered?: boolean
   [key: string]: unknown
+}
+
+/**
+ * v2.8.2-T1: 节点 hover 悬浮卡片(NodeToolbar 自动跟随节点位置,随画布缩放/平移)
+ * 仅当 d.hovered 为 true 时显示;内容与"节点详情"面板一致
+ */
+export function NodeHoverCard({ d }: { d: TopologyNodeData }) {
+  const { t } = useTranslation('topology')
+  return (
+    <NodeToolbar
+      isVisible={!!d.hovered}
+      position={Position.Top}
+      offset={10}
+      className="!rounded-lg !shadow-lg !bg-white dark:!bg-app-surface !border !border-gray-200 dark:!border-edge-subtle"
+    >
+      <div className="min-w-[210px] max-w-[280px] p-3 text-2xs">
+        <div className="flex items-center gap-1.5 font-medium text-gray-800 dark:text-gray-100 mb-2">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: NODE_COLORS[d.nodeType] || '#9ca3af' }} />
+          <span className="truncate">{d.label}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-500 dark:text-gray-400">
+          <span>{t('type')}</span>
+          <span className="font-medium text-gray-700 dark:text-gray-300">{NODE_LABELS[d.nodeType] || d.nodeType}</span>
+          {d.group ? (
+            <>
+              <span>{t('group')}</span><span className="font-medium text-gray-700 dark:text-gray-300">{d.group}</span>
+            </>
+          ) : null}
+          {d.podid ? (
+            <>
+              <span>{t('pod')}</span><span className="font-medium text-gray-700 dark:text-gray-300">{d.podid}</span>
+            </>
+          ) : null}
+          {d.cabinetName ? (
+            <>
+              <span>{t('cabinet')}</span><span className="font-medium text-gray-700 dark:text-gray-300">{d.cabinetName}</span>
+            </>
+          ) : null}
+          {d.startU !== undefined ? (
+            <>
+              <span>{t('uPosition')}</span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {d.startU}{d.endU !== undefined ? ` - ${d.endU}` : ''}
+              </span>
+            </>
+          ) : null}
+          {d.powerWatts !== undefined ? (
+            <>
+              <span>{t('power')}</span><span className="font-medium text-gray-700 dark:text-gray-300">{d.powerWatts}W</span>
+            </>
+          ) : null}
+          <span>{t('connectionsCount')}</span>
+          <span className="font-medium text-gray-700 dark:text-gray-300">{d.connectionCount ?? 0}</span>
+        </div>
+      </div>
+    </NodeToolbar>
+  )
 }
 
 /* ---------- 服务器节点 ----------
@@ -93,6 +153,8 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
       </div>
       <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
       <Handle id="down" type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
+      {/* v2.8.2-T1: hover 悬浮卡片 */}
+      <NodeHoverCard d={d} />
     </div>
   )
 }
@@ -129,6 +191,8 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
       </div>
       <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
       <Handle id="down" type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
+      {/* v2.8.2-T1: hover 悬浮卡片 */}
+      <NodeHoverCard d={d} />
     </div>
   )
 }
@@ -170,6 +234,8 @@ function GpuNodeComponent({ data, selected }: NodeProps) {
       </div>
       <Handle id="right" type="source" position={Position.Right} style={{ background: color, width: 5, height: 5 }} />
       <Handle id="down" type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
+      {/* v2.8.2-T1: hover 悬浮卡片 */}
+      <NodeHoverCard d={d} />
     </div>
   )
 }

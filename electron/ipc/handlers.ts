@@ -507,7 +507,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const files = fs.readdirSync(outputDir, { withFileTypes: true })
     return files
       .filter((f) => f.isFile())
-      .map((f) => ({ name: f.name, type: path.extname(f.name).toUpperCase().replace('.', '') || 'FILE' }))
+      // v2.8.0-T6: type 统一返回小写扩展名,避免前端 MIME 拼接大小写不一致
+      .map((f) => ({ name: f.name, type: path.extname(f.name).slice(1).toLowerCase() || 'file' }))
   }))
 
   ipcMain.handle('project:listOutputBatches', wrapHandler(async (_event, projectName: string) => {
@@ -515,8 +516,15 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const outputDir = path.join(getWorkspacePath(), projectName, 'output')
     if (!fs.existsSync(outputDir)) return []
 
-    const entries = fs.readdirSync(outputDir, { withFileTypes: true })
-    return entries
+    // v2.8.0-T7: 根目录文件(如导出的拓扑 PNG)作为虚拟批次 `[根目录]` 展示,
+    // 避免导出到 output/ 根目录的文件在"输出结果"区不可见
+    const rootFiles = fs.readdirSync(outputDir, { withFileTypes: true })
+      .filter((f) => f.isFile() && !f.name.startsWith('.'))
+      .map((f) => ({ name: f.name, path: `output/${f.name}` }))
+    const batches: { name: string; files: { name: string; path: string }[] }[] =
+      rootFiles.length > 0 ? [{ name: '[根目录]', files: rootFiles }] : []
+
+    const dirs = fs.readdirSync(outputDir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => {
         const batchFiles = fs.readdirSync(path.join(outputDir, d.name))
@@ -524,6 +532,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
           .map((f) => ({ name: f, path: `output/${d.name}/${f}` }))
         return { name: d.name, files: batchFiles }
       })
+    return [...batches, ...dirs]
   }))
 
   ipcMain.handle('project:saveConfigFile', wrapHandler(async (_event, name: string, content: string) => {

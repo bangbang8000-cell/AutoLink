@@ -114,13 +114,26 @@ export function ProjectExplorer() {
 
   // T6: 点击项目内文件 → 打开 fileViewer (filePath 用 node.path 相对项目根)
   const handleProjectFileClick = useCallback((projectName: string, node: FileTreeNode) => {
+    // v2.8.1-T5: 点击 topology.json 打开可编辑拓扑视图(而非 JSON 文本)
+    if (node.name === 'topology.json') {
+      const project = projects.find((p) => p.name === projectName)
+      if (project) {
+        selectProject(project)
+      }
+      openTab({
+        type: 'topology',
+        title: t('common:menu.topology'),
+        closable: true,
+      })
+      return
+    }
     openTab({
       type: 'fileViewer',
       title: node.name,
       closable: true,
       state: { filePath: node.path, projectName, isTemplate: false },
     })
-  }, [openTab])
+  }, [openTab, selectProject, projects, t])
 
   // T9: 点击批次内文件 → 打开 fileViewer (filePath 用 workspace 相对路径)
   const handleBatchFileClick = useCallback((_projectName: string, _batch: OutputBatch, file: OutputBatchFile) => {

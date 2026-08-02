@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
+import { ExcelTable } from '@/components/workspace/ExcelTable'
+import { getImageMime } from '@/utils/file-type'
 
 interface Props {
   fileName?: string | null
@@ -14,7 +16,6 @@ export function OutputTab({ fileName, fileType }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sheets, setSheets] = useState<Record<string, string[][]>>({})
-  const [activeSheet, setActiveSheet] = useState<string>('')
   const [imageSrc, setImageSrc] = useState<string | null>(null)
 
   useEffect(() => {
@@ -27,11 +28,14 @@ export function OutputTab({ fileName, fileType }: Props) {
     setLoading(true)
     setError(null)
     try {
+      // v2.8.0-T6: 类型归一(小写),兼容旧版大写 type 与 .PNG 大写扩展名
+      const lowerName = fileName.toLowerCase()
+      const type = String(fileType || '').toLowerCase()
       if (
-        fileType === 'xlsx' ||
-        fileType === 'xls' ||
-        fileName?.endsWith('.xlsx') ||
-        fileName?.endsWith('.xls')
+        type === 'xlsx' ||
+        type === 'xls' ||
+        lowerName.endsWith('.xlsx') ||
+        lowerName.endsWith('.xls')
       ) {
         // T10: getFileBinary 需要 (projectName, relPath) 两个参数
         const base64 = await window.electron?.project?.getFileBinary(projectName, `output/${fileName}`)
@@ -46,17 +50,12 @@ export function OutputTab({ fileName, fileType }: Props) {
           sheetsData[name] = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })
         })
         setSheets(sheetsData)
-        setActiveSheet(wb.SheetNames[0] || '')
-      } else if (
-        fileType === 'png' ||
-        fileType === 'jpg' ||
-        fileType === 'jpeg' ||
-        fileName?.endsWith('.png') ||
-        fileName?.endsWith('.jpg')
-      ) {
+      } else if (getImageMime(lowerName)) {
+        // v2.8.0-T6: 图片预览(含 SVG),MIME 由扩展名映射,避免大小写脆弱
         const base64 = await window.electron?.project?.getFileBinary(projectName, `output/${fileName}`)
-        if (base64) {
-          setImageSrc(`data:image/${fileType || 'png'};base64,${base64}`)
+        const mime = getImageMime(lowerName)
+        if (base64 && mime) {
+          setImageSrc(`data:${mime};base64,${base64}`)
         }
       } else {
         setError(t('common:fileViewer.unsupportedType', { type: fileType || '' }))
@@ -97,76 +96,9 @@ export function OutputTab({ fileName, fileType }: Props) {
     )
   }
 
-  // Excel table preview
+  // Excel table preview(v2.8.0-T1: 复用统一 ExcelTable,切 sheet 零重载)
   if (Object.keys(sheets).length > 0) {
-    const data = sheets[activeSheet]
-    if (!data || data.length === 0) {
-      return (
-        <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-          {t('common:fileViewer.emptyTable')}
-        </div>
-      )
-    }
-    return (
-      <div className="h-full flex flex-col">
-        {/* Sheet tabs */}
-        {Object.keys(sheets).length > 1 && (
-          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 shrink-0 overflow-x-auto">
-            {Object.keys(sheets).map((name) => (
-              <button
-                key={name}
-                onClick={() => setActiveSheet(name)}
-                className={`px-2.5 py-0.5 text-xs rounded whitespace-nowrap ${
-                  name === activeSheet
-                    ? 'bg-primary-500 text-white'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-app-hover'
-                }`}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* Table */}
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="sticky top-0 bg-gray-100 dark:bg-gray-700">
-                {data[0]?.map((cell, i) => (
-                  <th
-                    key={i}
-                    className="px-2 py-1.5 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap"
-                  >
-                    {cell}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.slice(1).map((row, ri) => (
-                <tr
-                  key={ri}
-                  className={
-                    ri % 2 === 0
-                      ? 'bg-white dark:bg-app-elevated'
-                      : 'bg-gray-50 dark:bg-app/50'
-                  }
-                >
-                  {row.map((cell, ci) => (
-                    <td
-                      key={ci}
-                      className="px-2 py-1 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap"
-                    >
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
+    return <ExcelTable sheetsData={sheets} />
   }
 
   return (

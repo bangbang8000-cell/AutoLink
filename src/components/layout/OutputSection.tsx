@@ -9,6 +9,9 @@ import type { ContextMenuItem } from '@/components/ui/ContextMenu'
 import { Section, getFileIcon } from '@/components/layout/FileTreePanel'
 import type { WorkspaceTab } from '@/stores/workspace.store'
 
+// v2.8.0-T7: 与 electron/ipc/handlers.ts 的 listOutputBatches 虚拟批次名保持一致
+export const ROOT_BATCH_NAME = '[根目录]'
+
 // Output section: lists output batches per project
 export function OutputSection({ projects, openTab }: {
   projects: { name: string }[]
@@ -67,7 +70,7 @@ export function OutputSection({ projects, openTab }: {
     })
   }, [openTab])
 
-  // T12: 批次右键菜单(openInFileManager/deleteBatch)
+  // T12: 批次右键菜单(openInFileManager/deleteBatch);根目录虚拟批次不可删除
   const buildBatchContextMenu = (projectName: string, batchName: string): ContextMenuItem[] => [
     {
       label: t('common:explorer.contextMenu.openInFileManager'),
@@ -76,11 +79,13 @@ export function OutputSection({ projects, openTab }: {
         window.electron?.shell?.showItemInFolder(`${wsp}/${projectName}/output/${batchName}`)
       },
     },
-    {
-      label: t('common:explorer.contextMenu.deleteBatch'),
-      danger: true,
-      action: () => setDeleteCtx({ type: 'batch', projectName, batchName }),
-    },
+    ...(batchName !== ROOT_BATCH_NAME
+      ? [{
+          label: t('common:explorer.contextMenu.deleteBatch'),
+          danger: true,
+          action: () => setDeleteCtx({ type: 'batch', projectName, batchName }),
+        }]
+      : []),
   ]
 
   // T12: 文件右键菜单(openFile/showInFileManager/copyFilePath/deleteFile)
@@ -133,7 +138,9 @@ export function OutputSection({ projects, openTab }: {
                 </div>
               )}
               {isExpanded && batches.map((batch) => {
-                const isBatchExpanded = expandedBatches[`batch:${p.name}/${batch.name}`]
+                // v2.8.0-T7: 根目录虚拟批次常展开,不可折叠/删除
+                const isRootBatch = batch.name === ROOT_BATCH_NAME
+                const isBatchExpanded = isRootBatch || expandedBatches[`batch:${p.name}/${batch.name}`]
                 return (
                   <div key={`batch:${p.name}/${batch.name}`}>
                     <TreeNode
@@ -144,11 +151,11 @@ export function OutputSection({ projects, openTab }: {
                           ? <FolderOpen size={12} className="text-gray-400" />
                           : <Folder size={12} className="text-gray-400" />
                       }
-                      onClick={() => toggleBatch(p.name, batch.name)}
-                      onArrowClick={() => toggleBatch(p.name, batch.name)}
+                      onClick={() => { if (!isRootBatch) toggleBatch(p.name, batch.name) }}
+                      onArrowClick={() => { if (!isRootBatch) toggleBatch(p.name, batch.name) }}
                       isExpanded={isBatchExpanded}
                       hasChildren={batch.files.length > 0}
-                      contextMenu={buildBatchContextMenu(p.name, batch.name)}
+                      contextMenu={isRootBatch ? undefined : buildBatchContextMenu(p.name, batch.name)}
                     />
                     {isBatchExpanded && batch.files.map((f) => {
                       const { Icon, color } = getFileIcon(f.name)
@@ -182,8 +189,12 @@ export function OutputSection({ projects, openTab }: {
                 await window.electron.project.deleteOutputBatch(deleteCtx.projectName, deleteCtx.batchName)
                 addToast('success', t('common:explorer.toast.batchDeleted', { name: deleteCtx.batchName }))
               } else {
-                // deleteOutputFile 期望相对 output 目录的路径:batchName/fileName
-                await window.electron.project.deleteOutputFile(deleteCtx.projectName, `${deleteCtx.batchName}/${deleteCtx.fileName}`)
+                // deleteOutputFile 期望相对 output 目录的路径:
+                // 普通批次为 batchName/fileName;根目录虚拟批次仅为 fileName
+                const relPath = deleteCtx.batchName === ROOT_BATCH_NAME
+                  ? deleteCtx.fileName || ''
+                  : `${deleteCtx.batchName}/${deleteCtx.fileName}`
+                await window.electron.project.deleteOutputFile(deleteCtx.projectName, relPath)
                 addToast('success', t('common:explorer.toast.fileDeleted', { name: deleteCtx.fileName }))
               }
               await refreshBatches(deleteCtx.projectName)
