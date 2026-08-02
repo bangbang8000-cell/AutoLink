@@ -1282,7 +1282,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('template:healthCheck', wrapHandler(async () => {
     const deviceIds = new Set(loadDeviceLibrary().categories.flatMap((c) => c.devices.map((d) => d.id)))
 
-    const checkTemplate = async (tplDir: string, id: string): Promise<{ type: string; detail: string }[]> => {
+    const checkTemplate = async (tplDir: string): Promise<{ type: string; detail: string }[]> => {
       const issues: { type: string; detail: string }[] = []
       const jsonPath = path.join(tplDir, 'project_config.json')
       if (!fs.existsSync(jsonPath)) {
