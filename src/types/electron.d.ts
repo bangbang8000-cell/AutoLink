@@ -34,7 +34,26 @@ interface Window {
       getStructure: (templateName: string) => Promise<import('@/types/file-tree').FileTreeNode[]>
       getFile: (templateName: string, filePath: string) => Promise<string | null>
       getConfig: (templateName: string) => Promise<import('@/types/project-config').ProjectConfig | null>
-      list: () => Promise<Array<{ id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean }>>
+      list: () => Promise<Array<{
+        id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean
+        summary: {
+          numGpuServers: number; numAllFlashStorage: number; numHybridFlashStorage: number; numComputeServers: number
+          paramProtocol: string; paramSpeed: string; storageSpeed: string; powerLimitPerRack: number
+        } | null
+      }>>
+      preview: (templateName: string) => Promise<{
+        success: boolean
+        error?: string
+        summary?: {
+          numServers: number; numGpuServers: number
+          paramLeafCount: number; paramSpineCount: number; paramCoreCount: number
+          storageLeafCount: number; storageSpineCount: number
+          paramSpeed: string; storageSpeed: string; paramProtocol: string
+          totalRacks: number; totalPowerWatts: number
+          valid: boolean; errors: string[]
+          convergence: Array<{ networkType?: string; convergenceRatio?: number; meetsTarget?: boolean; recommendation?: string }> | null
+        }
+      }>
       create: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
       delete: (templateName: string) => Promise<void>
       update: (templateName: string, updates: {

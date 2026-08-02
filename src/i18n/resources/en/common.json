@@ -101,6 +101,23 @@
       "jsonSyntaxError": "JSON syntax error",
       "configUnavailable": "Template config unavailable; cannot save",
       "configLoadFailed": "Failed to load template config; only basic info is editable. Fix the config via the \"Raw JSON\" panel."
+    },
+    "preview": {
+      "title": "Preview Solution",
+      "loading": "Generating solution...",
+      "noConfig": "Template is missing project_config.json and cannot be previewed. Rebuild the template or edit the config manually.",
+      "failed": "Template preview failed. Please check the template config.",
+      "valid": "Topology validation passed",
+      "invalid": "Topology validation failed ({{count}} errors)",
+      "servers": "Servers",
+      "switches": "Switches",
+      "racks": "Racks",
+      "power": "Total Power",
+      "protocol": "Protocol",
+      "convergence": "Convergence",
+      "errorList": "Validation Errors",
+      "edit": "Edit",
+      "createProject": "Create Project from Template"
     }
   },
   "menu": {
@@ -295,6 +312,7 @@
       "favorite": "Favorite",
       "deleteProject": "Delete Project",
       "viewTemplateFiles": "View Template Files",
+      "previewTemplate": "Preview Solution",
       "createFromTemplate": "Create Project from Template",
       "editTemplate": "Edit Template...",
       "deleteTemplate": "Delete Template",

@@ -11,11 +11,34 @@ import { TreeNode } from '@/components/layout/TreeNode'
 import type { ContextMenuItem } from '@/components/ui/ContextMenu'
 import type { FileTreeNode, GroupKey } from '@/types/file-tree'
 import { Section, collectAllDirPaths, renderTemplateChildren } from '@/components/layout/FileTreePanel'
+import { TemplatePreviewModal } from '@/components/layout/TemplatePreviewModal'
 import type { WorkspaceTab } from '@/stores/workspace.store'
+
+// V2.9.7-T1: 模板规模摘要（来自 template:list 的 summary 字段）
+interface TemplateSummary {
+  numGpuServers: number
+  numAllFlashStorage: number
+  numHybridFlashStorage: number
+  numComputeServers: number
+  paramProtocol: string
+  paramSpeed: string
+  storageSpeed: string
+  powerLimitPerRack: number
+}
+
+interface TemplateItem {
+  id: string
+  name: string
+  description?: string
+  scenario?: string
+  tags?: string[]
+  isBuiltin?: boolean
+  summary?: TemplateSummary | null
+}
 
 // Template section with expandable file tree
 export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
-  templates: { id: string; name: string; description?: string; scenario?: string; tags?: string[]; isBuiltin?: boolean }[]
+  templates: TemplateItem[]
   openTab: (tab: Omit<WorkspaceTab, 'id'>) => string
   handleOpenInExplorer: (name: string) => void
 }) {
@@ -81,6 +104,13 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
     await updateTemplate(editTarget.id, updates)
     addToast('success', t('common:explorer.toast.templateUpdated', { id: editTarget.id }))
   }, [editTarget, updateTemplate, addToast])
+
+  // V2.9.7-T3: 模板预览方案
+  const [previewTarget, setPreviewTarget] = useState<TemplateItem | null>(null)
+
+  const handlePreviewTemplate = useCallback((tpl: TemplateItem) => {
+    setPreviewTarget(tpl)
+  }, [])
 
   const handleExportTemplate = useCallback(async (tplName: string) => {
     if (busy) return
@@ -179,16 +209,24 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
             <div key={tpl.id}>
               <TreeNode
                 label={
-                  <span className="flex items-center gap-1.5 min-w-0">
-                    <span className="truncate">{tpl.name}</span>
-                    {tpl.isBuiltin && (
-                      <span className="shrink-0 text-3xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1 rounded">
-                        {t('common:template.builtin', '内置')}
-                      </span>
-                    )}
-                    {tpl.description && (
-                      <span className="truncate text-2xs text-gray-400 dark:text-gray-500 max-w-[100px]">
-                        {tpl.description}
+                  <span className="flex flex-col min-w-0">
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="truncate">{tpl.name}</span>
+                      {tpl.isBuiltin && (
+                        <span className="shrink-0 text-3xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1 rounded">
+                          {t('common:template.builtin', '内置')}
+                        </span>
+                      )}
+                      {tpl.description && (
+                        <span className="truncate text-2xs text-gray-400 dark:text-gray-500 max-w-[100px]">
+                          {tpl.description}
+                        </span>
+                      )}
+                    </span>
+                    {/* V2.9.7-T1: 模板规模摘要行 */}
+                    {tpl.summary && (
+                      <span className="text-2xs text-gray-400 dark:text-gray-500 truncate max-w-[240px]">
+                        GPU {tpl.summary.numGpuServers} · 存储 {tpl.summary.numAllFlashStorage + tpl.summary.numHybridFlashStorage} · 通算 {tpl.summary.numComputeServers} · {tpl.summary.paramProtocol} {tpl.summary.paramSpeed}
                       </span>
                     )}
                   </span>
@@ -200,6 +238,7 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                 hasChildren
                 leading={<LayoutTemplate size={12} className="text-gray-400 dark:text-gray-500 shrink-0" />}
                 contextMenu={[
+                  { label: t('common:explorer.contextMenu.previewTemplate', '预览方案'), action: () => handlePreviewTemplate(tpl) },
                   { label: t('common:explorer.contextMenu.createFromTemplate', '基于此模板创建项目'), action: () => openWizardFromTemplate(tpl.name) },
                   { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplateExpand(tpl.name) },
                   { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(tpl.name) },
@@ -253,6 +292,22 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
           template={editTarget}
           onConfirm={handleEditConfirm}
           onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {/* V2.9.7-T3: 模板预览弹窗 */}
+      {previewTarget && (
+        <TemplatePreviewModal
+          template={{ id: previewTarget.id, name: previewTarget.name, isBuiltin: previewTarget.isBuiltin }}
+          onClose={() => setPreviewTarget(null)}
+          onCreateProject={(name) => {
+            setPreviewTarget(null)
+            openWizardFromTemplate(name)
+          }}
+          onEdit={(name, isBuiltin) => {
+            setPreviewTarget(null)
+            handleEditTemplate({ id: name, name, isBuiltin })
+          }}
         />
       )}
     </>

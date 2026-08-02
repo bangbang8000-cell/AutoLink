@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## [2.9.7] - 2026-08-02
+
+### 模板预览与派生文件（项目模板生命周期打通 · 第四阶段）
+
+v2.9.7 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第四阶段：模板列表展示规模摘要，新增"预览方案"能力——以临时目录即时执行设计引擎，弹窗呈现校验状态与统计摘要，不落盘任何派生文件（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+
+#### 模板规模摘要（T1）
+- `template:list` 返回每模板 `summary`：GPU 服务器/全闪/混闪/通算数量、参数网络协议与速率、存储速率、单机柜功率上限（从 `project_config.json` 解析，无 JSON 时 `null`）
+- 模板列表项展示摘要行：`GPU n · 存储 n · 通算 n · 协议 速率`
+
+#### 预览方案（T2/T3）
+- 新增 `template:preview` IPC：`mkdtemp` 临时目录复制 `project_config.json` → 调用 design 引擎（30s 超时）→ 提取服务器/交换机分级计数/机柜数/总功率/校验状态与错误/收敛比 → `finally` 清理临时目录，不落盘到模板目录
+- 模板右键菜单新增"预览方案"；新增 `TemplatePreviewModal` 弹窗：校验状态横幅 + 6 张统计卡片（服务器/交换机/机柜/总功率/协议/收敛比）+ 校验错误列表（最多 8 条）
+- 弹窗底部提供"去编辑"与"基于此模板创建项目"快捷入口
+
+#### 无 JSON 模板提示（T4）
+- 旧模板无 `project_config.json` 时预览返回 `template.noConfig`，弹窗内明确警告提示（不再静默失败）
+
+#### 派生文件策略固化（T5）
+- 预览采用临时目录模式：`topology.json`/`rack_layout.json` 等派生文件仅在临时目录生成，随 `finally` 删除，模板目录保持只读不变
+
+#### i18n 与测试（T6）
+- 新增 5 语言 `common.template.preview.*`（15 keys）与 `common.explorer.contextMenu.previewTemplate`
+- 新增 `template-preview-modal.test.tsx` 5 个 RTL 用例：成功摘要/无 JSON 提示/校验失败列表/创建项目回调/去编辑回调
+
+#### 版本与回归
+- 版本号 2.9.6 → 2.9.7（package.json / VERSION / package-lock.json）
+- 全量回归：pytest 560 passed、vitest 350 passed、tsc 0 error、eslint 0 error（37 个既有 warning）、模板验证 16/16 通过
+
 ## [2.9.6] - 2026-08-02
 
 ### 模板可视化编辑（项目模板生命周期打通 · 第三阶段）

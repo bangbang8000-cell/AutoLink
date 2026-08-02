@@ -48,6 +48,8 @@ const electronAPI = {
     getConfig: (templateName: string) =>
       ipcRenderer.invoke('template:getConfig', templateName),
     list: () => ipcRenderer.invoke('template:list'),
+    preview: (templateName: string) =>
+      ipcRenderer.invoke('template:preview', templateName),
     create: (projectName: string, meta: unknown) =>
       ipcRenderer.invoke('template:create', projectName, meta),
     delete: (templateName: string) =>

@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, shell, dialog, app } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
 import { execSync } from 'child_process'
 import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath, getDocPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
@@ -1028,6 +1029,29 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }
 
   ipcMain.handle('template:list', wrapHandler(async () => {
+    // V2.9.7-T1: 从模板 project_config.json 解析规模摘要（无 JSON 时返回 null）
+    const readSummary = (tplDir: string) => {
+      const jsonPath = path.join(tplDir, 'project_config.json')
+      if (!fs.existsSync(jsonPath)) return null
+      try {
+        const cfg = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+        const topo = cfg.topology || {}
+        const rack = cfg.rack_config || {}
+        return {
+          numGpuServers: topo.num_gpu_servers ?? 0,
+          numAllFlashStorage: topo.num_all_flash_storage ?? 0,
+          numHybridFlashStorage: topo.num_hybrid_flash_storage ?? 0,
+          numComputeServers: topo.num_compute_servers ?? 0,
+          paramProtocol: topo.param_protocol || 'RoCE',
+          paramSpeed: topo.param_speed || '',
+          storageSpeed: topo.storage_speed || '',
+          powerLimitPerRack: rack.power_limit_per_rack ?? 0,
+        }
+      } catch {
+        return null
+      }
+    }
+
     // 读取单个模板目录，返回模板元信息数组
     const readDir = (tplDir: string, isBuiltin: boolean) => {
       if (!fs.existsSync(tplDir)) return []
@@ -1050,6 +1074,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
             tags: meta.tags || [],
             updatedAt: meta.updatedAt || meta.createdAt || '',
             isBuiltin: isBuiltin || !!meta.isBuiltin,
+            summary: readSummary(path.join(tplDir, e.name)),
           }
         })
     }
@@ -1193,6 +1218,62 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       fs.writeFileSync(jsonPath, updates.projectConfig, 'utf-8')
       const iniPath = path.join(targetDir, 'network_config.ini')
       fs.writeFileSync(iniPath, result.ini ?? '', 'utf-8')
+    }
+  }))
+
+  // V2.9.7-T2/T4/T5: 模板预览方案 - 临时目录即时设计（不落盘到模板目录）
+  ipcMain.handle('template:preview', wrapHandler(async (_event, templateName: string) => {
+    sanitizeName(templateName)
+    const userTplDir = path.join(getUserTemplatePath(), templateName)
+    const builtinTplDir = path.join(getTemplatePath(), templateName)
+    const tplDir = fs.existsSync(userTplDir) ? userTplDir
+      : fs.existsSync(builtinTplDir) ? builtinTplDir : null
+    if (!tplDir) throw new Error(`模板 "${templateName}" 不存在`)
+
+    const jsonPath = path.join(tplDir, 'project_config.json')
+    if (!fs.existsSync(jsonPath)) {
+      // V2.9.7-T4: 旧模板（仅 INI）给出明确提示，不静默失败
+      return { success: false, error: 'template.noConfig' }
+    }
+
+    // 临时目录：写入 JSON → design → 提取摘要 → finally 清理
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'autolink-preview-'))
+    const tmpJson = path.join(tmpDir, 'project_config.json')
+    try {
+      fs.copyFileSync(jsonPath, tmpJson)
+      const result = await pythonService.call('design', { configFile: tmpJson }, 30000) as {
+        summary?: Record<string, unknown>
+        powerData?: { totalRacks?: number; totalPowerWatts?: number }
+        valid?: boolean
+        validationIssues?: Array<{ severity?: string; message?: string; rule_id?: string }>
+        estimation?: { convergence?: unknown }
+      }
+      const summary = result?.summary || {}
+      const power = result?.powerData || {}
+      const issues = result?.validationIssues || []
+      const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message || i.rule_id || '校验失败')
+      return {
+        success: true,
+        summary: {
+          numServers: (summary.totalServers as number) ?? (summary.numServers as number) ?? 0,
+          numGpuServers: (summary.numServers as number) ?? 0,
+          paramLeafCount: (summary.paramLeafCount as number) ?? 0,
+          paramSpineCount: (summary.paramSpineCount as number) ?? 0,
+          paramCoreCount: (summary.paramCoreCount as number) ?? 0,
+          storageLeafCount: (summary.storageLeafCount as number) ?? 0,
+          storageSpineCount: (summary.storageSpineCount as number) ?? 0,
+          paramSpeed: (summary.paramSpeed as string) ?? '',
+          storageSpeed: (summary.storageSpeed as string) ?? '',
+          paramProtocol: (summary.paramProtocol as string) ?? 'RoCE',
+          totalRacks: power.totalRacks ?? 0,
+          totalPowerWatts: power.totalPowerWatts ?? 0,
+          valid: !!result?.valid,
+          errors,
+          convergence: result?.estimation?.convergence ?? null,
+        },
+      }
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   }))
 

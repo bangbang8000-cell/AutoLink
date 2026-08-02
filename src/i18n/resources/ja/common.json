@@ -97,6 +97,23 @@
       "jsonSyntaxError": "JSON 構文エラー",
       "configUnavailable": "テンプレート設定を利用できないため、保存できません",
       "configLoadFailed": "テンプレート設定の読み込みに失敗しました。基本情報のみ編集できます。「JSON 原文」パネルで設定を修正してください。"
+    },
+    "preview": {
+      "title": "ソリューションをプレビュー",
+      "loading": "ソリューションを生成中...",
+      "noConfig": "テンプレートに project_config.json がないため、プレビューできません。テンプレートを再作成するか、設定を手動で編集してください。",
+      "failed": "テンプレートのプレビューに失敗しました。テンプレート設定を確認してください。",
+      "valid": "トポロジ検証に合格",
+      "invalid": "トポロジ検証に不合格（{{count}} 件のエラー）",
+      "servers": "サーバー",
+      "switches": "スイッチ",
+      "racks": "ラック",
+      "power": "総電力",
+      "protocol": "プロトコル",
+      "convergence": "収束比",
+      "errorList": "検証エラー",
+      "edit": "編集へ",
+      "createProject": "このテンプレートからプロジェクトを作成"
     }
   },
   "menu": {
@@ -283,6 +300,7 @@
       "favorite": "お気に入りに追加",
       "deleteProject": "プロジェクトを削除",
       "createFromTemplate": "このテンプレートからプロジェクトを作成",
+      "previewTemplate": "ソリューションをプレビュー",
       "viewTemplateFiles": "テンプレートファイルを表示",
       "editTemplate": "テンプレートを編集...",
       "deleteTemplate": "テンプレートを削除",

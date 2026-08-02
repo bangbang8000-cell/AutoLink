@@ -97,6 +97,23 @@
       "jsonSyntaxError": "JSON 語法錯誤",
       "configUnavailable": "範本設定不可用，無法儲存",
       "configLoadFailed": "範本設定載入失敗，僅可編輯基本資訊。請透過\"JSON 原文\"面板修復設定。"
+    },
+    "preview": {
+      "title": "預覽方案",
+      "loading": "正在產生方案...",
+      "noConfig": "範本缺少 project_config.json，無法預覽。請先重建範本或手動編輯設定。",
+      "failed": "範本預覽失敗，請檢查範本設定。",
+      "valid": "拓撲校驗通過",
+      "invalid": "拓撲校驗未通過（{{count}} 項錯誤）",
+      "servers": "伺服器",
+      "switches": "交換機",
+      "racks": "機櫃",
+      "power": "總功率",
+      "protocol": "協定",
+      "convergence": "收斂比",
+      "errorList": "校驗錯誤",
+      "edit": "去編輯",
+      "createProject": "以此範本建立專案"
     }
   },
   "menu": {
@@ -283,6 +300,7 @@
       "favorite": "收藏置頂",
       "deleteProject": "刪除專案",
       "createFromTemplate": "以此範本建立專案",
+      "previewTemplate": "預覽方案",
       "viewTemplateFiles": "檢視範本檔案",
       "editTemplate": "編輯範本...",
       "deleteTemplate": "刪除範本",

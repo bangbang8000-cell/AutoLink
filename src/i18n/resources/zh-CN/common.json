@@ -101,6 +101,23 @@
       "jsonSyntaxError": "JSON 语法错误",
       "configUnavailable": "模板配置不可用，无法保存",
       "configLoadFailed": "模板配置加载失败，仅可编辑基本信息。请通过\"JSON 原文\"面板修复配置。"
+    },
+    "preview": {
+      "title": "预览方案",
+      "loading": "正在生成方案...",
+      "noConfig": "模板缺少 project_config.json，无法预览。请先重建模板或手动编辑配置。",
+      "failed": "模板预览失败，请检查模板配置。",
+      "valid": "拓扑校验通过",
+      "invalid": "拓扑校验未通过（{{count}} 项错误）",
+      "servers": "服务器",
+      "switches": "交换机",
+      "racks": "机柜",
+      "power": "总功率",
+      "protocol": "协议",
+      "convergence": "收敛比",
+      "errorList": "校验错误",
+      "edit": "去编辑",
+      "createProject": "基于此模板创建项目"
     }
   },
   "menu": {
@@ -295,6 +312,7 @@
       "favorite": "收藏置顶",
       "deleteProject": "删除项目",
       "viewTemplateFiles": "查看模板文件",
+      "previewTemplate": "预览方案",
       "createFromTemplate": "基于此模板创建项目",
       "editTemplate": "编辑模板...",
       "deleteTemplate": "删除模板",

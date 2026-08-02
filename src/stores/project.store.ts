@@ -30,6 +30,17 @@ export interface TemplateInfo {
   tags: string[]
   updatedAt: string
   isBuiltin?: boolean
+  // V2.9.7-T1: 模板规模摘要（无 project_config.json 时为 null）
+  summary?: {
+    numGpuServers: number
+    numAllFlashStorage: number
+    numHybridFlashStorage: number
+    numComputeServers: number
+    paramProtocol: string
+    paramSpeed: string
+    storageSpeed: string
+    powerLimitPerRack: number
+  } | null
 }
 
 interface ProjectState {
