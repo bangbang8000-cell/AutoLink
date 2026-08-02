@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [2.9.9] - 2026-08-02
+
+### 收口与发布（项目模板生命周期打通 · 最终阶段）
+
+v2.9.9 是 v2.9.4~2.9.9「项目模板生命周期打通」系列收官版本：验证导出回归（TypeError 历史遗留修复确认）、全量质量门禁、用户指南模板全流程 5 章节、CI 手动触发支持（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+
+#### 导出回归验证（T1）
+- `scripts/test_export.py` 历史遗留 `TypeError: unhashable type: 'LibraryDevice'` 确认已修复（v2.9.3 已将 `export_bom` 设备分组键由 LibraryDevice 对象改为设备 id 字符串）
+- 全量 16 模板逐一验证 `export_bom` + `generate_report_data` 通过，0 失败
+
+#### 全量回归（T2）
+- `npx tsc --noEmit` → 0 error；`npx eslint src/ electron/` → 0 error（38 个既有 warning）
+- `npm run test` → 354 passed（19 文件）；`python -m pytest tests/backend/ -v` → 560 passed
+- `python scripts/validate_templates.py` → 16/16；`python scripts/prepare_templates.py --check` → 16/16
+
+#### 用户指南 5 章节（T3）
+- `docs/user_guide/user_guide.md` 第 2 章重构为模板全流程：2.5 从模板创建项目 / 2.6 沉淀与编辑模板（可视化表单）/ 2.7 模板预览 / 2.8 模板分享（导入导出 ZIP 结构与强校验）/ 2.9 模板健康检查
+
+#### 发布与 CI（T4）
+- 版本号 2.9.8 → 2.9.9（package.json / VERSION / package-lock.json）
+- `.github/workflows/ci.yml` 新增 `workflow_dispatch` 手动触发（含 v2.9.8 加入的 `validate_templates.py` 步骤）
+- commit + tag v2.9.9 推送，触发 CI 验证
+
 ## [2.9.8] - 2026-08-02
 
 ### 模板生命周期管理（项目模板生命周期打通 · 第五阶段）

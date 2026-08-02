@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # V2.9.9-T4: 支持手动触发 CI（验证 validate_templates 步骤等）
+  workflow_dispatch:
 jobs:
   check:
     runs-on: ubuntu-latest
