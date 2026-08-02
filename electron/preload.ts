@@ -45,6 +45,8 @@ const electronAPI = {
       ipcRenderer.invoke('template:getStructure', templateName),
     getFile: (templateName: string, filePath: string) =>
       ipcRenderer.invoke('template:getFile', templateName, filePath),
+    getConfig: (templateName: string) =>
+      ipcRenderer.invoke('template:getConfig', templateName),
     list: () => ipcRenderer.invoke('template:list'),
     create: (projectName: string, meta: unknown) =>
       ipcRenderer.invoke('template:create', projectName, meta),

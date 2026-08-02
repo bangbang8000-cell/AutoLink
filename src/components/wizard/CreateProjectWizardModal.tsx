@@ -14,14 +14,29 @@ interface Props {
 
 export function CreateProjectWizardModal({ templateName, onClose }: Props) {
   const { t } = useTranslation()
-  const { openWizard, closeWizard, config } = useWizardStore()
+  const { openWizard, closeWizard, config, loadTemplateConfig } = useWizardStore()
   const { createProjectWithConfig } = useProjectStore()
   const { loadLibrary } = useDeviceLibraryStore()
   const addToast = useToastStore((s) => s.addToast)
 
+  // V2.9.5-T3: 基于模板创建时预填向导配置（networks/topology/device_refs/rack_config/scale_up）
   useEffect(() => {
     openWizard(templateName)
     loadLibrary()
+    if (templateName) {
+      window.electron?.template?.getConfig(templateName)
+        .then((cfg) => {
+          loadTemplateConfig(cfg)
+          if (!cfg) {
+            addToast('warning', t('common:toast.templateNoConfig', '模板缺少配置，向导将从头开始'), 6000)
+          }
+        })
+        .catch(() => {
+          addToast('warning', t('common:toast.templateLoadFailed', '模板配置加载失败，向导将从头开始'), 6000)
+        })
+    }
+    // 仅在挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleComplete = async () => {

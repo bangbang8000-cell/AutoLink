@@ -22,6 +22,7 @@
     "devicesMissing": "以下のデバイスが未選択です：{{list}}",
     "powerRequired": "ラックあたりの電力上限を設定してください",
     "powerExceeds": "現在の冷却方式では電力上限は {{max}}W を超えられません",
-    "countExceeds": "サーバー種類あたりの上限は2048台です"
+    "countExceeds": "サーバー種類あたりの上限は2048台です",
+    "resetToDefault": "デフォルトにリセット"
   }
 }

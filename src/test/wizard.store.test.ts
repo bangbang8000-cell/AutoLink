@@ -185,4 +185,67 @@ describe('WizardStore', () => {
       expect(useWizardStore.getState().templateName).toBeNull()
     })
   })
+
+  describe('V2.9.5-T3: loadTemplateConfig 模板配置预填', () => {
+    it('应合并模板配置并预填向导', () => {
+      useWizardStore.getState().loadTemplateConfig({
+        meta: { name: 'H100-100台', description: '模板描述', version: 1, created_at: '', updated_at: '' },
+        networks: { param_network: true, storage_network: false, biz_network: true, oob_network: true },
+        topology: {
+          downlink_mode: 'custom', param_protocol: 'RoCE',
+          num_gpu_servers: 100, num_all_flash_storage: 7, num_hybrid_flash_storage: 7, num_compute_servers: 20,
+          param_ports_per_server: 8, storage_ports_per_server: 1, param_switch_ports: 64,
+          storage_switch_ports: 40, param_speed: '400G', storage_speed: '200G',
+          param_downlink_limit: 25, storage_downlink_limit: 20, biz_downlink_limit: 25, oob_downlink_limit: 25,
+        },
+        device_refs: { gpu_server: { library_id: 'nvidia_dgx_h100' } },
+        rack_config: { rack_type: 42, power_limit_per_rack: 12000, naming_prefix: '机柜' },
+        scale_up: {},
+      })
+      const c = useWizardStore.getState().config
+      expect(c.meta.name).toBe('H100-100台')
+      expect(c.meta.description).toBe('模板描述')
+      expect(c.networks.storage_network).toBe(false)
+      expect(c.topology.num_gpu_servers).toBe(100)
+      expect(c.device_refs.gpu_server).toEqual({ library_id: 'nvidia_dgx_h100' })
+      expect(c.rack_config.power_limit_per_rack).toBe(12000)
+    })
+
+    it('null 模板配置不应改变向导状态', () => {
+      const before = useWizardStore.getState().config
+      useWizardStore.getState().loadTemplateConfig(null)
+      expect(useWizardStore.getState().config).toBe(before)
+    })
+
+    it('模板字段缺失时用默认值补全（不产生 undefined）', () => {
+      useWizardStore.getState().loadTemplateConfig({
+        meta: { name: 'tpl', description: '', version: 1, created_at: '', updated_at: '' },
+        networks: { param_network: true, storage_network: true, biz_network: true, oob_network: true },
+        topology: undefined as never,
+        device_refs: undefined as never,
+        rack_config: undefined as never,
+      } as never)
+      const c = useWizardStore.getState().config
+      expect(c.topology.num_gpu_servers).toBe(100)
+      expect(c.rack_config.power_limit_per_rack).toBe(6000)
+    })
+  })
+
+  describe('V2.9.5-T5: resetConfig 重置为默认', () => {
+    it('应清空模板预填并重置配置', () => {
+      useWizardStore.getState().openWizard('H100-100台')
+      useWizardStore.getState().loadTemplateConfig({
+        meta: { name: 'H100-100台', description: '', version: 1, created_at: '', updated_at: '' },
+        networks: { param_network: true, storage_network: false, biz_network: true, oob_network: true },
+        topology: undefined as never,
+        device_refs: undefined as never,
+        rack_config: undefined as never,
+      } as never)
+      useWizardStore.getState().resetConfig()
+      const s = useWizardStore.getState()
+      expect(s.templateName).toBeNull()
+      expect(s.config.meta.name).toBe('')
+      expect(s.config.networks.storage_network).toBe(true) // 恢复默认
+    })
+  })
 })

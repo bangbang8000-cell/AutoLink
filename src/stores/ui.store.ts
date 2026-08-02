@@ -24,6 +24,8 @@ interface UIState {
   explorerProjectListHeight: number
   explorerGroupMode: ExplorerGroupMode
   showCreateProjectWizard: boolean
+  /** V2.9.5-T4: 从模板打开向导时的模板名（手动新建时为 null） */
+  templateForWizard: string | null
   showAboutDialog: boolean
   showShortcutsDialog: boolean
 
@@ -37,6 +39,7 @@ interface UIState {
   setExplorerProjectListHeight: (height: number) => void
   setExplorerGroupMode: (mode: ExplorerGroupMode) => void
   setShowCreateProjectWizard: (show: boolean) => void
+  openWizardFromTemplate: (name: string) => void
   setShowAboutDialog: (show: boolean) => void
   setShowShortcutsDialog: (show: boolean) => void
 }
@@ -53,6 +56,7 @@ export const useUIStore = create<UIState>()(
       explorerProjectListHeight: 300,
       explorerGroupMode: 'smart',
       showCreateProjectWizard: false,
+      templateForWizard: null,
       showAboutDialog: false,
       showShortcutsDialog: false,
 
@@ -88,7 +92,10 @@ export const useUIStore = create<UIState>()(
 
       setExplorerGroupMode: (mode) => set({ explorerGroupMode: mode }),
 
-      setShowCreateProjectWizard: (show) => set({ showCreateProjectWizard: show }),
+      setShowCreateProjectWizard: (show) => set({ showCreateProjectWizard: show, templateForWizard: null }),
+
+      // V2.9.5-T4: 从模板打开向导（设置模板名 + 打开向导）
+      openWizardFromTemplate: (name) => set({ templateForWizard: name, showCreateProjectWizard: true }),
 
       setShowAboutDialog: (show) => set({ showAboutDialog: show }),
 

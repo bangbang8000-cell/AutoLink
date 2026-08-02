@@ -284,8 +284,20 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     fs.mkdirSync(projectDir, { recursive: true })
     fs.mkdirSync(path.join(projectDir, 'output'), { recursive: true })
 
+    // V2.9.5-T1: 从模板创建项目 — 用户模板优先（user-templates），再查内置模板
+    // 复制 project_config.json（若存在）+ network_config.ini；模板不存在时明确抛错
     if (options?.template && !options.empty) {
-      const tplDir = path.join(getTemplatePath(), options.template)
+      const userTplDir = path.join(getUserTemplatePath(), options.template)
+      const builtinTplDir = path.join(getTemplatePath(), options.template)
+      const tplDir = fs.existsSync(userTplDir) ? userTplDir
+        : fs.existsSync(builtinTplDir) ? builtinTplDir : null
+      if (!tplDir) {
+        throw new Error(`模板 "${options.template}" 不存在（用户模板与内置模板均未找到）`)
+      }
+      const tplJson = path.join(tplDir, 'project_config.json')
+      if (fs.existsSync(tplJson)) {
+        fs.copyFileSync(tplJson, path.join(projectDir, 'project_config.json'))
+      }
       const tplConfig = path.join(tplDir, 'network_config.ini')
       if (fs.existsSync(tplConfig)) {
         fs.copyFileSync(tplConfig, path.join(projectDir, 'network_config.ini'))
@@ -985,6 +997,23 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const fullPath = sanitizeUnderBase(baseDir, templateName, filePath)
     if (!fs.existsSync(fullPath)) return null
     return fs.readFileSync(fullPath, 'utf-8')
+  }))
+
+  // V2.9.5-T2: 读取模板 project_config.json（用户模板优先，无 JSON 返回 null）
+  ipcMain.handle('template:getConfig', wrapHandler(async (_event, templateName: string) => {
+    sanitizeName(templateName)
+    const userTplDir = path.join(getUserTemplatePath(), templateName)
+    const builtinTplDir = path.join(getTemplatePath(), templateName)
+    const tplDir = fs.existsSync(userTplDir) ? userTplDir : builtinTplDir
+    if (!fs.existsSync(tplDir)) return null
+    const jsonPath = path.join(tplDir, 'project_config.json')
+    if (!fs.existsSync(jsonPath)) return null
+    try {
+      return JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+    } catch (err) {
+      console.error(`[template:getConfig] 解析失败: ${templateName}`, err)
+      return null
+    }
   }))
 
   interface TemplateMeta {

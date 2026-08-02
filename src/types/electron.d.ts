@@ -33,6 +33,7 @@ interface Window {
     template: {
       getStructure: (templateName: string) => Promise<import('@/types/file-tree').FileTreeNode[]>
       getFile: (templateName: string, filePath: string) => Promise<string | null>
+      getConfig: (templateName: string) => Promise<import('@/types/project-config').ProjectConfig | null>
       list: () => Promise<Array<{ id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean }>>
       create: (projectName: string, meta: { name: string; description?: string; scenario?: string; tags?: string[] }) => Promise<void>
       delete: (templateName: string) => Promise<void>

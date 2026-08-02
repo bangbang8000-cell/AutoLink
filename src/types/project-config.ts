@@ -63,6 +63,15 @@ export interface ProjectRackConfig {
   cabinet_list?: string  // CSV file path or inline data
 }
 
+/** V2.9.3-T1: Scale-Up 配置段（UB/NVLink/UALink，可选） */
+export interface ProjectScaleUp {
+  protocol?: 'NVLink' | 'UALink' | 'UB'
+  num_gpus?: number
+  gpus_per_node?: number
+  domain_size?: number
+  bandwidth?: number
+}
+
 /** 项目配置 (完整) */
 export interface ProjectConfig {
   meta: ProjectMeta
@@ -70,6 +79,8 @@ export interface ProjectConfig {
   topology: ProjectTopology
   device_refs: Record<string, DeviceRef>
   rack_config: ProjectRackConfig
+  /** V2.9.3-T1: 可选 Scale-Up 配置段 */
+  scale_up?: ProjectScaleUp
 }
 
 /** 默认项目配置 */
@@ -115,6 +126,7 @@ export function createDefaultProjectConfig(name: string): ProjectConfig {
       gpu_dedicated: false,
       power_preset: '',
     },
+    scale_up: {},
   }
 }
 

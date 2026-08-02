@@ -22,6 +22,7 @@
     "devicesMissing": "以下设备尚未选择：{{list}}",
     "powerRequired": "请设置单机柜功率上限",
     "powerExceeds": "当前散热方式下单柜功率上限不能超过 {{max}}W",
-    "countExceeds": "单类服务器数量上限 2048"
+    "countExceeds": "单类服务器数量上限 2048",
+    "resetToDefault": "重置为默认"
   }
 }

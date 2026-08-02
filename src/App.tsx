@@ -56,6 +56,7 @@ export default function App() {
   const reopenLastClosed = useWorkspaceStore((s) => s.reopenLastClosed)
   const showCreateProjectWizard = useUIStore((s) => s.showCreateProjectWizard)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
+  const templateForWizard = useUIStore((s) => s.templateForWizard)
   const showShortcutsDialog = useUIStore((s) => s.showShortcutsDialog)
   const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
   // v2.7.3-T1: Ctrl+S 保存配置
@@ -233,7 +234,10 @@ export default function App() {
       <DeviceImportModal />
       <DeviceExportModal />
       {showCreateProjectWizard && (
-        <CreateProjectWizardModal onClose={() => setShowCreateProjectWizard(false)} />
+        <CreateProjectWizardModal
+          templateName={templateForWizard}
+          onClose={() => setShowCreateProjectWizard(false)}
+        />
       )}
     </div>
     </ProjectProvider>

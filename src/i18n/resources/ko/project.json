@@ -22,6 +22,7 @@
     "devicesMissing": "다음 장치가 선택되지 않았습니다: {{list}}",
     "powerRequired": "랙당 전력 상한을 설정하세요",
     "powerExceeds": "현재 냉각 방식에서 전력 상한은 {{max}}W를 초과할 수 없습니다",
-    "countExceeds": "서버 유형당 최대 2048대"
+    "countExceeds": "서버 유형당 최대 2048대",
+    "resetToDefault": "기본값으로 재설정"
   }
 }

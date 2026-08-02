@@ -21,6 +21,7 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
 }) {
   const { t } = useTranslation()
   const explorerGroupMode = useUIStore((s) => s.explorerGroupMode)
+  const openWizardFromTemplate = useUIStore((s) => s.openWizardFromTemplate)
   // T11: 模板展开状态改用 explorer.store
   const expandedTemplates = useExplorerStore((s) => s.expandedTemplates)
   const templateStructures = useExplorerStore((s) => s.templateStructures)
@@ -199,6 +200,7 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                 hasChildren
                 leading={<LayoutTemplate size={12} className="text-gray-400 dark:text-gray-500 shrink-0" />}
                 contextMenu={[
+                  { label: t('common:explorer.contextMenu.createFromTemplate', '基于此模板创建项目'), action: () => openWizardFromTemplate(tpl.name) },
                   { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplateExpand(tpl.name) },
                   { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(tpl.name) },
                   { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExportTemplate(tpl.name) },

@@ -22,6 +22,7 @@
     "devicesMissing": "以下設備尚未選擇：{{list}}",
     "powerRequired": "請設定單機櫃功率上限",
     "powerExceeds": "目前散熱方式下單櫃功率上限不能超過 {{max}}W",
-    "countExceeds": "單類伺服器數量上限 2048"
+    "countExceeds": "單類伺服器數量上限 2048",
+    "resetToDefault": "重設為預設"
   }
 }

@@ -6,7 +6,7 @@ import clsx from 'clsx'
 
 export function WizardStepBasic() {
   const { t } = useTranslation('project')
-  const { config, templateName, updateMeta } = useWizardStore()
+  const { config, templateName, updateMeta, resetConfig } = useWizardStore()
   const projects = useProjectStore((s) => s.projects)
 
   // V2.9.2-T6: 名称校验(空值不打断输入, 由底部按钮禁用提示)
@@ -29,13 +29,21 @@ export function WizardStepBasic() {
         </p>
       </div>
 
-      {/* Template info banner */}
+      {/* Template info banner (V2.9.5-T5: 可重置为默认) */}
       {templateName && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-info-200 dark:border-info-800 bg-info-50 dark:bg-info-900/20">
           <Info size={14} className="text-gray-400 shrink-0" />
-          <span className="text-xs text-info-600 dark:text-info-400">
+          <span className="text-xs text-info-600 dark:text-info-400 truncate">
             基于模板: {templateName}
           </span>
+          <button
+            type="button"
+            onClick={resetConfig}
+            className="ml-auto shrink-0 text-2xs text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400"
+            title={t('wizard.resetToDefault', '放弃模板预填，从头创建')}
+          >
+            {t('wizard.resetToDefault', '重置为默认')}
+          </button>
         </div>
       )}
 

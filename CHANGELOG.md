@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## [2.9.5] - 2026-08-02
+
+### 从模板创建项目（项目模板生命周期打通 · 第二阶段）
+
+v2.9.5 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第二阶段：打通"模板 → 项目"完整链路——模板右键入口、向导预加载、后端双路径查找、前端死代码清理（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+
+#### 后端：project:create 模板支持（T1）
+- 模板目录双路径查找：用户模板（user-templates）优先，其次内置模板（template/），均未找到时明确抛错
+- 从模板创建项目时全量复制 `project_config.json` + `network_config.ini`（此前只复制 INI）
+
+#### 后端：template:getConfig IPC（T2）
+- 新增 `template:getConfig` IPC：返回模板的 project_config.json 内容，供向导预加载
+
+#### 向导：模板配置预加载（T3）
+- `wizard.store.loadTemplateConfig`：创建项目向导打开时拉取模板配置并合并（规模/选型/机柜/网络）
+- 加载失败或模板无配置时 toast 提示并从头开始（`templateLoadFailed`/`templateNoConfig`）
+
+#### 模板侧边栏：右键"基于此模板创建项目"（T4）
+- 模板目录上下文菜单新增"基于此模板创建项目"，一键打开向导并预填模板配置
+- 新增 `ui.store.openWizardFromTemplate` + `templateForWizard` 状态
+
+#### 向导基本步骤增强（T5）
+- 新增"重置为默认"按钮（`resetConfig`），一键恢复空白向导配置
+
+#### 死代码清理（T6）
+- 删除不再使用的 `CreateProjectModal.tsx`（已被向导取代）
+
+#### 前端测试与 i18n（T7/T8）
+- `wizard.store.test.ts` 新增 `loadTemplateConfig`/`resetConfig` 用例
+- 新增 5 语言 key：`common.explorer.contextMenu.createFromTemplate`、`common.templateLoadFailed`/`templateNoConfig`、`project.resetToDefault`
+
+#### 版本与回归
+- 版本号 2.9.4 → 2.9.5（package.json / VERSION / package-lock.json）
+- 全量回归：pytest 552 passed、vitest 345 passed、tsc 0 error、eslint 0 error（36 个既有 warning）、模板验证 16/16 通过
+
 ## [2.9.4] - 2026-08-02
 
 ### 模板数据模型与库治理（项目模板生命周期打通 · 第一阶段）
