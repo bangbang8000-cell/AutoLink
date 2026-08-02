@@ -148,7 +148,7 @@
     {
       "id": "optical_modules",
       "name": "光模块",
-      "description": "100G-1.6T 光模块/DAC/AOC（SR4/DR4/DR8/FR4/LR4/CWDM4等规格）",
+      "description": "100G-1.6T 光模块/DAC/AOC（SR4/DR4/DR8/FR4/LR4/CWDM4等规格，1.6T含硅光/LPO/EML/TFLN多路线）",
       "device_ids": [
         "om_100g_qsfp28_sr4_100m",
         "om_100g_qsfp28_lr4_10km",
@@ -179,7 +179,11 @@
         "om_1600g_osfp_xd_dr8_500m",
         "om_1600g_osfp_xd_2x800g_aoc_5m",
         "om_1600g_osfp_xd_sr8_100m",
-        "om_1600g_osfp_xd_2x800g_dac_3m"
+        "om_1600g_osfp_xd_2x800g_dac_3m",
+        "om_1600g_osfp_xd_sip_dr8_500m",
+        "om_1600g_osfp_xd_lpo_sr8_100m",
+        "om_1600g_osfp_xd_eml_lr8_10km",
+        "om_1600g_osfp_xd_tfln_dr8_500m"
       ]
     }
   ]

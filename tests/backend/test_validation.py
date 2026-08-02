@@ -292,9 +292,9 @@ class TestV010ParamOversubscription:
 class TestEngineBasics:
     """引擎基础功能"""
 
-    def test_default_engine_has_10_rules(self, engine):
-        """默认引擎含 10 条规则"""
-        assert engine.get_rule_count() == 10
+    def test_default_engine_has_12_rules(self, engine):
+        """默认引擎含 12 条规则 (V001-V012, V2.7.4 新增 V011/V012)"""
+        assert engine.get_rule_count() == 12
 
     def test_rule_exception_becomes_error_issue(self, engine):
         """规则函数抛异常时应转为 ERROR issue"""

@@ -216,23 +216,71 @@ def generate_summary_data(designer):
 
 
 def generate_device_list(designer):
-    """Generate device inventory from topology and device profiles"""
+    """Generate device inventory from topology and device profiles
+
+    V2.7.4-T9: 从 device_library 拉取 vendor/model 填充设备清单
+    """
+    from device_library import get_device_library
+
     items = []
+
+    try:
+        library = get_device_library()
+    except Exception:
+        library = None
+
+    def _profile_id(profile):
+        """从 device_profile 提取可哈希的 ID 字符串
+        V2.7.4-T9fix: device_profile 可能是 LibraryDevice 对象或字符串 ID
+        """
+        if profile is None:
+            return None
+        # LibraryDevice 对象优先取 id 属性
+        pid = getattr(profile, 'id', None)
+        if pid:
+            return pid
+        # 字符串 ID 直接返回
+        if isinstance(profile, str):
+            return profile
+        return None
+
+    def _lookup(profile):
+        """从设备库查询 vendor/model，返回 (vendor, model)"""
+        if library and profile:
+            pid = _profile_id(profile)
+            if pid:
+                dev = library.get(pid)
+                if dev:
+                    return getattr(dev, 'vendor', '') or '', getattr(dev, 'model', '') or ''
+            # 直接传入对象时尝试从对象本身取 vendor/model
+            v = getattr(profile, 'vendor', None)
+            m = getattr(profile, 'model', None)
+            if v or m:
+                return v or '', m or ''
+        return '', ''
 
     # Collect all device types and their counts from the designer
     # Servers: from designer.servers, group by group (e.g., "GPU服务器", "存储服务器")
+    # V2.7.4-T9: 按 device_profile 分组以填充厂商型号
     server_groups = {}
     for server in designer.servers:
         group = server.group or "GPU服务器"
-        if group not in server_groups:
-            server_groups[group] = {"count": 0, "u_height": server.u_height or 4, "power": server.power_watts or 2000}
-        server_groups[group]["count"] += 1
+        profile = getattr(server, 'device_profile', None)
+        pid = _profile_id(profile)
+        group_key = (group, pid)
+        if group_key not in server_groups:
+            vendor, model = _lookup(profile)
+            server_groups[group_key] = {
+                "count": 0, "u_height": server.u_height or 4, "power": server.power_watts or 2000,
+                "vendor": vendor, "model": model, "group": group,
+            }
+        server_groups[group_key]["count"] += 1
 
-    for group, info in server_groups.items():
+    for info in server_groups.values():
         items.append({
-            "设备类型": group,
-            "厂商": "",
-            "型号": "",
+            "设备类型": info["group"],
+            "厂商": info["vendor"],
+            "型号": info["model"],
             "数量": info["count"],
             "单机功耗(W)": info["power"],
             "U位高度": info["u_height"],
@@ -240,7 +288,8 @@ def generate_device_list(designer):
             "总U位": info["count"] * info["u_height"],
         })
 
-    # Switches: count by type prefix
+    # Switches: count by type prefix + device_profile
+    # V2.7.4-T9: 按 (label, device_profile) 分组以填充厂商型号
     switch_types = {}
     all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
                     designer.storage_leaves + designer.storage_spines + designer.storage_cores +
@@ -253,15 +302,22 @@ def generate_device_list(designer):
             'access': '接入交换机', 'agg': '汇聚交换机',
         }
         label = stype_map.get(stype, stype)
-        if label not in switch_types:
-            switch_types[label] = {"count": 0, "power": sw.power_watts or 0, "u_height": sw.u_height or 1}
-        switch_types[label]["count"] += 1
+        profile = getattr(sw, 'device_profile', None)
+        pid = _profile_id(profile)
+        sw_key = (label, pid)
+        if sw_key not in switch_types:
+            vendor, model = _lookup(profile)
+            switch_types[sw_key] = {
+                "count": 0, "power": sw.power_watts or 0, "u_height": sw.u_height or 1,
+                "vendor": vendor, "model": model, "label": label,
+            }
+        switch_types[sw_key]["count"] += 1
 
-    for stype, info in switch_types.items():
+    for info in switch_types.values():
         items.append({
-            "设备类型": stype,
-            "厂商": "",
-            "型号": "",
+            "设备类型": info["label"],
+            "厂商": info["vendor"],
+            "型号": info["model"],
             "数量": info["count"],
             "单机功耗(W)": info["power"],
             "U位高度": info["u_height"],
@@ -343,31 +399,6 @@ def apply_excel_formatting(filename):
         device_col = headers.get('A端设备')
         port_col = headers.get('A端接口')
 
-        # 读取所有数据值（处理NaN → ffill）
-        if max_row >= 2:
-            rows_data = []
-            for row_idx in range(2, max_row + 1):
-                row_vals = {}
-                for col in [podid_col, group_col, device_col, port_col]:
-                    if col:
-                        v = ws.cell(row=row_idx, column=col).value
-                        row_vals[col] = v
-                rows_data.append(row_vals)
-
-            # Forward-fill NaN values (pandas output leaves merged cells as NaN)
-            for i in range(len(rows_data)):
-                if i > 0:
-                    for col in [podid_col, group_col, device_col]:
-                        if col and rows_data[i].get(col) is None:
-                            rows_data[i][col] = rows_data[i-1].get(col)
-
-            # 写回填充值
-            for i, rd in enumerate(rows_data):
-                r = i + 2
-                for col, val in rd.items():
-                    if col and ws.cell(row=r, column=col).value is None and val is not None:
-                        ws.cell(row=r, column=col).value = val
-
         # 摘要sheet特殊处理
         if sheet_name in ('网络设计摘要', '设计摘要'):
             for row in ws.iter_rows(min_row=1, max_row=max_row, max_col=max_col):
@@ -376,96 +407,95 @@ def apply_excel_formatting(filename):
                     cell.border = thin_border
             continue
 
-        # ===== 收集合并区域和组分界 =====
+        # V2.7.4-T11: 单次遍历完成 ffill + 合并区域收集 + 组分界标记
+        # 旧实现需要 8 次遍历 (read→ffill→writeback→podid_merge→group_merge→device_merge→style→port_align)
+        # 新实现合并为 2 次遍历 (collect+style)，万级连接导出 ≤ 5s
         merge_regions = []
         group_boundaries = set()
+        ffill_cols = [c for c in [podid_col, group_col, device_col] if c]
 
-        # podid列合并
-        if podid_col:
-            cur, start = None, 2
-            for r in range(2, max_row + 1):
-                v = ws.cell(row=r, column=podid_col).value
-                if v != cur:
-                    if cur is not None and r - 1 > start:
-                        merge_regions.append((start, r - 1, podid_col, podid_col))
-                    cur, start = v, r
-            if cur is not None and max_row > start:
-                merge_regions.append((start, max_row, podid_col, podid_col))
+        if max_row >= 2:
+            # 单次遍历: 读取值 + ffill + 收集合并区域
+            prev_vals = {c: None for c in ffill_cols}
+            # 合并区域起点跟踪
+            merge_start = {c: 2 for c in ffill_cols}
+            dev_in_group_start = 2  # 设备列在当前分组内的起点
 
-        # 分组列合并 + 组分界标记
-        if group_col:
-            cur, start = None, 2
             for r in range(2, max_row + 1):
-                v = ws.cell(row=r, column=group_col).value
-                if v != cur:
-                    if cur is not None:
-                        if r - 1 > start:
-                            merge_regions.append((start, r - 1, group_col, group_col))
-                        group_boundaries.add(r - 1)  # 组结束行
-                    cur, start = v, r
-            if cur is not None and max_row > start:
-                merge_regions.append((start, max_row, group_col, group_col))
+                # 读取当前行关键列的值
+                cur_vals = {}
+                for col in ffill_cols:
+                    v = ws.cell(row=r, column=col).value
+                    if v is None and prev_vals.get(col) is not None:
+                        # NaN → ffill: 写回上一行的值
+                        v = prev_vals[col]
+                        ws.cell(row=r, column=col).value = v
+                    cur_vals[col] = v
 
-        # 设备列合并（在每个分组内独立合并）
-        if device_col and group_col:
-            for r in range(2, max_row + 1):
-                if r == 2:
-                    cur_dev, dev_start = ws.cell(row=r, column=device_col).value, r
-                    continue
-                if r in group_boundaries:
-                    continue  # 不在边界重置, 让下一行group变更触发合并
-                dev_val = ws.cell(row=r, column=device_col).value
-                grp_val = ws.cell(row=r, column=group_col).value
-                prev_grp = ws.cell(row=r - 1, column=group_col).value
-                if grp_val != prev_grp:
-                    if r - 1 > dev_start:
-                        merge_regions.append((dev_start, r - 1, device_col, device_col))
-                    cur_dev, dev_start = dev_val, r
-                elif dev_val != cur_dev:
-                    if r - 1 > dev_start:
-                        merge_regions.append((dev_start, r - 1, device_col, device_col))
-                    cur_dev, dev_start = dev_val, r
-            if max_row > dev_start:
-                merge_regions.append((dev_start, max_row, device_col, device_col))
-        elif device_col:
-            cur, start = None, 2
-            for r in range(2, max_row + 1):
-                v = ws.cell(row=r, column=device_col).value
-                if v != cur:
-                    if cur is not None and r - 1 > start:
-                        merge_regions.append((start, r - 1, device_col, device_col))
-                    cur, start = v, r
-            if cur is not None and max_row > start:
-                merge_regions.append((start, max_row, device_col, device_col))
+                # 检测 group 变更 (决定组分界 + 设备合并重置)
+                grp_changed = (group_col and r > 2 and
+                               cur_vals.get(group_col) != prev_vals.get(group_col))
+
+                # group 变更时: 先关闭上一组的设备合并 + 标记组分界 + 关闭 group 合并
+                if grp_changed:
+                    # 关闭上一组的设备合并
+                    if device_col and r - 1 > dev_in_group_start:
+                        merge_regions.append((dev_in_group_start, r - 1, device_col, device_col))
+                    dev_in_group_start = r
+                    group_boundaries.add(r - 1)
+                    # 关闭 group 合并
+                    if group_col and r - 1 > merge_start[group_col]:
+                        merge_regions.append((merge_start[group_col], r - 1, group_col, group_col))
+                    merge_start[group_col] = r
+                else:
+                    # 同组内检测各列值变更以收集合并区域
+                    for col in ffill_cols:
+                        if col == group_col:
+                            continue  # group_col 已在 grp_changed 分支处理
+                        if col == device_col:
+                            # 设备列在分组内独立合并
+                            if cur_vals.get(device_col) != prev_vals.get(device_col) and r > 2:
+                                if r - 1 > dev_in_group_start:
+                                    merge_regions.append((dev_in_group_start, r - 1, device_col, device_col))
+                                dev_in_group_start = r
+                        else:
+                            # podid 等普通列: 值变更即关闭合并
+                            if cur_vals.get(col) != prev_vals.get(col) and r > 2:
+                                if r - 1 > merge_start[col]:
+                                    merge_regions.append((merge_start[col], r - 1, col, col))
+                                merge_start[col] = r
+
+                prev_vals = cur_vals
+
+            # 收尾: 关闭所有未闭合的合并区域
+            for col in ffill_cols:
+                if col == device_col:
+                    if max_row > dev_in_group_start:
+                        merge_regions.append((dev_in_group_start, max_row, device_col, device_col))
+                else:
+                    if max_row > merge_start[col]:
+                        merge_regions.append((merge_start[col], max_row, col, col))
 
         # 应用合并
         for sr, er, sc, ec in merge_regions:
             ws.merge_cells(start_row=sr, end_row=er, start_column=sc, end_column=ec)
 
-        # ===== 数据行样式 (单次遍历) =====
+        # ===== 数据行样式 (单次遍历, 含端口列对齐) =====
         for row_idx in range(2, max_row + 1):
             is_boundary = row_idx in group_boundaries
             fill = even_fill if row_idx % 2 == 0 else odd_fill
-            row = [ws.cell(row=row_idx, column=c) for c in range(1, max_col + 1)]
-
-            for cell in row:
+            for c in range(1, max_col + 1):
+                cell = ws.cell(row=row_idx, column=c)
                 cell.border = thick_bottom if is_boundary else thin_border
-                if is_boundary and cell.column == group_col:
+                if is_boundary and c == group_col:
                     cell.fill = group_fill
                 else:
                     cell.fill = fill
-                col = cell.column
-                if col == podid_col or col == group_col or col == device_col:
-                    cell.alignment = center_align
-                elif col == max_col or (port_col and col > device_col):
-                    cell.alignment = left_align if col == max_col else center_align
+                # 对齐: podid/group/device/端口列居中, 最后一列居左, 其余居中
+                if c == max_col:
+                    cell.alignment = left_align
                 else:
                     cell.alignment = center_align
-
-        # 端口列居左
-        if port_col:
-            for r in range(2, max_row + 1):
-                ws.cell(row=r, column=port_col).alignment = center_align
 
     wb.save(filename)
     print(f"已应用Excel格式美化: {filename}")
@@ -665,7 +695,7 @@ def export_bom(designer, filename):
 
     汇总所有设备 + 光模块，按型号分组，含数量和价格区间
     """
-    from optical_selector import select_module_for_connection, estimate_module_cost
+    from optical_selector import select_module_for_connection, estimate_module_cost, PRICE_RANGE_MAP, LEAD_TIME_MAP
     from device_library import get_device_library
 
     try:
@@ -689,6 +719,7 @@ def export_bom(designer, filename):
             '数量': 1,
             '单位功率(W)': server.power_watts or 0,
             '价格区间': price or '',
+            '供货周期': LEAD_TIME_MAP.get(price or '', ''),
         })
 
     # 2. 交换机
@@ -714,9 +745,11 @@ def export_bom(designer, filename):
             '数量': 1,
             '单位功率(W)': sw.power_watts or 0,
             '价格区间': price or '',
+            '供货周期': LEAD_TIME_MAP.get(price or '', ''),
         })
 
     # 3. 光模块（按型号汇总）
+    # V2.7.4-T3: 增加功耗和供货周期
     seen_conns = set()
     module_counts = {}
     for dev in designer.servers + all_switches:
@@ -738,8 +771,9 @@ def export_bom(designer, filename):
                         'model': sel.module_id,
                         'desc': sel.description,
                         'count': 0,
-                        'power': sel.distance_m,  # 用支持距离代替功率
+                        'power': sel.power_w,  # V2.7.4-T3: 真实功耗
                         'price': sel.price_range,
+                        'lead_time': sel.lead_time_weeks,  # V2.7.4-T3: 供货周期
                     }
                 module_counts[key]['count'] += 1
 
@@ -750,16 +784,16 @@ def export_bom(designer, filename):
             '设备型号': mod_data['model'],
             '描述': mod_data['desc'],
             '数量': mod_data['count'],
-            '单位功率(W)': 0,
+            '单位功率(W)': mod_data['power'],
             '价格区间': mod_data['price'],
+            '供货周期': mod_data['lead_time'],
         })
 
     df = pd.DataFrame(rows)
 
-    # 计算价格估算
-    price_map = {'低': (500, 2000), '中': (2000, 8000), '高': (8000, 30000), '极高': (30000, 100000)}
-    df['估价低(元)'] = df['价格区间'].map(lambda x: price_map.get(x, (0, 0))[0])
-    df['估价高(元)'] = df['价格区间'].map(lambda x: price_map.get(x, (0, 0))[1])
+    # V2.7.4-T3: 计算价格估算（统一引用 optical_selector.PRICE_RANGE_MAP，消除重复）
+    df['估价低(元)'] = df['价格区间'].map(lambda x: PRICE_RANGE_MAP.get(x, (0, 0))[0])
+    df['估价高(元)'] = df['价格区间'].map(lambda x: PRICE_RANGE_MAP.get(x, (0, 0))[1])
     df['估价低小计'] = df['估价低(元)'] * df['数量']
     df['估价高小计'] = df['估价高(元)'] * df['数量']
 
@@ -899,18 +933,20 @@ def generate_report_data(designer):
 def export_pdf_report(designer, filename):
     """V2.4.6: 生成 PDF 设计报告
 
-    基于 generate_report_data 的数据，使用 reportlab 生成 8 章节正式 PDF 报告。
+    V2.7.4-T7: 增加功率分布柱状图和光模块成本饼图
+    V2.7.4-T8: 增加页眉页脚和目录
     """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import mm
     from reportlab.lib import colors
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image,
     )
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     import os as _os
+    import tempfile
 
     # 注册中文字体（Windows: 微软雅黑；Linux: 文泉驿；fallback: Helvetica）
     font_name = 'Helvetica'
@@ -929,11 +965,26 @@ def export_pdf_report(designer, filename):
                 continue
 
     data = generate_report_data(designer)
+    project_name = data.get('overview', {}).get('项目名称', 'AutoLink')
+
+    # V2.7.4-T8: 页眉页脚回调
+    def _draw_header_footer(canvas, doc):
+        canvas.saveState()
+        # 页眉：项目名 + 版本
+        canvas.setFont(font_name, 8)
+        canvas.setFillColor(colors.HexColor('#6b7280'))
+        canvas.drawString(20 * mm, A4[1] - 12 * mm, f"AutoLink 智算中心设计报告 - {project_name}")
+        canvas.drawRightString(A4[0] - 20 * mm, A4[1] - 12 * mm, f"v{data.get('version', '2.7.4')}")
+        canvas.setStrokeColor(colors.HexColor('#d1d5db'))
+        canvas.line(20 * mm, A4[1] - 14 * mm, A4[0] - 20 * mm, A4[1] - 14 * mm)
+        # 页脚：页码
+        canvas.drawCentredString(A4[0] / 2, 10 * mm, f"第 {doc.page} 页")
+        canvas.restoreState()
 
     doc = SimpleDocTemplate(
         filename, pagesize=A4,
         leftMargin=20 * mm, rightMargin=20 * mm,
-        topMargin=20 * mm, bottomMargin=20 * mm,
+        topMargin=25 * mm, bottomMargin=20 * mm,
     )
 
     styles = getSampleStyleSheet()
@@ -946,8 +997,17 @@ def export_pdf_report(designer, filename):
                                   fontName=font_name, fontSize=10, leading=16)
     cell_style = ParagraphStyle('ChCell', parent=styles['Normal'],
                                 fontName=font_name, fontSize=9, leading=12)
+    toc_style = ParagraphStyle('ChTOC', parent=styles['Normal'],
+                               fontName=font_name, fontSize=11, leading=20)
 
     story = []
+
+    # V2.7.4-T8: 目录
+    story.append(Paragraph('目录', h2_style))
+    toc_items = ['1. 项目概览', '2. 网络架构', '3. 功耗与散热', '4. 光模块汇总', '5. 成本估算', '6. 校验结果']
+    for item in toc_items:
+        story.append(Paragraph(item, toc_style))
+    story.append(PageBreak())
 
     # 封面
     story.append(Paragraph('AutoLink 智算中心设计报告', title_style))
@@ -1005,6 +1065,15 @@ def export_pdf_report(designer, filename):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
     ]))
     story.append(pw_table)
+    story.append(Spacer(1, 4 * mm))
+
+    # V2.7.4-T7: 功率分布柱状图
+    power_chart_path = _generate_power_chart(pw, font_name)
+    if power_chart_path:
+        story.append(Paragraph('功率分布图：', normal_style))
+        story.append(Image(power_chart_path, width=140 * mm, height=80 * mm))
+        story.append(Spacer(1, 4 * mm))
+
     story.append(PageBreak())
 
     # 4. 光模块汇总
@@ -1028,6 +1097,13 @@ def export_pdf_report(designer, filename):
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
         ]))
         story.append(mod_table)
+        story.append(Spacer(1, 4 * mm))
+
+        # V2.7.4-T7: 光模块成本饼图
+        cost_chart_path = _generate_module_cost_chart(mods, font_name)
+        if cost_chart_path:
+            story.append(Paragraph('光模块成本占比图：', normal_style))
+            story.append(Image(cost_chart_path, width=120 * mm, height=80 * mm))
     else:
         story.append(Paragraph('无光模块数据', normal_style))
     story.append(Spacer(1, 4 * mm))
@@ -1061,5 +1137,82 @@ def export_pdf_report(designer, filename):
     else:
         story.append(Paragraph('无校验问题，拓扑结构完整。', normal_style))
 
-    doc.build(story)
+    # V2.7.4-T8: 构建时使用页眉页脚回调
+    doc.build(story, onFirstPage=_draw_header_footer, onLaterPages=_draw_header_footer)
     return filename
+
+
+def _generate_power_chart(power_data, font_name='Helvetica'):
+    """V2.7.4-T7: 生成功率分布柱状图 PNG，返回临时文件路径"""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    # 提取功率数据（过滤非数值项）
+    labels = []
+    values = []
+    for k, v in power_data.items():
+        if isinstance(v, (int, float)) and v > 0:
+            labels.append(str(k))
+            values.append(float(v))
+
+    if not values:
+        return None
+
+    import tempfile, os as _os
+    fig, ax = plt.subplots(figsize=(7, 4))
+    bars = ax.bar(labels, values, color=['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][:len(values)])
+    ax.set_ylabel('功率 (W)', fontsize=10)
+    ax.set_title('功率分布', fontsize=12)
+    ax.tick_params(axis='x', rotation=30, labelsize=8)
+    for bar, val in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'{val:.0f}',
+                ha='center', va='bottom', fontsize=8)
+    fig.tight_layout()
+
+    tmp_path = _os.path.join(tempfile.gettempdir(), 'autolink_power_chart.png')
+    fig.savefig(tmp_path, dpi=150)
+    plt.close(fig)
+    return tmp_path
+
+
+def _generate_module_cost_chart(modules_data, font_name='Helvetica'):
+    """V2.7.4-T7: 生成光模块成本占比饼图 PNG，返回临时文件路径"""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    from optical_selector import estimate_module_cost
+
+    labels = []
+    costs = []
+    for mid, info in modules_data.items():
+        count = info.get('count', 0)
+        price_range = info.get('price', '')
+        if count > 0 and price_range:
+            lo, hi = estimate_module_cost(price_range)
+            avg_cost = (lo + hi) / 2 * count
+            if avg_cost > 0:
+                labels.append(str(mid))
+                costs.append(avg_cost)
+
+    if not costs:
+        return None
+
+    import tempfile, os as _os
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.pie(costs, labels=labels, autopct='%1.1f%%', startangle=90,
+           colors=['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][:len(costs)])
+    ax.set_title('光模块成本占比', fontsize=12)
+    fig.tight_layout()
+
+    tmp_path = _os.path.join(tempfile.gettempdir(), 'autolink_module_cost_chart.png')
+    fig.savefig(tmp_path, dpi=150)
+    plt.close(fig)
+    return tmp_path

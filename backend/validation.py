@@ -358,6 +358,68 @@ def _rule_param_oversubscription(ctx: ValidationContext) -> List[ValidationIssue
     return issues
 
 
+# V2.7.4-T6: PUE 合规阈值（政策合规，区别于 V003 的优化目标 1.25）
+PUE_COMPLIANCE_THRESHOLD = 1.3
+
+
+def _rule_pue_compliance(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V011: PUE ≤ 1.3 合规校验（政策合规级别）
+
+    区别于 V003（PUE > 1.25 优化目标 → WARNING），
+    V011 关注政策合规阈值 1.3（如东数西算、绿色数据中心认证要求）。
+    """
+    issues = []
+    if ctx.pue_result:
+        pue = ctx.pue_result.get("pue", 0)
+        if pue > PUE_COMPLIANCE_THRESHOLD:
+            issues.append(ValidationIssue(
+                rule_id="V011",
+                severity=Severity.WARNING,
+                category="合规规则",
+                message=f"PUE {pue} 超过合规阈值 {PUE_COMPLIANCE_THRESHOLD}，不满足绿色数据中心认证要求",
+                affected_items=[],
+                recommendation="升级液冷散热、优化冷热通道隔离、提升自然冷利用率以达到 PUE ≤ 1.3 合规标准",
+            ))
+    return issues
+
+
+# V2.7.4-T4: OCP 冷板标准接口兼容设备列表
+# 符合 OCP Cold Plate Spec 的冷却液类型
+_OCP_COMPATIBLE_COOLANTS = {'PG25', 'PG40', 'FC3283', 'water', '水'}
+
+
+def _rule_liquid_cooling_interface(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V012: 液冷 OCP 冷板标准接口校验
+
+    检查使用冷板液冷的设备是否符合 OCP 冷板标准接口规范：
+    - cooling_method 为 cold_plate 时，检查冷却液类型是否为 OCP 兼容
+    - 未指定冷却液类型时给 INFO 提示
+    """
+    issues = []
+    checked = set()
+    for server in ctx.servers:
+        cooling_method = (server.get('cooling_method') or server.get('cooling') or '').lower()
+        if cooling_method != 'cold_plate':
+            continue
+
+        device_name = server.get('name') or server.get('id') or ''
+        if device_name in checked:
+            continue
+        checked.add(device_name)
+
+        coolant = (server.get('coolant') or '').strip()
+        if coolant and coolant not in _OCP_COMPATIBLE_COOLANTS:
+            issues.append(ValidationIssue(
+                rule_id="V012",
+                severity=Severity.WARNING,
+                category="合规规则",
+                message=f"设备 {device_name} 使用冷板液冷但冷却液 {coolant} 不在 OCP 兼容列表 {sorted(_OCP_COMPATIBLE_COOLANTS)}",
+                affected_items=[device_name],
+                recommendation="使用 OCP Cold Plate Spec 兼容冷却液（PG25/PG40/FC3283/水）",
+            ))
+    return issues
+
+
 def create_default_engine() -> ValidationEngine:
     """创建默认校验引擎（包含所有内置规则）"""
     engine = ValidationEngine()
@@ -371,4 +433,7 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V008", "网络规则", _rule_oob_reachability)
     engine.register_rule("V009", "网络规则", _rule_storage_redundancy)
     engine.register_rule("V010", "拓扑规则", _rule_param_oversubscription)
+    # V2.7.4-T6/T4: 新增合规校验规则
+    engine.register_rule("V011", "合规规则", _rule_pue_compliance)
+    engine.register_rule("V012", "合规规则", _rule_liquid_cooling_interface)
     return engine

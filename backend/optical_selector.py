@@ -22,6 +22,12 @@ class OpticalSelection:
     vendors: List[str]
     estimated_length_m: float
     match_reason: str
+    # V2.7.4-T3: 新增功耗/供货周期/成本估算字段
+    power_w: float = 0.0
+    lead_time_weeks: str = ""
+    unit_cost_lo: int = 0
+    unit_cost_hi: int = 0
+    tech_route: str = ""
 
 
 def _parse_speed(speed_str: str) -> int:
@@ -91,18 +97,38 @@ def _get_preferred_spec(distance_m: float, cable_type: str) -> str:
         return 'LR4'
 
 
+# V2.7.4-T2: spec → fiber_type 映射表（严格匹配）
+_SPEC_FIBER_MAP: Dict[str, str] = {
+    'SR4': 'MMF', 'SR8': 'MMF', 'AOC': 'MMF',
+    'DR4': 'SMF', 'DR8': 'SMF', 'FR4': 'SMF', 'LR4': 'SMF', 'LR8': 'SMF', 'CWDM4': 'SMF',
+    'DAC': 'copper',
+}
+
+
+def _infer_fiber_type(spec: str) -> str:
+    """根据 spec 推断光纤类型（MMF/SMF/copper）"""
+    return _SPEC_FIBER_MAP.get(spec.upper(), '')
+
+
 def select_optical_module(
     speed: str,
     distance_m: float,
     cable_type: str = '',
+    fiber_type: str = '',
     library: Optional[DeviceLibrary] = None,
 ) -> Optional[OpticalSelection]:
     """根据速率、距离、线缆类型选择最优光模块
+
+    V2.7.4-T2: 增加 fiber_type 参数，支持 MMF/SMF 严格匹配
+    V2.7.4-T3: 返回结果包含功耗/供货周期/成本估算
 
     Args:
         speed: 速率字符串，如 '400G', '800G'
         distance_m: 估算距离（米）
         cable_type: 线缆类型提示，如 'MPO', 'AOC', 'DAC'
+        fiber_type: 光纤类型约束，如 'MMF', 'SMF', 'copper'（V2.7.4-T2）
+            - 空字符串：自动从 preferred_spec 推断
+            - 指定值：严格过滤，SR4 只匹配 MMF, DR4/FR4/LR4 只匹配 SMF
         library: 设备库实例（可选）
 
     Returns:
@@ -120,12 +146,16 @@ def select_optical_module(
 
     preferred_spec = _get_preferred_spec(distance_m, cable_type)
 
+    # V2.7.4-T2: 如果未指定 fiber_type，从 preferred_spec 自动推断
+    if not fiber_type:
+        fiber_type = _infer_fiber_type(preferred_spec)
+
     # 获取所有光模块
     all_modules = library.get_by_category('optical_modules')
     if not all_modules:
         return None
 
-    # 筛选：速率匹配 + 距离足够
+    # 筛选：速率匹配 + 距离足够 + V2.7.4-T2 fiber_type 严格匹配
     candidates = []
     for mod in all_modules:
         # 优先使用 speed 字段，降级使用 ID 解析
@@ -136,11 +166,18 @@ def select_optical_module(
         mod_distance = getattr(mod, 'distance_m', 0) or 0
         if mod_distance < distance_m:
             continue
+        # V2.7.4-T2: fiber_type 严格匹配
+        if fiber_type:
+            mod_fiber = getattr(mod, 'fiber_type', '') or ''
+            if mod_fiber and mod_fiber != fiber_type:
+                continue
         candidates.append(mod)
 
     if not candidates:
-        # 降级：忽略速率，选距离足够的
-        candidates = [m for m in all_modules if (getattr(m, 'distance_m', 0) or 0) >= distance_m]
+        # 降级：忽略速率，选距离足够的（仍保持 fiber_type 约束）
+        candidates = [m for m in all_modules
+                      if (getattr(m, 'distance_m', 0) or 0) >= distance_m
+                      and (not fiber_type or not getattr(m, 'fiber_type', '') or getattr(m, 'fiber_type', '') == fiber_type)]
         if not candidates:
             return None
 
@@ -153,6 +190,10 @@ def select_optical_module(
     pool = preferred if preferred else candidates
     best = min(pool, key=lambda m: getattr(m, 'distance_m', 9999) or 9999)
 
+    # V2.7.4-T3: 填充功耗/供货周期/成本估算
+    price_range = getattr(best, 'price_range', '') or ''
+    cost_lo, cost_hi = estimate_module_cost(price_range)
+
     return OpticalSelection(
         module_id=best.id,
         speed=speed,
@@ -160,11 +201,17 @@ def select_optical_module(
         spec=getattr(best, 'spec', '') or '',
         distance_m=getattr(best, 'distance_m', 0) or 0,
         fiber_type=getattr(best, 'fiber_type', '') or '',
-        price_range=getattr(best, 'price_range', '') or '',
+        price_range=price_range,
         description=best.description or '',
         vendors=getattr(best, 'vendors', [])[:3],
         estimated_length_m=distance_m,
-        match_reason=f"速率={speed}, 距离≈{distance_m:.0f}m, 推荐={preferred_spec}",
+        match_reason=f"速率={speed}, 距离≈{distance_m:.0f}m, 推荐={preferred_spec}, 光纤={fiber_type or '不限'}",
+        # V2.7.4-T3 新增字段
+        power_w=float(getattr(best, 'power_watts', 0) or 0),
+        lead_time_weeks=LEAD_TIME_MAP.get(price_range, ''),
+        unit_cost_lo=cost_lo,
+        unit_cost_hi=cost_hi,
+        tech_route=getattr(best, 'tech_route', '') or '',
     )
 
 
@@ -184,6 +231,14 @@ PRICE_RANGE_MAP: Dict[str, tuple] = {
     '中': (2000, 8000),
     '高': (8000, 30000),
     '极高': (30000, 100000),
+}
+
+# V2.7.4-T3: 供货周期映射（基于价格区间估算）
+LEAD_TIME_MAP: Dict[str, str] = {
+    '低': '2-4周',
+    '中': '4-8周',
+    '高': '8-12周',
+    '极高': '12-24周',
 }
 
 

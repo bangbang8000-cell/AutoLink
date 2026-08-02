@@ -162,39 +162,39 @@ class TestSelectOpticalModule:
 
     def test_select_400g_sr4_short(self, mock_library):
         """400G 25m 选 SR4"""
-        result = select_optical_module("400G", 25.0, "MPO", mock_library)
+        result = select_optical_module("400G", 25.0, "MPO", library=mock_library)
         assert result is not None
         assert result.module_id == "400G-SR4"
         assert "400G" in result.match_reason
 
     def test_select_400g_dr4_medium(self, mock_library):
         """400G 300m 选 DR4(距离足够中选最近的)"""
-        result = select_optical_module("400G", 300.0, "MPO", mock_library)
+        result = select_optical_module("400G", 300.0, "MPO", library=mock_library)
         assert result is not None
         assert result.module_id == "400G-DR4"
 
     def test_select_800g(self, mock_library):
         """800G 选 SR8"""
-        result = select_optical_module("800G", 50.0, "MPO", mock_library)
+        result = select_optical_module("800G", 50.0, "MPO", library=mock_library)
         assert result is not None
         assert result.module_id == "800G-SR8"
 
     def test_no_speed_match_fallback(self, mock_library):
         """速率不匹配时降级选距离足够的"""
-        result = select_optical_module("999G", 50.0, "", mock_library)
+        result = select_optical_module("999G", 50.0, "", library=mock_library)
         # 降级:忽略速率,选距离足够的
         assert result is not None
 
     def test_invalid_speed(self, mock_library):
         """无效速率返回 None"""
-        result = select_optical_module("", 10.0, "", mock_library)
+        result = select_optical_module("", 10.0, "", library=mock_library)
         assert result is None
 
     def test_empty_library(self):
         """空设备库返回 None"""
         lib = MagicMock()
         lib.get_by_category.return_value = []
-        result = select_optical_module("400G", 10.0, "", lib)
+        result = select_optical_module("400G", 10.0, "", library=lib)
         assert result is None
 
 

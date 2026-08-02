@@ -56,6 +56,8 @@ class DeviceProfile:
     distance_m: Optional[int] = None     # 支持距离（米）
     fiber_type: Optional[str] = None     # 'copper' | 'MMF' | 'SMF'
     vendors: List[str] = field(default_factory=list)
+    # V2.7.4 光模块技术路线字段（可选，向后兼容）
+    tech_route: Optional[str] = None     # '硅光' | 'LPO' | 'EML' | '薄膜铌酸锂' | None(传统可插拔)
 
     def is_server(self) -> bool:
         return len(self.interface_models) > 0
@@ -206,6 +208,8 @@ class DeviceLibrary:
             distance_m=data.get("distance_m"),
             fiber_type=data.get("fiber_type"),
             vendors=data.get("vendors", []),
+            # V2.7.4 光模块技术路线
+            tech_route=data.get("tech_route"),
         )
 
     def get(self, device_id: str) -> Optional[LibraryDevice]:

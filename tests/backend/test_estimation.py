@@ -18,19 +18,19 @@ class TestEstimatePUE:
     """PUE 估算测试"""
 
     def test_air_cooling_baseline(self):
-        """风冷 25℃ 无自然冷基准:cooling_pue ≈ 1.35"""
+        """风冷 25℃ 无自然冷基准:cooling_pue ≈ 1.33 (V2.7.4-T5: 默认冷通道隔离 -0.02)"""
         result = estimate_pue(PUEInput(it_power_kw=100, cooling_method="air", outdoor_temp_c=25, has_free_cooling=False))
-        assert result.cooling_pue == pytest.approx(1.35, abs=0.01)
+        assert result.cooling_pue == pytest.approx(1.33, abs=0.01)
 
     def test_cold_plate_baseline(self):
-        """冷板 25℃ 无自然冷基准:cooling_pue ≈ 1.18"""
+        """冷板 25℃ 无自然冷基准:cooling_pue ≈ 1.16 (V2.7.4-T5: 默认冷通道隔离 -0.02)"""
         result = estimate_pue(PUEInput(it_power_kw=100, cooling_method="cold_plate", outdoor_temp_c=25, has_free_cooling=False))
-        assert result.cooling_pue == pytest.approx(1.18, abs=0.01)
+        assert result.cooling_pue == pytest.approx(1.16, abs=0.01)
 
     def test_immersion_baseline(self):
-        """浸没 25℃ 无自然冷基准:cooling_pue ≈ 1.08"""
+        """浸没 25℃ 无自然冷基准:cooling_pue ≈ 1.06 (V2.7.4-T5: 默认冷通道隔离 -0.02)"""
         result = estimate_pue(PUEInput(it_power_kw=100, cooling_method="immersion", outdoor_temp_c=25, has_free_cooling=False))
-        assert result.cooling_pue == pytest.approx(1.08, abs=0.01)
+        assert result.cooling_pue == pytest.approx(1.06, abs=0.01)
 
     def test_temperature_effect_air(self):
         """风冷温度系数:35℃ 比 25℃ 高 0.08"""
@@ -68,9 +68,10 @@ class TestEstimatePUE:
         assert result.meets_target is False
 
     def test_ups_loss(self):
-        """UPS 损耗 = it_power * (1 - efficiency)"""
+        """UPS 损耗 = it_power * (1 - efficiency) * redundancy_factor (V2.7.4-T5: N+1 默认 1.02x)"""
         result = estimate_pue(PUEInput(it_power_kw=1000, ups_efficiency=0.96))
-        assert result.ups_loss_kw == pytest.approx(40.0, abs=0.1)
+        # 1000 * 0.04 * 1.02 (N+1) = 40.8
+        assert result.ups_loss_kw == pytest.approx(40.8, abs=0.1)
 
     def test_high_power_recommends_cold_plate(self):
         """>5MW 风冷建议升级冷板"""

@@ -1,0 +1,15 @@
+{
+  "id": "om_1600g_osfp_xd_eml_lr8_10km",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "LR8",
+  "distance_m": 10000,
+  "fiber_type": "SMF",
+  "power_watts": 24,
+  "tech_route": "EML",
+  "vendors": ["光迅科技", "海思光电子", "II-VI"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD LR8 EML电吸收调制光模块，长距传输10公里，8x200G PAM4，适用于园区互联",
+  "tags": ["1.6T", "OSFP-XD", "LR8", "SMF", "10km", "EML", "长距"]
+}

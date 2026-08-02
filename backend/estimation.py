@@ -25,6 +25,10 @@ class PUEInput:
     load_factor: float = 0.8         # 负载率 (0-1)
     ups_efficiency: float = 0.96     # UPS 效率
     has_free_cooling: bool = True    # 是否支持自然冷
+    # V2.7.4-T5: PUE 模型增强参数
+    humidity_c: float = 50.0         # 相对湿度 (%)，影响蒸发冷却/加湿能耗
+    ups_redundancy: str = "N+1"      # UPS 冗余模式: 'N' | 'N+1' | '2N'
+    containment: str = "cold"        # 冷热通道隔离: 'hot' | 'cold' | 'none'
 
 
 @dataclass
@@ -46,6 +50,8 @@ def estimate_pue(inp: PUEInput) -> PUEResult:
     """
     PUE 估算
     基于散热方式、室外温度、负载率等参数估算数据中心 PUE
+
+    V2.7.4-T5: 增加湿度修正、UPS 冗余损耗、冷热通道隔离修正
     """
     it_power = inp.it_power_kw
 
@@ -70,11 +76,29 @@ def estimate_pue(inp: PUEInput) -> PUEResult:
     if inp.load_factor < 0.5:
         cooling_pue += (0.5 - inp.load_factor) * 0.3
 
+    # V2.7.4-T5: 湿度修正（高湿度增加冷凝负荷，低湿度增加加湿能耗）
+    if inp.humidity_c > 60:
+        cooling_pue += (inp.humidity_c - 60) * 0.001
+    elif inp.humidity_c < 30:
+        cooling_pue += (30 - inp.humidity_c) * 0.0005
+
+    # V2.7.4-T5: 冷热通道隔离修正
+    if inp.containment == "hot":
+        cooling_pue -= 0.03  # 热通道隔离效果最佳
+    elif inp.containment == "cold":
+        cooling_pue -= 0.02  # 冷通道隔离
+    elif inp.containment == "none":
+        cooling_pue += 0.05  # 无隔离时冷热混合，制冷效率下降
+
     cooling_power = it_power * (cooling_pue - 1)
 
     # 2. 供配电 PUE 分量（UPS 损耗）
-    power_distribution_pue = 1 + (1 - inp.ups_efficiency)
-    ups_loss = it_power * (1 - inp.ups_efficiency)
+    # V2.7.4-T5: UPS 冗余模式影响损耗
+    base_loss = 1 - inp.ups_efficiency
+    redundancy_factor = {"N": 1.0, "N+1": 1.02, "2N": 1.04}.get(inp.ups_redundancy, 1.02)
+    effective_loss = base_loss * redundancy_factor
+    power_distribution_pue = 1 + effective_loss
+    ups_loss = it_power * effective_loss
 
     # 3. 其他 PUE 分量（照明、监控等）
     other_pue = 1.01
@@ -122,6 +146,10 @@ class ConvergenceResult:
     target_ratio: float        # 目标收敛比
     meets_target: bool         # 是否满足目标
     recommendation: str        # 建议
+    # V2.7.4-T10: 新增 Spine/Core 层收敛比字段
+    spine_fanout: float = 0.0       # Spine 层收敛比（Leaf上行/Spine上行）
+    core_layer_ratio: float = 0.0   # Core 层收敛比（仅 3-tier）
+    is_3tier: bool = False          # 是否为 3 层 CLOS 拓扑
 
 
 def calc_convergence_ratio(
@@ -130,10 +158,18 @@ def calc_convergence_ratio(
     leaf_uplink_ports: int,
     port_speed_gbps: float,
     num_leaves: int = 1,
+    spine_count: int = 0,
+    spine_uplink_ports: int = 0,
+    core_count: int = 0,
 ) -> ConvergenceResult:
     """
     计算收敛比
     收敛比 = 下行总带宽 / 上行总带宽
+
+    V2.7.4-T10: 增加 Spine fanout 计算，提供 Leaf 级和全局两级收敛比
+    - Leaf 级收敛比: leaf_downlink_bw / leaf_uplink_bw（现有逻辑）
+    - Spine 级收敛比: leaf_uplink_total_bw / spine_uplink_total_bw（3-tier 时）
+    - Core 层收敛比: spine_uplink_total_bw / core_downlink_total_bw（3-tier + Core 时）
     """
     targets = {
         "param": 1.0,
@@ -147,12 +183,32 @@ def calc_convergence_ratio(
     uplink_bw = leaf_uplink_ports * port_speed_gbps * num_leaves
     ratio = downlink_bw / uplink_bw if uplink_bw > 0 else float('inf')
 
+    # V2.7.4-T10: Spine 层收敛比计算
+    spine_fanout = 0.0
+    core_layer_ratio = 0.0
+    is_3tier = spine_count > 0
+
+    if is_3tier and spine_uplink_ports > 0:
+        spine_uplink_bw = spine_uplink_ports * port_speed_gbps * spine_count
+        spine_fanout = uplink_bw / spine_uplink_bw if spine_uplink_bw > 0 else 0.0
+
+        # Core 层收敛比（如果有 Core 交换机）
+        if core_count > 0:
+            # Core 下行带宽 = Spine 上行带宽总和
+            core_downlink_bw = spine_uplink_bw
+            # Core 上行带宽假设 = Core 下行（无阻塞 Core 层）
+            core_layer_ratio = 1.0
+
     if ratio <= 1.0:
         rec = "无阻塞设计，满足全互联需求"
     elif ratio <= target:
         rec = f"收敛比 {ratio:.1f}:1 在目标范围内"
     else:
         rec = f"收敛比 {ratio:.1f}:1 超过目标 {target:.1f}:1，建议增加上行端口或减少下行接入"
+
+    # V2.7.4-T10: 3-tier 时补充 Spine fanout 信息
+    if is_3tier and spine_fanout > 0:
+        rec += f" | Spine fanout: {spine_fanout:.2f}:1"
 
     return ConvergenceResult(
         network_type=network_type,
@@ -163,6 +219,10 @@ def calc_convergence_ratio(
         target_ratio=target,
         meets_target=ratio <= target,
         recommendation=rec,
+        # V2.7.4-T10 新增字段
+        spine_fanout=round(spine_fanout, 2),
+        core_layer_ratio=round(core_layer_ratio, 2),
+        is_3tier=is_3tier,
     )
 
 

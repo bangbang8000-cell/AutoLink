@@ -1,0 +1,15 @@
+{
+  "id": "om_1600g_osfp_xd_sip_dr8_500m",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "DR8",
+  "distance_m": 500,
+  "fiber_type": "SMF",
+  "power_watts": 22,
+  "tech_route": "硅光",
+  "vendors": ["中际旭创", "新易盛", "Intel"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD DR8 硅光模块，硅光集成芯片方案，传输距离500米，8x200G PAM4，低功耗",
+  "tags": ["1.6T", "OSFP-XD", "DR8", "SMF", "500m", "硅光", "SiPh"]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "om_1600g_osfp_xd_lpo_sr8_100m",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "SR8",
+  "distance_m": 100,
+  "fiber_type": "MMF",
+  "power_watts": 18,
+  "tech_route": "LPO",
+  "vendors": ["光迅科技", "源杰科技", "仕佳光子"],
+  "price_range": "高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD SR8 LPO线性直驱光模块，去除DSP降低功耗，传输距离100米，8x200G PAM4",
+  "tags": ["1.6T", "OSFP-XD", "SR8", "MMF", "100m", "LPO", "线性直驱"]
+}

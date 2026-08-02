@@ -1,0 +1,15 @@
+{
+  "id": "om_1600g_osfp_xd_tfln_dr8_500m",
+  "speed": "1.6T",
+  "form_factor": "OSFP-XD",
+  "spec": "DR8",
+  "distance_m": 500,
+  "fiber_type": "SMF",
+  "power_watts": 20,
+  "tech_route": "薄膜铌酸锂",
+  "vendors": ["铌奥光电", "光迅科技", "华为"],
+  "price_range": "极高",
+  "category": "optical_modules",
+  "description": "1.6T OSFP-XD DR8 薄膜铌酸锂(TFLN)调制器光模块，超低功耗高带宽，传输距离500米，8x200G PAM4",
+  "tags": ["1.6T", "OSFP-XD", "DR8", "SMF", "500m", "TFLN", "薄膜铌酸锂"]
+}

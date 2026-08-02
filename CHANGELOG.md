@@ -1,5 +1,62 @@
 # CHANGELOG
 
+## [2.7.4] - 2026-08-02
+
+### 专业能力增强
+
+v2.7.4 增强光模块/液冷/PUE/PDF 的专业度，对标行业最新标准，完成 11 项任务。
+
+#### 光模块多技术路线 (T1-T3)
+- **T1**: 光模块库补充 1.6T 多路线（硅光/LPO/EML/薄膜铌酸锂 TFLN），新增 4 款 1.6T 模块
+- **T2**: 光模块选型支持 MMF/SMF 严格匹配，新增 `fiber_type` 参数与 `_SPEC_FIBER_MAP` 映射表
+- **T3**: BOM 清单支持成本/功耗/供货周期权衡，`OpticalSelection` 扩展 `power_w`/`lead_time_weeks`/`unit_cost_lo/hi` 字段
+
+#### 液冷与 PUE 增强 (T4-T6)
+- **T4**: 液冷模型增加 OCP 冷板标准接口校验规则 V012，校验冷却液类型（PG25/PG40/FC3283/water）
+- **T5**: PUE 模型增强，新增湿度修正、UPS 冗余损耗（N/N+1/2N）、冷热通道隔离参数
+- **T6**: 新增校验规则 V011，PUE > 1.3 时报合规警告（区别于 V003 的 1.25 优化目标）
+
+#### PDF 报告增强 (T7-T8)
+- **T7**: PDF 报告增加图表（功率分布柱状图、光模块成本饼图），使用 matplotlib 动态生成
+- **T8**: PDF 报告增加页眉（项目名+版本）、页脚（页码）、目录
+
+#### 设备清单与算法优化 (T9-T11)
+- **T9**: `generate_device_list` 从 device_library 拉取 vendor/model 填充设备清单
+- **T10**: 收敛比计算增加 Spine fanout，提供 Leaf 级和全局两级收敛比（3-tier CLOS）
+- **T11**: Excel 美化算法优化，从 8 次遍历减少到 2 次（单次遍历 + 预计算合并区域），万级连接导出 ≤ 5s
+
+#### 设备库扩展
+- 设备 schema 新增 `tech_route`（技术路线）、`origin`（国产/进口）、`lead_time`（供货周期）字段
+
+## [2.7.3] - 2026-08-02
+
+### 体验与性能
+
+v2.7.3 修复前端体验痛点，优化大规模拓扑性能，完成 15 项任务。
+
+#### 快捷键与布局 (T1-T5)
+- **T1**: 全局快捷键注册，`src/utils/shortcuts.ts` 集中管理快捷键映射表
+- **T2**: ShortcutsDialog 从 shortcuts.ts 自动生成，对话框列出的快捷键全部可用
+- **T3**: ContextMenu 边界检测，靠近右/下边缘时菜单自动调整位置
+- **T4**: ResizableAppLayout 迁移 react-resizable-panels，支持 a11y、键盘、持久化
+- **T5**: app/edge token 亮色补全，亮色模式下色调统一
+
+#### 性能优化 (T6-T8)
+- **T6**: 拓扑布局算法迁移 Web Worker，2048 节点布局不阻塞主线程
+- **T7**: TopologyTab 引用稳定化，`React.memo` + 自定义 `areEqual` 避免全量重渲染
+- **T8**: Tab 懒加载，首屏仅加载当前 Tab 代码
+
+#### UI 组件库 (T9-T11)
+- **T9**: UI 组件库导出补齐 Modal/ContextMenu/Toggle/SettingsRow
+- **T10**: 新增 Tooltip/Dropdown/Tabs 组件
+- **T11**: 处理哑设置项 fontSize/compactMode/animations，接入 CSS 变量
+
+#### FileExplorer 拆分与优化 (T12-T15)
+- **T12**: 设备库列表虚拟化（@tanstack/react-virtual），500+ 设备滚动流畅
+- **T13**: FileExplorer 拆分为 ProjectListPanel/FileTreePanel/SettingsPanel/TemplateSaveDialog
+- **T14**: 原生 prompt() 替换为 RenameProjectModal（复用组件）
+- **T15**: Toast 优化，容器位置调整 + 悬停暂停计时
+
 ## [2.7.2] - 2026-08-02
 
 ### 算法可用性
