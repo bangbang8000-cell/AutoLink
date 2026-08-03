@@ -37,11 +37,24 @@ jobs:
         with:
           node-version: '22'
 
+      # V3.0.0: 后端 PyInstaller 打包需要 Python 环境
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
       - name: Install dependencies
         run: npm ci
 
+      # V3.0.0: 安装后端打包依赖（pytest/pyinstaller 等）
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements-dev.txt
+
       - name: Build app (renderer + electron)
         run: npm run build
+
+      # V3.0.0: PyInstaller 单目录打包后端 engine（python.service 免 Python 运行，产物进 dist/backend-dist）
+      - name: Build backend (PyInstaller)
+        run: python -m PyInstaller scripts/pyinstaller.spec
 
       - name: Package with electron-builder
         run: npx electron-builder ${{ matrix.build_flag }} --publish=never
