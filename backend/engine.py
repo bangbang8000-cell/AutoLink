@@ -761,31 +761,51 @@ def handle_export(params):
     }
 
 
-def main():
-    """主入口：从 stdin 读取 JSON，处理后输出到 stdout
+def _write_line(obj: dict) -> None:
+    """V3.0.0-T0-6: 单行 NDJSON 输出 + flush（持久进程逐行协议）"""
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
 
-    V2.7.6-T7: 使用 _ACTION_REGISTRY 注册表派发 action
-      - 所有 handler 通过 @register_action('xxx') 装饰器自动注册
-      - main() 仅负责从注册表查找并派发, 不再硬编码 action 列表
+
+def emit_event(request_id: str, chunk: str) -> None:
+    """V3.0.0-T0-6: 发送流式事件行 {type:'event', requestId, chunk}
+
+    供流式 handler 使用（未来 AI 对话/进度），Electron 端逐行透传 webContents.send('ai:stream', ...)。
     """
-    try:
-        raw = sys.stdin.read()
-        request = json.loads(raw)
-        action = request.get('action', '')
-        params = request.get('params', {})
+    _write_line({"type": "event", "requestId": request_id, "chunk": chunk})
 
-        # V2.7.6-T7: 从注册表查找 handler
-        handler = get_action_handler(action)
-        if not handler:
-            response = {"success": False, "error": f"未知 action: {action}"}
-        else:
+
+def main():
+    """主入口：stdin 逐行读取 NDJSON 请求 → stdout 逐行 NDJSON 响应（持久 Agent 进程）
+
+    V3.0.0-T0-6: 由"一次性读 stdin"重构为"逐行循环"：
+      - 请求行: {"action": "...", "params": {...}, "requestId": "..."}
+      - 响应行: {"type": "result", "requestId", "success", "data"|"error"}
+      - 事件行: {"type": "event", "requestId", "chunk"}   （handler 经 emit_event 发送）
+      - 解析失败: {"type": "error", "requestId", "error"}
+    每行输出后 flush；stdin 关闭（EOF）时退出 → 兼容旧的一次性管道调用。
+    """
+    for raw in sys.stdin:
+        raw = raw.strip()
+        if not raw:
+            continue
+        request_id = ''
+        try:
+            request = json.loads(raw)
+            request_id = request.get('requestId', '')
+            action = request.get('action', '')
+            params = request.get('params', {})
+            handler = get_action_handler(action)
+            if not handler:
+                _write_line({"type": "result", "requestId": request_id,
+                             "success": False, "error": f"未知 action: {action}"})
+                continue
             result = handler(params)
-            response = {"success": True, "data": result}
-
-    except Exception as e:
-        response = {"success": False, "error": str(e)}
-
-    print(json.dumps(response, ensure_ascii=False))
+            _write_line({"type": "result", "requestId": request_id, "success": True, "data": result})
+        except json.JSONDecodeError as e:
+            _write_line({"type": "error", "requestId": request_id, "error": f"JSON 解析失败: {e}"})
+        except Exception as e:
+            _write_line({"type": "result", "requestId": request_id, "success": False, "error": str(e)})
 
 
 if __name__ == "__main__":

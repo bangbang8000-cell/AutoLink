@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 import { isDev, initializeAppDirs, ensureDemoProjects } from './config.js'
 import { setupIpcHandlers } from './ipc/handlers.js'
 import { updateService } from './services/update.service.js'
+import { pythonService } from './services/python.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -140,6 +141,11 @@ class AutoLinkApp {
       if (BrowserWindow.getAllWindows().length === 0) {
         this.createMainWindow()
       }
+    })
+
+    // V3.0.0-T0-6: 退出时关闭 Python 长驻 Agent 进程
+    app.on('will-quit', () => {
+      pythonService.stop()
     })
 
     // Delayed update check (3s after startup)

@@ -666,6 +666,20 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
   }
 
+  // V3.0.0-T0-6: 流式调用（engine {type:'event'} 行逐行透传 → webContents.send('ai:stream')）
+  ipcMain.handle('ai:call', wrapHandler(async (event, action: string, params?: unknown) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    return pythonService.callWithEvents(
+      action,
+      (params as Record<string, unknown>) ?? {},
+      (ev) => {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('ai:stream', ev)
+        }
+      },
+    )
+  }))
+
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
