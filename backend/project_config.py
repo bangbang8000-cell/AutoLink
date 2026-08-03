@@ -16,6 +16,8 @@ DEFAULT_PROJECT_CONFIG = {
         "name": "",
         "description": "",
         "version": 1,
+        # V3.0.0-T0-2: 独立 schema 演进字段（缺失视为 1，兼容 2.9.9）
+        "schema_version": 2,
         "created_at": "",
         "updated_at": ""
     },
@@ -68,6 +70,59 @@ REQUIRED_RACK_KEYS = {'rack_type', 'power_limit_per_rack', 'naming_prefix'}
 
 
 # ================================================================
+#  V3.0.0-T0-2: 配置 schema 版本化与迁移链
+# ================================================================
+
+# 当前配置 schema 版本（2.9.9 隐式 = 1；3.0.0 起显式演进，新增字段全部可选）
+SCHEMA_VERSION = 2
+_SCHEMA_VERSION_KEY = 'schema_version'
+
+
+def get_schema_version(config: dict) -> int:
+    """读取配置 schema 版本（缺失视为 1，兼容 2.9.9 旧配置）"""
+    if not isinstance(config, dict):
+        return 1
+    try:
+        return int((config.get('meta') or {}).get(_SCHEMA_VERSION_KEY, 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _migrate_v1_to_v2(config: dict) -> dict:
+    """v1 → v2：补齐 schema_version 标记（结构不变；v2 起新增字段全部可选）"""
+    config.setdefault('meta', {})[_SCHEMA_VERSION_KEY] = 2
+    return config
+
+
+# 目标版本 → 迁移函数（迁移方向：from 版本+1 → 该版本）
+_MIGRATIONS = {
+    2: _migrate_v1_to_v2,
+}
+
+
+def migrate_config(config: dict) -> dict:
+    """
+    按 meta.schema_version 逐版本升级到当前 SCHEMA_VERSION。
+    返回迁移后的新配置（不修改入参）；已是当前版本时原样返回。
+    """
+    if not isinstance(config, dict):
+        return config
+    version = get_schema_version(config)
+    if version >= SCHEMA_VERSION:
+        return config
+
+    result = json.loads(json.dumps(config))  # deep copy，不修改入参
+    while version < SCHEMA_VERSION:
+        version += 1
+        migrator = _MIGRATIONS.get(version)
+        if migrator:
+            result = migrator(result)
+        else:
+            result.setdefault('meta', {})[_SCHEMA_VERSION_KEY] = version
+    return result
+
+
+# ================================================================
 #  公共接口
 # ================================================================
 
@@ -98,6 +153,17 @@ def load_project_config(config_path: str) -> dict:
         return {}, f"JSON 解析错误: {e}"
     except Exception as e:
         return {}, f"读取配置文件失败: {e}"
+
+    # V3.0.0-T0-2: 自动迁移旧 schema 到当前版本
+    migrated = migrate_config(config)
+    if migrated is not config:
+        config = migrated
+        # 尝试回写（只读目录如打包内置模板失败时忽略，内存态已迁移即可）
+        try:
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+        except OSError:
+            pass
 
     error = validate_config(config)
     if error:
@@ -134,14 +200,37 @@ def save_project_config(config_path: str, config: dict) -> tuple:
         return False, f"保存配置文件失败: {e}"
 
 
-def validate_config(config: dict) -> str | None:
+def validate_config(config: dict, strict: bool = True) -> str | None:
     """
     校验 project_config.json 格式完整性
     返回 None 表示校验通过，否则返回错误描述字符串
+
+    strict=True（默认）：REQUIRED_* 键全部必须存在，缺失即报错（兼容 2.9.9 行为）。
+    strict=False（宽松）：缺失键不报错（供 AIHUB 生成/对话补全等"先宽松后补全"场景），
+                         对存在的键仍做类型与枚举校验。
     """
     if not isinstance(config, dict):
         return "配置根必须是 JSON 对象"
 
+    # ============ 宽松模式（strict=False）：仅校验已存在键的类型/枚举 ============
+    if not strict:
+        topo = config.get('topology') or {}
+        for k in ['num_gpu_servers', 'num_all_flash_storage', 'num_hybrid_flash_storage', 'num_compute_servers',
+                  'param_ports_per_server', 'storage_ports_per_server', 'param_switch_ports',
+                  'storage_switch_ports', 'param_downlink_limit', 'storage_downlink_limit',
+                  'biz_downlink_limit', 'oob_downlink_limit']:
+            if k in topo and not isinstance(topo.get(k), (int, float)):
+                return f"topology.{k} 必须是数值"
+        if 'param_protocol' in topo and topo.get('param_protocol') not in ('IB', 'RoCE', 'UEC'):
+            return f"topology.param_protocol 必须是 'IB' / 'RoCE' / 'UEC'"
+        if 'downlink_mode' in topo and topo.get('downlink_mode') not in ('full', 'custom'):
+            return f"topology.downlink_mode 必须是 'full' 或 'custom'"
+        su = config.get('scale_up')
+        if su is not None and not isinstance(su, dict):
+            return "scale_up 必须是 JSON 对象"
+        return None
+
+    # ============ 严格模式（默认）：完整 REQUIRED 校验 ============
     # 检查顶层 key
     missing_top = REQUIRED_TOP_KEYS - set(config.keys())
     if missing_top:

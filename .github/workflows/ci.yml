@@ -23,3 +23,5 @@ jobs:
       - run: npm run build:renderer
       # V2.9.8-T3: 模板验证纳入 CI — 16 内置模板损坏时构建失败
       - run: python scripts/validate_templates.py
+      # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
+      - run: python scripts/gen_golden.py --check

@@ -365,12 +365,9 @@ def handle_design(params):
 
     # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
     # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
-    all_switches = (
-        designer.param_leaves + designer.param_spines + designer.param_cores +
-        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
-    )
-    all_devices = designer.servers + all_switches + getattr(designer, 'scale_up_gpus', [])
+    # V3.0.0-T0-3: 统一访问器（消除 11 类硬编码聚合）
+    all_switches = designer.all_switches()
+    all_devices = designer.all_devices()
     seen_conns = set()
     for dev in all_devices:
         for conn in dev.connections:
@@ -584,13 +581,8 @@ def _calculate_power_summary(designer):
     cabinets = {}
     power_limit = getattr(designer, 'power_limit_per_rack', 6000) or 6000
     cabinet_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
-    all_devices = list(designer.servers) + (
-        getattr(designer, 'param_leaves', []) + getattr(designer, 'param_spines', []) +
-        getattr(designer, 'param_cores', []) + getattr(designer, 'storage_leaves', []) +
-        getattr(designer, 'storage_spines', []) + getattr(designer, 'storage_cores', []) +
-        getattr(designer, 'oob_access', []) + getattr(designer, 'oob_agg', []) +
-        getattr(designer, 'biz_access', []) + getattr(designer, 'biz_agg', [])
-    )
+    # V3.0.0-T0-3: 统一访问器（保持原语义：服务器 + 交换机，不含 Scale-Up GPU）
+    all_devices = designer.servers + designer.all_switch_lists()
     for dev in all_devices:
         if dev.cabinet_id is None:
             continue

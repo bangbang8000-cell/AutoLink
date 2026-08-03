@@ -9,6 +9,8 @@ from models import NetworkObject, Connection
 from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier
 from device_library import get_device_library, LibraryDevice, InterfaceModel
 from rail_topology import RailOptimizedTopology
+# V3.0.0-T0-2: 加载旧 schema 配置时自动迁移到当前版本（内存态，不回写）
+from project_config import migrate_config
 
 
 class NetworkDesignerV2:
@@ -67,6 +69,9 @@ class NetworkDesignerV2:
         """加载 project_config.json 格式"""
         with open(config_file, 'r', encoding='utf-8') as f:
             self._project_config = json.load(f)
+
+        # V3.0.0-T0-2: 旧 schema 配置自动迁移（内存态；模板目录只读不回写）
+        self._project_config = migrate_config(self._project_config)
 
         # 加载设备库
         try:
@@ -707,6 +712,69 @@ class NetworkDesignerV2:
 
         # V2.9.0: 多约束机柜分配（服务器 + param/storage 交换机）
         self._allocate_rack_servers()
+
+    # ================================================================
+    #  V3.0.0-T0-3: 统一访问器（exporter/validation/engine 共用，消除四网硬编码聚合）
+    # ================================================================
+    def all_switch_lists(self):
+        """全部交换机列表（参数/存储/OOB/业务 11 类）"""
+        return (self.param_leaves + self.param_spines + self.param_cores +
+                self.storage_leaves + self.storage_spines + self.storage_cores +
+                self.oob_access + self.oob_agg + self.biz_access + self.biz_agg)
+
+    def all_switches(self):
+        """全部交换机（同 all_switch_lists，语义别名）"""
+        return self.all_switch_lists()
+
+    def all_devices(self):
+        """全部设备：服务器 + 交换机 + Scale-Up GPU"""
+        return self.servers + self.all_switch_lists() + list(getattr(self, 'scale_up_gpus', []))
+
+    def all_switch_groups(self):
+        """按 obj_type 分组返回 {obj_type: [switches]}，供导出/机柜按网段展开"""
+        groups = {}
+        for sw in self.all_switch_lists():
+            groups.setdefault(sw.obj_type, []).append(sw)
+        return groups
+
+    def describe_domains(self):
+        """V3.0.0-T0-3: 当前设计器的网络域元数据（为插件化/AIHUB 上下文提供描述）
+
+        返回各网络域（param/storage/biz/oob/scale_up）的 {类型/协议/速率/端口数/设备数}。
+        不参与设计流程，仅作描述层（行为不变）。
+        """
+        domains = {}
+        if getattr(self, 'param_enabled', True):
+            domains['param'] = {
+                'tiers': 3 if getattr(self, 'param_3tier_needed', False) else 2,
+                'protocol': getattr(self, 'param_protocol', 'RoCE'),
+                'speed': getattr(self, 'param_speed', '400G'),
+                'switch_ports': getattr(self, 'param_switch_ports', 64),
+                'ports_per_server': getattr(self, 'param_ports_per_server', 8),
+                'leaves': len(self.param_leaves),
+                'spines': len(self.param_spines),
+                'cores': len(self.param_cores),
+            }
+        if getattr(self, 'storage_enabled', True):
+            domains['storage'] = {
+                'tiers': 3 if getattr(self, 'storage_3tier_needed', False) else 2,
+                'speed': getattr(self, 'storage_speed', '200G'),
+                'switch_ports': getattr(self, 'storage_switch_ports', 40),
+                'leaves': len(self.storage_leaves),
+                'spines': len(self.storage_spines),
+                'cores': len(self.storage_cores),
+            }
+        if getattr(self, 'biz_enabled', False):
+            domains['biz'] = {'access': len(self.biz_access), 'agg': len(self.biz_agg)}
+        if getattr(self, 'oob_enabled', True):
+            domains['oob'] = {'access': len(self.oob_access), 'agg': len(self.oob_agg)}
+        if getattr(self, 'scale_up_config', None):
+            domains['scale_up'] = {
+                'protocol': self.scale_up_config.get('protocol'),
+                'num_gpus': self.scale_up_config.get('num_gpus', 0),
+                'gpus': len(getattr(self, 'scale_up_gpus', [])),
+            }
+        return domains
 
     # ================================================================
     #  机柜分配 (V2.9.0: 多约束装箱, 替代简单轮转)

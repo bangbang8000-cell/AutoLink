@@ -9,6 +9,8 @@ export interface ProjectMeta {
   name: string
   description: string
   version: number
+  /** V3.0.0-T0-2: 配置 schema 版本（缺失视为 1，兼容 2.9.9；3.0.0 起显式演进） */
+  schema_version?: number
   created_at: string
   updated_at: string
 }
@@ -90,6 +92,7 @@ export function createDefaultProjectConfig(name: string): ProjectConfig {
       name,
       description: '',
       version: 1,
+      schema_version: 2,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

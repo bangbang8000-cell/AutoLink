@@ -35,3 +35,6 @@ output/
 
 # Design drafts (process files, not source of truth)
 design/
+
+# 敏感本地信息（含服务器凭据，禁止提交）
+*.local.md

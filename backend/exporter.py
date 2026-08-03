@@ -697,12 +697,8 @@ def export_cabling_guide(designer, filename):
     from optical_selector import select_module_for_connection, estimate_module_cost
 
     rows = []
-    all_switches = (
-        designer.param_leaves + designer.param_spines + designer.param_cores +
-        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
-    )
-    all_devices = designer.servers + all_switches
+    all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
+    all_devices = designer.all_devices()
     seen_conns = set()
 
     for dev in all_devices:
@@ -963,11 +959,7 @@ def generate_report_data(designer, estimation=None):
         overview['Scale-Up总链路数'] = su_stats.get('total_connections', 0)
 
     # 2. 网络架构
-    all_switches = (
-        designer.param_leaves + designer.param_spines + designer.param_cores +
-        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
-    )
+    all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
     architecture = {
         '参数网Leaf': len(designer.param_leaves),
         '参数网Spine': len(designer.param_spines),
@@ -1032,7 +1024,7 @@ def generate_report_data(designer, estimation=None):
     # 7. 机柜规划 (V2.9.1: 机柜清单,含交换机; 类型来自 rack_allocation 分配)
     rack_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
     rack_cabs = {}
-    for dev in designer.servers + all_switches + getattr(designer, 'scale_up_gpus', []):
+    for dev in designer.all_devices():  # V3.0.0-T0-3: 统一访问器（服务器+交换机+Scale-Up GPU）
         if dev.cabinet_id is None:
             continue
         cid = dev.cabinet_id
@@ -1122,9 +1114,7 @@ def export_compliance_report(designer, filename):
         })
 
     # 交换机
-    all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
-                    designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-                    designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg)
+    all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
     for sw in all_switches:
         profile = getattr(sw, 'device_profile', None)
         origin = _get_origin(profile)

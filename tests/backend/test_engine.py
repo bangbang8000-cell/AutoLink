@@ -213,6 +213,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = []
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 0
         assert result["totalPowerWatts"] == 0
@@ -232,6 +233,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 1
@@ -255,6 +257,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["cabinets"][0]["exceeded"] is True
@@ -275,6 +278,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 0
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         # 0 被视为 falsy，or 6000 生效，使用默认值 6000
@@ -296,6 +300,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = None
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["cabinets"][0]["powerLimit"] == 6000  # 默认值
@@ -314,6 +319,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 0
@@ -334,6 +340,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalPowerWatts"] == 0
@@ -357,6 +364,7 @@ class TestPowerSummary:
                 MockServer("s3", 2, 3000),
             ]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 2
