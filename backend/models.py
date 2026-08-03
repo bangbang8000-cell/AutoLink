@@ -14,7 +14,9 @@ class NetworkObject:
     def __init__(self, name, obj_type, group=None, max_ports=64, podid=None,
                  device_profile=None, power_watts=0, u_height=1, layer_hint=None,
                  rail_id=None, rail_role="none", domain_id=None, protocol="",
-                 network_type=""):
+                 network_type="",
+                 # V3.0.0-T0-4: 端口容量显式化（None = 沿用"半口下联"兼容行为）
+                 downlink_limit=None, uplink_limit=None, ports_per_nic=1):
         self.name = name
         self.obj_type = obj_type  # 'server', 'param_leaf', 'param_spine', 'param_core', 'storage_leaf', 'storage_spine'
         self.group = group
@@ -59,26 +61,39 @@ class NetworkObject:
         self.rail_role: str = rail_role
 
         # 根据设备类型初始化端口计数器
+        # V3.0.0-T0-4: 支持显式 downlink/uplink 容量与每网卡端口数（缺省保持"半口下联"）
         if "leaf" in obj_type:
-            # Leaf: 前一半端口用于服务器，后一半端口用于Spine
+            # Leaf: 下联端口用于服务器，上联用于Spine
             self.downlink_counter = 1
-            self.uplink_counter = math.ceil(max_ports / 2) + 1
-            self.downlink_limit = math.floor(max_ports / 2)
-            self.uplink_limit = max_ports
+            if downlink_limit is not None:
+                self.downlink_limit = downlink_limit
+                self.uplink_counter = downlink_limit + 1
+            else:
+                self.downlink_limit = math.floor(max_ports / 2)
+                self.uplink_counter = math.ceil(max_ports / 2) + 1
+            self.uplink_limit = uplink_limit if uplink_limit is not None else max_ports
+            self.ports_per_nic = ports_per_nic
         elif "spine" in obj_type:
-            # Spine: 前一半端口用于Leaf，后一半端口用于Core
+            # Spine: 下联用于Leaf，上联用于Core
             self.downlink_counter = 1
-            self.uplink_counter = math.ceil(max_ports / 2) + 1
-            self.downlink_limit = math.floor(max_ports / 2)
-            self.uplink_limit = max_ports
+            if downlink_limit is not None:
+                self.downlink_limit = downlink_limit
+                self.uplink_counter = downlink_limit + 1
+            else:
+                self.downlink_limit = math.floor(max_ports / 2)
+                self.uplink_counter = math.ceil(max_ports / 2) + 1
+            self.uplink_limit = uplink_limit if uplink_limit is not None else max_ports
+            self.ports_per_nic = ports_per_nic
         elif "core" in obj_type:
             # Core: 所有端口用于Spine连接
             self.core_counter = 1
             self.core_limit = max_ports
+            self.ports_per_nic = ports_per_nic
         else:
             # 服务器使用普通端口计数器
             self.port_counter = 1
             self.port_limit = max_ports
+            self.ports_per_nic = ports_per_nic  # 每网卡端口数（双平面=2）
 
     @staticmethod
     def _infer_layer_hint(obj_type: str) -> str:

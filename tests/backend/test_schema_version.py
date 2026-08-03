@@ -100,6 +100,61 @@ def test_validate_lenient_scale_up_type_check():
     assert validate_config(cfg, strict=False) is not None
 
 
+# ---------- V3.0.0-T0-5: clusters/gpu_pools 校验 ----------
+
+def _clusters_config():
+    cfg = _v1_config()
+    cfg['clusters'] = [
+        {
+            "cluster_id": "p-cluster",
+            "role": "P",
+            "gpu_pools": [
+                {"pool_id": "h100-pool", "count": 8, "profile_ref": {"library_id": "x"}},
+                {"pool_id": "b300-pool", "count": 4},
+            ],
+        },
+        {"cluster_id": "d-cluster", "role": "D", "gpu_pools": []},
+    ]
+    return cfg
+
+
+def test_clusters_valid_strict_and_lenient():
+    cfg = _clusters_config()
+    assert validate_config(cfg) is None
+    assert validate_config(cfg, strict=False) is None
+
+
+def test_clusters_absent_is_ok():
+    cfg = _v1_config()
+    assert validate_config(cfg) is None  # 无 clusters 段兼容 2.9.9
+
+
+def test_clusters_invalid_structures():
+    base = _clusters_config()
+
+    bad = json.loads(json.dumps(base))
+    bad['clusters'] = 'not-a-list'
+    assert validate_config(bad) is not None
+    assert validate_config(bad, strict=False) is not None
+
+    bad = json.loads(json.dumps(base))
+    bad['clusters'] = [{'cluster_id': 42, 'role': 'P', 'gpu_pools': []}]
+    assert validate_config(bad) is not None
+
+    bad = json.loads(json.dumps(base))
+    bad['clusters'] = [{'cluster_id': 'x', 'role': 'X', 'gpu_pools': []}]
+    assert validate_config(bad) is not None
+
+    bad = json.loads(json.dumps(base))
+    bad['clusters'][0]['gpu_pools'] = [{'pool_id': 'p', 'count': 0}]
+    assert validate_config(bad) is not None
+
+    bad = json.loads(json.dumps(base))
+    bad['clusters'][0]['gpu_pools'] = [{'pool_id': 'p', 'count': 2, 'profile_ref': 'not-dict'}]
+    assert validate_config(bad) is not None
+    assert validate_config(bad, strict=False) is not None
+
+
 # ---------- load_project_config 自动迁移 + 回写 ----------
 
 def test_load_project_config_auto_migrate_and_writeback(tmp_path):

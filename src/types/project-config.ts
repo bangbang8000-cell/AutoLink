@@ -74,6 +74,31 @@ export interface ProjectScaleUp {
   bandwidth?: number
 }
 
+/** V3.0.0-T0-5: GPU 资源池（异构 GPU 池化，pool 内同构） */
+export interface GpuPool {
+  pool_id: string
+  /** 该池 GPU 服务器数量（>0） */
+  count: number
+  /** 指向设备库 profile 的引用（可含 library_id 等，可选） */
+  profile_ref?: Record<string, unknown>
+  /** 该池 NIC/组网覆盖（可选，未提供则用顶层 topology） */
+  nic_config?: Record<string, unknown>
+  /** 机柜偏好（可选，如 '42U 高功率'） */
+  rack_pref?: string
+}
+
+/** V3.0.0-T0-5: 集群角色（P=参数面/训练、D=数据面/推理；与组网形态正交） */
+export type ClusterRole = 'P' | 'D'
+
+/** V3.0.0-T0-5: 集群（独立选择组网方案的最小单元） */
+export interface Cluster {
+  cluster_id: string
+  role: ClusterRole
+  /** 可选：该集群独立组网参数（未提供则沿用顶层 topology） */
+  network_mode?: Record<string, unknown>
+  gpu_pools: GpuPool[]
+}
+
 /** 项目配置 (完整) */
 export interface ProjectConfig {
   meta: ProjectMeta
@@ -83,6 +108,8 @@ export interface ProjectConfig {
   rack_config: ProjectRackConfig
   /** V2.9.3-T1: 可选 Scale-Up 配置段 */
   scale_up?: ProjectScaleUp
+  /** V3.0.0-T0-5: 可选多集群段（GPU 池化 + P/D 正交集群模型） */
+  clusters?: Cluster[]
 }
 
 /** 默认项目配置 */

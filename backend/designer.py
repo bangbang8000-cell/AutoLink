@@ -91,6 +91,16 @@ class NetworkDesignerV2:
                 if device:
                     self._device_profiles[key] = device
 
+            # V3.0.0-T0-5: GPU 池化 — 按池解析异构 profile_ref → _device_profiles['gpu_server.<pool_id>']
+            for cl in self._project_config.get('clusters', []) or []:
+                for pool in cl.get('gpu_pools', []) or []:
+                    pid = pool.get('pool_id')
+                    ref = pool.get('profile_ref')
+                    if pid and ref:
+                        dev = self._device_library.resolve_ref(ref)
+                        if dev:
+                            self._device_profiles[f'gpu_server.{pid}'] = dev
+
             # V2.9.4-T3: 设备档案别名收敛 — 向导键名映射到 designer 键名
             # (向导写 param_leaf_switch/all_flash_storage_server, designer 读 param_switch/storage_server)
             if 'param_switch' not in self._device_profiles and 'param_leaf_switch' in self._device_profiles:
@@ -185,6 +195,23 @@ class NetworkDesignerV2:
 
         # --- 服务器配置 ---
         self.num_servers = topo.get('num_gpu_servers', 0)
+        # V3.0.0-T0-5: GPU 池化 + 正交集群模型（可选段；启用时 num_servers 由池汇总）
+        self.clusters = pc.get('clusters', []) or []
+        self.gpu_pool_defs = []
+        if self.clusters:
+            for cl in self.clusters:
+                for pool in cl.get('gpu_pools', []) or []:
+                    self.gpu_pool_defs.append({
+                        'cluster_id': cl.get('cluster_id', ''),
+                        'role': cl.get('role', ''),
+                        'pool_id': pool.get('pool_id', ''),
+                        'count': int(pool.get('count', 0)),
+                        'profile_ref': pool.get('profile_ref'),
+                        'rack_pref': pool.get('rack_pref', ''),
+                    })
+            pool_total = sum(p['count'] for p in self.gpu_pool_defs)
+            if pool_total > 0:
+                self.num_servers = pool_total
         # Backward compat: support both old num_storage_servers and new split fields
         if 'num_all_flash_storage' in topo or 'num_hybrid_flash_storage' in topo:
             self.additional_storage = topo.get('num_all_flash_storage', 0) + topo.get('num_hybrid_flash_storage', 0)
@@ -661,14 +688,33 @@ class NetworkDesignerV2:
         servers_per_group = self.param_servers_per_pod if self.param_3tier_needed else self.param_servers_per_group
         if servers_per_group <= 0:
             servers_per_group = 1
-        for server_idx in range(1, self.num_servers + 1):
-            group_id = (server_idx - 1) // servers_per_group + 1
-            group_name = f"GPU服务器组{group_id}"
-            podid = f"pod-gpu-{group_id}"
-            s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
-            self.servers.append(s)
-            self.server_groups[s.name] = group_name
-            self.podid_map[s.name] = podid
+        # V3.0.0-T0-5: 按池创建异构 GPU（pool 内同构、pool 间可异 profile；无池时走原逻辑）
+        pool_defs = getattr(self, 'gpu_pool_defs', []) or []
+        if pool_defs:
+            server_idx = 0
+            for pdef in pool_defs:
+                pool_profile = self._device_profiles.get(f"gpu_server.{pdef['pool_id']}") or gpu_profile
+                for _ in range(pdef['count']):
+                    server_idx += 1
+                    group_name = f"GPU服务器组{pdef['pool_id']}"
+                    podid = f"pod-gpu-{pdef['pool_id']}"
+                    s = _make_server(f"GPU服务器_{pdef['pool_id']}_{server_idx}", group_name, podid, pool_profile)
+                    s.pool_id = pdef['pool_id']
+                    s.cluster_id = pdef['cluster_id']
+                    s.server_index = server_idx  # V3.0.0-T0-5: wiring 依赖全局序号，避免解析池名
+                    self.servers.append(s)
+                    self.server_groups[s.name] = group_name
+                    self.podid_map[s.name] = podid
+        else:
+            for server_idx in range(1, self.num_servers + 1):
+                group_id = (server_idx - 1) // servers_per_group + 1
+                group_name = f"GPU服务器组{group_id}"
+                podid = f"pod-gpu-{group_id}"
+                s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
+                s.server_index = server_idx
+                self.servers.append(s)
+                self.server_groups[s.name] = group_name
+                self.podid_map[s.name] = podid
 
         # 额外存储服务器
         for i in range(1, self.additional_storage + 1):
@@ -868,6 +914,8 @@ class NetworkDesignerV2:
                 name=s.name, obj_type=s.obj_type, group=s.group,
                 power_watts=s.power_watts or 0, u_height=s.u_height or 1,
                 device_type=infer_device_type(s.obj_type, s.group),
+                # V3.0.0-T0-5: GPU 池标识（''=非池化）
+                pool=getattr(s, 'pool_id', ''),
             )
             slots.append((s, d))
         # V2.9.3-T3: Scale-Up GPU 节点 (1 台/柜, 类型 scaleup; 域内柜号相邻)
@@ -1142,7 +1190,12 @@ class NetworkDesignerV2:
         """参数网络2tier: GPU→Leaf + Leaf→Spine (每Spine 2×400G)"""
         # Server → Leaf (使用 get_downlink_port)
         for server in gpu_servers:
-            sidx = int(server.name.split('_')[1])
+            sidx = getattr(server, 'server_index', None)
+            if sidx is None:
+                try:
+                    sidx = int(server.name.split('_')[1])
+                except (ValueError, IndexError):
+                    continue
             gid = (sidx - 1) // self.param_servers_per_group + 1
             for pi in range(1, self.param_ports_per_server + 1):
                 leaf = next((l for l in self.param_leaves

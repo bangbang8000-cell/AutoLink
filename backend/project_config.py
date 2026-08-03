@@ -200,6 +200,39 @@ def save_project_config(config_path: str, config: dict) -> tuple:
         return False, f"保存配置文件失败: {e}"
 
 
+def _validate_clusters(config: dict) -> str | None:
+    """V3.0.0-T0-5: 可选 clusters 段结构校验（GPU 池化 + 正交集群模型）
+
+    返回错误描述或 None。clusters 缺失/为空视为未启用多集群（兼容 2.9.9）。
+    """
+    clusters = config.get('clusters')
+    if clusters is None:
+        return None
+    if not isinstance(clusters, list):
+        return "clusters 必须是 JSON 数组"
+    for cl in clusters:
+        if not isinstance(cl, dict):
+            return "clusters 每项必须是 JSON 对象"
+        if not isinstance(cl.get('cluster_id'), str):
+            return "clusters[].cluster_id 必须是字符串"
+        if cl.get('role') not in ('P', 'D'):
+            return "clusters[].role 必须是 'P' / 'D'"
+        pools = cl.get('gpu_pools', [])
+        if not isinstance(pools, list):
+            return "clusters[].gpu_pools 必须是 JSON 数组"
+        for pool in pools:
+            if not isinstance(pool, dict):
+                return "gpu_pools 每项必须是 JSON 对象"
+            if not isinstance(pool.get('pool_id'), str):
+                return "gpu_pools[].pool_id 必须是字符串"
+            if not isinstance(pool.get('count'), (int, float)) or pool.get('count', 0) <= 0:
+                return "gpu_pools[].count 必须是正数"
+            ref = pool.get('profile_ref')
+            if ref is not None and not isinstance(ref, dict):
+                return "gpu_pools[].profile_ref 必须是 JSON 对象"
+    return None
+
+
 def validate_config(config: dict, strict: bool = True) -> str | None:
     """
     校验 project_config.json 格式完整性
@@ -228,6 +261,9 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
         su = config.get('scale_up')
         if su is not None and not isinstance(su, dict):
             return "scale_up 必须是 JSON 对象"
+        clusters_err = _validate_clusters(config)
+        if clusters_err:
+            return clusters_err
         return None
 
     # ============ 严格模式（默认）：完整 REQUIRED 校验 ============
@@ -285,6 +321,11 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
                 return f"scale_up.{k} 必须是数值"
         if 'protocol' in su and su['protocol'] not in ('NVLink', 'UALink', 'UB'):
             return f"scale_up.protocol 必须是 'NVLink' / 'UALink' / 'UB'"
+
+    # V3.0.0-T0-5: 可选 clusters 段结构校验（GPU 池化 + 正交集群模型）
+    clusters_err = _validate_clusters(config)
+    if clusters_err:
+        return clusters_err
 
     return None  # 校验通过
 
