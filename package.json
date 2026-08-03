@@ -113,6 +113,10 @@
         "to": "backend"
       },
       {
+        "from": "dist/backend-dist",
+        "to": "backend-dist"
+      },
+      {
         "from": "template",
         "to": "template"
       },

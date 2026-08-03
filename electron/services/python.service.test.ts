@@ -7,7 +7,7 @@ vi.mock('electron', () => ({
   app: { isPackaged: false, getPath: (name: string) => `C:/fake-userdata/${name}` },
 }))
 
-import { pythonService } from './python.service'
+import { pythonService } from './python.service.js'
 
 const LONG = 30000
 

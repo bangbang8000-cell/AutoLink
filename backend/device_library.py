@@ -4,6 +4,7 @@ AutoLink V2.1 — 设备库加载器
 """
 
 import os
+import sys
 import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
@@ -327,7 +328,11 @@ def get_device_library(library_path: Optional[str] = None) -> DeviceLibrary:
     if _library_instance is None:
         if library_path is None:
             # 默认路径: 项目根目录/template/device_library
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # V3.0.0-T0-7: PyInstaller 打包后数据随 spec datas 落在 sys._MEIPASS(_internal) 下
+            if getattr(sys, '_MEIPASS', None):
+                base_dir = sys._MEIPASS
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             library_path = os.path.join(base_dir, "template", "device_library")
         _library_instance = DeviceLibrary(library_path)
         _library_instance.load()

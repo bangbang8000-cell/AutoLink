@@ -17,6 +17,13 @@ import datetime
 # Add backend directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# V3.0.0-T0-6/T0-7: 统一 stdio 为 UTF-8（持久 NDJSON 协议；PyInstaller 打包后不依赖环境变量）
+for _stream in (sys.stdin, sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 from designer import NetworkDesignerV2
 from topology import calc_max_2tier
 from exporter import (
@@ -809,4 +816,14 @@ def main():
 
 
 if __name__ == "__main__":
+    # V3.0.0-T0-7: 引擎进程内将第三方日志 print 重定向到 stderr，保证 stdout 仅含 NDJSON 协议行
+    # （仅引擎独立进程生效；pytest 直接 import 本模块不受影响）
+    import builtins as _builtins
+    _orig_print = _builtins.print
+
+    def _print(*args, **kwargs):
+        kwargs.setdefault('file', sys.stderr)
+        _orig_print(*args, **kwargs)
+
+    _builtins.print = _print
     main()

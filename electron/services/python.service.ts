@@ -1,5 +1,7 @@
 import { spawn, ChildProcess } from 'child_process'
+import type { StdioOptions } from 'child_process'
 import * as path from 'path'
+import * as fs from 'fs'
 import { getBackendPath } from '../config.js'
 
 interface NdjsonLine {
@@ -131,11 +133,7 @@ class PythonService {
       return Promise.resolve()
     }
     return new Promise<void>((resolve) => {
-      const enginePath = path.join(getBackendPath(), 'engine.py')
-      const proc = spawn(this.pythonPath, [enginePath], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-      })
+      const proc = this.spawnEngine()
       this.proc = proc
       this.buffer = ''
       this.stderrTail = ''
@@ -159,6 +157,23 @@ class PythonService {
       // stdin 可写即视为可派发请求（引擎 import 完成后进入 stdin 循环）
       setImmediate(() => resolve())
     })
+  }
+
+  /** V3.0.0-T0-7: 启动引擎 — 优先打包产物 backend-dist/engine(.exe)，回退 python engine.py */
+  private spawnEngine(): ChildProcess {
+    const exeName = process.platform === 'win32' ? 'engine.exe' : 'engine'
+    const bundled = path.join(getBackendPath(), '..', 'backend-dist', exeName)
+    const stdio: StdioOptions = ['pipe', 'pipe', 'pipe']
+    const env = { ...process.env, PYTHONIOENCODING: 'utf-8' }
+    try {
+      if (fs.existsSync(bundled)) {
+        return spawn(bundled, [], { stdio, env })
+      }
+    } catch {
+      // 探测失败回退
+    }
+    const enginePath = path.join(getBackendPath(), 'engine.py')
+    return spawn(this.pythonPath, [enginePath], { stdio, env })
   }
 
   private onProcessGone(reason: string): void {
