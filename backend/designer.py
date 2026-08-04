@@ -754,6 +754,14 @@ class NetworkDesignerV2:
         servers_per_group = self.param_servers_per_pod if self.param_3tier_needed else self.param_servers_per_group
         if servers_per_group <= 0:
             servers_per_group = 1
+        # V3.0.1-T1-5: 双平面 3-tier 服务器按"逻辑超级 Pod"分组（plane-ab-pod{N}），
+        # 与平面 A/B 的 Leaf Pod（plane-A-pod{N}/plane-B-pod{N}）对齐，供前端 Pod 分组/colsHint
+        self._dp3tier_pod_groups = False
+        if (getattr(self, 'dual_plane_enabled', False)
+                and getattr(self, 'dual_plane_stats', None)
+                and self.dual_plane_stats[0].get('tier') == 3):
+            self._dp3tier_pod_groups = True
+            servers_per_group = max(1, int(self.dual_plane_stats[0].get('servers_per_pod', 0) or 1))
         # V3.0.0-T0-5: 按池创建异构 GPU（pool 内同构、pool 间可异 profile；无池时走原逻辑）
         pool_defs = getattr(self, 'gpu_pool_defs', []) or []
         if pool_defs:
@@ -775,7 +783,8 @@ class NetworkDesignerV2:
             for server_idx in range(1, self.num_servers + 1):
                 group_id = (server_idx - 1) // servers_per_group + 1
                 group_name = f"GPU服务器组{group_id}"
-                podid = f"pod-gpu-{group_id}"
+                # V3.0.1-T1-5: 双平面 3-tier 服务器归入逻辑超级 Pod（plane-ab-pod{N}）
+                podid = f"plane-ab-pod{group_id}" if self._dp3tier_pod_groups else f"pod-gpu-{group_id}"
                 s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
                 s.server_index = server_idx
                 self.servers.append(s)

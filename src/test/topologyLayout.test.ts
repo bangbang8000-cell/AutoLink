@@ -17,6 +17,7 @@ import {
   countPods,
   calculateServerArea,
   calculateCanvasSize,
+  normalizePodId,
 } from '@/components/workspace/tabs/topology/topologyLayout'
 import type { TopologyNode, TopologyEdge } from '@/stores/design.store'
 
@@ -29,6 +30,22 @@ function makeServer(id: string, podid: string): TopologyNode {
 function makeSwitch(id: string, type: string, podid: string): TopologyNode {
   return { id, type, group: '', podid, layerHint: type.includes('core') ? 'core' : type.includes('spine') ? 'spine' : type.includes('leaf') ? 'leaf' : type.includes('access') ? 'access' : 'agg' }
 }
+
+/* ---------- normalizePodId（双平面 3-tier 超级 Pod 归一化）测试 ---------- */
+
+describe('normalizePodId', () => {
+  it('V3.0.1-T1-5: 平面 A/B Pod 归一化到逻辑超级 Pod', () => {
+    expect(normalizePodId('plane-A-pod1')).toBe('plane-ab-pod1')
+    expect(normalizePodId('plane-B-pod2')).toBe('plane-ab-pod2')
+  })
+  it('2-tier 平面标签与普通 Pod 保持不变', () => {
+    expect(normalizePodId('plane-A')).toBe('plane-A')
+    expect(normalizePodId('plane-B')).toBe('plane-B')
+    expect(normalizePodId('pod-gpu-1')).toBe('pod-gpu-1')
+    expect(normalizePodId('pod-storage-1')).toBe('pod-storage-1')
+    expect(normalizePodId('')).toBe('')
+  })
+})
 
 /* ---------- calculateGrid 测试 ---------- */
 

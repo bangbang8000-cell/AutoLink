@@ -148,6 +148,30 @@ def test_b300_800g_dual_plane(tmp_path):
     assert d.validate_topology()['valid']
 
 
+def test_dual_plane_3tier_server_pod_alignment(tmp_path):
+    """3-tier 服务器按逻辑超级 Pod 分组（plane-ab-pod{N}），与平面 A/B Leaf Pod 对齐"""
+    d = _designer(tmp_path, servers=1024, speed="800G")
+    from collections import Counter
+    # 服务器 podid：servers_per_pod=648 → 2 个超级 Pod（648 + 376）
+    sps = Counter(s.podid for s in d.servers[:1024])
+    assert sps == {'plane-ab-pod1': 648, 'plane-ab-pod2': 376}
+    # Leaf podid 按平面 A/B 展开，Pod 号与超级 Pod 对应
+    leaf_pods = {l.podid for l in d.param_leaves}
+    assert leaf_pods == {'plane-A-pod1', 'plane-A-pod2', 'plane-B-pod1', 'plane-B-pod2'}
+    # 每服务器连平面 A/B 同一 Pod 号（plane-ab-pod{N} = A{N} + B{N}）
+    s0 = next(s for s in d.servers[:1024] if s.podid == 'plane-ab-pod1')
+    leaf_names = {c.z_device for c in s0.connections if c.network_type == 'param'}
+    assert any('参数A_Leaf_P1_' in n for n in leaf_names)
+    assert any('参数B_Leaf_P1_' in n for n in leaf_names)
+
+
+def test_dual_plane_2tier_server_pod_unchanged(tmp_path):
+    """2-tier 服务器分组不回归（无 Pod 概念，保持 pod-gpu-1 单组）"""
+    d = _designer(tmp_path, servers=128)
+    assert all(s.podid == 'pod-gpu-1' for s in d.servers[:128])
+    assert d.dual_plane_stats[0]['tier'] == 2
+
+
 # ---------- 逐平面 protocol/speed 独立 ----------
 
 def test_per_plane_speed_honored(tmp_path):

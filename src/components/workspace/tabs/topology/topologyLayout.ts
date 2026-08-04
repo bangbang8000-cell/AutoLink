@@ -132,6 +132,18 @@ function isOobNetwork(n: TopologyNode): boolean { return n.type.startsWith('oob_
 function isBizNetwork(n: TopologyNode): boolean { return n.type.startsWith('biz_') }
 
 /**
+ * V3.0.1-T1-5: 双平面 3-tier 逻辑超级 Pod 归一化
+ * 后端 3-tier 双平面：服务器归入 plane-ab-pod{N}（逻辑超级 Pod），
+ * 平面 A/B 的 Leaf/Spine 归入 plane-A-pod{N} / plane-B-pod{N}。
+ * 归一化后三者在前端归入同一 Pod 分组（服务器区 + 两平面 Leaf 对齐）。
+ * 2-tier（plane-A / plane-B）与传统 Pod（pod-gpu-*）保持不变。
+ */
+export function normalizePodId(podid: string): string {
+  const m = podid.match(/^plane-(A|B)-pod(\d+)$/)
+  return m ? `plane-ab-pod${m[2]}` : podid
+}
+
+/**
  * 计算服务器矩形排列的列数和行数
  * - 传入 colsHint 时强制使用，否则按 4:3 宽高比自适应
  */
@@ -218,7 +230,8 @@ function groupNodes(nodes: TopologyNode[]): { pods: PodGroup[]; networks: Networ
 
   for (const node of nodes) {
     const hint = getLayerHint(node)
-    const podid = node.podid || ''
+    // V3.0.1-T1-5: 双平面 3-tier 超级 Pod 归一化（plane-A/B-pod{N} → plane-ab-pod{N}）
+    const podid = normalizePodId(node.podid || '')
 
     const getOrCreatePod = (pid: string): PodGroup => {
       if (!podMap.has(pid)) {
