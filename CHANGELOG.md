@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [3.0.3] - 2026-08-05
+
+### Release 说明自动更新与发布体验（3.X 系列 · 发布链路）
+
+v3.0.3 聚焦发布链路体验：GitHub Release 页面说明文档从 CHANGELOG.md 自动提取对应版本段落，替代 GitHub 自动生成（英文、无结构）的说明，与软件「关于」对话框、README 保持一致的版本叙事。
+
+#### Release 说明自动更新（T）
+- 新增 `scripts/extract_release_notes.py`：从 CHANGELOG.md 提取指定版本 `## [x.y.z]` 段落（支持 `v` 前缀），版本不存在或段落为空时退出码非 0 阻止发布
+- `.github/workflows/build.yml` Release 步骤改用 `--notes-file release_notes.md`（替代 `--generate-notes`）：打 tag 推送后自动发布 CHANGELOG 对应段落为 Release 说明
+- CHANGELOG.md 补全 v3.0.0 / v3.0.1 / v3.0.2 三条历史条目，与 v2.9.x 格式对齐
+
+#### 版本与回归
+- 版本号 3.0.2 → 3.0.3（package.json / VERSION / package-lock.json）
+- 提取脚本本地验证：v3.0.0/v3.0.1/v3.0.2/v3.0.3 段落提取正确、边界无泄漏，缺失版本报错退出码 1
+
 ## [3.0.2] - 2026-08-05
 
 ### 三合一融合网与 1 分 2 扇出 + ZCube/华为超节点（3.X 系列迭代）
