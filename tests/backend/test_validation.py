@@ -356,8 +356,8 @@ class TestEngineBasics:
     """引擎基础功能"""
 
     def test_default_engine_has_15_rules(self, engine):
-        """默认引擎含 21 条规则 (V001-V021, V3.0.2-T2-3 新增 V021 华为超节点结构规则)"""
-        assert engine.get_rule_count() == 21
+        """默认引擎含 22 条规则 (V001-V022, V3.0.2-T2-3 新增 V021 华为超节点 + T2-5 新增 V022 三合一融合网)"""
+        assert engine.get_rule_count() == 22
 
     def test_rule_exception_becomes_error_issue(self, engine):
         """规则函数抛异常时应转为 ERROR issue"""

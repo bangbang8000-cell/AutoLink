@@ -21,6 +21,8 @@ export interface ProjectNetworks {
   storage_network: boolean
   biz_network: boolean
   oob_network: boolean
+  /** V3.0.2-T2-5: 三合一网卡开关（storage+biz+带内管理合并为融合以太网，OOB 独立；可选，默认 false） */
+  eth_combined?: boolean
 }
 
 /** 参数面协议类型（V2.7.6-T2/V2.9.3-T8: 支持 UEC） */

@@ -202,6 +202,8 @@ def _rule_speed_match(ctx: ValidationContext) -> List[ValidationIssue]:
     speed_limits = {
         "param": (100.0, None),      # 参数网最低 100G
         "storage": (25.0, None),     # 存储网最低 25G
+        # V3.0.2-T2-5: 融合网（storage+biz+带内管理合一）最低 25G
+        "combined": (25.0, None),
         "biz": (1.0, None),          # 业务网最低 1G
         "oob": (None, 10.0),         # OOB 网最高 10G
     }
@@ -675,6 +677,54 @@ def _rule_huawei_supernode_structure(ctx: ValidationContext) -> List[ValidationI
     return issues
 
 
+def _rule_combined_eth(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V022: 三合一融合网校验 (V3.0.2-T2-5)
+
+    eth_combined（networks.eth_combined=true）专属规则：
+      - 融合交换机存在：至少 1 台融合 Leaf（否则存储/业务/带内管理无承载）
+      - 带内管理可达性：每台服务器至少 1 条 network_type='combined' 连接
+    """
+    issues = []
+    if not ctx.config.get('eth_combined'):
+        return issues
+
+    combined_sw = [sw.get('name', '') for sw in ctx.switches
+                   if str(sw.get('obj_type', '')).startswith('combined')]
+    if not combined_sw:
+        issues.append(ValidationIssue(
+            rule_id="V022",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message="三合一融合网已启用（networks.eth_combined=true），但未创建融合交换机",
+            affected_items=[],
+            recommendation="启用 eth_combined 后应创建单层融合 Leaf 交换机承载 storage+biz+带内管理",
+        ))
+
+    # 带内管理可达性：每台服务器至少 1 条 combined 连接
+    server_ids = {s.get('name') for s in ctx.servers}
+    server_combined = {name: 0 for name in server_ids}
+    for conn in ctx.connections:
+        net = conn.get('network_type') or conn.get('networkType', '')
+        if net != 'combined':
+            continue
+        for side in ('source', 'target'):
+            name = conn.get(side, '')
+            if name in server_combined:
+                server_combined[name] += 1
+    missing = [name for name, cnt in server_combined.items() if cnt == 0]
+    if missing:
+        issues.append(ValidationIssue(
+            rule_id="V022",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"带内管理可达性不足: {len(missing)} 台服务器无融合网连接"
+                    f" (如 {', '.join(sorted(missing)[:5])})",
+            affected_items=sorted(missing),
+            recommendation="每台服务器的融合网卡至少 1 口接入融合 Leaf，确保存储/业务/带内管理可达",
+        ))
+    return issues
+
+
 def _rule_rail_consistency(ctx: ValidationContext) -> List[ValidationIssue]:
     """V007: Rail-Optimized 一致性校验
 
@@ -727,9 +777,10 @@ def _rule_storage_redundancy(ctx: ValidationContext) -> List[ValidationIssue]:
       - 原 a_end_name → 改为 source (与 edges schema 一致)
     """
     issues = []
+    # V3.0.2-T2-5: 三合一融合网（combined）同样纳入存储冗余路径检查
     storage_conns = [c for c in ctx.connections
-                     if c.get("network_type", "") == "storage"
-                     or c.get("networkType", "") == "storage"]
+                     if c.get("network_type", "") in ("storage", "combined")
+                     or c.get("networkType", "") in ("storage", "combined")]
     storage_servers = set()
     for c in storage_conns:
         # 服务器侧端点(source 优先,fallback 到 a_end_name)
@@ -909,4 +960,6 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V020", "拓扑规则", _rule_zcube_structure)
     # V3.0.2-T2-3: 华为超节点专属结构规则
     engine.register_rule("V021", "拓扑规则", _rule_huawei_supernode_structure)
+    # V3.0.2-T2-5: 三合一融合网专属规则
+    engine.register_rule("V022", "拓扑规则", _rule_combined_eth)
     return engine

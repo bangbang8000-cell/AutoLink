@@ -35,7 +35,7 @@ CABINET_TYPE_NETWORK = 'network'
 CABINET_TYPE_SCALEUP = 'scaleup'   # V2.9.3-T3: Scale-Up GPU 节点柜
 
 # 交换机 obj_type 前缀 → 网段
-_NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_')
+_NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_', 'combined_')
 
 # GPU 独占阈值: 功率 ≥ 上限 * GPU_DEDICATE_RATIO 时独占机柜
 GPU_DEDICATE_RATIO = 0.5

@@ -36,6 +36,8 @@ def _all_devices(d):
     return list(d.servers) + (
         d.param_leaves + d.param_spines + d.param_cores +
         d.storage_leaves + d.storage_spines + d.storage_cores +
+        # V3.0.2-T2-5: 三合一融合网 Leaf
+        list(getattr(d, 'combined_leaves', [])) +
         d.oob_access + d.oob_agg + d.biz_access + d.biz_agg +
         list(getattr(d, 'scale_up_gpus', [])) +
         # V3.0.2-T2-3: 华为超节点 NPU + Scale-Out 交换机
@@ -77,6 +79,8 @@ def _snapshot(d):
         'storage_leaves': len(d.storage_leaves),
         'storage_spines': len(d.storage_spines),
         'storage_cores': len(d.storage_cores),
+        # V3.0.2-T2-5: 三合一融合网 Leaf
+        'combined_leaves': len(getattr(d, 'combined_leaves', [])),
         'oob_access': len(d.oob_access),
         'oob_agg': len(d.oob_agg),
         'biz_access': len(d.biz_access),

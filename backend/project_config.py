@@ -300,6 +300,9 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
     for k in REQUIRED_NETWORK_KEYS:
         if not isinstance(networks.get(k), bool):
             return f"networks.{k} 必须是布尔值"
+    # V3.0.2-T2-5: 可选三合一开关（networks.eth_combined，缺失=传统分离四网）
+    if 'eth_combined' in networks and not isinstance(networks['eth_combined'], bool):
+        return "networks.eth_combined 必须是布尔值（可选，默认 false）"
 
     # 检查 topology
     topo = config.get('topology', {})

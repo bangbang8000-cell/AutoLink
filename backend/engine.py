@@ -342,6 +342,8 @@ def handle_design(params):
             "storage_network": getattr(designer, 'storage_enabled', True),
             "biz_network": getattr(designer, 'biz_enabled', True),
             "oob_network": getattr(designer, 'oob_enabled', True),
+            # V3.0.2-T2-5: 三合一网卡开关（storage+biz+带内管理合一）
+            "eth_combined": getattr(designer, 'eth_combined', False),
         },
         "rackType": getattr(designer, 'rack_type', 42),
         "powerLimitPerRack": getattr(designer, 'power_limit_per_rack', 6000),
@@ -413,6 +415,9 @@ def handle_design(params):
     for sw in designer.storage_spines:
         nodes.append(_sw_node(sw))
     for sw in designer.storage_cores:
+        nodes.append(_sw_node(sw))
+    # V3.0.2-T2-5: 三合一融合网 Leaf 节点
+    for sw in getattr(designer, 'combined_leaves', []):
         nodes.append(_sw_node(sw))
     for sw in designer.biz_access:
         nodes.append(_sw_node(sw))
@@ -547,6 +552,8 @@ def handle_design(params):
             net_type = 'oob'
         elif sw.obj_type.startswith('biz'):
             net_type = 'biz'
+        elif sw.obj_type.startswith('combined'):
+            net_type = 'combined'
         else:
             net_type = ''
         switches_ctx.append({
@@ -588,6 +595,9 @@ def handle_design(params):
         "zcube_stats": getattr(designer, 'zcube_stats', None),
         # V3.0.2-T2-3: 华为超节点校验数据（V021）
         "huawei_stats": getattr(designer, 'huawei_stats', {}),
+        # V3.0.2-T2-5: 三合一融合网校验数据（V022）
+        "eth_combined": getattr(designer, 'eth_combined', False),
+        "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
         "param_spine_count": getattr(designer, 'param_spine_count', 0),
         "param_core_count": getattr(designer, 'param_core_count', 0),
     }

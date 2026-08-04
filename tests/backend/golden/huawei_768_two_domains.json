@@ -4,6 +4,7 @@
   "counts": {
     "biz_access": 0,
     "biz_agg": 0,
+    "combined_leaves": 0,
     "huawei_npus": 768,
     "huawei_scaleout_switches": 16,
     "oob_access": 0,

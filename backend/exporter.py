@@ -153,9 +153,11 @@ def generate_switch_view(designer):
     """生成交换机视角的连接表"""
     param_connections = []
     storage_connections = []
+    combined_connections = []   # V3.0.2-T2-5: 三合一融合网
 
     all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
-                   designer.storage_leaves + designer.storage_spines + designer.storage_cores)
+                   designer.storage_leaves + designer.storage_spines + designer.storage_cores +
+                   list(getattr(designer, 'combined_leaves', [])))
 
     for switch in all_switches:
         switch_group = designer.switch_groups.get(switch.name, "")
@@ -180,11 +182,14 @@ def generate_switch_view(designer):
                 }
                 if "参数" in switch.name:
                     param_connections.append(row)
+                elif switch.obj_type.startswith('combined'):
+                    combined_connections.append(row)
                 else:
                     storage_connections.append(row)
 
     param_df = pd.DataFrame(param_connections)
     storage_df = pd.DataFrame(storage_connections)
+    combined_df = pd.DataFrame(combined_connections)
 
     if not param_df.empty:
         param_df['type_weight'] = param_df['A端设备'].apply(_get_switch_type_weight)
@@ -200,7 +205,14 @@ def generate_switch_view(designer):
         storage_df = storage_df.sort_values(by=['type_weight', '交换机分组', 'dev_num', 'A端设备', 'port_num'])
         storage_df = storage_df.drop(columns=['type_weight', 'dev_num', 'port_num'])
 
-    return {'参数网络': param_df, '存储网络': storage_df}
+    if not combined_df.empty:
+        combined_df['type_weight'] = combined_df['A端设备'].apply(_get_switch_type_weight)
+        combined_df['dev_num'] = combined_df['A端设备'].apply(_extract_number)
+        combined_df['port_num'] = combined_df['A端接口'].apply(_extract_number)
+        combined_df = combined_df.sort_values(by=['type_weight', '交换机分组', 'dev_num', 'A端设备', 'port_num'])
+        combined_df = combined_df.drop(columns=['type_weight', 'dev_num', 'port_num'])
+
+    return {'参数网络': param_df, '存储网络': storage_df, '融合网络': combined_df}
 
 
 # V2.9.1: 机柜类型显示标签 (与 rack_allocation.CABINET_TYPE_* 对应)

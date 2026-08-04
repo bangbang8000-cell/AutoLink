@@ -47,6 +47,8 @@ class NetworkDesignerV2:
         self.servers = []
         self.param_leaves, self.param_spines, self.param_cores = [], [], []
         self.storage_leaves, self.storage_spines, self.storage_cores = [], [], []
+        # V3.0.2-T2-5: 三合一融合网交换机（eth_combined 时替代 storage+biz 独立网络）
+        self.combined_leaves = []
         self.oob_access, self.oob_agg, self.oob_info = [], [], {}
         self.biz_access, self.biz_agg, self.biz_info = [], [], {}
         self.server_groups, self.switch_groups, self.podid_map = {}, {}, {}
@@ -63,7 +65,8 @@ class NetworkDesignerV2:
         self.generate_connections()
         if self.oob_enabled:
             self._design_oob_network()
-        if self.biz_enabled:
+        # V3.0.2-T2-5: 三合一模式下业务流量并入融合网，不再独立设计业务网
+        if self.biz_enabled and not getattr(self, 'eth_combined', False):
             self._design_biz_network()
         # V3.0.0-T0-3: 设计完成后构建网络域元数据（真实对象计数）
         self._build_network_domains()
@@ -198,6 +201,8 @@ class NetworkDesignerV2:
         self.storage_enabled = networks.get('storage_network', True)
         self.biz_enabled = networks.get('biz_network', True)
         self.oob_enabled = networks.get('oob_network', True)
+        # V3.0.2-T2-5: 三合一网卡开关（storage+biz+带内管理合并为融合以太网，OOB 独立）
+        self.eth_combined = bool(networks.get('eth_combined', False))
 
         # --- 服务器配置 ---
         self.num_servers = topo.get('num_gpu_servers', 0)
@@ -710,40 +715,52 @@ class NetworkDesignerV2:
                 self.param_servers_per_pod = 0
 
         # --- 存储网络 (自动计算) ---
-        # V2.7.2-T9: 放开 3-tier 限制,根据服务器数量自动判定
-        storage_max_2tier = calc_max_2tier(self.storage_switch_ports, self.storage_ports_per_server)
-        self.storage_3tier_needed = self.total_servers > storage_max_2tier if storage_max_2tier > 0 else False
+        # V3.0.2-T2-5: 默认无独立存储网（eth_combined 或 storage 关闭时防属性缺失）
+        self.storage_leaf_count = 0
+        self.storage_spine_count = 0
+        self.storage_core_count = 0
+        self.storage_3tier_needed = False
+        self.storage_pods = 0
+        self.storage_servers_per_pod = 0
+        self.storage_groups = 0
+        # V3.0.2-T2-5: 三合一融合网（eth_combined）替代独立存储/业务网
+        if getattr(self, 'eth_combined', False):
+            self._calc_combined_hierarchy()
+        elif self.storage_enabled:
+            # V2.7.2-T9: 放开 3-tier 限制,根据服务器数量自动判定
+            storage_max_2tier = calc_max_2tier(self.storage_switch_ports, self.storage_ports_per_server)
+            self.storage_3tier_needed = self.total_servers > storage_max_2tier if storage_max_2tier > 0 else False
 
-        if self.storage_3tier_needed:
-            # 三层组网: Leaf-Spine-Core
-            self.storage_pods = math.ceil(self.total_servers / max(storage_max_2tier, 1))
-            self.storage_servers_per_pod = min(storage_max_2tier, self.total_servers)
-            # 每 Pod 内 Leaf 数 = (servers_per_pod / max_servers_per_leaf) * ports_per_server
-            max_servers_per_storage_leaf = self.storage_switch_ports // 2
-            storage_servers_per_group = max(1, min(
-                self.storage_servers_per_pod // self.storage_ports_per_server,
-                max_servers_per_storage_leaf
-            ))
-            storage_groups_per_pod = max(1, self.storage_servers_per_pod // storage_servers_per_group)
-            self.storage_leaf_per_group = self.storage_ports_per_server
-            self.storage_groups = self.storage_pods * storage_groups_per_pod
-            self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
-            self.storage_spine_count = max(1, self.storage_leaf_count // 2)
-            # Core 数 = ceil(spine_count / (switch_ports // 2))
-            spine_per_core = max(1, self.storage_switch_ports // 2)
-            self.storage_core_count = math.ceil(self.storage_spine_count / spine_per_core)
-            self.storage_servers_per_group = storage_servers_per_group
-        else:
-            self.storage_pods = 0
-            self.storage_servers_per_pod = 0
-            self.storage_servers_per_group = min(self.storage_dl, self.total_servers)
-            if self.storage_servers_per_group <= 0:
-                self.storage_servers_per_group = 1
-            self.storage_groups = math.ceil(self.total_servers / self.storage_servers_per_group)
-            self.storage_leaf_per_group = self.storage_ports_per_server
-            self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
-            self.storage_spine_count = max(1, self.storage_leaf_count // 2)
-            self.storage_core_count = 0
+            if self.storage_3tier_needed:
+                # 三层组网: Leaf-Spine-Core
+                self.storage_pods = math.ceil(self.total_servers / max(storage_max_2tier, 1))
+                self.storage_servers_per_pod = min(storage_max_2tier, self.total_servers)
+                # 每 Pod 内 Leaf 数 = (servers_per_pod / max_servers_per_leaf) * ports_per_server
+                max_servers_per_storage_leaf = self.storage_switch_ports // 2
+                storage_servers_per_group = max(1, min(
+                    self.storage_servers_per_pod // self.storage_ports_per_server,
+                    max_servers_per_storage_leaf
+                ))
+                storage_groups_per_pod = max(1, self.storage_servers_per_pod // storage_servers_per_group)
+                self.storage_leaf_per_group = self.storage_ports_per_server
+                self.storage_groups = self.storage_pods * storage_groups_per_pod
+                self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
+                self.storage_spine_count = max(1, self.storage_leaf_count // 2)
+                # Core 数 = ceil(spine_count / (switch_ports // 2))
+                spine_per_core = max(1, self.storage_switch_ports // 2)
+                self.storage_core_count = math.ceil(self.storage_spine_count / spine_per_core)
+                self.storage_servers_per_group = storage_servers_per_group
+            else:
+                self.storage_pods = 0
+                self.storage_servers_per_pod = 0
+                self.storage_servers_per_group = min(self.storage_dl, self.total_servers)
+                if self.storage_servers_per_group <= 0:
+                    self.storage_servers_per_group = 1
+                self.storage_groups = math.ceil(self.total_servers / self.storage_servers_per_group)
+                self.storage_leaf_per_group = self.storage_ports_per_server
+                self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
+                self.storage_spine_count = max(1, self.storage_leaf_count // 2)
+                self.storage_core_count = 0
 
     # ================================================================
     #  对象创建
@@ -867,7 +884,10 @@ class NetworkDesignerV2:
             self._create_param_2tier_switches(param_switch_profile)
 
         # 存储网络交换机 (仅在启用时创建)
-        if self.storage_enabled:
+        # V3.0.2-T2-5: 三合一融合网（eth_combined）创建融合 Leaf，替代独立存储网
+        if getattr(self, 'eth_combined', False):
+            self._create_combined_switches(storage_switch_profile)
+        elif self.storage_enabled:
             self._create_storage_switches(storage_switch_profile)
 
         # V2.9.3-T2: Scale-Up GPU 节点 (需在机柜分配前创建, T3 将其纳入 RackAllocator)
@@ -880,9 +900,10 @@ class NetworkDesignerV2:
     #  V3.0.0-T0-3: 统一访问器（exporter/validation/engine 共用，消除四网硬编码聚合）
     # ================================================================
     def all_switch_lists(self):
-        """全部交换机列表（参数/存储/OOB/业务 11 类）"""
+        """全部交换机列表（参数/存储/OOB/业务/融合 12 类）"""
         return (self.param_leaves + self.param_spines + self.param_cores +
                 self.storage_leaves + self.storage_spines + self.storage_cores +
+                getattr(self, 'combined_leaves', []) +
                 self.oob_access + self.oob_agg + self.biz_access + self.biz_agg)
 
     def all_switches(self):
@@ -960,7 +981,17 @@ class NetworkDesignerV2:
                 leaf_count=int(hs.get('num_scaleout_switches') or 0),
                 network_mode='huawei_supernode',
             ))
-        if getattr(self, 'storage_enabled', True):
+        # V3.0.2-T2-5: 三合一融合域（storage+biz+带内管理合一，单层交换机，OOB 独立）
+        if getattr(self, 'eth_combined', False):
+            self.domains.append(NetworkDomain(
+                type='combined',
+                tiers=1,
+                protocol='Ethernet',
+                speed=getattr(self, 'storage_speed', '100G'),
+                ports_per_server=getattr(self, 'storage_ports_per_server', 1),
+                leaf_count=len(self.combined_leaves),
+            ))
+        elif getattr(self, 'storage_enabled', True):
             self.domains.append(NetworkDomain(
                 type='storage',
                 tiers=_leaf_tiers(True, getattr(self, 'storage_3tier_needed', False),
@@ -970,7 +1001,7 @@ class NetworkDesignerV2:
                 ports_per_server=getattr(self, 'storage_ports_per_server', 1),
                 leaf_count=len(self.storage_leaves),
             ))
-        if getattr(self, 'biz_enabled', False) and self.biz_access:
+        if getattr(self, 'biz_enabled', False) and self.biz_access and not getattr(self, 'eth_combined', False):
             self.domains.append(NetworkDomain(
                 type='biz',
                 tiers=2,
@@ -1200,6 +1231,9 @@ class NetworkDesignerV2:
         if obj_type.startswith('param_'):
             key = 'param_switch'
         elif obj_type.startswith('storage_'):
+            key = 'storage_switch'
+        # V3.0.2-T2-5: 融合网 Leaf 沿用存储交换机档案（功率/U 位）
+        elif obj_type.startswith('combined_'):
             key = 'storage_switch'
         elif obj_type.startswith('oob_'):
             key = 'oob_access_switch' if obj_type.endswith('access') else 'oob_agg_switch'
@@ -1526,6 +1560,68 @@ class NetworkDesignerV2:
             self.param_leaves + self.param_spines + self.param_cores, profile
         )
 
+    # ================================================================
+    #  V3.0.2-T2-5: 三合一融合网（eth_combined）
+    # ================================================================
+    def _calc_combined_hierarchy(self):
+        """V3.0.2-T2-5: 融合网层次（单层交换机，替代独立存储/业务网）
+
+        每服务器 storage_ports_per_server 口融合网卡（承载 storage+biz+带内管理），
+        接入单层融合 Leaf；不创建 storage/biz 独立网络。
+        """
+        self.combined_switch_ports = self.storage_switch_ports
+        self.combined_dl = max(1, self.storage_dl)
+        self.combined_leaf_count = max(1, math.ceil(
+            self.total_servers * self.storage_ports_per_server / self.combined_dl))
+        self.storage_3tier_needed = False
+        self.storage_leaf_count = 0
+        self.storage_spine_count = 0
+        self.storage_core_count = 0
+        self.storage_pods = 0
+        self.storage_servers_per_pod = 0
+        self.storage_groups = 0
+
+    def _create_combined_switches(self, profile=None):
+        """V3.0.2-T2-5: 创建融合网 Leaf（单层）"""
+        self.combined_leaves = []
+        for g in range(1, self.combined_leaf_count + 1):
+            sw = NetworkObject(name=f"融合Leaf_{g}", obj_type='combined_leaf',
+                               group=f"融合网Leaf组{g}", max_ports=self.combined_switch_ports,
+                               podid=f"pod-combined-{g}", device_profile=profile)
+            sw.downlink_limit = self.combined_dl
+            sw.uplink_counter = self.combined_dl + 1
+            if profile:
+                sw.downlink_prefix = profile.downlink_prefix or ""
+                sw.uplink_prefix = profile.uplink_prefix or ""
+            else:
+                sw.downlink_prefix = self._storage_switch_downlink_prefix or ""
+                sw.uplink_prefix = self._storage_switch_uplink_prefix or ""
+            self.combined_leaves.append(sw)
+            self.switch_groups[sw.name] = sw.group
+            self.podid_map[sw.name] = sw.podid
+        # 融合交换机并入 _allocate_rack_servers 阶段统一分配（机柜编号连续）
+
+    def _wire_combined(self):
+        """V3.0.2-T2-5: 融合网接线（所有服务器融合网卡 → 融合 Leaf，单层）"""
+        servers_per_leaf = math.ceil(self.total_servers / self.combined_leaf_count)
+        ports_per_leaf_block = max(1, servers_per_leaf * self.storage_ports_per_server)
+        for si, server in enumerate(self.servers):
+            for pi in range(1, self.storage_ports_per_server + 1):
+                li = (si * self.storage_ports_per_server + (pi - 1)) // ports_per_leaf_block
+                if li >= len(self.combined_leaves):
+                    li = len(self.combined_leaves) - 1
+                leaf = self.combined_leaves[li]
+                try:
+                    lp = leaf.get_downlink_port()
+                    srv_port = f"{server.storage_prefix or '融合网卡'}{pi}"
+                    self._add_conn(server, srv_port, self.storage_speed,
+                                   leaf, lp, self.storage_speed,
+                                   self.cable_types['storage']['server_leaf'],
+                                   "服务器到融合Leaf",
+                                   network_type='combined')
+                except ValueError:
+                    continue
+
     def _create_storage_switches(self, profile=None):
         for group in range(1, self.storage_groups + 1):
             for leaf_idx in range(1, self.storage_leaf_per_group + 1):
@@ -1599,7 +1695,10 @@ class NetworkDesignerV2:
             pt.generate_connections(gpu_servers, self.param_pods, self.param_servers_per_pod)
         else:
             self._wire_param_2tier(gpu_servers)
-        if self.storage_enabled:
+        # V3.0.2-T2-5: 三合一融合网接线（替代独立存储网）
+        if getattr(self, 'eth_combined', False):
+            self._wire_combined()
+        elif self.storage_enabled:
             self._wire_storage()
 
     def _wire_rail_optimized(self, gpu_servers):
@@ -1841,17 +1940,19 @@ class NetworkDesignerV2:
                 if conn.a_device == server.name:
                     if conn.network_type == "param":
                         pc += 1; sp.add(server.name)
-                    elif conn.network_type == "storage":
+                    # V3.0.2-T2-5: 三合一融合网连接计入存储语义
+                    elif conn.network_type in ("storage", "combined"):
                         sc += 1; ss.add(server.name)
         if pc != param_nic_total:
             errors.append(f"参数网连接: {pc}/{param_nic_total}")
         if sc != storage_nic_total:
-            errors.append(f"存储网连接: {sc}/{storage_nic_total}")
+            errors.append(f"存储/融合网连接: {sc}/{storage_nic_total}")
         if len(sp) != self.num_servers:
             errors.append(f"参数网覆盖: {len(sp)}/{self.num_servers}")
 
         all_sw = (self.param_leaves + self.param_spines + self.param_cores +
                   self.storage_leaves + self.storage_spines + self.storage_cores +
+                  getattr(self, 'combined_leaves', []) +
                   self.oob_access + self.oob_agg + self.biz_access + self.biz_agg)
         for sw in all_sw:
             # Spine/汇聚可支持2:1收敛, 连接数可达端口数的2倍
