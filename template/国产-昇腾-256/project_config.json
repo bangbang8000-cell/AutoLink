@@ -23,7 +23,7 @@
     "storage_ports_per_server": 1,
     "param_switch_ports": 64,
     "storage_switch_ports": 48,
-    "param_speed": "200G",
+    "param_speed": "400G",
     "storage_speed": "200G",
     "param_downlink_limit": 32,
     "storage_downlink_limit": 24,
@@ -35,49 +35,49 @@
       "library_id": "huawei_atlas_800t_a2"
     },
     "param_leaf_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "param_spine_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "param_core_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "param_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "storage_leaf_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "storage_spine_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "storage_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "huawei_ce8850_64cq_ei"
     },
     "all_flash_storage_server": {
-      "library_id": "generic_all_flash"
+      "library_id": "huawei_oceanstor_dorado_8000"
     },
     "hybrid_flash_storage_server": {
-      "library_id": "generic_hybrid_flash"
+      "library_id": "huawei_oceanstor_5310"
     },
     "storage_server": {
-      "library_id": "generic_all_flash"
+      "library_id": "huawei_oceanstor_dorado_8000"
     },
     "biz_access_switch": {
-      "library_id": "h3c_s6850_56hf"
+      "library_id": "huawei_ce6860_48s6cq"
     },
     "biz_agg_switch": {
-      "library_id": "h3c_s6520x_54qc_ei"
+      "library_id": "huawei_s6730_h48x6c"
     },
     "compute_server": {
-      "library_id": "generic_2u_compute"
+      "library_id": "huawei_2288h_v7"
     },
     "oob_access_switch": {
-      "library_id": "h3c_s5130s_52p_ei"
+      "library_id": "huawei_s5735_l48t4x_a"
     },
     "oob_agg_switch": {
-      "library_id": "h3c_s5120v3_52p_ei"
+      "library_id": "huawei_s5732_h48s6q"
     }
   },
   "rack_config": {

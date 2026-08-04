@@ -35,7 +35,7 @@ CABINET_TYPE_NETWORK = 'network'
 CABINET_TYPE_SCALEUP = 'scaleup'   # V2.9.3-T3: Scale-Up GPU 节点柜
 
 # 交换机 obj_type 前缀 → 网段
-_NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_')
+_NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_', 'combined_')
 
 # GPU 独占阈值: 功率 ≥ 上限 * GPU_DEDICATE_RATIO 时独占机柜
 GPU_DEDICATE_RATIO = 0.5
@@ -57,6 +57,8 @@ class DeviceSlot:
     network: str = ''                    # 网段标识 (param/storage/oob/biz)，网络设备用
     # V2.9.3-T3: Scale-Up GPU 域 ID (-1=非 Scale-Up 节点)
     scaleup_domain: int = -1
+    # V3.0.0-T0-5: GPU 池 ID (''=非池化，走原逻辑)；同池 GPU 聚柜不混池
+    pool: str = ''
     # 分配结果
     cabinet_id: int = 0
     cabinet_name: str = ''
@@ -169,12 +171,22 @@ class RackAllocator:
     def _assign_gpu(self, device: DeviceSlot) -> None:
         """GPU 服务器分配：
         - Scale-Up GPU 节点 (scaleup_domain >= 0) → 独占机柜 (1 台/柜, 类型 scaleup)
+        - V3.0.0-T0-5: 池化 GPU (pool 非空) → 同池聚柜优先（池间不混柜）
         - gpu_dedicated 或 功率 ≥ 上限*ratio → 独占机柜 (1 台/柜)
         - 否则 → GPU 柜功率装箱 (可多台共柜)
         """
         if device.scaleup_domain >= 0:
             # V2.9.3-T3: 1 台/柜; 输入顺序(域内 GPU 连续)保证域内柜号相邻
             cab = self._new_cabinet(CABINET_TYPE_SCALEUP)
+            self._place(cab, device)
+            return
+        if device.pool:
+            # 池化：优先放入同池已有 GPU 柜（功率+U 位约束），找不到则新开（保持池隔离）
+            for c in self._buckets.get(CABINET_TYPE_GPU, []):
+                if any(d.pool == device.pool for d in c.devices) and self._can_fit(c, device):
+                    self._place(c, device)
+                    return
+            cab = self._new_cabinet(CABINET_TYPE_GPU)
             self._place(cab, device)
             return
         dedicated = self.gpu_dedicated or device.power_watts >= self.power_limit * GPU_DEDICATE_RATIO

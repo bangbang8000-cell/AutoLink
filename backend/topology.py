@@ -34,13 +34,18 @@ def calc_leafs_per_pod(switch_ports, ports_per_server, servers_per_pod):
 class FatTreeTopology:
     """Fat-Tree网络拓扑设计器（支持二层/三层自动判定）"""
 
-    def __init__(self, ports_per_server, switch_ports, network_speed, cable_type_config, network_type="param"):
+    def __init__(self, ports_per_server, switch_ports, network_speed, cable_type_config, network_type="param",
+                 # V3.0.0-T0-4: 显式叶数/下联容量/平面标识（3.0.1 双平面 16 Leaf 使用；缺省自动推导）
+                 leaf_count=None, downlink_limit=None, plane_id=None):
         self.ports_per_server = ports_per_server
         self.switch_ports = switch_ports
         self.network_speed = network_speed
         self.cable_type_config = cable_type_config
         self.network_type = network_type
         self.prefix = "参数" if network_type == "param" else "存储"
+        self.leaf_count = leaf_count
+        self.downlink_limit = downlink_limit
+        self.plane_id = plane_id
 
         # 网络组件
         self.leaves = []
@@ -52,8 +57,18 @@ class FatTreeTopology:
         self.podid_map = {}
 
     def calculate_hierarchy(self, num_servers):
-        """计算网络层次结构，返回 (is_3tier, total_leaves, total_spines, total_cores)"""
+        """计算网络层次结构，返回 (is_3tier, total_leaves, total_spines, total_cores)
+
+        V3.0.0-T0-4: 当显式指定 leaf_count 时跳过推导（双平面 16 Leaf 场景），
+        叶数由调用方决定；缺省保持 2/3-tier 自动判定。
+        """
         max_2tier = calc_max_2tier(self.switch_ports, self.ports_per_server)
+
+        if self.leaf_count is not None:
+            total_leaves = self.leaf_count
+            total_spines = max(1, total_leaves // 2)
+            total_cores = max(1, total_spines // 2)
+            return True, total_leaves, total_spines, total_cores
 
         if num_servers <= max_2tier:
             return False, None, None, None
@@ -146,13 +161,15 @@ class FatTreeTopology:
         leaf_map = {l.name: l for l in self.leaves}
 
         for server in servers:
-            parts = server.name.split('_')
-            if len(parts) < 2:
-                continue
-            try:
-                server_idx = int(parts[1])
-            except (ValueError, IndexError):
-                continue
+            server_idx = getattr(server, 'server_index', None)
+            if server_idx is None:
+                parts = server.name.split('_')
+                if len(parts) < 2:
+                    continue
+                try:
+                    server_idx = int(parts[1])
+                except (ValueError, IndexError):
+                    continue
             pod_id = (server_idx - 1) // servers_per_pod + 1
             server.podid = f"pod-{pod_id}"
 

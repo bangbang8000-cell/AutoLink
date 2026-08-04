@@ -10,6 +10,8 @@ import { Server, Network, Cpu } from 'lucide-react'
 import {
   TOPOLOGY_NODE_STYLES,
   TOPOLOGY_NODE_DEFAULT_COLOR,
+  // V3.0.1-T1-7: 双平面平面配色
+  getDualPlaneColor,
 } from '@/constants/topology-colors'
 
 /* ---------- 节点颜色 / 标签常量 ---------- */
@@ -79,7 +81,7 @@ export function NodeHoverCard({ d }: { d: TopologyNodeData }) {
     >
       <div className="min-w-[210px] max-w-[280px] p-3 text-2xs">
         <div className="flex items-center gap-1.5 font-medium text-gray-800 dark:text-gray-100 mb-2">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: NODE_COLORS[d.nodeType] || '#9ca3af' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: getDualPlaneColor(d.group, d.label) ?? NODE_COLORS[d.nodeType] ?? '#9ca3af' }} />
           <span className="truncate">{d.label}</span>
         </div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-500 dark:text-gray-400">
@@ -129,7 +131,8 @@ export function NodeHoverCard({ d }: { d: TopologyNodeData }) {
 
 function ServerNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
-  const color = NODE_COLORS[d.nodeType] || TOPOLOGY_NODE_DEFAULT_COLOR
+  // V3.0.1-T1-7: 双平面平面配色优先于节点类型色
+  const color = getDualPlaneColor(d.group, d.label) ?? NODE_COLORS[d.nodeType] ?? TOPOLOGY_NODE_DEFAULT_COLOR
   return (
     <div
       className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-app-elevated shadow-sm transition-shadow"
@@ -169,7 +172,8 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
 
 function SwitchNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
-  const color = NODE_COLORS[d.nodeType] || TOPOLOGY_NODE_DEFAULT_COLOR
+  // V3.0.1-T1-7: 双平面平面配色优先于节点类型色
+  const color = getDualPlaneColor(d.group, d.label) ?? NODE_COLORS[d.nodeType] ?? TOPOLOGY_NODE_DEFAULT_COLOR
   return (
     <div
       className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-app-elevated shadow-sm transition-shadow"

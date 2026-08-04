@@ -27,6 +27,10 @@ class UBConfig:
         num_cpus: 配套 CPU 数 (鲲鹏), 仅用于统计,不参与 UB 互联
         ub_domain_size: UB 域大小 (0=所有 NPU 同属一个域; >0=按指定大小切分多域)
         protocol: 协议类型, 固定 "UB"
+        num_scaleout_switches: 每 UB 域 Scale-Out 交换机数 (V3.0.2-T2-3, 0=不生成)
+        scaleout_ports_per_npu: 每 NPU Scale-Out 上联口数
+        scaleout_speed: Scale-Out 端口速率 (如 "800G")
+        scaleout_switch_ports: Scale-Out 交换机端口数
     """
     num_npus: int = 384                    # NPU 总数
     npus_per_node: int = 8                 # 每节点 NPU 数 (如 Atlas 800T A2 = 8)
@@ -34,6 +38,11 @@ class UBConfig:
     num_cpus: int = 0                      # 配套 CPU 数 (鲲鹏)
     ub_domain_size: int = 0                # UB 域大小 (0=所有 NPU 一个域)
     protocol: str = "UB"                   # 协议类型
+    # V3.0.2-T2-3: 域间 Scale-Out (800G) 上联
+    num_scaleout_switches: int = 16        # 每 UB 域 Scale-Out 交换机数
+    scaleout_ports_per_npu: int = 2        # 每 NPU Scale-Out 上联口数
+    scaleout_speed: str = "800G"           # Scale-Out 端口速率
+    scaleout_switch_ports: int = 144       # Scale-Out 交换机端口数
 
 
 @dataclass
@@ -86,6 +95,7 @@ class UBTopology:
         self.config = config
         # 运行时缓存
         self._connections: List[UBConnection] = []
+        self._scaleout_connections: List[Dict[str, Any]] = []   # V3.0.2-T2-3: Scale-Out 上联/互联边
         self._domains: List[List[int]] = []   # 每个域的 NPU 索引列表
         self._stats: Dict[str, Any] = {}
 
@@ -167,6 +177,84 @@ class UBTopology:
         return connections
 
     # ------------------------------------------------------------------
+    #  Scale-Out 上联 / 域间互联 (V3.0.2-T2-3)
+    # ------------------------------------------------------------------
+    def generate_scaleout_connections(self) -> List[Dict[str, Any]]:
+        """生成 Scale-Out 上联与域间互联连接 (dict 格式, 兼容 engine edge schema)
+
+        华为超节点 Scale-Out 网络 (PRD 4.1.3)：
+          - 上联: 每 NPU 的 Scale-Out 口 (默认 2 口, 800G) 轮转连接域内 Scale-Out 交换机
+          - 域间互联: 全部 Scale-Out 交换机全互联 (全 mesh, 构成域间 800G 骨干)
+
+        num_scaleout_switches=0 时不生成任何 Scale-Out 边。
+
+        Returns:
+            连接字典列表, 每条含 source/target/source_port/target_port/speed/
+            cable_type/network_type('scale_out')/description/domain_id
+        """
+        if self._scaleout_connections:
+            return self._scaleout_connections
+
+        N = int(self.config.num_scaleout_switches or 0)
+        if N <= 0:
+            self._scaleout_connections = []
+            return self._scaleout_connections
+
+        domains = self._divide_domains()
+        if not domains:
+            self._scaleout_connections = []
+            return self._scaleout_connections
+
+        speed = self.config.scaleout_speed
+        cable = "AOC"
+        edges: List[Dict[str, Any]] = []
+        so_switches: List[str] = []
+        for domain_id, npu_indices in enumerate(domains):
+            dom_switches = [f"ScaleOut_{domain_id + 1}_{j}" for j in range(1, N + 1)]
+            so_switches.extend(dom_switches)
+            # 1. NPU → 域内 Scale-Out 交换机 (轮转均摊, 与 NPU 序号解耦)
+            for i in npu_indices:
+                for p in range(1, self.config.scaleout_ports_per_npu + 1):
+                    sw = dom_switches[(i + p) % N]
+                    edges.append({
+                        "source": f"NPU_{i}", "target": sw,
+                        "source_port": f"SO_{p}", "target_port": f"NPU_{i}",
+                        "speed": speed, "aSpeed": speed, "zSpeed": speed,
+                        "cable_type": cable, "cableType": cable,
+                        "network_type": "scale_out", "networkType": "scale_out",
+                        "description": f"超节点域 {domain_id + 1} Scale-Out 上联: NPU_{i} → {sw}",
+                        "domain_id": domain_id,
+                    })
+
+        # 2. Scale-Out 交换机全互联 (域间 800G 骨干, 全 mesh)
+        m = len(so_switches)
+        for ii in range(m):
+            for jj in range(ii + 1, m):
+                a, b = so_switches[ii], so_switches[jj]
+                edges.append({
+                    "source": a, "target": b,
+                    "source_port": f"SO-Link_{jj + 1}", "target_port": f"SO-Link_{ii + 1}",
+                    "speed": speed, "aSpeed": speed, "zSpeed": speed,
+                    "cable_type": cable, "cableType": cable,
+                    "network_type": "scale_out", "networkType": "scale_out",
+                    "description": f"Scale-Out 域间互联: {a} ↔ {b}",
+                    "domain_id": None,
+                })
+
+        self._scaleout_connections = edges
+        return edges
+
+    def to_scaleout_dict_list(self) -> List[Dict[str, Any]]:
+        """导出 Scale-Out 连接为 dict 列表 (兼容 engine.py edge schema)
+
+        若未生成则先调用 generate_scaleout_connections()。num_scaleout_switches=0
+        时返回空列表。
+        """
+        if not self._scaleout_connections:
+            self.generate_scaleout_connections()
+        return self._scaleout_connections
+
+    # ------------------------------------------------------------------
     #  统计信息
     # ------------------------------------------------------------------
     def _compute_stats(self) -> Dict[str, Any]:
@@ -198,6 +286,12 @@ class UBTopology:
         # 单 NPU 双向聚合带宽 = (N-1) * ub_bandwidth (域内全互联时)
         per_npu_agg_bw = max_ports_per_npu * self.config.ub_bandwidth_gbps
 
+        # V3.0.2-T2-3: Scale-Out 统计 (num_scaleout_switches=0 时全为 0)
+        so_per_domain = int(self.config.num_scaleout_switches or 0)
+        num_so_total = so_per_domain * num_domains
+        uplink_edges = n * (int(self.config.scaleout_ports_per_npu or 0)) if so_per_domain > 0 else 0
+        inter_edges = (num_so_total * (num_so_total - 1) // 2) if num_so_total > 1 else 0
+
         return {
             "topology_type": "ub_full_mesh",
             "protocol": self.config.protocol,
@@ -208,11 +302,22 @@ class UBTopology:
             "ub_bandwidth_gbps": self.config.ub_bandwidth_gbps,
             "ub_domain_size": self.config.ub_domain_size,
             "num_domains": num_domains,
+            "npus_per_domain": domains[0][-1] + 1 if domains else 0,   # 首域 NPU 数（域划分语义）
             "total_links": total_links,
             "total_bandwidth_gbps": total_bw,
             "total_bandwidth_tbps": total_bw / 1000.0,
             "max_ports_per_npu": max_ports_per_npu,
             "per_npu_aggregate_bandwidth_gbps": per_npu_agg_bw,
+            # V3.0.2-T2-3: Scale-Out 上联/域间互联
+            "scaleout_enabled": so_per_domain > 0,
+            "num_scaleout_switches_per_domain": so_per_domain,
+            "num_scaleout_switches": num_so_total,
+            "scaleout_ports_per_npu": int(self.config.scaleout_ports_per_npu or 0),
+            "scaleout_speed": self.config.scaleout_speed,
+            "scaleout_switch_ports": int(self.config.scaleout_switch_ports or 0),
+            "scaleout_uplink_edges": uplink_edges,
+            "scaleout_interconnect_edges": inter_edges,
+            "scaleout_total_edges": uplink_edges + inter_edges,
             "domains": domain_stats,
         }
 
@@ -228,6 +333,8 @@ class UBTopology:
               - max_ports_per_npu (单 NPU 最大端口数)
               - per_npu_aggregate_bandwidth_gbps (单 NPU 聚合带宽)
               - domains (各域明细: num_npus / num_links / ports_per_npu / domain_bandwidth_gbps)
+              - V3.0.2-T2-3 Scale-Out: num_scaleout_switches_per_domain / num_scaleout_switches
+                / scaleout_uplink_edges / scaleout_interconnect_edges / scaleout_total_edges
         """
         if not self._stats:
             self.generate_connections()

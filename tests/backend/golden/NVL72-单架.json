@@ -1,0 +1,36 @@
+{
+  "cabinets": 153,
+  "connections": 8456,
+  "counts": {
+    "biz_access": 8,
+    "biz_agg": 2,
+    "combined_leaves": 0,
+    "huawei_npus": 0,
+    "huawei_scaleout_switches": 0,
+    "oob_access": 4,
+    "oob_agg": 1,
+    "param_cores": 0,
+    "param_leaves": 24,
+    "param_spines": 12,
+    "scale_up_gpus": 72,
+    "servers": 88,
+    "storage_cores": 0,
+    "storage_leaves": 4,
+    "storage_spines": 2
+  },
+  "downlink_mode": "full",
+  "network_connections": {
+    "biz": 480,
+    "oob": 192,
+    "param": 2304,
+    "scale_up": 5112,
+    "storage": 368
+  },
+  "param_protocol": "RoCE",
+  "param_speed": "800G",
+  "rail_count": 8,
+  "rail_mode": "standard",
+  "topology_hash": "b969f6437dd0e23d",
+  "total_power_w": 1241690,
+  "valid": true
+}

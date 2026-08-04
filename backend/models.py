@@ -14,7 +14,9 @@ class NetworkObject:
     def __init__(self, name, obj_type, group=None, max_ports=64, podid=None,
                  device_profile=None, power_watts=0, u_height=1, layer_hint=None,
                  rail_id=None, rail_role="none", domain_id=None, protocol="",
-                 network_type=""):
+                 network_type="",
+                 # V3.0.0-T0-4: 端口容量显式化（None = 沿用"半口下联"兼容行为）
+                 downlink_limit=None, uplink_limit=None, ports_per_nic=1):
         self.name = name
         self.obj_type = obj_type  # 'server', 'param_leaf', 'param_spine', 'param_core', 'storage_leaf', 'storage_spine'
         self.group = group
@@ -31,6 +33,27 @@ class NetworkObject:
         self.device_profile = device_profile  # LibraryDevice or None
         self.power_watts = power_watts
         self.u_height = u_height
+
+        # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）逻辑口模型
+        # 从设备档案 breakout 读取（如 Q3200 800G→2×400G）；缺省 1 = 1:1 物理口
+        _bk = getattr(device_profile, 'breakout', None) if device_profile else None
+        if not isinstance(_bk, dict):
+            _bk = None
+        self.breakout_info = _bk
+        self.breakout_count = int((_bk or {}).get('count', 1) or 1)
+        # 逻辑输出速率兼容两种档案键：交换机用 logical_speed，光模块用 output_speed
+        self.breakout_output_speed = ((_bk or {}).get('logical_speed')
+                                      or (_bk or {}).get('output_speed')) if _bk else None
+        # 接线标注统一为 input_speed/output_speed（选型/导出消费）：
+        # 交换机档案 physical_speed/logical_speed → input_speed/output_speed
+        if _bk:
+            self.breakout_link_info = {
+                'input_speed': _bk.get('input_speed') or _bk.get('physical_speed') or '',
+                'output_speed': _bk.get('output_speed') or _bk.get('logical_speed') or '',
+                'count': self.breakout_count,
+            }
+        else:
+            self.breakout_link_info = None
 
         # 机柜信息 (V2.1新增)
         self.cabinet_id: Optional[int] = None
@@ -59,26 +82,39 @@ class NetworkObject:
         self.rail_role: str = rail_role
 
         # 根据设备类型初始化端口计数器
+        # V3.0.0-T0-4: 支持显式 downlink/uplink 容量与每网卡端口数（缺省保持"半口下联"）
         if "leaf" in obj_type:
-            # Leaf: 前一半端口用于服务器，后一半端口用于Spine
+            # Leaf: 下联端口用于服务器，上联用于Spine
             self.downlink_counter = 1
-            self.uplink_counter = math.ceil(max_ports / 2) + 1
-            self.downlink_limit = math.floor(max_ports / 2)
-            self.uplink_limit = max_ports
+            if downlink_limit is not None:
+                self.downlink_limit = downlink_limit
+                self.uplink_counter = downlink_limit + 1
+            else:
+                self.downlink_limit = math.floor(max_ports / 2)
+                self.uplink_counter = math.ceil(max_ports / 2) + 1
+            self.uplink_limit = uplink_limit if uplink_limit is not None else max_ports
+            self.ports_per_nic = ports_per_nic
         elif "spine" in obj_type:
-            # Spine: 前一半端口用于Leaf，后一半端口用于Core
+            # Spine: 下联用于Leaf，上联用于Core
             self.downlink_counter = 1
-            self.uplink_counter = math.ceil(max_ports / 2) + 1
-            self.downlink_limit = math.floor(max_ports / 2)
-            self.uplink_limit = max_ports
+            if downlink_limit is not None:
+                self.downlink_limit = downlink_limit
+                self.uplink_counter = downlink_limit + 1
+            else:
+                self.downlink_limit = math.floor(max_ports / 2)
+                self.uplink_counter = math.ceil(max_ports / 2) + 1
+            self.uplink_limit = uplink_limit if uplink_limit is not None else max_ports
+            self.ports_per_nic = ports_per_nic
         elif "core" in obj_type:
             # Core: 所有端口用于Spine连接
             self.core_counter = 1
             self.core_limit = max_ports
+            self.ports_per_nic = ports_per_nic
         else:
             # 服务器使用普通端口计数器
             self.port_counter = 1
             self.port_limit = max_ports
+            self.ports_per_nic = ports_per_nic  # 每网卡端口数（双平面=2）
 
     @staticmethod
     def _infer_layer_hint(obj_type: str) -> str:
@@ -102,14 +138,24 @@ class NetworkObject:
         self.connections.append(connection)
 
     def get_downlink_port(self):
-        """获取下联端口(用于连接服务器或Leaf)"""
+        """获取下联端口(用于连接服务器或Leaf)
+
+        V3.0.2-T2-11: 支持 1 分 2 扇出（breakout）——物理口内按 count 拆分为逻辑口。
+        count=1 时行为不变（每物理口 1 逻辑口）；count>1 时命名如 "端口1-1/端口1-2"。
+        端口上限 = 物理口数 × 扇出数（与 V016 逻辑口容量校验一致）。
+        """
+        total = self.downlink_limit * self.breakout_count
         if self.downlink_limit <= 0:
             raise ValueError(f"{self.name}的下联端口限制为0，无法分配端口")
-        if self.downlink_counter > self.downlink_limit:
-            raise ValueError(f"{self.name}的下联端口数量超过限制({self.downlink_limit})")
+        if self.downlink_counter > total:
+            raise ValueError(f"{self.name}的下联端口数量超过限制({total})")
         port_num = self.downlink_counter
         self.downlink_counter += 1
         prefix = self.downlink_prefix or "端口"
+        if self.breakout_count > 1:
+            physical = (port_num - 1) // self.breakout_count + 1
+            sub = (port_num - 1) % self.breakout_count + 1
+            return f"{prefix}{physical}-{sub}"
         return f"{prefix}{port_num}"
 
     def get_uplink_port(self):
@@ -160,7 +206,7 @@ class Connection:
     def __init__(self, a_device, a_port, a_module, z_device, z_port, z_module, cable_type, description,
                  a_cabinet_id=None, a_cabinet_name="", a_start_u=None, a_end_u=None,
                  z_cabinet_id=None, z_cabinet_name="", z_start_u=None, z_end_u=None,
-                 network_type=""):
+                 network_type="", breakout=None):
         self.a_device = a_device
         self.a_port = a_port
         self.a_module = a_module
@@ -170,6 +216,9 @@ class Connection:
         self.cable_type = cable_type
         self.description = description
         self.network_type = network_type  # 'param', 'storage', 'oob', 'biz'
+        # V3.0.2-T2-11: 1 分 2 扇出标注（如 {"input_speed":"800G","output_speed":"400G","count":2}）
+        # a_module/z_module 为逻辑速率；分裂线缆选型按 breakout.input_speed（物理速率）匹配
+        self.breakout = breakout
         # 机柜信息 (V2.1新增)
         self.a_cabinet_id = a_cabinet_id
         self.a_cabinet_name = a_cabinet_name

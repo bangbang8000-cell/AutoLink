@@ -1,0 +1,19 @@
+{
+  "id": "cloudmatrix_512",
+  "name": "昇腾 CloudMatrix 512 超节点",
+  "description": "512颗昇腾910C NPU 华为超节点：双 UB 域（256×2）域内全对等 + 32台 CloudEngine 800G Scale-Out 跨域骨干，面向万亿参数大模型训练",
+  "scenario": "CloudMatrix-512",
+  "tags": [
+    "昇腾910C",
+    "CloudMatrix",
+    "华为超节点",
+    "512台",
+    "UB总线",
+    "双域",
+    "800G Scale-Out",
+    "国产化",
+    "大模型"
+  ],
+  "updatedAt": "2026-08-04",
+  "templateVersion": 1
+}

@@ -1,5 +1,6 @@
+# AutoLink V3.0.0-T0-7: 后端运行时依赖（PyInstaller 打包 + 免 Python 运行）
+# 安装: pip install -r backend/requirements.txt
 openpyxl>=3.1.0
 pandas>=2.0.0
-pytest>=7.0.0
-pytest-cov>=4.0.0
 reportlab>=4.0.0
+matplotlib>=3.7.0

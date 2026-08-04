@@ -4,6 +4,7 @@ AutoLink V2.1 — 设备库加载器
 """
 
 import os
+import sys
 import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
@@ -19,6 +20,8 @@ class InterfaceModel:
     downlink_prefix: str = "NIC"
     uplink_prefix: str = "NIC"
     port_numbering: str = "sequential"
+    # V3.0.1-T1-6: 双口网卡标记（dual-port：每卡 2 口，口1→平面A、口2→平面B）
+    dual_port: bool = False
 
 
 @dataclass
@@ -61,6 +64,11 @@ class DeviceProfile:
     # V2.7.5 信创字段（可选，向后兼容）
     origin: Optional[str] = None         # 'domestic' | 'imported' | 'mixed' (国产/进口/混合)
     lead_time: Optional[str] = None      # 供货周期，如 '8-12周'
+    # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）能力（可选，缺省 = 1:1 物理口）
+    # 例: {"physical_speed": "800G", "logical_speed": "400G", "count": 2, "cable": "MPO-1x2"}
+    # 交换机口用: 物理 1 个高速口 → 逻辑 count 个低速口（如 Q3200 800G→2×400G）
+    # 光模块用: 1 根分裂线缆，input_speed 物理速率 → output_speed 逻辑速率
+    breakout: Optional[Dict[str, Any]] = None
 
     def is_server(self) -> bool:
         return len(self.interface_models) > 0
@@ -143,12 +151,18 @@ class DeviceLibrary:
                             print(f"[DeviceLibrary] WARN: {device_id} category='{device.category}' "
                                   f"但索引分类='{cat_id}',以索引为准")
                             device.category = cat_id
-                        # T8: 交换机须有 port_speed/port_type
+                        # T8: 交换机须有 port_speed/port_type；光模块用 speed/form_factor（V2.4 独立字段，不走交换机语义）
                         if device.is_switch() and not device.interface_models:
-                            if not device.port_speed:
-                                print(f"[DeviceLibrary] WARN: 交换机 {device_id} 缺少 port_speed")
-                            if not device.port_type:
-                                print(f"[DeviceLibrary] WARN: 交换机 {device_id} 缺少 port_type")
+                            if device.category == 'optical_modules':
+                                if not getattr(device, 'speed', None):
+                                    print(f"[DeviceLibrary] WARN: 光模块 {device_id} 缺少 speed")
+                                if not getattr(device, 'form_factor', None):
+                                    print(f"[DeviceLibrary] WARN: 光模块 {device_id} 缺少 form_factor")
+                            else:
+                                if not device.port_speed:
+                                    print(f"[DeviceLibrary] WARN: 交换机 {device_id} 缺少 port_speed")
+                                if not device.port_type:
+                                    print(f"[DeviceLibrary] WARN: 交换机 {device_id} 缺少 port_type")
                         self.devices[device_id] = device
                         self.categories[cat_id].append(device_id)
                     except Exception as e:
@@ -174,6 +188,8 @@ class DeviceLibrary:
                 downlink_prefix=im.get("downlink_prefix", "NIC"),
                 uplink_prefix=im.get("uplink_prefix", "NIC"),
                 port_numbering=im.get("port_numbering", "sequential"),
+                # V3.0.1-T1-6: 双口网卡标记
+                dual_port=bool(im.get("dual_port", False)),
             ))
 
         return LibraryDevice(
@@ -224,6 +240,8 @@ class DeviceLibrary:
             # V2.7.5 信创字段
             origin=data.get("origin"),
             lead_time=data.get("lead_time"),
+            # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）能力
+            breakout=data.get("breakout"),
         )
 
     def get(self, device_id: str) -> Optional[LibraryDevice]:
@@ -313,6 +331,8 @@ class DeviceLibrary:
             tech_route=getattr(device, 'tech_route', None),
             origin=getattr(device, 'origin', None),
             lead_time=getattr(device, 'lead_time', None),
+            # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）能力
+            breakout=overrides.get("breakout", getattr(device, 'breakout', None)),
         )
         return merged
 
@@ -327,7 +347,11 @@ def get_device_library(library_path: Optional[str] = None) -> DeviceLibrary:
     if _library_instance is None:
         if library_path is None:
             # 默认路径: 项目根目录/template/device_library
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # V3.0.0-T0-7: PyInstaller 打包后数据随 spec datas 落在 sys._MEIPASS(_internal) 下
+            if getattr(sys, '_MEIPASS', None):
+                base_dir = sys._MEIPASS
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             library_path = os.path.join(base_dir, "template", "device_library")
         _library_instance = DeviceLibrary(library_path)
         _library_instance.load()

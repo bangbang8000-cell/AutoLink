@@ -213,6 +213,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = []
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 0
         assert result["totalPowerWatts"] == 0
@@ -232,6 +233,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 1
@@ -255,6 +257,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["cabinets"][0]["exceeded"] is True
@@ -275,6 +278,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 0
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         # 0 被视为 falsy，or 6000 生效，使用默认值 6000
@@ -296,6 +300,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = None
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["cabinets"][0]["powerLimit"] == 6000  # 默认值
@@ -314,6 +319,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 0
@@ -334,6 +340,7 @@ class TestPowerSummary:
         class MockDesigner:
             servers = [MockServer()]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalPowerWatts"] == 0
@@ -357,6 +364,7 @@ class TestPowerSummary:
                 MockServer("s3", 2, 3000),
             ]
             power_limit_per_rack = 6000
+            all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
         assert result["totalRacks"] == 2
@@ -365,42 +373,51 @@ class TestPowerSummary:
 
 
 class TestMainEntry:
-    """测试主入口函数"""
+    """测试主入口函数（V3.0.0-T0-6: NDJSON 逐行协议 + 持久循环）"""
+
+    @staticmethod
+    def _run_main(lines):
+        from engine import main
+        import io
+
+        old_stdin = sys.stdin
+        old_stdout = sys.stdout
+        try:
+            sys.stdin = io.StringIO("\n".join(lines) + "\n")
+            sys.stdout = io.StringIO()
+            main()
+            out = sys.stdout.getvalue()
+            return [json.loads(l) for l in out.strip().split("\n") if l.strip()]
+        finally:
+            sys.stdin = old_stdin
+            sys.stdout = old_stdout
 
     def test_main_unknown_action(self):
-        """未知 action"""
-        from engine import main
-        import io
-
-        old_stdin = sys.stdin
-        old_stdout = sys.stdout
-        try:
-            sys.stdin = io.StringIO(json.dumps({"action": "unknown", "params": {}}))
-            sys.stdout = io.StringIO()
-            main()
-            output = json.loads(sys.stdout.getvalue())
-            assert output["success"] is False
-            assert "未知 action" in output["error"]
-        finally:
-            sys.stdin = old_stdin
-            sys.stdout = old_stdout
+        """未知 action → {type:'result', success:false}"""
+        resp = self._run_main([json.dumps({"action": "unknown", "params": {}})])[0]
+        assert resp["type"] == "result"
+        assert resp["success"] is False
+        assert "未知 action" in resp["error"]
 
     def test_main_invalid_json(self):
-        """无效 JSON 输入"""
-        from engine import main
-        import io
+        """无效 JSON → {type:'error'}"""
+        resp = self._run_main(["not json"])[0]
+        assert resp["type"] == "error"
+        assert "JSON 解析失败" in resp["error"]
 
-        old_stdin = sys.stdin
-        old_stdout = sys.stdout
-        try:
-            sys.stdin = io.StringIO("not json")
-            sys.stdout = io.StringIO()
-            main()
-            output = json.loads(sys.stdout.getvalue())
-            assert output["success"] is False
-        finally:
-            sys.stdin = old_stdin
-            sys.stdout = old_stdout
+    def test_main_multiple_requests_persistent(self):
+        """V3.0.0-T0-6: 一次 stdin 多条请求 → 逐行响应（持久循环，requestId 分发）"""
+        reqs = [
+            {"action": "unknown", "params": {}, "requestId": "r1"},
+            {"action": "unknown", "params": {}, "requestId": "r2"},
+            "not json",
+            {"action": "unknown", "params": {}, "requestId": "r3"},
+        ]
+        resps = self._run_main([json.dumps(r) if isinstance(r, dict) else r for r in reqs])
+        assert len(resps) == 4
+        assert [r.get("requestId") for r in resps] == ["r1", "r2", "", "r3"]
+        assert all(r["type"] == "result" for r in resps[:2])
+        assert resps[2]["type"] == "error"
 
 
 class TestDesignWithProjectConfig:

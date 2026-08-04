@@ -6,7 +6,7 @@ import os
 import json
 import configparser
 import datetime
-from project_config import validate_config, create_default_config
+from project_config import validate_config, create_default_config, SCHEMA_VERSION
 
 
 # ================================================================
@@ -219,6 +219,8 @@ def ini_to_project_config(ini_path: str, project_name: str = None) -> dict:
 
     # 更新版本号和时间戳
     config['meta']['version'] = 1
+    # V3.0.0-T0-2: 迁移产物直接带当前 schema 版本（旧字段语义不变）
+    config['meta']['schema_version'] = SCHEMA_VERSION
     config['meta']['created_at'] = datetime.datetime.now().isoformat()
     config['meta']['updated_at'] = config['meta']['created_at']
 

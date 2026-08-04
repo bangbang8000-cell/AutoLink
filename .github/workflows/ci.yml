@@ -17,9 +17,18 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci
-      - run: pip install -r backend/requirements.txt
+      # V3.0.0-T0-7: 开发/测试依赖（含运行时 + pytest + pyinstaller）
+      - run: pip install -r backend/requirements-dev.txt
       - run: npm run typecheck
       - run: npm run lint
+      # V3.0.0-T0-8: 前端单测（vitest，含 python.service 持久 Agent 集成测试）
+      - run: npm test
       - run: npm run build:renderer
+      # V3.0.0-T0-8: Electron 主进程/preload 编译门禁
+      - run: npm run build:electron
       # V2.9.8-T3: 模板验证纳入 CI — 16 内置模板损坏时构建失败
       - run: python scripts/validate_templates.py
+      # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
+      - run: python scripts/gen_golden.py --check
+      # V3.0.0-T0-8: 后端全量 pytest
+      - run: python -m pytest tests/backend -q

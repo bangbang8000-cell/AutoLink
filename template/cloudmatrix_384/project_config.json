@@ -1,83 +1,79 @@
 {
   "meta": {
     "name": "cloudmatrix_384",
-    "description": "",
-    "version": 1,
+    "description": "384 颗昇腾 910C NPU 华为超节点：UB 域内全对等 + 16 台 800G Scale-Out 上联",
+    "version": 2,
     "created_at": "2026-08-02T22:48:15.565418",
-    "updated_at": "2026-08-02T22:48:15.565418"
+    "updated_at": "2026-08-04T00:00:00"
   },
   "networks": {
-    "param_network": true,
-    "storage_network": true,
-    "biz_network": true,
-    "oob_network": true
+    "param_network": false,
+    "storage_network": false,
+    "biz_network": false,
+    "oob_network": false
   },
   "topology": {
     "downlink_mode": "custom",
     "param_protocol": "RoCE",
-    "num_gpu_servers": 48,
-    "num_all_flash_storage": 8,
-    "num_hybrid_flash_storage": 8,
-    "num_compute_servers": 24,
+    "num_gpu_servers": 384,
+    "num_all_flash_storage": 0,
+    "num_hybrid_flash_storage": 0,
+    "num_compute_servers": 0,
     "param_ports_per_server": 8,
-    "storage_ports_per_server": 2,
+    "storage_ports_per_server": 1,
     "param_switch_ports": 64,
     "storage_switch_ports": 48,
-    "param_speed": "200G",
+    "param_speed": "800G",
     "storage_speed": "200G",
     "param_downlink_limit": 32,
     "storage_downlink_limit": 24,
     "biz_downlink_limit": 25,
-    "oob_downlink_limit": 25
+    "oob_downlink_limit": 25,
+    "param_network_mode": "huawei_supernode",
+    "param_huawei_supernode": {
+      "num_npus": 384,
+      "npus_per_node": 8,
+      "ub_bandwidth_gbps": 2800,
+      "ub_domain_size": 0,
+      "num_scaleout_switches": 16,
+      "scaleout_ports_per_npu": 2,
+      "scaleout_speed": "800G",
+      "scaleout_switch_ports": 64
+    }
   },
   "device_refs": {
     "gpu_server": {
-      "library_id": "huawei_atlas_800t_a2"
+      "library_id": "ascend_910c"
     },
     "param_leaf_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
-    },
-    "param_spine_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
-    },
-    "param_core_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
+      "library_id": "huawei_ce16800_64_800g"
     },
     "param_switch": {
-      "library_id": "nvidia_sn5400_64_200g"
+      "library_id": "huawei_ce16800_64_800g"
     },
     "storage_leaf_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
-    },
-    "storage_spine_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "huawei_ce6885h"
     },
     "storage_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "huawei_ce6885h"
     },
     "all_flash_storage_server": {
-      "library_id": "generic_all_flash"
-    },
-    "hybrid_flash_storage_server": {
-      "library_id": "generic_hybrid_flash"
+      "library_id": "huawei_oceanstor_dorado_8000"
     },
     "storage_server": {
-      "library_id": "generic_all_flash"
+      "library_id": "huawei_oceanstor_dorado_8000"
     },
     "biz_access_switch": {
-      "library_id": "h3c_s6850_56hf"
+      "library_id": "huawei_ce6860_48s6cq"
     },
     "biz_agg_switch": {
-      "library_id": "h3c_s6520x_54qc_ei"
-    },
-    "compute_server": {
-      "library_id": "generic_2u_compute"
+      "library_id": "huawei_s6730_h48x6c"
     },
     "oob_access_switch": {
-      "library_id": "h3c_s5130s_52p_ei"
+      "library_id": "huawei_s5735_l48t4x_a"
     },
     "oob_agg_switch": {
-      "library_id": "h3c_s5120v3_52p_ei"
+      "library_id": "huawei_s5732_h48s6q"
     }
   },
   "rack_config": {
@@ -86,12 +82,5 @@
     "naming_prefix": "机柜",
     "cooling_method": "air",
     "gpu_dedicated": true
-  },
-  "scale_up": {
-    "protocol": "UB",
-    "num_gpus": 384,
-    "gpus_per_node": 8,
-    "domain_size": 384,
-    "bandwidth": 2800.0
   }
 }

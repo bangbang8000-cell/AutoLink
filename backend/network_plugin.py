@@ -56,6 +56,50 @@ class NetworkPluginInfo:
     description: str = ""
 
 
+@dataclass
+class NetworkDomain:
+    """网络域抽象（V3.0.0-T0-3）
+
+    描述一个可独立配置/校验/渲染的网络域（组网形态的最小表达单元），
+    与插件、集群正交：组网形态（横向）由 type/planes/tiers 表达，
+    GPU 池/集群（纵向）由 cluster_id/network_mode 表达。
+
+    Attributes:
+        type: 网络域类型（param/storage/biz/oob/scale_up，或新组网 dual_plane/zcube...）
+        planes: 平面数（双平面=2，缺省 1）
+        tiers: 层级数（2/3）
+        protocol: 协议（RoCE/IB/UEC/NVLink/UALink/UB/Ethernet）
+        speed: 端口速率（如 "400G"）
+        ports_per_server: 每服务器端口数
+        leaf_count: Leaf 交换机数量
+        cluster_id: 所属集群 id（正交模型；空 = 全局域）
+        network_mode: 所属集群的组网模式（正交模型；空 = 未启用多集群）
+    """
+    type: str
+    planes: int = 1
+    tiers: int = 0
+    protocol: str = ''
+    speed: str = ''
+    ports_per_server: int = 0
+    leaf_count: int = 0
+    cluster_id: str = ''
+    network_mode: str = ''
+
+    def to_dict(self) -> Dict[str, Any]:
+        """序列化为 dict（供 engine/AIHUB 上下文消费）"""
+        return {
+            'type': self.type,
+            'planes': self.planes,
+            'tiers': self.tiers,
+            'protocol': self.protocol,
+            'speed': self.speed,
+            'ports_per_server': self.ports_per_server,
+            'leaf_count': self.leaf_count,
+            'cluster_id': self.cluster_id,
+            'network_mode': self.network_mode,
+        }
+
+
 class NetworkPlugin(ABC):
     """网络类型插件抽象接口
 
@@ -136,6 +180,41 @@ def unregister_plugin(name: str) -> bool:
         del _plugin_registry[name]
         return True
     return False
+
+
+# ==================================================================
+#  V3.0.0-T0-3: 组网模式（network_mode）解析 —— engine 分派接缝
+# ==================================================================
+
+# 传统 designer 原生支持的组网模式（无需插件，走 NetworkDesignerV2 既有路径）。
+# 组合形态：standard / fat_tree（同义）与 rail / rail_optimized（同义，Rail-Optimized）。
+# 网络域级：param/storage/biz/oob/scale_up（对应既有四网 + Scale-Up）。
+# V3.0.1-T1-2/V3.0.2-T2-1/T2-3: dual_plane（param_planes 配置）、zcube（param_network_mode='zcube'）、
+# huawei_supernode（param_network_mode='huawei_supernode'）。
+NATIVE_NETWORK_MODES = frozenset({
+    'standard', 'fat_tree', 'rail', 'rail_optimized',
+    'param', 'storage', 'biz', 'oob', 'scale_up',
+    'dual_plane', 'zcube', 'huawei_supernode',
+})
+
+
+def resolve_network_mode(network_mode: Optional[str]) -> str:
+    """解析组网模式 → 处理路径（V3.0.0-T0-3 engine 分派接缝）
+
+    Args:
+        network_mode: 集群的 network_mode 值（缺失/空 = 未显式指定）
+
+    Returns:
+        'native'  → 传统 NetworkDesignerV2 原生路径（结果与 2.9.9 一致）
+        'plugin'  → 插件注册表可处理（3.0.1+ 新组网插件：dual_plane/zcube/huawei_supernode...）
+        'unknown' → 未注册的未知模式（engine 应明确报错，防止静默走错路径）
+    """
+    mode = (network_mode or '').strip().lower()
+    if not mode or mode in NATIVE_NETWORK_MODES:
+        return 'native'
+    if get_plugin(mode) is not None:
+        return 'plugin'
+    return 'unknown'
 
 
 # ==================================================================
@@ -557,18 +636,175 @@ class ScaleUpNetworkPlugin(NetworkPlugin):
         }
 
 
+class ZcubeNetworkPlugin(NetworkPlugin):
+    """ZCube 组网插件（V3.0.2-T2-1，PRD 4.1.2）
+
+    扁平化二部图：两组 Leaf 直连 GPU、无 Spine；双口单轨/多轨混合接入。
+    与 Designer 原生路径共用 zcube_topology.ZcubeTopology（插件接口的合规封装）。
+    """
+
+    _VALID_PROTOCOLS = ["RoCEv2", "IB", "UEC"]
+
+    def get_info(self) -> NetworkPluginInfo:
+        return NetworkPluginInfo(
+            name="zcube",
+            display_name="ZCube",
+            tier=NetworkTier.SCALE_OUT,
+            protocols=self._VALID_PROTOCOLS,
+            description="ZCube 扁平化二部图（无 Spine，两组 Leaf 直连 GPU，双口混合接入）",
+        )
+
+    def validate_config(self, config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        if config.get("num_gpus", 0) <= 0:
+            errors.append("num_gpus 必须大于 0")
+        if config.get("switch_ports", 0) <= 0:
+            errors.append("switch_ports 必须大于 0")
+        return errors
+
+    def generate_topology(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        from zcube_topology import ZcubeTopology
+
+        zc = ZcubeTopology(
+            num_gpus=config.get("num_gpus", 1024),
+            nics_per_gpu=config.get("nics_per_gpu", 2),
+            leaf_count=config.get("leaf_count", 0),
+            switch_ports=config.get("switch_ports", 144),
+            cable_type_config={"server_leaf": "MPO", "leaf_spine": "MPO"},
+        )
+        stats = zc.calculate()
+        # 纯 dict 表达（插件接口）；Designer 原生路径直接用 ZcubeTopology 对象
+        return {
+            "network_type": "zcube",
+            "nodes": [
+                {"id": f"参数{label}_Leaf_{i}", "type": "switch", "role": "leaf",
+                 "network_type": "param", "zcube_group": label}
+                for label in ("A", "B") for i in range(1, stats["leaf_count"] + 1)
+            ],
+            "edges": [],
+            "stats": {
+                "num_gpus": stats["num_gpus"],
+                "leaf_count_per_group": stats["leaf_count"],
+                "nics_per_gpu": stats["nics_per_gpu"],
+                "no_spine": True,
+            },
+        }
+
+    def get_default_config(self) -> Dict[str, Any]:
+        return {
+            "num_gpus": 1024,
+            "nics_per_gpu": 2,
+            "leaf_count": 0,
+            "switch_ports": 144,
+        }
+
+
+class HuaweiSuperNodePlugin(NetworkPlugin):
+    """华为超节点组网插件（V3.0.2-T2-3，PRD 4.1.3）
+
+    UB 域内全对等（2800G） + 域间 800G Scale-Out 上联。
+    与 Designer 原生路径共用 ub_topology.UBTopology（插件接口的合规封装）。
+    """
+
+    _VALID_PROTOCOLS = ["UB"]
+
+    def get_info(self) -> NetworkPluginInfo:
+        return NetworkPluginInfo(
+            name="huawei_supernode",
+            display_name="华为超节点",
+            tier=NetworkTier.SCALE_UP,
+            protocols=self._VALID_PROTOCOLS,
+            description="华为昇腾超节点（CloudMatrix）：UB 域内全对等 + 域间 800G Scale-Out",
+        )
+
+    def validate_config(self, config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        if config.get("num_npus", 0) <= 0:
+            errors.append("num_npus 必须大于 0")
+        if config.get("npus_per_node", 0) <= 0:
+            errors.append("npus_per_node 必须大于 0")
+        return errors
+
+    def generate_topology(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        from ub_topology import UBConfig, UBTopology
+
+        ht = UBTopology(UBConfig(
+            num_npus=int(config.get("num_npus", 384)),
+            npus_per_node=int(config.get("npus_per_node", 8)),
+            ub_bandwidth_gbps=float(config.get("ub_bandwidth_gbps", 2800)),
+            num_cpus=int(config.get("num_cpus", 0)),
+            ub_domain_size=int(config.get("ub_domain_size", 0)),
+            protocol=str(config.get("protocol", "UB")),
+            num_scaleout_switches=int(config.get("num_scaleout_switches", 16)),
+            scaleout_ports_per_npu=int(config.get("scaleout_ports_per_npu", 2)),
+            scaleout_speed=str(config.get("scaleout_speed", "800G")),
+            scaleout_switch_ports=int(config.get("scaleout_switch_ports", 144)),
+        ))
+        ub_edges = ht.to_dict_list()
+        so_edges = ht.to_scaleout_dict_list()
+        stats = ht.get_stats()
+
+        num_domains = int(stats["num_domains"])
+        npus_per_domain = int(stats.get("npus_per_domain") or stats["num_npus"])
+        nodes: List[Dict[str, Any]] = [
+            {"id": f"NPU_{i}", "type": "npu", "network_type": "ub", "protocol": "UB",
+             "domain_id": i // npus_per_domain if npus_per_domain else 0,
+             "podid": f"ub-domain-{i // npus_per_domain + 1}" if npus_per_domain else "ub-domain-1"}
+            for i in range(int(stats["num_npus"]))
+        ]
+        so_per_domain = int(stats["num_scaleout_switches_per_domain"])
+        for d in range(num_domains):
+            for j in range(1, so_per_domain + 1):
+                nodes.append({
+                    "id": f"ScaleOut_{d + 1}_{j}", "type": "huawei_scaleout",
+                    "role": "scaleout", "network_type": "scale_out", "domain_id": d,
+                    "podid": f"ub-domain-{d + 1}",
+                })
+
+        return {
+            "network_type": "huawei_supernode",
+            "nodes": nodes,
+            "edges": ub_edges + so_edges,
+            "stats": {
+                "num_npus": stats["num_npus"],
+                "num_domains": num_domains,
+                "num_scaleout_switches": stats["num_scaleout_switches"],
+                "ub_full_mesh": True,
+                "scale_out": stats["scaleout_enabled"],
+            },
+        }
+
+    def get_default_config(self) -> Dict[str, Any]:
+        return {
+            "num_npus": 384,
+            "npus_per_node": 8,
+            "ub_bandwidth_gbps": 2800,
+            "num_cpus": 192,
+            "ub_domain_size": 0,
+            "protocol": "UB",
+            "num_scaleout_switches": 16,
+            "scaleout_ports_per_npu": 2,
+            "scaleout_speed": "800G",
+            "scaleout_switch_ports": 144,
+        }
+
+
 def register_builtin_plugins() -> None:
     """注册所有内置插件
 
-    将 5 个内置网络插件注册到全局插件表:
+    将内置网络插件注册到全局插件表:
       - param    参数网 (RoCEv2/IB)
       - storage  存储网 (RoCEv2)
       - biz      业务网 (Ethernet)
       - oob      带外管理网 (Ethernet)
       - scale_up Scale-Up 网 (NVLink/UALink/UB)
+      - zcube    ZCube 扁平化二部图（V3.0.2-T2-1）
+      - huawei_supernode  华为超节点（V3.0.2-T2-3）
     """
     register_plugin("param", ParamNetworkPlugin())
     register_plugin("storage", StorageNetworkPlugin())
     register_plugin("biz", BizNetworkPlugin())
     register_plugin("oob", OOBNetworkPlugin())
     register_plugin("scale_up", ScaleUpNetworkPlugin())
+    register_plugin("zcube", ZcubeNetworkPlugin())
+    register_plugin("huawei_supernode", HuaweiSuperNodePlugin())

@@ -48,6 +48,7 @@ import {
   type PodGroupNodeData,
 } from './topology/PodGroupNode'
 import { useTopologyLayout } from '@/hooks/useTopologyLayout'
+import { normalizePodId } from './topology/topologyLayout'
 
 /* ---------- node / edge types ---------- */
 
@@ -396,7 +397,27 @@ function TopologyFlowInner() {
   }, [rfNodes, pushHistory])
 
   /* ---------- V2.4.7: POD 折叠/展开 ---------- */
-  const [collapsedPods, setCollapsedPods] = useState<Set<string>>(new Set())
+// V3.0.2-T2-3: 超大规模拓扑降载 —— 边数超过阈值时初始默认折叠全部 Pod,
+// 不渲染 Pod 内边(服务器-Leaf / Leaf-Spine 全互联),只渲染跨 Pod 骨架边,
+// 避免 10W+ 条边全量构建导致渲染进程卡死;用户可点击 Pod 框展开查看内部。
+const EDGE_LIMIT = 30000
+
+function collectAllPods(topology: { nodes: TopologyNode[] } | null): Set<string> {
+  const pods = new Set<string>()
+  if (!topology) return pods
+  for (const n of topology.nodes) {
+    // V3.0.2-T2-3: 折叠粒度按归一化逻辑超级 Pod(plane-ab-pod{N})划分,
+    // 与布局 Pod 分组一致 —— 展开 plane-ab-pod1 会联动带出平面 A/B 的 pod1 设备
+    if (n.podid) pods.add(normalizePodId(n.podid))
+  }
+  return pods
+}
+
+const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
+  const t = useDesignStore.getState().topology
+  if (t && t.edges.length > EDGE_LIMIT) return collectAllPods(t)
+  return new Set()
+})
 
   const togglePodCollapse = useCallback((podid: string) => {
     setCollapsedPods((prev) => {
@@ -413,27 +434,53 @@ function TopologyFlowInner() {
       // V2.4.2: 清除旧版本布局数据
       clearOldLayoutVersions(selectedProjectName)
       setHasSavedLayout(loadLayout(selectedProjectName) !== null)
+      // V3.0.2-T2-3: 切换项目时按新拓扑规模重置 Pod 折叠状态
+      const t = useDesignStore.getState().topology
+      if (t && t.edges.length > EDGE_LIMIT) setCollapsedPods(collectAllPods(t))
+      else setCollapsedPods(new Set())
     }
   }, [selectedProjectName])
+
+  // V3.0.2-T2-3: 拓扑数据就绪后同步折叠超大规模 Pod —— 必须在 render 期间派生,
+  // 否则全量边(10W+)会在 useEffect 前就阻塞主线程导致卡死
+  const effectiveCollapsed = useMemo(() => {
+    if (topology && topology.edges.length > EDGE_LIMIT && collapsedPods.size === 0) {
+      return collectAllPods(topology)
+    }
+    return collapsedPods
+  }, [topology, collapsedPods])
 
   /* ---------- filtered data ---------- */
   const { filteredNodes, filteredEdges } = useMemo(() => {
     if (!topology) return { filteredNodes: [], filteredEdges: [] }
-    if (filter === '全部') return { filteredNodes: topology.nodes, filteredEdges: topology.edges }
-    const matchingEdgeSet = new Set<string>()
-    for (const edge of topology.edges) {
-      if (matchFilter(edge.description, edge.cableType, edge.networkType || '', filter)) {
-        matchingEdgeSet.add(edge.source)
-        matchingEdgeSet.add(edge.target)
+    let nodes = topology.nodes
+    let edges = topology.edges
+    if (filter !== '全部') {
+      const matchingEdgeSet = new Set<string>()
+      for (const edge of topology.edges) {
+        if (matchFilter(edge.description, edge.cableType, edge.networkType || '', filter)) {
+          matchingEdgeSet.add(edge.source)
+          matchingEdgeSet.add(edge.target)
+        }
       }
+      nodes = topology.nodes.filter((n) => matchingEdgeSet.has(n.id))
+      const nodeIds = new Set(nodes.map((n) => n.id))
+      edges = topology.edges.filter(
+        (e) => nodeIds.has(e.source) && nodeIds.has(e.target) && matchFilter(e.description, e.cableType, e.networkType || '', filter),
+      )
     }
-    const nodes = topology.nodes.filter((n) => matchingEdgeSet.has(n.id))
-    const nodeIds = new Set(nodes.map((n) => n.id))
-    const edges = topology.edges.filter(
-      (e) => nodeIds.has(e.source) && nodeIds.has(e.target) && matchFilter(e.description, e.cableType, e.networkType || '', filter),
-    )
+    // V3.0.2-T2-3: 降载 —— 折叠的 Pod 内部边不渲染(节点保留,display 层按 Pod 隐藏)
+    if (effectiveCollapsed.size > 0) {
+      const podOf = new Map<string, string>()
+      for (const n of topology.nodes) if (n.podid) podOf.set(n.id, normalizePodId(n.podid))
+      edges = edges.filter((e) => {
+        const sp = podOf.get(e.source)
+        const tp = podOf.get(e.target)
+        return !(sp && effectiveCollapsed.has(sp)) && !(tp && effectiveCollapsed.has(tp))
+      })
+    }
     return { filteredNodes: nodes, filteredEdges: edges }
-  }, [topology, filter])
+  }, [topology, filter, effectiveCollapsed])
 
   /* ---------- v2.7.3-T6: 通过 Web Worker 计算布局(大规模拓扑不阻塞主线程) ---------- */
   const { layout: layoutResult, computing: layoutComputing } = useTopologyLayout(filteredNodes, filteredEdges)
@@ -568,11 +615,11 @@ function TopologyFlowInner() {
   const displayNodes = useMemo(() => {
     // 构建折叠 POD 内设备节点 ID 集合
     const collapsedNodeIds = new Set<string>()
-    if (collapsedPods.size > 0) {
+    if (effectiveCollapsed.size > 0) {
       for (const n of rfNodes) {
         if (n.id.startsWith('pod-group-')) continue
         const data = n.data as unknown as TopologyNodeData
-        if (data?.podid && collapsedPods.has(data.podid)) {
+        if (data?.podid && effectiveCollapsed.has(normalizePodId(data.podid))) {
           collapsedNodeIds.add(n.id)
         }
       }
@@ -585,7 +632,7 @@ function TopologyFlowInner() {
       // POD 背景框节点：传递 collapsed 状态和切换回调
       if (n.id.startsWith('pod-group-')) {
         const podid = n.id.replace('pod-group-', '')
-        const isCollapsed = collapsedPods.has(podid)
+        const isCollapsed = effectiveCollapsed.has(podid)
         const prevData = n.data as unknown as { collapsed?: boolean; onToggleCollapse?: unknown }
         // 状态未变则复用原对象
         if (prevData?.collapsed === isCollapsed && prevData?.onToggleCollapse === togglePodCollapse) {
@@ -635,16 +682,16 @@ function TopologyFlowInner() {
       }
       return { ...baseNode, hidden: false }
     })
-  }, [rfNodes, searchQuery, collapsedPods, togglePodCollapse, hoverNodeId])
+  }, [rfNodes, searchQuery, effectiveCollapsed, togglePodCollapse, hoverNodeId])
 
   const displayEdges = useMemo(() => {
     // 构建折叠 POD 内设备节点 ID 集合
     const collapsedNodeIds = new Set<string>()
-    if (collapsedPods.size > 0) {
+    if (effectiveCollapsed.size > 0) {
       for (const n of rfNodes) {
         if (n.id.startsWith('pod-group-')) continue
         const data = n.data as unknown as TopologyNodeData
-        if (data?.podid && collapsedPods.has(data.podid)) {
+        if (data?.podid && effectiveCollapsed.has(data.podid)) {
           collapsedNodeIds.add(n.id)
         }
       }
@@ -672,7 +719,7 @@ function TopologyFlowInner() {
       if (e.hidden === false && !emphasized && !hasSearch && e.label === label && prevStyle === targetStyle) return e
       return { ...e, hidden: false, style: targetStyle, label }
     })
-  }, [rfNodes, rfEdges, searchQuery, collapsedPods, hoverEdgeId, selectedEdgeId, showEdgeLabels, labelHidden])
+  }, [rfNodes, rfEdges, searchQuery, effectiveCollapsed, hoverEdgeId, selectedEdgeId, showEdgeLabels, labelHidden])
 
   /* ---------- search & focus: center on first matching node ---------- */
   const handleSearchFocus = useCallback(() => {

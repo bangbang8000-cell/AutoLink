@@ -526,7 +526,7 @@ export function EditTemplateModal({ template, onConfirm, onClose }: Props) {
                     aria-checked={config.networks[n.key]}
                     onClick={() => updateNetworks({ [n.key]: !config.networks[n.key] })}
                     disabled={loading}
-                    className={toggleCls(config.networks[n.key])}
+                    className={toggleCls(!!config.networks[n.key])}
                   >
                     <span
                       className={clsx(

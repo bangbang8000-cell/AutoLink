@@ -1,0 +1,16 @@
+{
+  "id": "DP3Tier-1024",
+  "name": "双平面3层1024台方案",
+  "description": "1024台 B300（CX8 双口）双平面 800G IB，每平面 3-tier（Pod化 Leaf/Spine + Core）",
+  "scenario": "DP3Tier-1024",
+  "tags": [
+    "B300",
+    "1024台",
+    "双平面",
+    "3层组网",
+    "800G",
+    "IB"
+  ],
+  "updatedAt": "2026-08-04",
+  "templateVersion": 2
+}

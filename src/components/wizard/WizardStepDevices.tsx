@@ -18,9 +18,9 @@ const IB_DEFAULTS_BY_GPU: Record<string, Record<string, string>> = {
     param_spine_switch: 'nvidia_mqm9700_64_400g_ib',
     param_core_switch: 'nvidia_mqm9700_64_400g_ib',
   },
-  // B200/B300 (800G NDR era): Q3200 Leaf, Q3400 Spine/Core
+  // B200/B300 (800G NDR era): Leaf/Spine/Core 全系 Q3400(144口,支持 72 Leaf 下行 3-tier)
   b300: {
-    param_leaf_switch: 'nvidia_q3200_72_800g_ib',
+    param_leaf_switch: 'nvidia_q3400_144_800g_ib',
     param_spine_switch: 'nvidia_q3400_144_800g_ib',
     param_core_switch: 'nvidia_q3400_144_800g_ib',
   },

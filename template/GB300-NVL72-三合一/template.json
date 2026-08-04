@@ -1,0 +1,18 @@
+{
+  "id": "GB300-NVL72-三合一",
+  "name": "GB300 NVL72 三合一网卡方案",
+  "description": "72台GB300（NVL72机架）：800G IB 参数网 + 三合一融合以太网（存储/业务/带内管理合一，100G）+ 独立 OOB 1G",
+  "scenario": "NVL72",
+  "tags": [
+    "GB300",
+    "B300",
+    "72台",
+    "NVL72",
+    "800G",
+    "IB",
+    "三合一网卡",
+    "融合网"
+  ],
+  "updatedAt": "2026-08-04",
+  "templateVersion": 2
+}

@@ -3,7 +3,7 @@ AutoLink V2.4 - 光模块智能选型器
 根据速率、距离、线缆类型自动选择最优光模块
 """
 import re
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from device_library import DeviceLibrary, LibraryDevice, get_device_library
 
@@ -28,6 +28,8 @@ class OpticalSelection:
     unit_cost_lo: int = 0
     unit_cost_hi: int = 0
     tech_route: str = ""
+    # V3.0.2-T2-11: 1 分 2 扇出（breakout）标注（分裂线缆时携带，如 {"input_speed":"800G","output_speed":"400G","count":2}）
+    breakout: Optional[Dict[str, Any]] = None
 
 
 def _parse_speed(speed_str: str) -> int:
@@ -116,6 +118,7 @@ def select_optical_module(
     cable_type: str = '',
     fiber_type: str = '',
     library: Optional[DeviceLibrary] = None,
+    require_breakout: bool = False,
 ) -> Optional[OpticalSelection]:
     """根据速率、距离、线缆类型选择最优光模块
 
@@ -158,8 +161,14 @@ def select_optical_module(
     # 筛选：速率匹配 + 距离足够 + V2.7.4-T2 fiber_type 严格匹配
     candidates = []
     for mod in all_modules:
-        # 优先使用 speed 字段，降级使用 ID 解析
-        mod_speed_str = getattr(mod, 'speed', None) or mod.id
+        # V3.0.2-T2-11: 分裂线缆（breakout）按 input_speed 匹配物理速率，否则按 speed 字段/ID
+        bk = getattr(mod, 'breakout', None)
+        if not isinstance(bk, dict):
+            bk = {}
+        # V3.0.2-T2-11: 分裂连接只允许匹配分裂线缆（常规 800G 模块无法 1 分 2）
+        if require_breakout and not bk:
+            continue
+        mod_speed_str = bk.get('input_speed') or (getattr(mod, 'speed', None) or mod.id)
         mod_speed = _parse_speed(mod_speed_str)
         if mod_speed != target_speed:
             continue
@@ -177,6 +186,7 @@ def select_optical_module(
         # 降级：忽略速率，选距离足够的（仍保持 fiber_type 约束）
         candidates = [m for m in all_modules
                       if (getattr(m, 'distance_m', 0) or 0) >= distance_m
+                      and (not require_breakout or isinstance(getattr(m, 'breakout', None), dict))
                       and (not fiber_type or not getattr(m, 'fiber_type', '') or getattr(m, 'fiber_type', '') == fiber_type)]
         if not candidates:
             return None
@@ -194,6 +204,16 @@ def select_optical_module(
     price_range = getattr(best, 'price_range', '') or ''
     cost_lo, cost_hi = estimate_module_cost(price_range)
 
+    # V3.0.2-T2-11: 分裂线缆标注（1 分 2 时携带 input/output 速率与逻辑口数）
+    best_breakout = getattr(best, 'breakout', None)
+    if not isinstance(best_breakout, dict):
+        best_breakout = None
+    if best_breakout:
+        match_reason = (f"速率={speed}, 距离≈{distance_m:.0f}m, 推荐={preferred_spec}, 光纤={fiber_type or '不限'}, "
+                        f"1分{best_breakout.get('count', 2)} ({best_breakout.get('input_speed', '')}→{best_breakout.get('output_speed', '')})")
+    else:
+        match_reason = f"速率={speed}, 距离≈{distance_m:.0f}m, 推荐={preferred_spec}, 光纤={fiber_type or '不限'}"
+
     return OpticalSelection(
         module_id=best.id,
         speed=speed,
@@ -205,24 +225,37 @@ def select_optical_module(
         description=best.description or '',
         vendors=getattr(best, 'vendors', [])[:3],
         estimated_length_m=distance_m,
-        match_reason=f"速率={speed}, 距离≈{distance_m:.0f}m, 推荐={preferred_spec}, 光纤={fiber_type or '不限'}",
+        match_reason=match_reason,
         # V2.7.4-T3 新增字段
         power_w=float(getattr(best, 'power_watts', 0) or 0),
         lead_time_weeks=LEAD_TIME_MAP.get(price_range, ''),
         unit_cost_lo=cost_lo,
         unit_cost_hi=cost_hi,
         tech_route=getattr(best, 'tech_route', '') or '',
+        # V3.0.2-T2-11: breakout 标注
+        breakout=best_breakout,
     )
 
 
 def select_module_for_connection(conn, library: Optional[DeviceLibrary] = None) -> Optional[OpticalSelection]:
-    """为单条连接选择光模块"""
+    """为单条连接选择光模块
+
+    V3.0.2-T2-11: 1 分 2 分裂线缆（conn.breakout 携带）时按 input_speed（物理速率）
+    匹配分裂光模块（如 800G 物理口 → 2×400G 线缆），否则按逻辑速率匹配常规模块。
+    """
     speed = conn.a_module or ''
+    # V3.0.2-T2-11: 分裂线缆按物理速率匹配（input_speed）且只匹配分裂线缆
+    bk = getattr(conn, 'breakout', None)
+    require_breakout = False
+    if isinstance(bk, dict) and bk.get('input_speed'):
+        speed = bk['input_speed']
+        require_breakout = True
     distance = _estimate_distance(
         conn.a_cabinet_name or '', conn.z_cabinet_name or '',
         conn.a_start_u, conn.z_start_u,
     )
-    return select_optical_module(speed, distance, conn.cable_type, library)
+    return select_optical_module(speed, distance, conn.cable_type, library,
+                                 require_breakout=require_breakout)
 
 
 # 价格区间映射（人民币估算）

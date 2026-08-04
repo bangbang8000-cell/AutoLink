@@ -3,6 +3,9 @@ node_modules/
 dist/
 dist-electron/
 
+# V3.0.0-T0-7: PyInstaller 工作目录（脚本构建产物，dist/backend-dist 输出已被 dist/ 忽略）
+build/
+
 # Wiki (separate repository)
 wiki/
 
@@ -35,3 +38,6 @@ output/
 
 # Design drafts (process files, not source of truth)
 design/
+
+# 敏感本地信息（含服务器凭据，禁止提交）
+*.local.md

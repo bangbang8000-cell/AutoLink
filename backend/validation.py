@@ -202,6 +202,8 @@ def _rule_speed_match(ctx: ValidationContext) -> List[ValidationIssue]:
     speed_limits = {
         "param": (100.0, None),      # 参数网最低 100G
         "storage": (25.0, None),     # 存储网最低 25G
+        # V3.0.2-T2-5: 融合网（storage+biz+带内管理合一）最低 25G
+        "combined": (25.0, None),
         "biz": (1.0, None),          # 业务网最低 1G
         "oob": (None, 10.0),         # OOB 网最高 10G
     }
@@ -330,25 +332,56 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
 
     参数网/存储网所有服务器的网卡总数不得超过 Leaf 下行口总容量，
     否则 Leaf 端口不足导致部分服务器无法接入。
+
+    V3.0.1-T1-3: 双平面（dual_plane_stats）时按平面逐平面校验
+      required_per_plane = num_servers × nics_per_server
+      capacity_per_plane  = plane.leaf_count × plane.downlink_per_leaf
     """
     issues = []
 
-    # 参数网
-    num_servers = int(ctx.config.get('num_servers', 0) or 0)
-    ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
-    leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
-    dl = int(ctx.config.get('param_dl', 0) or 0)
-    required = num_servers * ports_per_server
-    capacity = leaf_count * dl
-    if capacity > 0 and required > capacity:
-        issues.append(ValidationIssue(
-            rule_id="V016",
-            severity=Severity.ERROR,
-            category="拓扑规则",
-            message=f"参数网服务器网卡总数 {required} 超过 Leaf 下行总容量 {capacity}",
-            affected_items=["param"],
-            recommendation="增加参数 Leaf 交换机数量或降低每服务器网卡数",
-        ))
+    # --- 参数网：双平面按平面展开 ---
+    dp_stats = ctx.config.get('dual_plane_stats')
+    if dp_stats:
+        num_servers = int(ctx.config.get('num_servers', 0) or 0)
+        nics = int(ctx.config.get('param_nics_per_server', 8) or 8)
+        required_per_plane = num_servers * nics
+        # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量
+        bk = int(ctx.config.get('param_breakout_count', 1) or 1)
+        for pl in dp_stats:
+            capacity = int(pl.get('leaf_count', 0) or 0) * int(pl.get('downlink_per_leaf', 0) or 0) * bk
+            if capacity > 0 and required_per_plane > capacity:
+                issues.append(ValidationIssue(
+                    rule_id="V016",
+                    severity=Severity.ERROR,
+                    category="拓扑规则",
+                    message=f"参数网平面{pl.get('plane', '?')}服务器网卡总数 {required_per_plane} "
+                            f"超过该平面 Leaf 下行总容量 {capacity}",
+                    affected_items=[f"param-plane-{pl.get('plane', '?')}"],
+                    recommendation="增加该平面 Leaf 交换机数量或降低每服务器网卡数",
+                ))
+    else:
+        # 参数网（传统四网）
+        num_servers = int(ctx.config.get('num_servers', 0) or 0)
+        # V3.0.2-T2-1: ZCube 每服务器参数口 = nics_per_gpu（双口混合接入）
+        if (str(ctx.config.get('param_network_mode', '') or '').strip().lower()) == 'zcube':
+            ports_per_server = int((ctx.config.get('zcube_stats') or {}).get('nics_per_gpu')
+                                   or (ctx.config.get('param_zcube') or {}).get('nics_per_gpu') or 2)
+        else:
+            ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
+        leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
+        dl = int(ctx.config.get('param_dl', 0) or 0)
+        required = num_servers * ports_per_server
+        # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量（物理口 × 扇出数）
+        capacity = leaf_count * dl * int(ctx.config.get('param_breakout_count', 1) or 1)
+        if capacity > 0 and required > capacity:
+            issues.append(ValidationIssue(
+                rule_id="V016",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"参数网服务器网卡总数 {required} 超过 Leaf 下行总容量 {capacity}",
+                affected_items=["param"],
+                recommendation="增加参数 Leaf 交换机数量或降低每服务器网卡数",
+            ))
 
     # 存储网
     total_servers = int(ctx.config.get('total_servers', num_servers) or 0)
@@ -356,7 +389,8 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
     storage_leaf = int(ctx.config.get('storage_leaf_count', 0) or 0)
     storage_dl = int(ctx.config.get('storage_dl', 0) or 0)
     s_required = total_servers * storage_ports
-    s_capacity = storage_leaf * storage_dl
+    # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量（如 TH5 400G 口 1 分 2 接 2×200G 存储）
+    s_capacity = storage_leaf * storage_dl * int(ctx.config.get('storage_breakout_count', 1) or 1)
     if s_capacity > 0 and s_required > s_capacity:
         issues.append(ValidationIssue(
             rule_id="V016",
@@ -469,6 +503,232 @@ def _rule_total_power_supply(ctx: ValidationContext) -> List[ValidationIssue]:
     return issues
 
 
+def _rule_zcube_structure(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V020: ZCube 扁平二部图结构校验 (V3.0.2-T2-1)
+
+    ZCube 模式（param_network_mode == 'zcube'）专属规则：
+      - 无 Spine/Core 层级一致性：参数网不得出现 Spine/Core 交换机（层级一致性）
+      - 端口容量：num_gpus × nics_per_gpu ≤ 2L × (switch_ports - L)
+      - 下联端口不超限：每 Leaf 实际下联 GPU ≤ downlink_per_leaf（保证路径唯一性前提）
+      - 双口混合接入：1 ≤ ports_to_group_a ≤ nics_per_gpu（前 p_a 口 → 组 A）
+    """
+    issues = []
+    if (str(ctx.config.get('param_network_mode', '') or '').strip().lower()) != 'zcube':
+        return issues
+
+    num_gpus = int(ctx.config.get('num_servers', 0) or 0)
+    stats = ctx.config.get('zcube_stats') or {}
+    zc = ctx.config.get('param_zcube') or {}
+    nics = int(stats.get('nics_per_gpu') or zc.get('nics_per_gpu') or 2)
+    L = int(stats.get('leaf_count') or 0)
+    switch_ports = int(stats.get('downlink_per_leaf') or 0) + L  # downlink+L=switch_ports
+
+    # --- 层级一致性：无 Spine/Core ---
+    spine_core = []
+    for sw in ctx.switches:
+        if sw.get('network_type') != 'param':
+            continue
+        if 'Spine' in sw.get('name', '') or 'Core' in sw.get('name', ''):
+            spine_core.append(sw.get('name', ''))
+    if spine_core:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"ZCube 扁平二部图不允许 Spine/Core 层，但存在: {', '.join(spine_core[:5])}",
+                affected_items=spine_core,
+                recommendation="ZCube 模式删除参数网 Spine/Core 交换机，仅保留两组 Leaf",
+            ))
+
+    # --- 端口容量：GPU 总网卡 ≤ 两组 Leaf 总下联容量 ---
+    if L > 0 and switch_ports > L:
+        required = num_gpus * nics
+        capacity = 2 * L * (switch_ports - L)
+        if required > capacity:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"ZCube GPU 网卡总数 {required} 超过两组 Leaf 总下联容量 {capacity} (2×{L}×{switch_ports - L})",
+                affected_items=["param-zcube"],
+                recommendation="增加 Leaf 数或使用更高端口密度交换机 (L×2 > num_gpus×nics/switch_ports 约束)",
+            ))
+
+    # --- 双口混合接入比例：1 ≤ p_a ≤ nics ---
+    p_a = int(stats.get('ports_to_group_a') or 0)
+    if p_a <= 0 or p_a > nics:
+        issues.append(ValidationIssue(
+            rule_id="V020",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"ZCube 双口混合接入比例异常: 组A端口数 {p_a} 超出网卡数 {nics}",
+            affected_items=["param-zcube"],
+            recommendation="每 GPU 前 ceil(nics/2) 口接组 A，余口接组 B，1 ≤ 组A口数 ≤ 网卡数",
+        ))
+
+    # --- 下联端口不超限（路径唯一性前提）：统计每 Leaf 实际下联/互联数 ---
+    # 每条物理链路在 edges 中双向各出现一次（c1/c2），仅按 Leaf 作为目标端计数一次
+    leaf_down = {}
+    leaf_inter = {}
+    for conn in ctx.connections:
+        if (conn.get('network_type') or conn.get('networkType', '')) != 'param':
+            continue
+        src, tgt = conn.get('source', ''), conn.get('target', '')
+        if tgt.startswith('参数') and 'Leaf' in tgt:
+            if src.startswith('参数') and 'Leaf' in src:
+                leaf_inter[tgt] = leaf_inter.get(tgt, 0) + 1
+            else:
+                leaf_down[tgt] = leaf_down.get(tgt, 0) + 1
+    downlink_per_leaf = int(stats.get('downlink_per_leaf') or 0)
+    inter_per_leaf = L
+    for leaf, cnt in sorted(leaf_down.items()):
+        if downlink_per_leaf > 0 and cnt > downlink_per_leaf:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"ZCube Leaf {leaf} 下联 GPU {cnt} 超过下联容量 {downlink_per_leaf}",
+                affected_items=[leaf],
+                recommendation="减少该 Leaf 接入 GPU 数或增加 Leaf 数量",
+            ))
+    for leaf, cnt in sorted(leaf_inter.items()):
+        if inter_per_leaf > 0 and cnt > inter_per_leaf:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.WARNING,
+                category="拓扑规则",
+                message=f"ZCube Leaf {leaf} 组间互联 {cnt} 超过对组 Leaf 数 {inter_per_leaf}",
+                affected_items=[leaf],
+                recommendation="组间应为全二部互联，每组 Leaf 仅与对组每个 Leaf 各连 1 条",
+            ))
+    return issues
+
+
+def _rule_huawei_supernode_structure(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V021: 华为超节点结构校验 (V3.0.2-T2-3)
+
+    华为超节点模式（param_network_mode == 'huawei_supernode'）专属规则：
+      - 层级一致性：不得出现传统参数网 Leaf/Spine/Core 交换机（超节点仅 Scale-Out 交换机）
+      - UB 域内全对等：network_type='ub' 边数 = num_npus × (num_npus-1) / 2
+      - Scale-Out 上联：network_type='scale_out' 的 NPU 上联边数 = num_npus × scaleout_ports_per_npu
+      - 域一致性：域内 NPU 数可整除（无残域导致统计异常）
+    """
+    issues = []
+    if (str(ctx.config.get('param_network_mode', '') or '').strip().lower()) != 'huawei_supernode':
+        return issues
+
+    stats = ctx.config.get('huawei_stats') or {}
+    num_npus = int(stats.get('num_npus') or 0)
+    if num_npus <= 0:
+        return issues
+
+    # --- 层级一致性：无传统参数 Leaf/Spine/Core ---
+    legacy_sw = [sw.get('name', '') for sw in ctx.switches
+                 if ('Leaf' in sw.get('name', '') or 'Spine' in sw.get('name', ''))
+                 and 'ScaleOut' not in sw.get('name', '')]
+    if legacy_sw:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"华为超节点不允许传统参数网 Leaf/Spine 交换机，但存在: {', '.join(legacy_sw[:5])}",
+            affected_items=legacy_sw,
+            recommendation="华为超节点组网仅含 Scale-Out 交换机与 NPU，删除参数网 Leaf/Spine/Core",
+        ))
+
+    # --- UB 域内全对等边数与 Scale-Out 上联边数 ---
+    ub_edges = 0
+    so_uplink = 0
+    for conn in ctx.connections:
+        net = conn.get('network_type') or conn.get('networkType', '')
+        if net == 'ub':
+            ub_edges += 1
+        elif net == 'scale_out' and str(conn.get('source', '')).startswith('NPU_'):
+            so_uplink += 1
+    expected_ub = num_npus * (num_npus - 1) // 2
+    if ub_edges != expected_ub:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"华为超节点 UB 域内全对等边数 {ub_edges} ≠ 期望 {expected_ub} (N×(N-1)/2)",
+            affected_items=["huawei-ub"],
+            recommendation="UB 域内应全对等互联，每对 NPU 恰好一条双向链路",
+        ))
+    expected_so = num_npus * int(stats.get('scaleout_ports_per_npu') or 0)
+    if expected_so > 0 and so_uplink != expected_so:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"华为超节点 Scale-Out 上联边数 {so_uplink} ≠ 期望 {expected_so} (NPU×上联口)",
+            affected_items=["huawei-scaleout"],
+            recommendation="每 NPU 按 scaleout_ports_per_npu 接入域内 Scale-Out 交换机",
+        ))
+
+    # --- 域一致性：域内 NPU 数可整除 ---
+    npus_per_domain = int(stats.get('npus_per_domain') or 0)
+    num_domains = int(stats.get('num_domains') or 0)
+    if num_domains > 0 and npus_per_domain > 0 and num_npus % npus_per_domain != 0:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"华为超节点 NPU 总数 {num_npus} 不能被域内 NPU 数 {npus_per_domain} 整除",
+            affected_items=["huawei-domains"],
+            recommendation="调整 num_npus 或 ub_domain_size，使域划分无残域",
+        ))
+    return issues
+
+
+def _rule_combined_eth(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V022: 三合一融合网校验 (V3.0.2-T2-5)
+
+    eth_combined（networks.eth_combined=true）专属规则：
+      - 融合交换机存在：至少 1 台融合 Leaf（否则存储/业务/带内管理无承载）
+      - 带内管理可达性：每台服务器至少 1 条 network_type='combined' 连接
+    """
+    issues = []
+    if not ctx.config.get('eth_combined'):
+        return issues
+
+    combined_sw = [sw.get('name', '') for sw in ctx.switches
+                   if str(sw.get('obj_type', '')).startswith('combined')]
+    if not combined_sw:
+        issues.append(ValidationIssue(
+            rule_id="V022",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message="三合一融合网已启用（networks.eth_combined=true），但未创建融合交换机",
+            affected_items=[],
+            recommendation="启用 eth_combined 后应创建单层融合 Leaf 交换机承载 storage+biz+带内管理",
+        ))
+
+    # 带内管理可达性：每台服务器至少 1 条 combined 连接
+    server_ids = {s.get('name') for s in ctx.servers}
+    server_combined = {name: 0 for name in server_ids}
+    for conn in ctx.connections:
+        net = conn.get('network_type') or conn.get('networkType', '')
+        if net != 'combined':
+            continue
+        for side in ('source', 'target'):
+            name = conn.get(side, '')
+            if name in server_combined:
+                server_combined[name] += 1
+    missing = [name for name, cnt in server_combined.items() if cnt == 0]
+    if missing:
+        issues.append(ValidationIssue(
+            rule_id="V022",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"带内管理可达性不足: {len(missing)} 台服务器无融合网连接"
+                    f" (如 {', '.join(sorted(missing)[:5])})",
+            affected_items=sorted(missing),
+            recommendation="每台服务器的融合网卡至少 1 口接入融合 Leaf，确保存储/业务/带内管理可达",
+        ))
+    return issues
+
+
 def _rule_rail_consistency(ctx: ValidationContext) -> List[ValidationIssue]:
     """V007: Rail-Optimized 一致性校验
 
@@ -521,9 +781,10 @@ def _rule_storage_redundancy(ctx: ValidationContext) -> List[ValidationIssue]:
       - 原 a_end_name → 改为 source (与 edges schema 一致)
     """
     issues = []
+    # V3.0.2-T2-5: 三合一融合网（combined）同样纳入存储冗余路径检查
     storage_conns = [c for c in ctx.connections
-                     if c.get("network_type", "") == "storage"
-                     or c.get("networkType", "") == "storage"]
+                     if c.get("network_type", "") in ("storage", "combined")
+                     or c.get("networkType", "") in ("storage", "combined")]
     storage_servers = set()
     for c in storage_conns:
         # 服务器侧端点(source 优先,fallback 到 a_end_name)
@@ -699,4 +960,10 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V017", "兼容性规则", _rule_optical_module_match)
     engine.register_rule("V018", "拓扑规则", _rule_pod_domain_scale)
     engine.register_rule("V019", "物理规则", _rule_total_power_supply)
+    # V3.0.2-T2-1: ZCube 专属结构规则
+    engine.register_rule("V020", "拓扑规则", _rule_zcube_structure)
+    # V3.0.2-T2-3: 华为超节点专属结构规则
+    engine.register_rule("V021", "拓扑规则", _rule_huawei_supernode_structure)
+    # V3.0.2-T2-5: 三合一融合网专属规则
+    engine.register_rule("V022", "拓扑规则", _rule_combined_eth)
     return engine

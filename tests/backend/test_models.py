@@ -105,6 +105,64 @@ class TestNetworkObject:
         assert obj.end_u is None
 
 
+class TestBreakout:
+    """V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）逻辑口模型"""
+
+    @staticmethod
+    def _profile_with_breakout(**bk):
+        """构造带 breakout 标注的设备档案桩"""
+        import types
+        p = types.SimpleNamespace()
+        p.breakout = bk or None
+        return p
+
+    def test_breakout_count_from_profile(self):
+        """从设备档案 breakout 读取扇出数与逻辑速率"""
+        leaf = NetworkObject(name="Leaf", obj_type="param_leaf", max_ports=64,
+                             device_profile=self._profile_with_breakout(
+                                 input_speed="800G", output_speed="400G", count=2))
+        assert leaf.breakout_count == 2
+        assert leaf.breakout_output_speed == "400G"
+        assert leaf.breakout_info == {"input_speed": "800G", "output_speed": "400G", "count": 2}
+
+    def test_breakout_default_one(self):
+        """无 breakout 档案时缺省 1:1 物理口"""
+        leaf = NetworkObject(name="Leaf", obj_type="param_leaf", max_ports=64)
+        assert leaf.breakout_count == 1
+        assert leaf.breakout_info is None
+        assert leaf.breakout_output_speed is None
+
+    def test_get_downlink_port_logical(self):
+        """1 分 2 时下联端口按逻辑口命名（端口1-1/端口1-2/端口2-1...）"""
+        leaf = NetworkObject(name="Leaf", obj_type="param_leaf", max_ports=64,
+                             device_profile=self._profile_with_breakout(
+                                 input_speed="800G", output_speed="400G", count=2))
+        assert leaf.get_downlink_port() == "端口1-1"
+        assert leaf.get_downlink_port() == "端口1-2"
+        assert leaf.get_downlink_port() == "端口2-1"
+        assert leaf.get_downlink_port() == "端口2-2"
+
+    def test_downlink_logical_limit(self):
+        """1 分 2 时下联上限 = 物理口数 × 扇出数"""
+        leaf = NetworkObject(name="Leaf", obj_type="param_leaf", max_ports=64,
+                             device_profile=self._profile_with_breakout(
+                                 input_speed="400G", output_speed="200G", count=2))
+        leaf.downlink_limit = 2
+        leaf.get_downlink_port()  # 端口1-1
+        leaf.get_downlink_port()  # 端口1-2
+        leaf.get_downlink_port()  # 端口2-1
+        leaf.get_downlink_port()  # 端口2-2
+        with pytest.raises(ValueError, match="下联端口数量超过限制\\(4\\)"):
+            leaf.get_downlink_port()
+
+    def test_no_breakout_behavior_unchanged(self):
+        """无 breakout 时行为与历史一致（端口1/端口2）"""
+        leaf = NetworkObject(name="Leaf", obj_type="param_leaf", max_ports=64)
+        leaf.downlink_prefix = "Eth"
+        assert leaf.get_downlink_port() == "Eth1"
+        assert leaf.get_downlink_port() == "Eth2"
+
+
 class TestConnection:
     """Connection 测试"""
 
@@ -128,6 +186,14 @@ class TestConnection:
         assert conn.a_cabinet_name == "机柜1"
         assert conn.a_start_u == 1
         assert conn.a_end_u == 2
+
+    def test_connection_breakout_field(self):
+        """V3.0.2-T2-11: 连接携带 1 分 2 扇出标注（缺省 None）"""
+        bk = {"input_speed": "800G", "output_speed": "400G", "count": 2}
+        conn = Connection("S", "P1", "400G", "L", "端口1-1", "400G", "MPO", "test", breakout=bk)
+        assert conn.breakout == bk
+        plain = Connection("S", "P1", "400G", "L", "P2", "400G", "MPO", "test")
+        assert plain.breakout is None
 
     def test_connection_defaults(self):
         """连接默认值"""

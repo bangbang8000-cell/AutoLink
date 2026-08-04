@@ -29,7 +29,8 @@
       "cable_type": "MPO-16",
       "downlink_prefix": "NIC",
       "uplink_prefix": "NIC",
-      "port_numbering": "sequential"
+      "port_numbering": "sequential",
+      "dual_port": true
     },
     {
       "network_type": "storage",

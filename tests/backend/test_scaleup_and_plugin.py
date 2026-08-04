@@ -220,7 +220,7 @@ class TestPluginRegistry:
 
     def test_builtin_plugins_registered(self):
         plugins = list_plugins()
-        assert set(plugins) == {"param", "storage", "biz", "oob", "scale_up"}
+        assert set(plugins) == {"param", "storage", "biz", "oob", "scale_up", "zcube", "huawei_supernode"}
 
     def test_get_plugin(self):
         plugin = get_plugin("param")

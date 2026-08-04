@@ -153,9 +153,11 @@ def generate_switch_view(designer):
     """生成交换机视角的连接表"""
     param_connections = []
     storage_connections = []
+    combined_connections = []   # V3.0.2-T2-5: 三合一融合网
 
     all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
-                   designer.storage_leaves + designer.storage_spines + designer.storage_cores)
+                   designer.storage_leaves + designer.storage_spines + designer.storage_cores +
+                   list(getattr(designer, 'combined_leaves', [])))
 
     for switch in all_switches:
         switch_group = designer.switch_groups.get(switch.name, "")
@@ -180,11 +182,14 @@ def generate_switch_view(designer):
                 }
                 if "参数" in switch.name:
                     param_connections.append(row)
+                elif switch.obj_type.startswith('combined'):
+                    combined_connections.append(row)
                 else:
                     storage_connections.append(row)
 
     param_df = pd.DataFrame(param_connections)
     storage_df = pd.DataFrame(storage_connections)
+    combined_df = pd.DataFrame(combined_connections)
 
     if not param_df.empty:
         param_df['type_weight'] = param_df['A端设备'].apply(_get_switch_type_weight)
@@ -200,7 +205,14 @@ def generate_switch_view(designer):
         storage_df = storage_df.sort_values(by=['type_weight', '交换机分组', 'dev_num', 'A端设备', 'port_num'])
         storage_df = storage_df.drop(columns=['type_weight', 'dev_num', 'port_num'])
 
-    return {'参数网络': param_df, '存储网络': storage_df}
+    if not combined_df.empty:
+        combined_df['type_weight'] = combined_df['A端设备'].apply(_get_switch_type_weight)
+        combined_df['dev_num'] = combined_df['A端设备'].apply(_extract_number)
+        combined_df['port_num'] = combined_df['A端接口'].apply(_extract_number)
+        combined_df = combined_df.sort_values(by=['type_weight', '交换机分组', 'dev_num', 'A端设备', 'port_num'])
+        combined_df = combined_df.drop(columns=['type_weight', 'dev_num', 'port_num'])
+
+    return {'参数网络': param_df, '存储网络': storage_df, '融合网络': combined_df}
 
 
 # V2.9.1: 机柜类型显示标签 (与 rack_allocation.CABINET_TYPE_* 对应)
@@ -697,12 +709,8 @@ def export_cabling_guide(designer, filename):
     from optical_selector import select_module_for_connection, estimate_module_cost
 
     rows = []
-    all_switches = (
-        designer.param_leaves + designer.param_spines + designer.param_cores +
-        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
-    )
-    all_devices = designer.servers + all_switches
+    all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
+    all_devices = designer.all_devices()
     seen_conns = set()
 
     for dev in all_devices:
@@ -730,6 +738,9 @@ def export_cabling_guide(designer, filename):
                 'Z端U位': f"{conn.z_start_u}-{conn.z_end_u}" if conn.z_start_u else '',
                 '速率': conn.a_module or '',
                 '线缆类型': conn.cable_type,
+                # V3.0.2-T2-11: 1 分 2 扇出标注（如 "1分2 (800G→400G)"）
+                '1分2扇出': (f"1分{conn.breakout.get('count', 2)} ({conn.breakout.get('input_speed', '')}→{conn.breakout.get('output_speed', '')})"
+                            if isinstance(getattr(conn, 'breakout', None), dict) else ''),
                 '光模块型号': sel.module_id if sel else '',
                 '封装': sel.form_factor if sel else '',
                 '规格': sel.spec if sel else '',
@@ -963,11 +974,7 @@ def generate_report_data(designer, estimation=None):
         overview['Scale-Up总链路数'] = su_stats.get('total_connections', 0)
 
     # 2. 网络架构
-    all_switches = (
-        designer.param_leaves + designer.param_spines + designer.param_cores +
-        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
-    )
+    all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
     architecture = {
         '参数网Leaf': len(designer.param_leaves),
         '参数网Spine': len(designer.param_spines),
@@ -1032,7 +1039,7 @@ def generate_report_data(designer, estimation=None):
     # 7. 机柜规划 (V2.9.1: 机柜清单,含交换机; 类型来自 rack_allocation 分配)
     rack_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
     rack_cabs = {}
-    for dev in designer.servers + all_switches + getattr(designer, 'scale_up_gpus', []):
+    for dev in designer.all_devices():  # V3.0.0-T0-3: 统一访问器（服务器+交换机+Scale-Up GPU）
         if dev.cabinet_id is None:
             continue
         cid = dev.cabinet_id
@@ -1122,9 +1129,7 @@ def export_compliance_report(designer, filename):
         })
 
     # 交换机
-    all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
-                    designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-                    designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg)
+    all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
     for sw in all_switches:
         profile = getattr(sw, 'device_profile', None)
         origin = _get_origin(profile)

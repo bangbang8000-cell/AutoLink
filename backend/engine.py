@@ -17,7 +17,16 @@ import datetime
 # Add backend directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# V3.0.0-T0-6/T0-7: 统一 stdio 为 UTF-8（持久 NDJSON 协议；PyInstaller 打包后不依赖环境变量）
+for _stream in (sys.stdin, sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 from designer import NetworkDesignerV2
+# V3.0.0-T0-3: 网络插件注册 + 组网模式（network_mode）分派接缝
+from network_plugin import register_builtin_plugins, resolve_network_mode
 from topology import calc_max_2tier
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
@@ -80,6 +89,48 @@ def list_registered_actions() -> list:
     return sorted(_ACTION_REGISTRY.keys())
 
 
+# ================================================================
+# V3.0.0-T0-3: 网络插件接线（engine 启动即注册内置插件）
+# ================================================================
+
+_PLUGINS_READY = False
+
+
+def _ensure_plugins_ready() -> None:
+    """幂等注册内置网络插件（main 进程与直接调用 handle_design 的测试共用）
+
+    register_builtin_plugins() 同名覆盖注册，重复调用安全。
+    """
+    global _PLUGINS_READY
+    if _PLUGINS_READY:
+        return
+    register_builtin_plugins()
+    _PLUGINS_READY = True
+
+
+def _validate_cluster_network_modes(config) -> list:
+    """校验 clusters 各集群 network_mode 是否可处理（V3.0.0-T0-3 分派接缝）
+
+    - 'native'  → 传统 designer 原生路径（缺省/standard/fat_tree/rail 等），放行
+    - 'plugin'  → 插件注册表可处理（3.0.1+ 新组网），放行
+    - 'unknown' → 未注册模式，收集错误（防止静默走错路径）
+    返回错误信息列表（空 = 全部可处理）。clusters 缺失/空 = 未启用多集群，直接放行。
+    """
+    errors = []
+    clusters = (config or {}).get('clusters') or []
+    for cl in clusters:
+        if not isinstance(cl, dict):
+            continue
+        cid = cl.get('cluster_id', '')
+        mode = cl.get('network_mode')
+        status = resolve_network_mode(mode)
+        if status == 'unknown':
+            errors.append(
+                f"clusters[{cid or '?'}].network_mode='{mode}' 暂不支持"
+                f"（3.0 原生支持 {sorted(resolve_network_mode.__globals__['NATIVE_NETWORK_MODES'])}）")
+    return errors
+
+
 def _parse_speed_gbps(speed_str: str) -> float:
     """将速率字符串（如 '400G'）解析为 Gbps 数值"""
     if not speed_str:
@@ -139,7 +190,9 @@ def _estimate_design(designer, params=None):
     # 5. 收敛比（参数网/存储网/业务网）
     convergence = {}
     # 参数网
-    if designer.param_leaf_count > 0:
+    # V3.0.2-T2-1: ZCube 无 Spine 层，Leaf 上行口为组间互联（非收敛），跳过收敛比计算
+    is_zcube = getattr(designer, 'param_network_mode', 'standard') == 'zcube'
+    if designer.param_leaf_count > 0 and not is_zcube:
         param_dl = getattr(designer, 'param_dl', 0) or 0
         param_ul = max(designer.param_switch_ports - param_dl, 0)
         convergence['param'] = _conv_to_dict(calc_convergence_ratio(
@@ -249,9 +302,22 @@ def _get_config_file(params):
 @register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""
+    # V3.0.0-T0-3: 确保内置网络插件已注册（分派接缝就绪）
+    _ensure_plugins_ready()
     config_file, error = _get_config_file(params)
     if error:
         return {"error": error}
+
+    # V3.0.0-T0-3: cluster network_mode 分派校验（未知模式明确报错，防静默走错路径）
+    if config_file.endswith('.json'):
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                _raw_config = json.load(f)
+            mode_errors = _validate_cluster_network_modes(_raw_config)
+            if mode_errors:
+                return {"error": "; ".join(mode_errors)}
+        except (OSError, json.JSONDecodeError) as e:
+            return {"error": f"读取配置失败: {e}"}
 
     designer = NetworkDesignerV2(config_file)
     summary = {
@@ -267,12 +333,17 @@ def handle_design(params):
         "storageSpeed": designer.storage_speed,
         "paramDownlink": getattr(designer, 'param_dl', 0),
         "storageDownlink": getattr(designer, 'storage_dl', 0),
+        # V3.0.0-T0-3: 网络域 / 集群元数据（插件化 + 正交模型输出）
+        "domains": [d.to_dict() for d in getattr(designer, 'domains', [])],
+        "clusters": getattr(designer, 'clusters', []),
         # V2.1 新增
         "networks": {
             "param_network": getattr(designer, 'param_enabled', True),
             "storage_network": getattr(designer, 'storage_enabled', True),
             "biz_network": getattr(designer, 'biz_enabled', True),
             "oob_network": getattr(designer, 'oob_enabled', True),
+            # V3.0.2-T2-5: 三合一网卡开关（storage+biz+带内管理合一）
+            "eth_combined": getattr(designer, 'eth_combined', False),
         },
         "rackType": getattr(designer, 'rack_type', 42),
         "powerLimitPerRack": getattr(designer, 'power_limit_per_rack', 6000),
@@ -286,6 +357,12 @@ def handle_design(params):
             "enabled": bool(getattr(designer, 'scale_up_config', None)),
             "config": getattr(designer, 'scale_up_config', None),
             "stats": getattr(designer, 'scale_up_stats', {}),
+        },
+        # V3.0.2-T2-3: 华为超节点配置与统计
+        "huaweiSuperNode": {
+            "enabled": getattr(designer, 'param_network_mode', '') == 'huawei_supernode',
+            "config": getattr(designer, 'huawei_config', None),
+            "stats": getattr(designer, 'huawei_stats', {}),
         },
     }
 
@@ -339,6 +416,9 @@ def handle_design(params):
         nodes.append(_sw_node(sw))
     for sw in designer.storage_cores:
         nodes.append(_sw_node(sw))
+    # V3.0.2-T2-5: 三合一融合网 Leaf 节点
+    for sw in getattr(designer, 'combined_leaves', []):
+        nodes.append(_sw_node(sw))
     for sw in designer.biz_access:
         nodes.append(_sw_node(sw))
     for sw in designer.biz_agg:
@@ -363,14 +443,28 @@ def handle_design(params):
             "powerWatts": gpu.power_watts, "uHeight": gpu.u_height,
         })
 
+    # V3.0.2-T2-3: 华为超节点 NPU 节点 + Scale-Out 交换机
+    for npu in getattr(designer, 'huawei_npus', []):
+        nodes.append({
+            "id": npu.name, "type": npu.obj_type, "group": npu.group,
+            "podid": npu.podid,
+            "domainId": npu.domain_id,
+            "protocol": npu.protocol,
+            "networkType": npu.network_type,
+            "network_type": npu.network_type,
+            "layerHint": npu.layer_hint,
+            "cabinetId": npu.cabinet_id, "cabinetName": npu.cabinet_name,
+            "startU": npu.start_u, "endU": npu.end_u,
+            "powerWatts": npu.power_watts, "uHeight": npu.u_height,
+        })
+    for sw in getattr(designer, 'huawei_scaleout_switches', []):
+        nodes.append(_sw_node(sw))
+
     # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
     # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
-    all_switches = (
-        designer.param_leaves + designer.param_spines + designer.param_cores +
-        designer.storage_leaves + designer.storage_spines + designer.storage_cores +
-        designer.oob_access + designer.oob_agg + designer.biz_access + designer.biz_agg
-    )
-    all_devices = designer.servers + all_switches + getattr(designer, 'scale_up_gpus', [])
+    # V3.0.0-T0-3: 统一访问器（消除 11 类硬编码聚合）
+    all_switches = designer.all_switches()
+    all_devices = designer.all_devices()
     seen_conns = set()
     for dev in all_devices:
         for conn in dev.connections:
@@ -418,7 +512,8 @@ def handle_design(params):
                 "name": dev.cabinet_name or f"机柜{cid}",
                 "type": cabinet_type_map.get(cid, 'gpu'),
                 "power_watts": 0,
-                "cooling_method": getattr(designer, '_default_cooling_method', 'air'),
+                # 修复: designer 属性为 cooling_method（rack_config），非 _default_cooling_method
+                "cooling_method": getattr(designer, 'cooling_method', 'air'),
                 "items": [],
             }
         cabinet_map[cid]["power_watts"] += dev.power_watts or 0
@@ -458,6 +553,8 @@ def handle_design(params):
             net_type = 'oob'
         elif sw.obj_type.startswith('biz'):
             net_type = 'biz'
+        elif sw.obj_type.startswith('combined'):
+            net_type = 'combined'
         else:
             net_type = ''
         switches_ctx.append({
@@ -485,10 +582,28 @@ def handle_design(params):
         "param_dl": getattr(designer, 'param_dl', 0),
         "storage_leaf_count": getattr(designer, 'storage_leaf_count', 0),
         "storage_dl": getattr(designer, 'storage_dl', 0),
+        # V3.0.2-T2-11: 交换机 1 分 2 扇出（breakout）逻辑口因子（V016 按逻辑口校验）
+        "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
+        "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
         "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
         "scale_up": getattr(designer, 'scale_up_config', None),
+        # V3.0.1-T1-3: 双平面按平面校验数据（V016 扩展）
+        "param_nics_per_server": getattr(designer, 'param_nics_per_server', 8),
+        "ports_per_nic": getattr(designer, 'ports_per_nic', 1),
+        "dual_plane_stats": getattr(designer, 'dual_plane_stats', None),
+        # V3.0.2-T2-1: ZCube 校验数据（V020）
+        "param_network_mode": getattr(designer, 'param_network_mode', 'standard'),
+        "param_zcube": getattr(designer, 'zcube_config', {}),
+        "zcube_stats": getattr(designer, 'zcube_stats', None),
+        # V3.0.2-T2-3: 华为超节点校验数据（V021）
+        "huawei_stats": getattr(designer, 'huawei_stats', {}),
+        # V3.0.2-T2-5: 三合一融合网校验数据（V022）
+        "eth_combined": getattr(designer, 'eth_combined', False),
+        "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
+        "param_spine_count": getattr(designer, 'param_spine_count', 0),
+        "param_core_count": getattr(designer, 'param_core_count', 0),
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
@@ -584,13 +699,8 @@ def _calculate_power_summary(designer):
     cabinets = {}
     power_limit = getattr(designer, 'power_limit_per_rack', 6000) or 6000
     cabinet_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
-    all_devices = list(designer.servers) + (
-        getattr(designer, 'param_leaves', []) + getattr(designer, 'param_spines', []) +
-        getattr(designer, 'param_cores', []) + getattr(designer, 'storage_leaves', []) +
-        getattr(designer, 'storage_spines', []) + getattr(designer, 'storage_cores', []) +
-        getattr(designer, 'oob_access', []) + getattr(designer, 'oob_agg', []) +
-        getattr(designer, 'biz_access', []) + getattr(designer, 'biz_agg', [])
-    )
+    # V3.0.0-T0-3: 统一访问器（保持原语义：服务器 + 交换机，不含 Scale-Up GPU）
+    all_devices = designer.servers + designer.all_switch_lists()
     for dev in all_devices:
         if dev.cabinet_id is None:
             continue
@@ -769,32 +879,64 @@ def handle_export(params):
     }
 
 
-def main():
-    """主入口：从 stdin 读取 JSON，处理后输出到 stdout
+def _write_line(obj: dict) -> None:
+    """V3.0.0-T0-6: 单行 NDJSON 输出 + flush（持久进程逐行协议）"""
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
 
-    V2.7.6-T7: 使用 _ACTION_REGISTRY 注册表派发 action
-      - 所有 handler 通过 @register_action('xxx') 装饰器自动注册
-      - main() 仅负责从注册表查找并派发, 不再硬编码 action 列表
+
+def emit_event(request_id: str, chunk: str) -> None:
+    """V3.0.0-T0-6: 发送流式事件行 {type:'event', requestId, chunk}
+
+    供流式 handler 使用（未来 AI 对话/进度），Electron 端逐行透传 webContents.send('ai:stream', ...)。
     """
-    try:
-        raw = sys.stdin.read()
-        request = json.loads(raw)
-        action = request.get('action', '')
-        params = request.get('params', {})
+    _write_line({"type": "event", "requestId": request_id, "chunk": chunk})
 
-        # V2.7.6-T7: 从注册表查找 handler
-        handler = get_action_handler(action)
-        if not handler:
-            response = {"success": False, "error": f"未知 action: {action}"}
-        else:
+
+def main():
+    """主入口：stdin 逐行读取 NDJSON 请求 → stdout 逐行 NDJSON 响应（持久 Agent 进程）
+
+    V3.0.0-T0-6: 由"一次性读 stdin"重构为"逐行循环"：
+      - 请求行: {"action": "...", "params": {...}, "requestId": "..."}
+      - 响应行: {"type": "result", "requestId", "success", "data"|"error"}
+      - 事件行: {"type": "event", "requestId", "chunk"}   （handler 经 emit_event 发送）
+      - 解析失败: {"type": "error", "requestId", "error"}
+    每行输出后 flush；stdin 关闭（EOF）时退出 → 兼容旧的一次性管道调用。
+    """
+    # V3.0.0-T0-3: 持久进程启动即注册内置网络插件（action 分派就绪）
+    _ensure_plugins_ready()
+    for raw in sys.stdin:
+        raw = raw.strip()
+        if not raw:
+            continue
+        request_id = ''
+        try:
+            request = json.loads(raw)
+            request_id = request.get('requestId', '')
+            action = request.get('action', '')
+            params = request.get('params', {})
+            handler = get_action_handler(action)
+            if not handler:
+                _write_line({"type": "result", "requestId": request_id,
+                             "success": False, "error": f"未知 action: {action}"})
+                continue
             result = handler(params)
-            response = {"success": True, "data": result}
-
-    except Exception as e:
-        response = {"success": False, "error": str(e)}
-
-    print(json.dumps(response, ensure_ascii=False))
+            _write_line({"type": "result", "requestId": request_id, "success": True, "data": result})
+        except json.JSONDecodeError as e:
+            _write_line({"type": "error", "requestId": request_id, "error": f"JSON 解析失败: {e}"})
+        except Exception as e:
+            _write_line({"type": "result", "requestId": request_id, "success": False, "error": str(e)})
 
 
 if __name__ == "__main__":
+    # V3.0.0-T0-7: 引擎进程内将第三方日志 print 重定向到 stderr，保证 stdout 仅含 NDJSON 协议行
+    # （仅引擎独立进程生效；pytest 直接 import 本模块不受影响）
+    import builtins as _builtins
+    _orig_print = _builtins.print
+
+    def _print(*args, **kwargs):
+        kwargs.setdefault('file', sys.stderr)
+        _orig_print(*args, **kwargs)
+
+    _builtins.print = _print
     main()

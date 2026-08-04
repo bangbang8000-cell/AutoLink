@@ -249,8 +249,10 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
           </select>
         </div>
         {filteredTemplates.map((tpl) => {
-          const isExpanded = expandedTemplates[tpl.name]
-          const structure = templateStructures[tpl.name] || []
+          // 模板文件操作统一使用 tpl.id（目录名）；name 仅为显示名
+          const tplKey = tpl.id
+          const isExpanded = expandedTemplates[tplKey]
+          const structure = templateStructures[tplKey] || []
           return (
             <div key={tpl.id}>
               <TreeNode
@@ -278,22 +280,22 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                   </span>
                 }
                 depth={0}
-                onClick={() => toggleTemplateExpand(tpl.name)}
-                onArrowClick={() => toggleTemplateExpand(tpl.name)}
+                onClick={() => toggleTemplateExpand(tplKey)}
+                onArrowClick={() => toggleTemplateExpand(tplKey)}
                 isExpanded={isExpanded}
                 hasChildren
                 leading={<LayoutTemplate size={12} className="text-gray-400 dark:text-gray-500 shrink-0" />}
                 contextMenu={[
                   { label: t('common:explorer.contextMenu.previewTemplate', '预览方案'), action: () => handlePreviewTemplate(tpl) },
-                  { label: t('common:explorer.contextMenu.createFromTemplate', '基于此模板创建项目'), action: () => openWizardFromTemplate(tpl.name) },
-                  { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplateExpand(tpl.name) },
-                  { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(tpl.name) },
-                  { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExportTemplate(tpl.name) },
+                  { label: t('common:explorer.contextMenu.createFromTemplate', '基于此模板创建项目'), action: () => openWizardFromTemplate(tplKey) },
+                  { label: t('common:explorer.contextMenu.viewTemplateFiles'), action: () => toggleTemplateExpand(tplKey) },
+                  { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(tplKey) },
+                  { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExportTemplate(tplKey) },
                   ...(tpl.isBuiltin
                     ? []
                     : [
                         { label: t('common:explorer.contextMenu.editTemplate'), action: () => handleEditTemplate(tpl) },
-                        { label: t('common:explorer.contextMenu.deleteTemplate'), action: () => setDeleteTarget({ name: tpl.name, type: 'template' as const }) },
+                        { label: t('common:explorer.contextMenu.deleteTemplate'), action: () => setDeleteTarget({ name: tplKey, type: 'template' as const }) },
                       ]
                   ),
                 ]}
@@ -304,15 +306,15 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                 </div>
               )}
               {isExpanded && structure.length > 0 && (
-                renderTemplateChildren(tpl.name, structure, 1, explorerGroupMode, {
-                  onFileClick: (node) => handleTemplateFileClick(tpl.name, node),
+                renderTemplateChildren(tplKey, structure, 1, explorerGroupMode, {
+                  onFileClick: (node) => handleTemplateFileClick(tplKey, node),
                   onDirToggle: (scope, relativePath) => toggleDir(scope, relativePath),
                   isDirExpanded: (scope, relativePath) => !!expandedDirs[`dir:${scope}/${relativePath}`],
                   isGroupExpanded: (tplName, gk) => !!expandedGroups[`group:${tplName}/${gk}`],
                   onGroupToggle: (tplName, gk) => toggleGroup(tplName, gk),
-                  fileContextMenuBuilder: (node) => buildTemplateFileContextMenu(tpl.name, node),
-                  dirContextMenuBuilder: (node) => buildTemplateDirContextMenu(tpl.name, node),
-                  groupContextMenuBuilder: (gk, nodes) => buildTemplateGroupContextMenu(tpl.name, gk, nodes),
+                  fileContextMenuBuilder: (node) => buildTemplateFileContextMenu(tplKey, node),
+                  dirContextMenuBuilder: (node) => buildTemplateDirContextMenu(tplKey, node),
+                  groupContextMenuBuilder: (gk, nodes) => buildTemplateGroupContextMenu(tplKey, gk, nodes),
                 })
               )}
             </div>

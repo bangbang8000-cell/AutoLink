@@ -72,6 +72,15 @@ const electronAPI = {
     report: (projectName: string) =>
       ipcRenderer.invoke('design:report', projectName),
   },
+  // V3.0.0-T0-6: Python 持久 Agent 流式通道（AIHUB 对话/进度复用）
+  ai: {
+    call: (action: string, params?: unknown) => ipcRenderer.invoke('ai:call', action, params),
+    onStream: (callback: (data: { requestId: string; chunk: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { requestId: string; chunk: string }) => callback(data)
+      ipcRenderer.on('ai:stream', handler)
+      return () => ipcRenderer.removeListener('ai:stream', handler)
+    },
+  },
   render: {
     exportConnections: (projectName: string, outputTypes: string[]) =>
       ipcRenderer.invoke('render:exportConnections', projectName, outputTypes),

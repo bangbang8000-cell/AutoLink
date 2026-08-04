@@ -37,3 +37,26 @@ export const TOPOLOGY_NODE_STYLES: Record<string, TopologyNodeStyleDef> = {
 
 /** 默认节点颜色(未知节点类型回退) */
 export const TOPOLOGY_NODE_DEFAULT_COLOR = '#9ca3af'
+
+/* ================================================================
+ *  V3.0.1-T1-7: 双平面节点着色（基础可辨识版）
+ *  服务器 8×双口网卡分属两平面：平面 A（参数A_* / plane-A）琥珀色、
+ *  平面 B（参数B_* / plane-B）青色，拓扑图中按平面一眼可辨。
+ * ================================================================ */
+
+/** 双平面专属配色（平面 A / 平面 B） */
+export const DUAL_PLANE_COLORS = {
+  A: '#F59E0B', // 琥珀（与参数网默认一致）
+  B: '#06B6D4', // 青色
+} as const
+
+/**
+ * 根据节点 group / 名称识别所属平面，返回平面专属色；非双平面节点返回 null
+ * 后端命名约定：group "参数A_Leaf组" / "参数B_Leaf组"，podid "plane-A" / "plane-B"
+ */
+export function getDualPlaneColor(group?: string, name?: string): string | null {
+  const haystack = `${group ?? ''} ${name ?? ''}`
+  if (/参数A|参数A_|plane-A/i.test(haystack)) return DUAL_PLANE_COLORS.A
+  if (/参数B|参数B_|plane-B/i.test(haystack)) return DUAL_PLANE_COLORS.B
+  return null
+}

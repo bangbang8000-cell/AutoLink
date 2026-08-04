@@ -1,0 +1,15 @@
+{
+  "id": "om_400g_qsfpdd_2x200g_dac_3m",
+  "speed": "400G",
+  "form_factor": "QSFP-DD",
+  "spec": "DAC",
+  "distance_m": 3,
+  "fiber_type": "copper",
+  "power_watts": 5,
+  "vendors": ["NVIDIA", "华为", "H3C"],
+  "price_range": "中",
+  "category": "optical_modules",
+  "breakout": {"input_speed": "400G", "output_speed": "200G", "count": 2},
+  "description": "400G QSFP-DD 2x200G DAC 直连铜缆，传输距离3米，双200G无源铜缆（1分2 MPO 线缆）",
+  "tags": ["400G", "QSFP-DD", "2x200G", "DAC", "copper", "3m"]
+}
