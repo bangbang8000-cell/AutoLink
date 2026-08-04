@@ -11,6 +11,8 @@ from device_library import get_device_library, LibraryDevice, InterfaceModel
 from rail_topology import RailOptimizedTopology
 # V3.0.0-T0-2: 加载旧 schema 配置时自动迁移到当前版本（内存态，不回写）
 from project_config import migrate_config
+# V3.0.0-T0-3: 网络域抽象（组网形态 × GPU 集群正交模型的横向表达）
+from network_plugin import NetworkDomain
 
 
 class NetworkDesignerV2:
@@ -52,6 +54,8 @@ class NetworkDesignerV2:
         self.scale_up_gpus = []
         self.scale_up_connections = []
         self.scale_up_stats = {}
+        # V3.0.0-T0-3: 网络域列表（设计完成后填充；供插件化/AIHUB 上下文使用）
+        self.domains = []
 
         # --- 执行设计 ---
         self.calc_network_hierarchy()
@@ -61,6 +65,8 @@ class NetworkDesignerV2:
             self._design_oob_network()
         if self.biz_enabled:
             self._design_biz_network()
+        # V3.0.0-T0-3: 设计完成后构建网络域元数据（真实对象计数）
+        self._build_network_domains()
 
     # ================================================================
     #  配置加载 (V2.1新增)
@@ -196,7 +202,20 @@ class NetworkDesignerV2:
         # --- 服务器配置 ---
         self.num_servers = topo.get('num_gpu_servers', 0)
         # V3.0.0-T0-5: GPU 池化 + 正交集群模型（可选段；启用时 num_servers 由池汇总）
-        self.clusters = pc.get('clusters', []) or []
+        # V3.0.0-T0-3: clusters 元数据补齐 network_mode/role/scale（正交模型：P/D 集群独立组网）
+        self.clusters = []
+        self.clusters_raw = pc.get('clusters', []) or []
+        for cl in self.clusters_raw:
+            pools = cl.get('gpu_pools', []) or []
+            cluster_meta = {
+                'cluster_id': cl.get('cluster_id', ''),
+                'role': cl.get('role', 'P'),
+                # network_mode 缺失时默认 'standard'（与传统四网设计等价）
+                'network_mode': cl.get('network_mode') or 'standard',
+                'scale': int(sum(p.get('count', 0) for p in pools)),
+                'gpu_pools': pools,
+            }
+            self.clusters.append(cluster_meta)
         self.gpu_pool_defs = []
         if self.clusters:
             for cl in self.clusters:
@@ -204,6 +223,7 @@ class NetworkDesignerV2:
                     self.gpu_pool_defs.append({
                         'cluster_id': cl.get('cluster_id', ''),
                         'role': cl.get('role', ''),
+                        'network_mode': cl.get('network_mode', 'standard'),
                         'pool_id': pool.get('pool_id', ''),
                         'count': int(pool.get('count', 0)),
                         'profile_ref': pool.get('profile_ref'),
@@ -782,6 +802,69 @@ class NetworkDesignerV2:
         for sw in self.all_switch_lists():
             groups.setdefault(sw.obj_type, []).append(sw)
         return groups
+
+    def _build_network_domains(self):
+        """V3.0.0-T0-3: 构建网络域列表 self.domains（设计完成后调用）
+
+        从既有四网 + Scale-Up 结构推导 NetworkDomain 列表（纯新增描述层，
+        不参与设计流程，行为不变）。3.0.0 单遍设计下域为全局（cluster_id 为空）；
+        3.0.2 多集群独立组网落地后按集群展开。
+        """
+        self.domains = []
+
+        def _leaf_tiers(enabled, three_tier, leaves, spines, cores):
+            if not enabled:
+                return 0
+            return 3 if three_tier else (2 if (leaves and spines) else (1 if leaves else 0))
+
+        if getattr(self, 'param_enabled', True):
+            self.domains.append(NetworkDomain(
+                type='param',
+                tiers=_leaf_tiers(True, getattr(self, 'param_3tier_needed', False),
+                                  self.param_leaves, self.param_spines, self.param_cores),
+                protocol=getattr(self, 'param_protocol', 'RoCE'),
+                speed=getattr(self, 'param_speed', '400G'),
+                ports_per_server=getattr(self, 'param_ports_per_server', 8),
+                leaf_count=len(self.param_leaves),
+            ))
+        if getattr(self, 'storage_enabled', True):
+            self.domains.append(NetworkDomain(
+                type='storage',
+                tiers=_leaf_tiers(True, getattr(self, 'storage_3tier_needed', False),
+                                  self.storage_leaves, self.storage_spines, self.storage_cores),
+                protocol='RoCE',
+                speed=getattr(self, 'storage_speed', '200G'),
+                ports_per_server=getattr(self, 'storage_ports_per_server', 1),
+                leaf_count=len(self.storage_leaves),
+            ))
+        if getattr(self, 'biz_enabled', False) and self.biz_access:
+            self.domains.append(NetworkDomain(
+                type='biz',
+                tiers=2,
+                protocol='Ethernet',
+                speed=getattr(self, 'biz_port_speed', '25G'),
+                ports_per_server=1,
+                leaf_count=len(self.biz_access),
+            ))
+        if getattr(self, 'oob_enabled', True) and self.oob_access:
+            self.domains.append(NetworkDomain(
+                type='oob',
+                tiers=2,
+                protocol='Ethernet',
+                speed='1G',
+                ports_per_server=1,
+                leaf_count=len(self.oob_access),
+            ))
+        su = getattr(self, 'scale_up_config', None)
+        if su and int(su.get('num_gpus', 0)) > 0:
+            self.domains.append(NetworkDomain(
+                type='scale_up',
+                tiers=1,
+                protocol=su.get('protocol', 'UALink'),
+                speed='',
+                ports_per_server=0,
+                leaf_count=len(getattr(self, 'scale_up_gpus', [])),
+            ))
 
     def describe_domains(self):
         """V3.0.0-T0-3: 当前设计器的网络域元数据（为插件化/AIHUB 上下文提供描述）

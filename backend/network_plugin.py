@@ -56,6 +56,50 @@ class NetworkPluginInfo:
     description: str = ""
 
 
+@dataclass
+class NetworkDomain:
+    """网络域抽象（V3.0.0-T0-3）
+
+    描述一个可独立配置/校验/渲染的网络域（组网形态的最小表达单元），
+    与插件、集群正交：组网形态（横向）由 type/planes/tiers 表达，
+    GPU 池/集群（纵向）由 cluster_id/network_mode 表达。
+
+    Attributes:
+        type: 网络域类型（param/storage/biz/oob/scale_up，或新组网 dual_plane/zcube...）
+        planes: 平面数（双平面=2，缺省 1）
+        tiers: 层级数（2/3）
+        protocol: 协议（RoCE/IB/UEC/NVLink/UALink/UB/Ethernet）
+        speed: 端口速率（如 "400G"）
+        ports_per_server: 每服务器端口数
+        leaf_count: Leaf 交换机数量
+        cluster_id: 所属集群 id（正交模型；空 = 全局域）
+        network_mode: 所属集群的组网模式（正交模型；空 = 未启用多集群）
+    """
+    type: str
+    planes: int = 1
+    tiers: int = 0
+    protocol: str = ''
+    speed: str = ''
+    ports_per_server: int = 0
+    leaf_count: int = 0
+    cluster_id: str = ''
+    network_mode: str = ''
+
+    def to_dict(self) -> Dict[str, Any]:
+        """序列化为 dict（供 engine/AIHUB 上下文消费）"""
+        return {
+            'type': self.type,
+            'planes': self.planes,
+            'tiers': self.tiers,
+            'protocol': self.protocol,
+            'speed': self.speed,
+            'ports_per_server': self.ports_per_server,
+            'leaf_count': self.leaf_count,
+            'cluster_id': self.cluster_id,
+            'network_mode': self.network_mode,
+        }
+
+
 class NetworkPlugin(ABC):
     """网络类型插件抽象接口
 
@@ -136,6 +180,38 @@ def unregister_plugin(name: str) -> bool:
         del _plugin_registry[name]
         return True
     return False
+
+
+# ==================================================================
+#  V3.0.0-T0-3: 组网模式（network_mode）解析 —— engine 分派接缝
+# ==================================================================
+
+# 传统 designer 原生支持的组网模式（无需插件，走 NetworkDesignerV2 既有路径）。
+# 组合形态：standard / fat_tree（同义）与 rail / rail_optimized（同义，Rail-Optimized）。
+# 网络域级：param/storage/biz/oob/scale_up（对应既有四网 + Scale-Up）。
+NATIVE_NETWORK_MODES = frozenset({
+    'standard', 'fat_tree', 'rail', 'rail_optimized',
+    'param', 'storage', 'biz', 'oob', 'scale_up',
+})
+
+
+def resolve_network_mode(network_mode: Optional[str]) -> str:
+    """解析组网模式 → 处理路径（V3.0.0-T0-3 engine 分派接缝）
+
+    Args:
+        network_mode: 集群的 network_mode 值（缺失/空 = 未显式指定）
+
+    Returns:
+        'native'  → 传统 NetworkDesignerV2 原生路径（结果与 2.9.9 一致）
+        'plugin'  → 插件注册表可处理（3.0.1+ 新组网插件：dual_plane/zcube/huawei_supernode...）
+        'unknown' → 未注册的未知模式（engine 应明确报错，防止静默走错路径）
+    """
+    mode = (network_mode or '').strip().lower()
+    if not mode or mode in NATIVE_NETWORK_MODES:
+        return 'native'
+    if get_plugin(mode) is not None:
+        return 'plugin'
+    return 'unknown'
 
 
 # ==================================================================

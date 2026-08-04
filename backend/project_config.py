@@ -217,6 +217,12 @@ def _validate_clusters(config: dict) -> str | None:
             return "clusters[].cluster_id 必须是字符串"
         if cl.get('role') not in ('P', 'D'):
             return "clusters[].role 必须是 'P' / 'D'"
+        # V3.0.0-T0-3: 可选 network_mode（正交模型：集群独立选组网方案）；
+        # 值域语义校验在 engine 层（native/plugin/unknown 分派），此处仅做类型检查
+        if cl.get('network_mode') is not None and (
+            not isinstance(cl.get('network_mode'), str) or not cl.get('network_mode').strip()
+        ):
+            return "clusters[].network_mode 必须是非空字符串"
         pools = cl.get('gpu_pools', [])
         if not isinstance(pools, list):
             return "clusters[].gpu_pools 必须是 JSON 数组"

@@ -25,6 +25,8 @@ for _stream in (sys.stdin, sys.stdout, sys.stderr):
         pass
 
 from designer import NetworkDesignerV2
+# V3.0.0-T0-3: 网络插件注册 + 组网模式（network_mode）分派接缝
+from network_plugin import register_builtin_plugins, resolve_network_mode
 from topology import calc_max_2tier
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
@@ -85,6 +87,48 @@ def get_action_handler(name: str):
 def list_registered_actions() -> list:
     """列出所有已注册的 action 名称 (主要用于调试)"""
     return sorted(_ACTION_REGISTRY.keys())
+
+
+# ================================================================
+# V3.0.0-T0-3: 网络插件接线（engine 启动即注册内置插件）
+# ================================================================
+
+_PLUGINS_READY = False
+
+
+def _ensure_plugins_ready() -> None:
+    """幂等注册内置网络插件（main 进程与直接调用 handle_design 的测试共用）
+
+    register_builtin_plugins() 同名覆盖注册，重复调用安全。
+    """
+    global _PLUGINS_READY
+    if _PLUGINS_READY:
+        return
+    register_builtin_plugins()
+    _PLUGINS_READY = True
+
+
+def _validate_cluster_network_modes(config) -> list:
+    """校验 clusters 各集群 network_mode 是否可处理（V3.0.0-T0-3 分派接缝）
+
+    - 'native'  → 传统 designer 原生路径（缺省/standard/fat_tree/rail 等），放行
+    - 'plugin'  → 插件注册表可处理（3.0.1+ 新组网），放行
+    - 'unknown' → 未注册模式，收集错误（防止静默走错路径）
+    返回错误信息列表（空 = 全部可处理）。clusters 缺失/空 = 未启用多集群，直接放行。
+    """
+    errors = []
+    clusters = (config or {}).get('clusters') or []
+    for cl in clusters:
+        if not isinstance(cl, dict):
+            continue
+        cid = cl.get('cluster_id', '')
+        mode = cl.get('network_mode')
+        status = resolve_network_mode(mode)
+        if status == 'unknown':
+            errors.append(
+                f"clusters[{cid or '?'}].network_mode='{mode}' 暂不支持"
+                f"（3.0 原生支持 {sorted(resolve_network_mode.__globals__['NATIVE_NETWORK_MODES'])}）")
+    return errors
 
 
 def _parse_speed_gbps(speed_str: str) -> float:
@@ -256,9 +300,22 @@ def _get_config_file(params):
 @register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""
+    # V3.0.0-T0-3: 确保内置网络插件已注册（分派接缝就绪）
+    _ensure_plugins_ready()
     config_file, error = _get_config_file(params)
     if error:
         return {"error": error}
+
+    # V3.0.0-T0-3: cluster network_mode 分派校验（未知模式明确报错，防静默走错路径）
+    if config_file.endswith('.json'):
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                _raw_config = json.load(f)
+            mode_errors = _validate_cluster_network_modes(_raw_config)
+            if mode_errors:
+                return {"error": "; ".join(mode_errors)}
+        except (OSError, json.JSONDecodeError) as e:
+            return {"error": f"读取配置失败: {e}"}
 
     designer = NetworkDesignerV2(config_file)
     summary = {
@@ -274,6 +331,9 @@ def handle_design(params):
         "storageSpeed": designer.storage_speed,
         "paramDownlink": getattr(designer, 'param_dl', 0),
         "storageDownlink": getattr(designer, 'storage_dl', 0),
+        # V3.0.0-T0-3: 网络域 / 集群元数据（插件化 + 正交模型输出）
+        "domains": [d.to_dict() for d in getattr(designer, 'domains', [])],
+        "clusters": getattr(designer, 'clusters', []),
         # V2.1 新增
         "networks": {
             "param_network": getattr(designer, 'param_enabled', True),
@@ -792,6 +852,8 @@ def main():
       - 解析失败: {"type": "error", "requestId", "error"}
     每行输出后 flush；stdin 关闭（EOF）时退出 → 兼容旧的一次性管道调用。
     """
+    # V3.0.0-T0-3: 持久进程启动即注册内置网络插件（action 分派就绪）
+    _ensure_plugins_ready()
     for raw in sys.stdin:
         raw = raw.strip()
         if not raw:
