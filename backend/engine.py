@@ -553,6 +553,10 @@ def handle_design(params):
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
         "scale_up": getattr(designer, 'scale_up_config', None),
+        # V3.0.1-T1-3: 双平面按平面校验数据（V016 扩展）
+        "param_nics_per_server": getattr(designer, 'param_nics_per_server', 8),
+        "ports_per_nic": getattr(designer, 'ports_per_nic', 1),
+        "dual_plane_stats": getattr(designer, 'dual_plane_stats', None),
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)

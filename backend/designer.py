@@ -247,6 +247,24 @@ class NetworkDesignerV2:
         self.param_speed = topo.get('param_speed', '400G')
         self.storage_speed = topo.get('storage_speed', '200G')
 
+        # --- V3.0.1-T1-1: 双平面 16 Leaf 配置（可选段；缺省关闭走传统路径） ---
+        # topology.param_planes: [{leaf_count, protocol, speed, switch_ports, uplink}]
+        # topology.param_nics_per_server: 每服务器参数网卡数（缺省 = param_ports_per_server）
+        # topology.ports_per_nic: 每网卡端口数（双平面 = 2，缺省 1）
+        self.param_planes = []
+        self.dual_plane_enabled = False
+        planes_raw = topo.get('param_planes')
+        if isinstance(planes_raw, dict):
+            planes_raw = [planes_raw]
+        if isinstance(planes_raw, list) and planes_raw:
+            self.param_planes = [dict(p) for p in planes_raw if isinstance(p, dict)]
+            self.dual_plane_enabled = len(self.param_planes) >= 1
+        self.param_nics_per_server = int(topo.get('param_nics_per_server', self.param_ports_per_server))
+        self.ports_per_nic = int(topo.get('ports_per_nic', 1))
+        if self.dual_plane_enabled and self.ports_per_nic < 2:
+            # 双平面语义要求双口网卡（每卡口1→平面A、口2→平面B）
+            self.ports_per_nic = 2
+
         # --- 下行端口限制 ---
         self._resolve_downlink_limits()
 
@@ -602,32 +620,41 @@ class NetworkDesignerV2:
     # ================================================================
     def calc_network_hierarchy(self):
         """计算参数网络和存储网络的层次结构"""
-        # --- 参数网络 ---
-        param_topology = FatTreeTopology(
-            self.param_ports_per_server, self.param_switch_ports,
-            self.param_speed, self.cable_types['param'], "param"
-        )
-        self.param_3tier_needed, param_leaves, param_spines, param_cores = \
-            param_topology.calculate_hierarchy(self.num_servers)
-
-        if self.param_3tier_needed:
-            self.param_leaf_count = param_leaves
-            self.param_spine_count = param_spines
-            self.param_core_count = param_cores
-            max_2tier = calc_max_2tier(self.param_switch_ports, self.param_ports_per_server)
-            self.param_pods = math.ceil(self.num_servers / max_2tier)
-            self.param_servers_per_pod = min(max_2tier, self.num_servers)
-        else:
-            self.param_servers_per_group = min(self.param_dl, self.num_servers)
-            if self.param_servers_per_group <= 0:
-                self.param_servers_per_group = 1
-            self.param_groups = math.ceil(self.num_servers / self.param_servers_per_group)
-            self.param_leaf_per_group = self.param_ports_per_server
-            self.param_leaf_count = self.param_groups * self.param_leaf_per_group
-            self.param_spine_count = max(1, self.param_leaf_count // 2)
-            self.param_core_count = 0
+        # --- V3.0.1-T1-1: 双平面 16 Leaf（可选段，优先于传统四网参数计算） ---
+        if getattr(self, 'dual_plane_enabled', False):
+            self._calc_dual_plane_hierarchy()
+            self.param_3tier_needed = False
             self.param_pods = 0
             self.param_servers_per_pod = 0
+            self.param_servers_per_group = max(1, self.num_servers)
+
+        # --- 参数网络（双平面启用时跳过传统计算，计数已在 _calc_dual_plane_hierarchy 完成） ---
+        if not getattr(self, 'dual_plane_enabled', False):
+            param_topology = FatTreeTopology(
+                self.param_ports_per_server, self.param_switch_ports,
+                self.param_speed, self.cable_types['param'], "param"
+            )
+            self.param_3tier_needed, param_leaves, param_spines, param_cores = \
+                param_topology.calculate_hierarchy(self.num_servers)
+
+            if self.param_3tier_needed:
+                self.param_leaf_count = param_leaves
+                self.param_spine_count = param_spines
+                self.param_core_count = param_cores
+                max_2tier = calc_max_2tier(self.param_switch_ports, self.param_ports_per_server)
+                self.param_pods = math.ceil(self.num_servers / max_2tier)
+                self.param_servers_per_pod = min(max_2tier, self.num_servers)
+            else:
+                self.param_servers_per_group = min(self.param_dl, self.num_servers)
+                if self.param_servers_per_group <= 0:
+                    self.param_servers_per_group = 1
+                self.param_groups = math.ceil(self.num_servers / self.param_servers_per_group)
+                self.param_leaf_per_group = self.param_ports_per_server
+                self.param_leaf_count = self.param_groups * self.param_leaf_per_group
+                self.param_spine_count = max(1, self.param_leaf_count // 2)
+                self.param_core_count = 0
+                self.param_pods = 0
+                self.param_servers_per_pod = 0
 
         # --- 存储网络 (自动计算) ---
         # V2.7.2-T9: 放开 3-tier 限制,根据服务器数量自动判定
@@ -751,7 +778,10 @@ class NetworkDesignerV2:
             self.podid_map[s.name] = s.podid
 
         # 参数网络交换机
-        if self.rail_mode == 'rail_optimized':
+        # V3.0.1-T1-2: 双平面 16 Leaf 优先于 Rail/传统 Fat-Tree
+        if getattr(self, 'dual_plane_enabled', False):
+            self._create_dual_plane_switches(param_switch_profile)
+        elif self.rail_mode == 'rail_optimized':
             # V2.4.6: Rail-Optimized 模式（NVIDIA SuperPOD 8-Rail）
             self._create_rail_optimized_switches(param_switch_profile)
         elif self.param_3tier_needed:
@@ -818,8 +848,11 @@ class NetworkDesignerV2:
             return 3 if three_tier else (2 if (leaves and spines) else (1 if leaves else 0))
 
         if getattr(self, 'param_enabled', True):
+            # V3.0.1-T1-2: 双平面域 planes=2（其余字段取平面 A 语义）
+            dp_planes = len(getattr(self, 'param_planes', []) or [])
             self.domains.append(NetworkDomain(
                 type='param',
+                planes=dp_planes or 1,
                 tiers=_leaf_tiers(True, getattr(self, 'param_3tier_needed', False),
                                   self.param_leaves, self.param_spines, self.param_cores),
                 protocol=getattr(self, 'param_protocol', 'RoCE'),
@@ -1149,6 +1182,53 @@ class NetworkDesignerV2:
             self.switch_groups[sw.name] = sw.group
             self.podid_map[sw.name] = sw.podid
 
+    def _dual_plane_topology(self):
+        """V3.0.1-T1-2: 构造双平面拓扑对象（配置复用 self.param_planes）"""
+        from dual_plane_topology import DualPlaneTopology
+        return DualPlaneTopology(
+            nics_per_server=self.param_nics_per_server,
+            ports_per_nic=self.ports_per_nic,
+            planes=self.param_planes,
+            cable_type_config=self.cable_types['param'],
+            network_type='param',
+            prefix='参数',
+        )
+
+    def _calc_dual_plane_hierarchy(self):
+        """V3.0.1-T1-1: 双平面层次计算（逐平面 leaf 容量推导）"""
+        dp = self._dual_plane_topology()
+        stats = dp.calculate_hierarchy(self.num_servers)
+        self.dual_plane_stats = stats
+        self.param_leaf_count = sum(s['leaf_count'] for s in stats)
+        self.param_spine_count = sum(s['spine_count'] for s in stats)
+        self.param_core_count = sum(s['core_count'] for s in stats)
+        self.param_leaf_per_group = self.param_nics_per_server
+        self.param_groups = max(1, math.ceil(self.num_servers / max(1, self.param_nics_per_server)))
+        # param_dl 取平面 A 下联容量（V016/收敛计算用）
+        self.param_dl = stats[0]['downlink_per_leaf'] if stats else self.param_dl
+
+    def _create_dual_plane_switches(self, profile=None):
+        """V3.0.1-T1-2: 创建双平面参数网交换机（全部平面压平到 param_leaves/spines）"""
+        dp = self._dual_plane_topology()
+        dp.calculate_hierarchy(self.num_servers)
+        dp.create_network_objects()
+        self.param_leaves = dp.leaves
+        self.param_spines = dp.spines
+        self.param_cores = dp.cores
+        self.switch_groups.update(dp.switch_groups)
+        self.podid_map.update(dp.podid_map)
+        # 交换机端口命名前缀（复用参数交换机档案）
+        self._apply_switch_port_prefixes(self.param_leaves + self.param_spines + self.param_cores, profile)
+
+    def _wire_dual_plane(self, gpu_servers):
+        """V3.0.1-T1-2: 双平面连接生成（Server→Leaf + Leaf→Spine 按平面）"""
+        dp = self._dual_plane_topology()
+        dp.calculate_hierarchy(self.num_servers)
+        dp.leaves = self.param_leaves
+        dp.spines = self.param_spines
+        dp.cores = self.param_cores
+        dp.generate_connections(gpu_servers)
+
     def _create_rail_optimized_switches(self, profile=None):
         """V2.4.6: 创建 Rail-Optimized 参数网交换机（NVIDIA SuperPOD 8-Rail）"""
         self._rail_topology = RailOptimizedTopology(
@@ -1236,7 +1316,10 @@ class NetworkDesignerV2:
     def generate_connections(self):
         gpu_servers = self.servers[:self.num_servers]
 
-        if self.rail_mode == 'rail_optimized':
+        # V3.0.1-T1-2: 双平面连接优先
+        if getattr(self, 'dual_plane_enabled', False):
+            self._wire_dual_plane(gpu_servers)
+        elif self.rail_mode == 'rail_optimized':
             # V2.4.6: Rail-Optimized 拓扑连接
             self._wire_rail_optimized(gpu_servers)
         elif self.param_3tier_needed:
@@ -1474,7 +1557,11 @@ class NetworkDesignerV2:
         print("拓扑自检")
         print("=" * 60)
         errors = []
-        param_nic_total = self.num_servers * self.param_ports_per_server
+        # V3.0.1-T1-2: 双平面每服务器参数口 = nics_per_server × ports_per_nic（如 8×2=16）
+        if getattr(self, 'dual_plane_enabled', False):
+            param_nic_total = self.num_servers * self.param_nics_per_server * self.ports_per_nic
+        else:
+            param_nic_total = self.num_servers * self.param_ports_per_server
         storage_nic_total = self.total_servers * self.storage_ports_per_server
         pc, sc = 0, 0
         sp, ss = set(), set()

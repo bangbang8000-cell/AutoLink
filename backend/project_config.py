@@ -270,6 +270,10 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
         clusters_err = _validate_clusters(config)
         if clusters_err:
             return clusters_err
+        # V3.0.1-T1-1: 宽松模式同样校验双平面段结构（若存在）
+        planes_err = _validate_param_planes(config)
+        if planes_err:
+            return planes_err
         return None
 
     # ============ 严格模式（默认）：完整 REQUIRED 校验 ============
@@ -333,7 +337,53 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
     if clusters_err:
         return clusters_err
 
+    # V3.0.1-T1-1: 可选双平面 param_planes 段校验（缺失 = 传统四网，兼容 2.9.9）
+    planes_err = _validate_param_planes(config)
+    if planes_err:
+        return planes_err
+
     return None  # 校验通过
+
+
+def _validate_param_planes(config: dict) -> str | None:
+    """V3.0.1-T1-1: 双平面 param_planes 段结构校验
+
+    语义约束（宽松/严格均生效）：
+      - param_planes 为数组，每项含 leaf_count(>0)/switch_ports(>0)/speed/protocol/uplink(>=0)
+      - 双平面要求 ports_per_nic >= 2（每卡双口，口1→平面A、口2→平面B）
+    """
+    topo = config.get('topology') or {}
+    planes = topo.get('param_planes')
+    if planes is None:
+        return None
+    if isinstance(planes, dict):
+        planes = [planes]
+    if not isinstance(planes, list) or not planes:
+        return "topology.param_planes 必须是非空数组"
+    for i, pl in enumerate(planes):
+        if not isinstance(pl, dict):
+            return f"topology.param_planes[{i}] 必须是 JSON 对象"
+        if pl.get('leaf_count') is not None and (
+            not isinstance(pl.get('leaf_count'), (int, float)) or pl.get('leaf_count', 0) <= 0
+        ):
+            return f"topology.param_planes[{i}].leaf_count 必须是正数"
+        if pl.get('switch_ports') is not None and (
+            not isinstance(pl.get('switch_ports'), (int, float)) or pl.get('switch_ports', 0) <= 0
+        ):
+            return f"topology.param_planes[{i}].switch_ports 必须是正数"
+        if pl.get('uplink') is not None and (
+            not isinstance(pl.get('uplink'), (int, float)) or pl.get('uplink', 0) < 0
+        ):
+            return f"topology.param_planes[{i}].uplink 必须是非负数值"
+        if pl.get('speed') is not None and not isinstance(pl.get('speed'), str):
+            return f"topology.param_planes[{i}].speed 必须是字符串"
+        if pl.get('protocol') is not None and pl['protocol'] not in ('IB', 'RoCE', 'UEC'):
+            return f"topology.param_planes[{i}].protocol 必须是 'IB' / 'RoCE' / 'UEC'"
+    if topo.get('ports_per_nic') is not None and (
+        not isinstance(topo.get('ports_per_nic'), (int, float)) or int(topo.get('ports_per_nic')) < 2
+    ):
+        return "双平面（param_planes）要求 topology.ports_per_nic >= 2（每网卡双口）"
+    return None
 
 
 def get_config_for_designer(config: dict) -> dict:

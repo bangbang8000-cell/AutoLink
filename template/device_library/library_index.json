@@ -10,6 +10,7 @@
       "device_ids": [
         "nvidia_dgx_h100",
         "nvidia_dgx_b200",
+        "nvidia_dgx_b300",
         "nvidia_dgx_gb300_nvl72",
         "nvidia_dgx_a100",
         "nvidia_hgx_h200",

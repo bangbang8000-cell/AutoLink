@@ -104,6 +104,85 @@ def _snapshot(d):
     }
 
 
+# ================================================================
+# V3.0.1-T1-8: 双平面 golden 场景（PRD 验收：CX7 2×200G / CX8 2×400G / 800G）
+# ================================================================
+
+def _dual_plane_scenarios():
+    """返回 {name: project_config dict}（双平面验收场景，3+ 个）"""
+    from project_config import create_default_config
+
+    def base(name, servers, speed, nics=8, leaf=8, switch_ports=144, uplink=16, storage=8, compute=8):
+        cfg = create_default_config(name)
+        cfg['topology'].update({
+            'num_gpu_servers': servers,
+            'num_all_flash_storage': storage,
+            'num_hybrid_flash_storage': 0,
+            'num_compute_servers': compute,
+            'param_protocol': 'IB',
+            'param_speed': speed,
+            'param_nics_per_server': nics,
+            'ports_per_nic': 2,
+            'param_planes': [
+                {'leaf_count': leaf, 'protocol': 'IB', 'speed': speed,
+                 'switch_ports': switch_ports, 'uplink': uplink},
+                {'leaf_count': leaf, 'protocol': 'IB', 'speed': speed,
+                 'switch_ports': switch_ports, 'uplink': uplink},
+            ],
+        })
+        return cfg
+
+    return {
+        # 128×H200：CX7 2×200G 双平面，各 8 Leaf（非阻塞 2:1）
+        'dual_plane_128_h200_cx7': base('dp-h200', 128, '200G'),
+        # 1024×B300：CX8 2×400G 双平面 800G IB（leaf 自动扩容）
+        'dual_plane_1024_b300_800g': base('dp-b300', 1024, '800G'),
+        # 288×GB300 NVL72：双平面 800G IB（3-tier 形态容量）
+        'dual_plane_288_gb300_800g': base('dp-gb300', 288, '800G'),
+    }
+
+
+def _run_dual_plane_scenarios(check):
+    """生成/校验双平面场景快照（文件 dual_plane_*.json）"""
+    from designer import NetworkDesignerV2
+    import tempfile
+    import shutil
+
+    diffs = []
+    generated = 0
+    tmpdir = tempfile.mkdtemp(prefix='golden_dp_')
+    try:
+        for name, cfg in _dual_plane_scenarios().items():
+            cfg_path = os.path.join(tmpdir, 'project_config.json')
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False)
+            try:
+                d = NetworkDesignerV2(cfg_path)
+                snap = _snapshot(d)
+            except Exception as e:  # 设计失败也记录快照（error）
+                snap = {'error': f'{type(e).__name__}: {e}'}
+
+            gf = os.path.join(golden_dir, name + '.json')
+            if check:
+                if not os.path.exists(gf):
+                    diffs.append(f'{name}: 缺少基线文件 {gf}')
+                    continue
+                with open(gf, encoding='utf-8') as f:
+                    expected = json.load(f)
+                if snap != expected:
+                    diffs.append(
+                        f'{name}: 与基线不一致\n'
+                        f'    基线: {json.dumps(expected, ensure_ascii=False)}\n'
+                        f'    当前: {json.dumps(snap, ensure_ascii=False)}')
+            else:
+                with open(gf, 'w', encoding='utf-8') as f:
+                    json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
+                generated += 1
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    return diffs, generated
+
+
 def main():
     check = '--check' in sys.argv
     os.makedirs(golden_dir, exist_ok=True)
@@ -139,13 +218,19 @@ def main():
                 json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
             generated += 1
 
+    # V3.0.1-T1-8: 双平面场景 golden
+    dp_diffs, dp_generated = _run_dual_plane_scenarios(check)
+    diffs.extend(dp_diffs)
+    generated += dp_generated
+
     if check:
         if diffs:
             print(f'golden --check 失败（{len(diffs)} 项差异）：')
             for d in diffs:
                 print(f'  - {d}')
             sys.exit(1)
-        print(f'golden --check 通过：{len(templates)}/{len(templates)} 模板与基线一致')
+        print(f'golden --check 通过：{len(templates)}/{len(templates)} 模板与基线一致'
+              f'（含 {len(_dual_plane_scenarios())} 个双平面场景）')
     else:
         print(f'golden 基线生成完成：{generated} 个模板写入 {golden_dir}')
         if skipped:

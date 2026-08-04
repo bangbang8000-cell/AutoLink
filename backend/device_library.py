@@ -20,6 +20,8 @@ class InterfaceModel:
     downlink_prefix: str = "NIC"
     uplink_prefix: str = "NIC"
     port_numbering: str = "sequential"
+    # V3.0.1-T1-6: 双口网卡标记（dual-port：每卡 2 口，口1→平面A、口2→平面B）
+    dual_port: bool = False
 
 
 @dataclass
@@ -175,6 +177,8 @@ class DeviceLibrary:
                 downlink_prefix=im.get("downlink_prefix", "NIC"),
                 uplink_prefix=im.get("uplink_prefix", "NIC"),
                 port_numbering=im.get("port_numbering", "sequential"),
+                # V3.0.1-T1-6: 双口网卡标记
+                dual_port=bool(im.get("dual_port", False)),
             ))
 
         return LibraryDevice(

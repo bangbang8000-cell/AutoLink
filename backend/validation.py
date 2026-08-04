@@ -330,25 +330,48 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
 
     参数网/存储网所有服务器的网卡总数不得超过 Leaf 下行口总容量，
     否则 Leaf 端口不足导致部分服务器无法接入。
+
+    V3.0.1-T1-3: 双平面（dual_plane_stats）时按平面逐平面校验
+      required_per_plane = num_servers × nics_per_server
+      capacity_per_plane  = plane.leaf_count × plane.downlink_per_leaf
     """
     issues = []
 
-    # 参数网
-    num_servers = int(ctx.config.get('num_servers', 0) or 0)
-    ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
-    leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
-    dl = int(ctx.config.get('param_dl', 0) or 0)
-    required = num_servers * ports_per_server
-    capacity = leaf_count * dl
-    if capacity > 0 and required > capacity:
-        issues.append(ValidationIssue(
-            rule_id="V016",
-            severity=Severity.ERROR,
-            category="拓扑规则",
-            message=f"参数网服务器网卡总数 {required} 超过 Leaf 下行总容量 {capacity}",
-            affected_items=["param"],
-            recommendation="增加参数 Leaf 交换机数量或降低每服务器网卡数",
-        ))
+    # --- 参数网：双平面按平面展开 ---
+    dp_stats = ctx.config.get('dual_plane_stats')
+    if dp_stats:
+        num_servers = int(ctx.config.get('num_servers', 0) or 0)
+        nics = int(ctx.config.get('param_nics_per_server', 8) or 8)
+        required_per_plane = num_servers * nics
+        for pl in dp_stats:
+            capacity = int(pl.get('leaf_count', 0) or 0) * int(pl.get('downlink_per_leaf', 0) or 0)
+            if capacity > 0 and required_per_plane > capacity:
+                issues.append(ValidationIssue(
+                    rule_id="V016",
+                    severity=Severity.ERROR,
+                    category="拓扑规则",
+                    message=f"参数网平面{pl.get('plane', '?')}服务器网卡总数 {required_per_plane} "
+                            f"超过该平面 Leaf 下行总容量 {capacity}",
+                    affected_items=[f"param-plane-{pl.get('plane', '?')}"],
+                    recommendation="增加该平面 Leaf 交换机数量或降低每服务器网卡数",
+                ))
+    else:
+        # 参数网（传统四网）
+        num_servers = int(ctx.config.get('num_servers', 0) or 0)
+        ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
+        leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
+        dl = int(ctx.config.get('param_dl', 0) or 0)
+        required = num_servers * ports_per_server
+        capacity = leaf_count * dl
+        if capacity > 0 and required > capacity:
+            issues.append(ValidationIssue(
+                rule_id="V016",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"参数网服务器网卡总数 {required} 超过 Leaf 下行总容量 {capacity}",
+                affected_items=["param"],
+                recommendation="增加参数 Leaf 交换机数量或降低每服务器网卡数",
+            ))
 
     # 存储网
     total_servers = int(ctx.config.get('total_servers', num_servers) or 0)
