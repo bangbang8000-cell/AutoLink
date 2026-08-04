@@ -1,5 +1,64 @@
 # CHANGELOG
 
+## [3.0.2] - 2026-08-05
+
+### 三合一融合网与 1 分 2 扇出 + ZCube/华为超节点（3.X 系列迭代）
+
+v3.0.2 在 v3.0.1 双平面基础上补齐 3.X 组网能力：三合一融合网（存储 + 业务 + 带内管理合一）、1 分 2 扇出（逻辑口模型 + 分裂线缆）、ZCube 扁平二部图、华为超节点（PRD 见 `docs/v3.0/v3.0.X_PRD.md`）。
+
+#### 三合一融合网（T2-5）
+- `eth_combined` 融合域：存储 + 业务 + 带内管理合并为单一融合以太网（单层 Leaf），OOB 独立保留，GB300-NVL72 三合一模板落地
+- V022 校验：融合交换机存在 + 带内管理可达；融合交换机上架 / 冷板液冷 / 光模块 WARN 检查修复；机柜分配修复
+
+#### 1 分 2 扇出（T2-11）
+- NetworkObject 逻辑口模型：物理高速口按 `breakout.count` 拆分为逻辑低速口（端口 1-1 / 1-2），容量上限 = 物理口 × count
+- 一对多接线：参数网 / 存储网 / 融合网均按逻辑速率建连，携带归一化 breakout 标注
+- 分裂线缆选型闭环：`require_breakout` 匹配 800G→2×400G、400G→2×200G，布线指导表新增"1 分 2"列，V016 容量按逻辑口校验
+
+#### ZCube 与华为超节点（T2-1/T2-3/T2-4）
+- ZCube 扁平二部图：无 Spine 双口混合接入，CloudMatrix 384/512 模板
+- 华为超节点：UB 域内全对等 + 域间 800G Scale-Out 上联，V021 校验，HuaweiSuperNodePlugin
+- 昇腾 CloudMatrix 模板升级 huawei_supernode、新增 cloudmatrix_512 双域；华为方案全系华为设备（昇腾 256 / CloudMatrix 四网改用华为交换机 + CE6885H 档案）
+
+#### 版本与回归
+- 版本号 3.0.1 → 3.0.2（package.json / VERSION / package-lock.json）
+- 全量回归：vitest 362 passed、pytest 688 passed、golden 基线（GB300-NVL72 三合一）重新生成
+
+## [3.0.1] - 2026-08-04
+
+### 双平面与超大规模拓扑（3.X 重构 · 组网能力落地）
+
+v3.0.1 落地双平面 16 Leaf 组网与超大规模降载（PRD 见 `docs/v3.0/v3.0.X_PRD.md` 4.1.1）。
+
+#### 双平面 16 Leaf（T1-1~T1-8）
+- `param_planes` 双平面后端：每平面独立 Leaf/Spine（共 16 Leaf），服务器双口网卡逐平面接入
+- 双平面拓扑可视化基础版：平面 A/B 配色可辨识
+- 3-tier 服务器超级 Pod 分组 + 前端 Pod 归一化渲染；逐平面校验 + golden 基线
+
+#### 超大规模与模板
+- 超大规模拓扑降载：EDGE_LIMIT 边裁剪 + 折叠粒度归一化，2048 台全量报告无失真
+- `loadConfig` JSON 优先；B300 默认 Leaf 自动选型 Q3400；DP3Tier-1024 模板与 golden 基线
+
+## [3.0.0] - 2026-08-03
+
+### 引擎重构与发布体系（3.X 系列 · 基础重构）
+
+v3.0.0 是 3.X 系列基础重构版本：架构改为「渲染层（0 网络）+ 主进程 + Python 引擎」，后端 PyInstaller 打包免 Python 运行，CI 全量门禁 + tag 自动发布（PRD 见 `docs/v3.0/v3.0.X_PRD.md`）。
+
+#### 基础重构（T0-1~T0-6）
+- 版本切换 + schema 版本化迁移链 + 统一访问器 + golden 基线
+- 端口模型显式化 + GPU 池化 / 正交集群（P/D 集群独立组网）
+- 拓扑插件接线 + 集群正交模型元数据
+- Python 持久 Agent 进程 + 流式事件通道（NDJSON）
+
+#### 打包与 CI（T0-7/T0-8）
+- requirements 拆分 + PyInstaller 后端打包（`dist/backend-dist`，免 Python 运行）
+- CI 全量门禁：typecheck / lint / vitest / build / validate_templates / golden / pytest
+- CI 发布编译 job：tag 触发三平台（Win NSIS / macOS dmg / Linux AppImage+deb）构建并自动发布 Release
+
+#### 修复
+- 项目浏览器右键菜单功能丢失（ContextMenu 遮罩拦截右键事件）
+
 ## [2.9.9] - 2026-08-02
 
 ### 收口与发布（项目模板生命周期打通 · 最终阶段）
