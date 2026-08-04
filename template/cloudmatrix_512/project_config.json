@@ -1,9 +1,9 @@
 {
   "meta": {
-    "name": "cloudmatrix_384",
-    "description": "384 颗昇腾 910C NPU 华为超节点：UB 域内全对等 + 16 台 800G Scale-Out 上联",
-    "version": 2,
-    "created_at": "2026-08-02T22:48:15.565418",
+    "name": "cloudmatrix_512",
+    "description": "512 颗昇腾 910C NPU 华为超节点：双 UB 域（256×2）域内全对等 + 32 台 800G Scale-Out 跨域骨干",
+    "version": 1,
+    "created_at": "2026-08-04T00:00:00",
     "updated_at": "2026-08-04T00:00:00"
   },
   "networks": {
@@ -15,7 +15,7 @@
   "topology": {
     "downlink_mode": "custom",
     "param_protocol": "RoCE",
-    "num_gpu_servers": 384,
+    "num_gpu_servers": 512,
     "num_all_flash_storage": 0,
     "num_hybrid_flash_storage": 0,
     "num_compute_servers": 0,
@@ -31,10 +31,10 @@
     "oob_downlink_limit": 25,
     "param_network_mode": "huawei_supernode",
     "param_huawei_supernode": {
-      "num_npus": 384,
+      "num_npus": 512,
       "npus_per_node": 8,
       "ub_bandwidth_gbps": 2800,
-      "ub_domain_size": 0,
+      "ub_domain_size": 256,
       "num_scaleout_switches": 16,
       "scaleout_ports_per_npu": 2,
       "scaleout_speed": "800G",
