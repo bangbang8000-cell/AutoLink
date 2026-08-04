@@ -55,9 +55,12 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
 
   return (
     <>
-      {/* 点击遮罩关闭 */}
-      <div className="fixed inset-0 z-[99]" onClick={onClose} />
+      {/* 点击遮罩关闭 — 同时拦截右键事件，防止默认浏览器菜单弹出 */}
       <div
+        className="fixed inset-0 z-[99]"
+        onClick={onClose}
+        onContextMenu={(e) => { e.preventDefault(); onClose() }}
+      />\n      <div
         ref={menuRef}
         className="fixed z-[100] bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 min-w-[180px]"
         style={{ left: adjustedX, top: adjustedY }}

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
@@ -55,12 +55,17 @@ export function TreeNode({
   const [showContext, setShowContext] = useState(false)
   const [pos, setPos] = useState({ x: 0, y: 0 })
 
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (!contextMenu) return
     e.preventDefault()
+    e.stopPropagation()
     setPos({ x: e.clientX, y: e.clientY })
     setShowContext(true)
-  }
+  }, [contextMenu])
+
+  const handleClose = useCallback(() => {
+    setShowContext(false)
+  }, [])
 
   const showArrow = onArrowClick && hasChildren
 
@@ -108,7 +113,7 @@ export function TreeNode({
           items={contextMenu}
           x={pos.x}
           y={pos.y}
-          onClose={() => setShowContext(false)}
+          onClose={handleClose}
         />
       )}
     </>
