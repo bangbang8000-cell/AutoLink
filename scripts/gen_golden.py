@@ -183,6 +183,77 @@ def _run_dual_plane_scenarios(check):
     return diffs, generated
 
 
+# ================================================================
+# V3.0.2-T2-1: ZCube 扁平二部图 golden 场景（无 Spine / 双口混合接入）
+# ================================================================
+
+def _zcube_scenarios():
+    """返回 {name: project_config dict}（ZCube 验收场景，2+ 个）"""
+    from project_config import create_default_config
+
+    def base(name, servers, nics=2, leaf_count=0, switch_ports=144, storage=8, compute=8):
+        cfg = create_default_config(name)
+        cfg['topology'].update({
+            'num_gpu_servers': servers,
+            'num_all_flash_storage': storage,
+            'num_hybrid_flash_storage': 0,
+            'num_compute_servers': compute,
+            'param_speed': '400G',
+            'param_network_mode': 'zcube',
+            'param_zcube': {'nics_per_gpu': nics, 'leaf_count': leaf_count,
+                            'switch_ports': switch_ports},
+        })
+        return cfg
+
+    return {
+        # 512 GPU 双口混合：自动推导 L=8，两组 Leaf 各 8（16 Leaf，无 Spine/Core）
+        'zcube_512_dual_nic': base('zc-512', 512, nics=2),
+        # 1024 GPU 四口多轨：组 A 2 口 + 组 B 2 口（L 自动扩容满足容量）
+        'zcube_1024_quad_nic': base('zc-1024', 1024, nics=4),
+    }
+
+
+def _run_zcube_scenarios(check):
+    """生成/校验 ZCube 场景快照（文件 zcube_*.json）"""
+    from designer import NetworkDesignerV2
+    import tempfile
+    import shutil
+
+    diffs = []
+    generated = 0
+    tmpdir = tempfile.mkdtemp(prefix='golden_zc_')
+    try:
+        for name, cfg in _zcube_scenarios().items():
+            cfg_path = os.path.join(tmpdir, 'project_config.json')
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False)
+            try:
+                d = NetworkDesignerV2(cfg_path)
+                snap = _snapshot(d)
+            except Exception as e:  # 设计失败也记录快照（error）
+                snap = {'error': f'{type(e).__name__}: {e}'}
+
+            gf = os.path.join(golden_dir, name + '.json')
+            if check:
+                if not os.path.exists(gf):
+                    diffs.append(f'{name}: 缺少基线文件 {gf}')
+                    continue
+                with open(gf, encoding='utf-8') as f:
+                    expected = json.load(f)
+                if snap != expected:
+                    diffs.append(
+                        f'{name}: 与基线不一致\n'
+                        f'    基线: {json.dumps(expected, ensure_ascii=False)}\n'
+                        f'    当前: {json.dumps(snap, ensure_ascii=False)}')
+            else:
+                with open(gf, 'w', encoding='utf-8') as f:
+                    json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
+                generated += 1
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    return diffs, generated
+
+
 def main():
     check = '--check' in sys.argv
     os.makedirs(golden_dir, exist_ok=True)
@@ -223,6 +294,11 @@ def main():
     diffs.extend(dp_diffs)
     generated += dp_generated
 
+    # V3.0.2-T2-1: ZCube 场景 golden
+    zc_diffs, zc_generated = _run_zcube_scenarios(check)
+    diffs.extend(zc_diffs)
+    generated += zc_generated
+
     if check:
         if diffs:
             print(f'golden --check 失败（{len(diffs)} 项差异）：')
@@ -230,7 +306,8 @@ def main():
                 print(f'  - {d}')
             sys.exit(1)
         print(f'golden --check 通过：{len(templates)}/{len(templates)} 模板与基线一致'
-              f'（含 {len(_dual_plane_scenarios())} 个双平面场景）')
+              f'（含 {len(_dual_plane_scenarios())} 个双平面 + '
+              f'{len(_zcube_scenarios())} 个 ZCube 场景）')
     else:
         print(f'golden 基线生成完成：{generated} 个模板写入 {golden_dir}')
         if skipped:

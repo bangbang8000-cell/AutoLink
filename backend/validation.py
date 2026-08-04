@@ -358,7 +358,12 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
     else:
         # 参数网（传统四网）
         num_servers = int(ctx.config.get('num_servers', 0) or 0)
-        ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
+        # V3.0.2-T2-1: ZCube 每服务器参数口 = nics_per_gpu（双口混合接入）
+        if (str(ctx.config.get('param_network_mode', '') or '').strip().lower()) == 'zcube':
+            ports_per_server = int((ctx.config.get('zcube_stats') or {}).get('nics_per_gpu')
+                                   or (ctx.config.get('param_zcube') or {}).get('nics_per_gpu') or 2)
+        else:
+            ports_per_server = int(ctx.config.get('param_ports_per_server', 8) or 8)
         leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
         dl = int(ctx.config.get('param_dl', 0) or 0)
         required = num_servers * ports_per_server
@@ -489,6 +494,107 @@ def _rule_total_power_supply(ctx: ValidationContext) -> List[ValidationIssue]:
             affected_items=[],
             recommendation="增加机柜数量/供电容量, 或降低设备功耗配置 (如降低功率预设)",
         ))
+    return issues
+
+
+def _rule_zcube_structure(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V020: ZCube 扁平二部图结构校验 (V3.0.2-T2-1)
+
+    ZCube 模式（param_network_mode == 'zcube'）专属规则：
+      - 无 Spine/Core 层级一致性：参数网不得出现 Spine/Core 交换机（层级一致性）
+      - 端口容量：num_gpus × nics_per_gpu ≤ 2L × (switch_ports - L)
+      - 下联端口不超限：每 Leaf 实际下联 GPU ≤ downlink_per_leaf（保证路径唯一性前提）
+      - 双口混合接入：1 ≤ ports_to_group_a ≤ nics_per_gpu（前 p_a 口 → 组 A）
+    """
+    issues = []
+    if (str(ctx.config.get('param_network_mode', '') or '').strip().lower()) != 'zcube':
+        return issues
+
+    num_gpus = int(ctx.config.get('num_servers', 0) or 0)
+    stats = ctx.config.get('zcube_stats') or {}
+    zc = ctx.config.get('param_zcube') or {}
+    nics = int(stats.get('nics_per_gpu') or zc.get('nics_per_gpu') or 2)
+    L = int(stats.get('leaf_count') or 0)
+    switch_ports = int(stats.get('downlink_per_leaf') or 0) + L  # downlink+L=switch_ports
+
+    # --- 层级一致性：无 Spine/Core ---
+    spine_core = []
+    for sw in ctx.switches:
+        if sw.get('network_type') != 'param':
+            continue
+        if 'Spine' in sw.get('name', '') or 'Core' in sw.get('name', ''):
+            spine_core.append(sw.get('name', ''))
+    if spine_core:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"ZCube 扁平二部图不允许 Spine/Core 层，但存在: {', '.join(spine_core[:5])}",
+                affected_items=spine_core,
+                recommendation="ZCube 模式删除参数网 Spine/Core 交换机，仅保留两组 Leaf",
+            ))
+
+    # --- 端口容量：GPU 总网卡 ≤ 两组 Leaf 总下联容量 ---
+    if L > 0 and switch_ports > L:
+        required = num_gpus * nics
+        capacity = 2 * L * (switch_ports - L)
+        if required > capacity:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"ZCube GPU 网卡总数 {required} 超过两组 Leaf 总下联容量 {capacity} (2×{L}×{switch_ports - L})",
+                affected_items=["param-zcube"],
+                recommendation="增加 Leaf 数或使用更高端口密度交换机 (L×2 > num_gpus×nics/switch_ports 约束)",
+            ))
+
+    # --- 双口混合接入比例：1 ≤ p_a ≤ nics ---
+    p_a = int(stats.get('ports_to_group_a') or 0)
+    if p_a <= 0 or p_a > nics:
+        issues.append(ValidationIssue(
+            rule_id="V020",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"ZCube 双口混合接入比例异常: 组A端口数 {p_a} 超出网卡数 {nics}",
+            affected_items=["param-zcube"],
+            recommendation="每 GPU 前 ceil(nics/2) 口接组 A，余口接组 B，1 ≤ 组A口数 ≤ 网卡数",
+        ))
+
+    # --- 下联端口不超限（路径唯一性前提）：统计每 Leaf 实际下联/互联数 ---
+    # 每条物理链路在 edges 中双向各出现一次（c1/c2），仅按 Leaf 作为目标端计数一次
+    leaf_down = {}
+    leaf_inter = {}
+    for conn in ctx.connections:
+        if (conn.get('network_type') or conn.get('networkType', '')) != 'param':
+            continue
+        src, tgt = conn.get('source', ''), conn.get('target', '')
+        if tgt.startswith('参数') and 'Leaf' in tgt:
+            if src.startswith('参数') and 'Leaf' in src:
+                leaf_inter[tgt] = leaf_inter.get(tgt, 0) + 1
+            else:
+                leaf_down[tgt] = leaf_down.get(tgt, 0) + 1
+    downlink_per_leaf = int(stats.get('downlink_per_leaf') or 0)
+    inter_per_leaf = L
+    for leaf, cnt in sorted(leaf_down.items()):
+        if downlink_per_leaf > 0 and cnt > downlink_per_leaf:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"ZCube Leaf {leaf} 下联 GPU {cnt} 超过下联容量 {downlink_per_leaf}",
+                affected_items=[leaf],
+                recommendation="减少该 Leaf 接入 GPU 数或增加 Leaf 数量",
+            ))
+    for leaf, cnt in sorted(leaf_inter.items()):
+        if inter_per_leaf > 0 and cnt > inter_per_leaf:
+            issues.append(ValidationIssue(
+                rule_id="V020",
+                severity=Severity.WARNING,
+                category="拓扑规则",
+                message=f"ZCube Leaf {leaf} 组间互联 {cnt} 超过对组 Leaf 数 {inter_per_leaf}",
+                affected_items=[leaf],
+                recommendation="组间应为全二部互联，每组 Leaf 仅与对组每个 Leaf 各连 1 条",
+            ))
     return issues
 
 
@@ -722,4 +828,6 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V017", "兼容性规则", _rule_optical_module_match)
     engine.register_rule("V018", "拓扑规则", _rule_pod_domain_scale)
     engine.register_rule("V019", "物理规则", _rule_total_power_supply)
+    # V3.0.2-T2-1: ZCube 专属结构规则
+    engine.register_rule("V020", "拓扑规则", _rule_zcube_structure)
     return engine

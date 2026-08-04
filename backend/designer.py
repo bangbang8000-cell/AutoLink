@@ -265,6 +265,17 @@ class NetworkDesignerV2:
             # 双平面语义要求双口网卡（每卡口1→平面A、口2→平面B）
             self.ports_per_nic = 2
 
+        # --- V3.0.2-T2-1: ZCube 组网模式（param_network_mode: standard/zcube） ---
+        # 单集群场景：cluster.network_mode 桥接（正交模型前向兼容）
+        _cluster_mode = ''
+        if len(self.clusters) == 1:
+            _cluster_mode = (self.clusters[0].get('network_mode') or '').strip().lower()
+        self.param_network_mode = (str(topo.get('param_network_mode') or '') or _cluster_mode or 'standard').strip().lower()
+        if self.param_network_mode not in ('standard', 'zcube'):
+            self.param_network_mode = 'standard'
+        self.zcube_config = topo.get('param_zcube') or {}
+        self.zcube_stats = {}
+
         # --- 下行端口限制 ---
         self._resolve_downlink_limits()
 
@@ -620,6 +631,14 @@ class NetworkDesignerV2:
     # ================================================================
     def calc_network_hierarchy(self):
         """计算参数网络和存储网络的层次结构"""
+        # --- V3.0.2-T2-1: ZCube 组网（param_network_mode='zcube'，无 Spine） ---
+        if getattr(self, 'param_network_mode', 'standard') == 'zcube':
+            self._calc_zcube_hierarchy()
+            self.param_3tier_needed = False
+            self.param_pods = 0
+            self.param_servers_per_pod = 0
+            self.param_servers_per_group = max(1, self.num_servers)
+
         # --- V3.0.1-T1-1: 双平面 16 Leaf（可选段，优先于传统四网参数计算） ---
         if getattr(self, 'dual_plane_enabled', False):
             self._calc_dual_plane_hierarchy()
@@ -628,8 +647,8 @@ class NetworkDesignerV2:
             self.param_servers_per_pod = 0
             self.param_servers_per_group = max(1, self.num_servers)
 
-        # --- 参数网络（双平面启用时跳过传统计算，计数已在 _calc_dual_plane_hierarchy 完成） ---
-        if not getattr(self, 'dual_plane_enabled', False):
+        # --- 参数网络（双平面/ZCube 启用时跳过传统计算） ---
+        if not getattr(self, 'dual_plane_enabled', False) and getattr(self, 'param_network_mode', 'standard') != 'zcube':
             param_topology = FatTreeTopology(
                 self.param_ports_per_server, self.param_switch_ports,
                 self.param_speed, self.cable_types['param'], "param"
@@ -778,8 +797,10 @@ class NetworkDesignerV2:
             self.podid_map[s.name] = s.podid
 
         # 参数网络交换机
-        # V3.0.1-T1-2: 双平面 16 Leaf 优先于 Rail/传统 Fat-Tree
-        if getattr(self, 'dual_plane_enabled', False):
+        # V3.0.2-T2-1: ZCube（无 Spine）优先；V3.0.1-T1-2: 双平面 16 Leaf 次之；再 Rail/传统 Fat-Tree
+        if getattr(self, 'param_network_mode', 'standard') == 'zcube':
+            self._create_zcube_switches(param_switch_profile)
+        elif getattr(self, 'dual_plane_enabled', False):
             self._create_dual_plane_switches(param_switch_profile)
         elif self.rail_mode == 'rail_optimized':
             # V2.4.6: Rail-Optimized 模式（NVIDIA SuperPOD 8-Rail）
@@ -848,18 +869,28 @@ class NetworkDesignerV2:
             return 3 if three_tier else (2 if (leaves and spines) else (1 if leaves else 0))
 
         if getattr(self, 'param_enabled', True):
-            # V3.0.1-T1-2: 双平面域 planes=2（其余字段取平面 A 语义）
-            dp_planes = len(getattr(self, 'param_planes', []) or [])
-            self.domains.append(NetworkDomain(
-                type='param',
-                planes=dp_planes or 1,
-                tiers=_leaf_tiers(True, getattr(self, 'param_3tier_needed', False),
-                                  self.param_leaves, self.param_spines, self.param_cores),
-                protocol=getattr(self, 'param_protocol', 'RoCE'),
-                speed=getattr(self, 'param_speed', '400G'),
-                ports_per_server=getattr(self, 'param_ports_per_server', 8),
-                leaf_count=len(self.param_leaves),
-            ))
+            # V3.0.2-T2-1: ZCube 域（两组 Leaf，无 Spine；planes=2 复用平面 A/B 语义）
+            if getattr(self, 'param_network_mode', 'standard') == 'zcube':
+                self.domains.append(NetworkDomain(
+                    type='param', planes=2, tiers=1,
+                    protocol=getattr(self, 'param_protocol', 'RoCE'),
+                    speed=getattr(self, 'param_speed', '400G'),
+                    ports_per_server=int(self.zcube_config.get('nics_per_gpu', 2)),
+                    leaf_count=len(self.param_leaves),
+                ))
+            else:
+                # V3.0.1-T1-2: 双平面域 planes=2（其余字段取平面 A 语义）
+                dp_planes = len(getattr(self, 'param_planes', []) or [])
+                self.domains.append(NetworkDomain(
+                    type='param',
+                    planes=dp_planes or 1,
+                    tiers=_leaf_tiers(True, getattr(self, 'param_3tier_needed', False),
+                                      self.param_leaves, self.param_spines, self.param_cores),
+                    protocol=getattr(self, 'param_protocol', 'RoCE'),
+                    speed=getattr(self, 'param_speed', '400G'),
+                    ports_per_server=getattr(self, 'param_ports_per_server', 8),
+                    leaf_count=len(self.param_leaves),
+                ))
         if getattr(self, 'storage_enabled', True):
             self.domains.append(NetworkDomain(
                 type='storage',
@@ -1229,6 +1260,47 @@ class NetworkDesignerV2:
         dp.cores = self.param_cores
         dp.generate_connections(gpu_servers)
 
+    def _zcube_topology(self):
+        """V3.0.2-T2-1: 构造 ZCube 拓扑对象（配置自 self.zcube_config / param_network_mode）"""
+        from zcube_topology import ZcubeTopology
+        return ZcubeTopology(
+            num_gpus=self.num_servers,
+            nics_per_gpu=int(self.zcube_config.get('nics_per_gpu', 2)),
+            leaf_count=int(self.zcube_config.get('leaf_count', 0)),
+            switch_ports=int(self.zcube_config.get('switch_ports', self.param_switch_ports)),
+            cable_type_config=self.cable_types['param'],
+            network_type='param',
+            prefix='参数',
+        )
+
+    def _calc_zcube_hierarchy(self):
+        """V3.0.2-T2-1: ZCube 层次（两组 Leaf，无 Spine/Core）"""
+        zc = self._zcube_topology()
+        self.zcube_stats = zc.calculate()
+        self.param_leaf_count = 2 * self.zcube_stats['leaf_count']
+        self.param_spine_count = 0                      # 无 Spine：层级一致性
+        self.param_core_count = 0
+        self.param_dl = self.zcube_stats['downlink_per_leaf']
+
+    def _create_zcube_switches(self, profile=None):
+        """V3.0.2-T2-1: 创建 ZCube 两组 Leaf（无 Spine/Core）"""
+        zc = self._zcube_topology()
+        zc.calculate()
+        zc.create_objects()
+        self.param_leaves = zc.leaves
+        self.param_spines = []
+        self.param_cores = []
+        self.switch_groups.update(zc.switch_groups)
+        self.podid_map.update(zc.podid_map)
+        self._apply_switch_port_prefixes(self.param_leaves, profile)
+
+    def _wire_zcube(self, gpu_servers):
+        """V3.0.2-T2-1: ZCube 连接生成（GPU→两组 Leaf + A↔B 全二部）"""
+        zc = self._zcube_topology()
+        zc.calculate()
+        zc.leaves = self.param_leaves
+        zc.generate_connections(gpu_servers)
+
     def _create_rail_optimized_switches(self, profile=None):
         """V2.4.6: 创建 Rail-Optimized 参数网交换机（NVIDIA SuperPOD 8-Rail）"""
         self._rail_topology = RailOptimizedTopology(
@@ -1316,8 +1388,10 @@ class NetworkDesignerV2:
     def generate_connections(self):
         gpu_servers = self.servers[:self.num_servers]
 
-        # V3.0.1-T1-2: 双平面连接优先
-        if getattr(self, 'dual_plane_enabled', False):
+        # V3.0.2-T2-1: ZCube 连接优先；V3.0.1-T1-2: 双平面连接次之
+        if getattr(self, 'param_network_mode', 'standard') == 'zcube':
+            self._wire_zcube(gpu_servers)
+        elif getattr(self, 'dual_plane_enabled', False):
             self._wire_dual_plane(gpu_servers)
         elif self.rail_mode == 'rail_optimized':
             # V2.4.6: Rail-Optimized 拓扑连接
@@ -1560,6 +1634,9 @@ class NetworkDesignerV2:
         # V3.0.1-T1-2: 双平面每服务器参数口 = nics_per_server × ports_per_nic（如 8×2=16）
         if getattr(self, 'dual_plane_enabled', False):
             param_nic_total = self.num_servers * self.param_nics_per_server * self.ports_per_nic
+        # V3.0.2-T2-1: ZCube 每服务器参数口 = nics_per_gpu（双口混合接入，如 2）
+        elif getattr(self, 'param_network_mode', 'standard') == 'zcube':
+            param_nic_total = self.num_servers * int(self.zcube_config.get('nics_per_gpu', 2))
         else:
             param_nic_total = self.num_servers * self.param_ports_per_server
         storage_nic_total = self.total_servers * self.storage_ports_per_server

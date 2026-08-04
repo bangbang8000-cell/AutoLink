@@ -3,7 +3,7 @@
 覆盖：
   - param_planes schema 校验（合法/非法/缺失兼容 2.9.9）
   - 128×H200（CX7 2×200G）：双平面各 8 Leaf、每服务器 16 口（8/平面）、自检通过
-  - 1024×B300（CX8 2×400G）800G IB：leaf 自动扩容、自检通过
+  - 1024×B300（CX8 2×400G）800G IB：逐平面 3-tier（Pod 化 + Core）、自检通过
   - 逐平面 protocol/speed 独立生效
   - 传统配置（无 param_planes）行为不变（双平面关闭）
   - engine handle_design summary 输出 domains.planes=2
@@ -135,14 +135,16 @@ def test_h200_topology_valid(tmp_path):
     assert result['valid'], result['errors']
 
 
-# ---------- 1024×B300（CX8 2×400G）800G IB：leaf 自动扩容 ----------
+# ---------- 1024×B300（CX8 2×400G）800G IB：逐平面 3-tier ----------
 
 def test_b300_800g_dual_plane(tmp_path):
     d = _designer(tmp_path, servers=1024, speed="800G", storage=32, compute=16)
-    # 8192 下联/平面 ÷ 128/Leaf → 64 Leaf/平面（自动扩容）
+    # 1024 > 单 Pod 容量 648 → 每平面 3-tier（Pod=2，每 Pod 72 Leaf）
     from collections import Counter
-    assert dict(Counter(getattr(l, 'plane_id', None) for l in d.param_leaves)) == {0: 64, 1: 64}
-    assert len(d.param_leaves) == 128
+    assert dict(Counter(getattr(l, 'plane_id', None) for l in d.param_leaves)) == {0: 144, 1: 144}
+    assert len(d.param_leaves) == 288
+    assert d.dual_plane_stats[0]['tier'] == 3
+    assert d.dual_plane_stats[0]['pods'] == 2
     assert d.validate_topology()['valid']
 
 

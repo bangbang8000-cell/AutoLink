@@ -189,9 +189,11 @@ def unregister_plugin(name: str) -> bool:
 # 传统 designer 原生支持的组网模式（无需插件，走 NetworkDesignerV2 既有路径）。
 # 组合形态：standard / fat_tree（同义）与 rail / rail_optimized（同义，Rail-Optimized）。
 # 网络域级：param/storage/biz/oob/scale_up（对应既有四网 + Scale-Up）。
+# V3.0.1-T1-2/V3.0.2-T2-1: dual_plane（param_planes 配置）、zcube（param_network_mode='zcube'）。
 NATIVE_NETWORK_MODES = frozenset({
     'standard', 'fat_tree', 'rail', 'rail_optimized',
     'param', 'storage', 'biz', 'oob', 'scale_up',
+    'dual_plane', 'zcube',
 })
 
 
@@ -633,18 +635,83 @@ class ScaleUpNetworkPlugin(NetworkPlugin):
         }
 
 
+class ZcubeNetworkPlugin(NetworkPlugin):
+    """ZCube 组网插件（V3.0.2-T2-1，PRD 4.1.2）
+
+    扁平化二部图：两组 Leaf 直连 GPU、无 Spine；双口单轨/多轨混合接入。
+    与 Designer 原生路径共用 zcube_topology.ZcubeTopology（插件接口的合规封装）。
+    """
+
+    _VALID_PROTOCOLS = ["RoCEv2", "IB", "UEC"]
+
+    def get_info(self) -> NetworkPluginInfo:
+        return NetworkPluginInfo(
+            name="zcube",
+            display_name="ZCube",
+            tier=NetworkTier.SCALE_OUT,
+            protocols=self._VALID_PROTOCOLS,
+            description="ZCube 扁平化二部图（无 Spine，两组 Leaf 直连 GPU，双口混合接入）",
+        )
+
+    def validate_config(self, config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        if config.get("num_gpus", 0) <= 0:
+            errors.append("num_gpus 必须大于 0")
+        if config.get("switch_ports", 0) <= 0:
+            errors.append("switch_ports 必须大于 0")
+        return errors
+
+    def generate_topology(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        from zcube_topology import ZcubeTopology
+
+        zc = ZcubeTopology(
+            num_gpus=config.get("num_gpus", 1024),
+            nics_per_gpu=config.get("nics_per_gpu", 2),
+            leaf_count=config.get("leaf_count", 0),
+            switch_ports=config.get("switch_ports", 144),
+            cable_type_config={"server_leaf": "MPO", "leaf_spine": "MPO"},
+        )
+        stats = zc.calculate()
+        # 纯 dict 表达（插件接口）；Designer 原生路径直接用 ZcubeTopology 对象
+        return {
+            "network_type": "zcube",
+            "nodes": [
+                {"id": f"参数{label}_Leaf_{i}", "type": "switch", "role": "leaf",
+                 "network_type": "param", "zcube_group": label}
+                for label in ("A", "B") for i in range(1, stats["leaf_count"] + 1)
+            ],
+            "edges": [],
+            "stats": {
+                "num_gpus": stats["num_gpus"],
+                "leaf_count_per_group": stats["leaf_count"],
+                "nics_per_gpu": stats["nics_per_gpu"],
+                "no_spine": True,
+            },
+        }
+
+    def get_default_config(self) -> Dict[str, Any]:
+        return {
+            "num_gpus": 1024,
+            "nics_per_gpu": 2,
+            "leaf_count": 0,
+            "switch_ports": 144,
+        }
+
+
 def register_builtin_plugins() -> None:
     """注册所有内置插件
 
-    将 5 个内置网络插件注册到全局插件表:
+    将内置网络插件注册到全局插件表:
       - param    参数网 (RoCEv2/IB)
       - storage  存储网 (RoCEv2)
       - biz      业务网 (Ethernet)
       - oob      带外管理网 (Ethernet)
       - scale_up Scale-Up 网 (NVLink/UALink/UB)
+      - zcube    ZCube 扁平化二部图（V3.0.2-T2-1）
     """
     register_plugin("param", ParamNetworkPlugin())
     register_plugin("storage", StorageNetworkPlugin())
     register_plugin("biz", BizNetworkPlugin())
     register_plugin("oob", OOBNetworkPlugin())
     register_plugin("scale_up", ScaleUpNetworkPlugin())
+    register_plugin("zcube", ZcubeNetworkPlugin())

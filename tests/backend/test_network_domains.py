@@ -43,14 +43,14 @@ def _base_config(name="domains-test"):
 
 def test_engine_registers_builtin_plugins():
     _ensure_plugins_ready()  # 幂等
-    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up"}
+    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up", "zcube"}
     assert get_plugin("param") is not None
 
 
 def test_register_builtin_plugins_idempotent():
     register_builtin_plugins()
     register_builtin_plugins()
-    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up"}
+    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up", "zcube"}
 
 
 # ---------- network_mode 分派 ----------
@@ -64,19 +64,21 @@ def test_resolve_network_mode_dispatch():
     assert resolve_network_mode('rail_optimized') == 'native'
     assert resolve_network_mode('param') == 'native'
     assert resolve_network_mode('scale_up') == 'native'
-    # unknown：3.0.0 未实现的组网模式（3.0.1/3.0.2 插件落地后变为 plugin）
-    assert resolve_network_mode('zcube') == 'unknown'
+    # V3.0.1/V3.0.2: dual_plane / zcube 已接入 Designer 原生路径
+    assert resolve_network_mode('dual_plane') == 'native'
+    assert resolve_network_mode('zcube') == 'native'
+    # unknown：3.0.2 未实现的组网模式（插件落地后变为 plugin）
     assert resolve_network_mode('huawei_supernode') == 'unknown'
 
 
 def test_validate_cluster_network_modes_unknown():
     cfg = _base_config()
     cfg['clusters'] = [
-        {"cluster_id": "c-p", "role": "P", "network_mode": "zcube", "gpu_pools": []},
+        {"cluster_id": "c-p", "role": "P", "network_mode": "huawei_supernode", "gpu_pools": []},
     ]
     errors = _validate_cluster_network_modes(cfg)
     assert len(errors) == 1
-    assert 'zcube' in errors[0]
+    assert 'huawei_supernode' in errors[0]
 
 
 def test_validate_cluster_network_modes_native_ok():
@@ -171,10 +173,10 @@ def test_clusters_metadata_no_clusters(tmp_path):
 # ---------- engine 分派接缝（handle_design 级别） ----------
 
 def test_handle_design_rejects_unknown_network_mode(tmp_path):
-    cfg = _clustered_config(network_mode='zcube')
+    cfg = _clustered_config(network_mode='huawei_supernode')
     path = _write_config(tmp_path, cfg)
     result = handle_design({'configFile': str(path)})
-    assert 'error' in result and 'zcube' in result['error']
+    assert 'error' in result and 'huawei_supernode' in result['error']
 
 
 def test_handle_design_accepts_native_network_mode(tmp_path):

@@ -274,6 +274,10 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
         planes_err = _validate_param_planes(config)
         if planes_err:
             return planes_err
+        # V3.0.2-T2-1: 宽松模式同样校验 ZCube 组网模式（若存在）
+        mode_err = _validate_param_mode(config)
+        if mode_err:
+            return mode_err
         return None
 
     # ============ 严格模式（默认）：完整 REQUIRED 校验 ============
@@ -342,7 +346,37 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
     if planes_err:
         return planes_err
 
+    # V3.0.2-T2-1: 可选 ZCube 组网模式校验（param_network_mode / param_zcube）
+    mode_err = _validate_param_mode(config)
+    if mode_err:
+        return mode_err
+
     return None  # 校验通过
+
+
+def _validate_param_mode(config: dict) -> str | None:
+    """V3.0.2-T2-1: 参数网组网模式校验
+
+    - param_network_mode: 'standard' | 'zcube'（缺省 standard，兼容 2.9.9）
+    - param_zcube: 可选 {nics_per_gpu>0, leaf_count>0, switch_ports>0}
+    """
+    topo = config.get('topology') or {}
+    mode = topo.get('param_network_mode')
+    if mode is not None and mode not in ('standard', 'zcube'):
+        return "topology.param_network_mode 必须是 'standard' 或 'zcube'"
+    zc = topo.get('param_zcube')
+    if zc is None:
+        return None
+    if not isinstance(zc, dict):
+        return "topology.param_zcube 必须是 JSON 对象"
+    for k in ('nics_per_gpu', 'switch_ports'):
+        if k in zc and (not isinstance(zc.get(k), (int, float)) or zc.get(k, 0) <= 0):
+            return f"topology.param_zcube.{k} 必须是正数"
+    # leaf_count=0 表示自动推导（最小满足容量），允许
+    lc = zc.get('leaf_count')
+    if lc is not None and (not isinstance(lc, (int, float)) or lc < 0):
+        return "topology.param_zcube.leaf_count 必须是非负整数（0=自动推导）"
+    return None
 
 
 def _validate_param_planes(config: dict) -> str | None:

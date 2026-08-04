@@ -356,8 +356,8 @@ class TestEngineBasics:
     """引擎基础功能"""
 
     def test_default_engine_has_15_rules(self, engine):
-        """默认引擎含 19 条规则 (V001-V019, V2.9.3-T5 新增 V016-V019 硬规则)"""
-        assert engine.get_rule_count() == 19
+        """默认引擎含 20 条规则 (V001-V020, V3.0.2-T2-1 新增 V020 ZCube 结构规则)"""
+        assert engine.get_rule_count() == 20
 
     def test_rule_exception_becomes_error_issue(self, engine):
         """规则函数抛异常时应转为 ERROR issue"""

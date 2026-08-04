@@ -190,7 +190,9 @@ def _estimate_design(designer, params=None):
     # 5. 收敛比（参数网/存储网/业务网）
     convergence = {}
     # 参数网
-    if designer.param_leaf_count > 0:
+    # V3.0.2-T2-1: ZCube 无 Spine 层，Leaf 上行口为组间互联（非收敛），跳过收敛比计算
+    is_zcube = getattr(designer, 'param_network_mode', 'standard') == 'zcube'
+    if designer.param_leaf_count > 0 and not is_zcube:
         param_dl = getattr(designer, 'param_dl', 0) or 0
         param_ul = max(designer.param_switch_ports - param_dl, 0)
         convergence['param'] = _conv_to_dict(calc_convergence_ratio(
@@ -557,6 +559,12 @@ def handle_design(params):
         "param_nics_per_server": getattr(designer, 'param_nics_per_server', 8),
         "ports_per_nic": getattr(designer, 'ports_per_nic', 1),
         "dual_plane_stats": getattr(designer, 'dual_plane_stats', None),
+        # V3.0.2-T2-1: ZCube 校验数据（V020）
+        "param_network_mode": getattr(designer, 'param_network_mode', 'standard'),
+        "param_zcube": getattr(designer, 'zcube_config', {}),
+        "zcube_stats": getattr(designer, 'zcube_stats', None),
+        "param_spine_count": getattr(designer, 'param_spine_count', 0),
+        "param_core_count": getattr(designer, 'param_core_count', 0),
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
