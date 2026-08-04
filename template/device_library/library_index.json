@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-08-02",
+  "updated_at": "2026-08-04",
   "categories": [
     {
       "id": "gpu_servers",
@@ -118,6 +118,7 @@
       "directory": "switches/storage",
       "device_ids": [
         "huawei_ce6881_48s6cq",
+        "huawei_ce6885h",
         "nvidia_sn4600c",
         "ruijie_rg_s6510_48vs8cq",
         "generic_48p_200g"

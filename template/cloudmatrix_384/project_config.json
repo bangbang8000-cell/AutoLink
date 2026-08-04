@@ -50,6 +50,30 @@
     },
     "param_switch": {
       "library_id": "huawei_ce16800_64_800g"
+    },
+    "storage_leaf_switch": {
+      "library_id": "huawei_ce6885h"
+    },
+    "storage_switch": {
+      "library_id": "huawei_ce6885h"
+    },
+    "all_flash_storage_server": {
+      "library_id": "huawei_oceanstor_dorado_8000"
+    },
+    "storage_server": {
+      "library_id": "huawei_oceanstor_dorado_8000"
+    },
+    "biz_access_switch": {
+      "library_id": "huawei_ce6860_48s6cq"
+    },
+    "biz_agg_switch": {
+      "library_id": "huawei_s6730_h48x6c"
+    },
+    "oob_access_switch": {
+      "library_id": "huawei_s5735_l48t4x_a"
+    },
+    "oob_agg_switch": {
+      "library_id": "huawei_s5732_h48s6q"
     }
   },
   "rack_config": {
