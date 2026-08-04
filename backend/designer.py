@@ -1631,11 +1631,13 @@ class NetworkDesignerV2:
                 try:
                     lp = leaf.get_downlink_port()
                     srv_port = f"{server.storage_prefix or '融合网卡'}{pi}"
-                    self._add_conn(server, srv_port, self.storage_speed,
-                                   leaf, lp, self.storage_speed,
+                    # V3.0.2-T2-11: 1 分 2 扇出时逻辑连接速率取 Leaf 逻辑输出速率
+                    link_speed = self._link_speed_for(leaf, self.storage_speed)
+                    self._add_conn(server, srv_port, link_speed,
+                                   leaf, lp, link_speed,
                                    self.cable_types['storage']['server_leaf'],
                                    "服务器到融合Leaf",
-                                   network_type='combined')
+                                   network_type='combined', breakout=leaf.breakout_link_info)
                 except ValueError:
                     continue
 
@@ -1755,9 +1757,11 @@ class NetworkDesignerV2:
                 try:
                     sp = f"{server.port_prefix or '参数网卡'}{pi}"
                     lp = leaf.get_downlink_port()
-                    self._add_conn(server, sp, self.param_speed, leaf, lp, self.param_speed,
+                    # V3.0.2-T2-11: 1 分 2 扇出时逻辑连接速率取 Leaf 逻辑输出速率（如 Q3200 800G→2×400G）
+                    link_speed = self._link_speed_for(leaf, self.param_speed)
+                    self._add_conn(server, sp, link_speed, leaf, lp, link_speed,
                                    self.cable_types['param']['server_leaf'], "服务器到参数Leaf",
-                                   network_type='param')
+                                   network_type='param', breakout=leaf.breakout_link_info)
                 except ValueError:
                     continue
 
@@ -1797,11 +1801,13 @@ class NetworkDesignerV2:
                     lp = leaf.get_downlink_port()
                     # V2.9.3-T7: 存储网卡前缀取自接口模型
                     srv_port = f"{server.storage_prefix or '存储网卡'}{pi}"
-                    self._add_conn(server, srv_port, self.storage_speed,
-                                   leaf, lp, self.storage_speed,
+                    # V3.0.2-T2-11: 1 分 2 扇出时逻辑连接速率取 Leaf 逻辑输出速率（如 TH5 400G→2×200G 接存储）
+                    link_speed = self._link_speed_for(leaf, self.storage_speed)
+                    self._add_conn(server, srv_port, link_speed,
+                                   leaf, lp, link_speed,
                                    self.cable_types['storage']['server_leaf'],
                                    "服务器到存储Leaf",
-                                   network_type='storage')
+                                   network_type='storage', breakout=leaf.breakout_link_info)
                 except ValueError:
                     continue
 
@@ -1849,21 +1855,31 @@ class NetworkDesignerV2:
                     except ValueError:
                         break
 
-    def _add_conn(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod, cable, desc, network_type=""):
+    def _add_conn(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod, cable, desc, network_type="",
+                  breakout=None):
+        # V3.0.2-T2-11: breakout 标注（1 分 2 分裂线缆时携带）
         c1 = Connection(a_dev.name, a_port, a_mod, z_dev.name, z_port, z_mod, cable, desc,
                         a_cabinet_id=a_dev.cabinet_id, a_cabinet_name=a_dev.cabinet_name,
                         a_start_u=a_dev.start_u, a_end_u=a_dev.end_u,
                         z_cabinet_id=z_dev.cabinet_id, z_cabinet_name=z_dev.cabinet_name,
                         z_start_u=z_dev.start_u, z_end_u=z_dev.end_u,
-                        network_type=network_type)
+                        network_type=network_type, breakout=breakout)
         c2 = Connection(z_dev.name, z_port, z_mod, a_dev.name, a_port, a_mod, cable, desc,
                         a_cabinet_id=z_dev.cabinet_id, a_cabinet_name=z_dev.cabinet_name,
                         a_start_u=z_dev.start_u, a_end_u=z_dev.end_u,
                         z_cabinet_id=a_dev.cabinet_id, z_cabinet_name=a_dev.cabinet_name,
                         z_start_u=a_dev.start_u, z_end_u=a_dev.end_u,
-                        network_type=network_type)
+                        network_type=network_type, breakout=breakout)
         a_dev.add_connection(c1)
         z_dev.add_connection(c2)
+
+    def _link_speed_for(self, leaf, default_speed):
+        """V3.0.2-T2-11: 接线逻辑速率 —— 交换机 1 分 2 扇出时取逻辑输出速率（如 800G→400G），否则默认"""
+        if getattr(leaf, 'breakout_count', 1) > 1:
+            out = getattr(leaf, 'breakout_output_speed', None)
+            if out:
+                return out
+        return default_speed
 
     # ================================================================
     #  OOB / 业务

@@ -738,6 +738,9 @@ def export_cabling_guide(designer, filename):
                 'Z端U位': f"{conn.z_start_u}-{conn.z_end_u}" if conn.z_start_u else '',
                 '速率': conn.a_module or '',
                 '线缆类型': conn.cable_type,
+                # V3.0.2-T2-11: 1 分 2 扇出标注（如 "1分2 (800G→400G)"）
+                '1分2扇出': (f"1分{conn.breakout.get('count', 2)} ({conn.breakout.get('input_speed', '')}→{conn.breakout.get('output_speed', '')})"
+                            if isinstance(getattr(conn, 'breakout', None), dict) else ''),
                 '光模块型号': sel.module_id if sel else '',
                 '封装': sel.form_factor if sel else '',
                 '规格': sel.spec if sel else '',
