@@ -6,13 +6,13 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-2.9.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.0.2-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
-[![Templates](https://img.shields.io/badge/templates-16-teal)](#)
-[![Devices](https://img.shields.io/badge/devices-118-purple)](#)
-[![CI](https://img.shields.io/badge/tests-885%20passed-brightgreen)](#)
+[![Templates](https://img.shields.io/badge/templates-19-teal)](#)
+[![Devices](https://img.shields.io/badge/devices-120-purple)](#)
+[![CI](https://img.shields.io/badge/tests-1050%20passed-brightgreen)](#)
 
 </div>
 
@@ -29,10 +29,10 @@
 | 维度 | 能力 |
 |------|------|
 | **全栈规划** | Scale-Up（卡间互联）+ Scale-Out（网间互联）双栈一体化，支持 IB / RoCE / UEC 三种 Scale-Out 协议 |
-| **真材实料** | 118 款主流设备库（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ 34 款光模块 |
-| **硬核校验** | 19 条校验规则（V001-V019）：拓扑连通性、端口容量、光模块匹配、功率上限，杜绝"设计失守" |
+| **真材实料** | 120 款主流设备库（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ 35 款光模块 |
+| **硬核校验** | 22 条校验规则（V001-V022）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
 | **交付级报告** | 连接表 / 布线表 / BOM / 设备清单 / 机柜表 / 9 章 PDF 报告，收敛比全部按计算值输出 |
-| **开箱即用** | 16 套场景模板 + 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
+| **开箱即用** | 19 套场景模板 + 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
 
 ---
 
@@ -72,15 +72,18 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - 布局落盘 `topology.json`，重新生成保留已保存布局；切换项目数据隔离
 - 暗色模式自适应，节点类型/机柜/功率信息悬浮即显
 
-### 4. 智能校验引擎（19 条硬规则）
+### 4. 智能校验引擎（22 条硬规则）
 
 | 规则 | 校验内容 |
 |------|----------|
 | V001-V015 | 拓扑连通性、端口溢出、设备一致性、PUE 合规等 |
-| **V016** | 服务器网卡总数 vs Leaf 下行容量 |
-| **V017** | 光模块封装 / 距离 / 速率匹配 |
+| **V016** | 服务器网卡总数 vs Leaf 下行容量（1 分 2 扇出按逻辑口计算） |
+| **V017** | 光模块封装 / 距离 / 速率匹配（含分裂线缆） |
 | **V018** | Pod / Scale-Up 域规模合理性 |
 | **V019** | 整机房功耗 vs 供电容量 |
+| **V020** | ZCube 扁平二部图接入容量 |
+| **V021** | 华为超节点 UB 域内全对等 + 域间 Scale-Out |
+| **V022** | 三合一融合网（融合交换机存在 + 带内管理可达） |
 
 ### 5. PUE 与能耗估算
 
@@ -95,9 +98,10 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 ### 7. 光模块智能选型
 
-- 34 款光模块库（100G / 200G / 400G / 800G / 1.6T）
+- 35 款光模块库（100G / 200G / 400G / 800G / 1.6T）
 - 按速率、距离、线缆类型自动选型，DAC / AOC / SR4 / DR4 / FR4 / LR4 全规格
 - 成本估算（价格区间），支持 V017 光模块匹配校验
+- **1 分 2 分裂线缆**：800G→2×400G、400G→2×200G、1.6T→2×800G 自动辨识，按物理口速率匹配
 
 ### 8. 机柜 U 位规划
 
@@ -116,6 +120,23 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - 5 种语言：简体中文 / English / 日本語 / 한국어 / 繁體中文，i18n key 完整性测试防回归
 - 首启 3 步引导、空状态引导、键盘快捷键速查表
 
+### 11. 双平面与超大规模拓扑（v3.0.1）
+
+- 双平面（dual-plane）16 Leaf / 800G IB：每平面独立 Leaf/Spine，服务器双口网卡逐平面接入
+- 3-tier 服务器超级 Pod 分组，Pod 归一化渲染；B300 默认 Leaf 自动选型 Q3400
+- 超大规模降载：EDGE_LIMIT 边裁剪与折叠粒度归一化，2048 台全量报告无失真
+
+### 12. 三合一融合网与 1 分 2 扇出（v3.0.2）
+
+- **三合一融合网（eth_combined）**：存储 + 业务 + 带内管理合并为单一融合以太网域（单层 Leaf），OOB 独立保留，GB300-NVL72 模板落地
+- **1 分 2 扇出（breakout）**：交换机 1 个物理高速口 → 2 个逻辑低速口（Q3200 800G→2×400G、MQM9700 400G→2×200G），服务器双口自动落同一物理口分裂子口（端口1-1/端口1-2）
+- 分裂线缆选型闭环：布线指导表标注"1 分 2"，V016 容量按逻辑口校验
+
+### 13. ZCube 与华为超节点（v3.0.2）
+
+- **ZCube 扁平二部图**：无 Spine 双口混合接入，CloudMatrix 384/512 模板
+- **华为超节点（huawei_supernode）**：UB 域内全对等 + 域间 800G Scale-Out 上联，V021 校验
+
 ---
 
 ## 📦 快速开始
@@ -124,17 +145,17 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-2.9.3-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-2.9.3-mac-x64.dmg` / `AutoLink-2.9.3-mac-arm64.dmg`
-- **Linux**：`AutoLink-2.9.3-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.0.2-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.0.2-mac-x64.dmg` / `AutoLink-3.0.2-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.0.2-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建 3 个示例项目，内置 **16 套场景模板** 与 **118 款设备库**。
+安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 
 ### 方式二：从源码运行
 
 #### 环境要求
 - **Node.js** ≥ 22
-- **Python** ≥ 3.10（需安装 `pandas`、`openpyxl`、`reportlab`）
+- **Python** ≥ 3.12（推荐；需 `pandas`、`openpyxl`、`reportlab`）
 
 ```bash
 git clone https://github.com/bangbang8000-cell/AutoLink.git
@@ -152,31 +173,39 @@ npm run dist:mac    # macOS (DMG x64 + arm64)
 npm run dist:linux  # Linux (AppImage + DEB)
 ```
 
+> V3.0.0 起：`electron-builder` 前自动用 **PyInstaller** 将 Python 引擎打包为免 Python 运行的后端（`scripts/pyinstaller.spec`），安装包内置 `backend-dist`。
+
 ### 运行测试
 
 ```bash
-npm test              # 前端测试（Vitest 341 cases）
-npm run test:backend  # 后端测试（pytest 544 cases）
-npm run test:all      # 全量测试（885 cases）
+npm test              # 前端测试（Vitest 362 cases）
+npm run test:backend  # 后端测试（pytest 688 cases）
+npm run test:all      # 全量测试（1050 cases）
 npm run typecheck     # TypeScript 类型检查（含 preload）
 npm run lint          # ESLint 代码检查（0 error）
-python scripts/validate_templates.py  # 16 模板验证
+python scripts/validate_templates.py  # 19 模板验证
+python scripts/gen_golden.py --check  # golden 基线比对
 ```
 
 ---
 
-## 🗂️ 内置模板（16 套）
+## 🗂️ 内置模板（19 套）
 
 | 模板 | 场景 | 规模 | Scale-Up |
 |------|------|------|----------|
 | NVL72-单架 | NVIDIA GB200 NVLink 域 | 72 GPU | NVLink 72 单域 ✅ |
+| **GB300-NVL72-三合一** | GB300 冷板液冷 + 三合一融合网 | 72 GPU | NVLink 72 单域 ✅ |
 | ualink_1_0_1024 | UALink 1.0 1024 GPU Pod | 1024 GPU | UALink 1024 ✅ |
 | cloudmatrix_384 | 华为 CloudMatrix 384 | 384 GPU | UB 384 单域 ✅ |
+| cloudmatrix_512 | 华为 CloudMatrix 双域 | 512 NPU | UB 双域 ✅ |
 | uec_1_0_cluster | UEC 1.0 集群 | 1024 GPU | — |
 | SuperPOD-256 | NVIDIA SuperPOD | 256 GPU | — |
+| DP3Tier-1024 | 3-tier 双平面 800G | 1024 GPU | — |
 | H100-100台 / H100-128台 | NVIDIA H100 训练 | 100 / 128 GPU | — |
 | L20-推理-64 | L20 推理集群 | 64 GPU | — |
 | 国产-昇腾-256 | 华为昇腾 910B | 256 NPU | — |
+| cambricon_mlu_cluster | 寒武纪 MLU 集群 | — | — |
+| hygon_dcu_cluster | 海光 DCU 集群 | — | — |
 | 液冷-H100-256 | 液冷场景 | 256 GPU | — |
 | 中型-512 / 大型-1024 / 超大-2048 | 训练集群 | 512 / 1024 / 2048 GPU | — |
 | 空项目 | 从零开始 | — | — |
@@ -185,12 +214,12 @@ python scripts/validate_templates.py  # 16 模板验证
 
 ## 🛠️ 技术栈
 
-- **前端**：React 18 + TypeScript + Zustand + Tailwind CSS + react-flow + ECharts
+- **前端**：React 18 + TypeScript + Zustand + Tailwind CSS + @xyflow/react + ECharts + Vite
 - **桌面**：Electron + contextBridge（安全隔离）+ electron-updater（双通道更新）
-- **后端**：Python（pandas + openpyxl + reportlab），JSON-RPC 桥接
-- **测试**：Vitest（341）+ pytest（544）
+- **后端**：Python（pandas + openpyxl + reportlab），JSON-RPC 子进程桥接，PyInstaller 免 Python 打包
+- **测试**：Vitest（362）+ pytest（688）
 - **i18n**：react-i18next（5 种语言）
-- **CI/CD**：GitHub Actions 三平台矩阵构建（win / mac / linux）
+- **CI/CD**：GitHub Actions 三平台矩阵构建（win / mac / linux）+ 模板/golden 门禁
 
 ---
 
@@ -199,19 +228,23 @@ python scripts/validate_templates.py  # 16 模板验证
 ```
 AutoLink/
 ├── backend/                # Python 计算引擎
-│   ├── engine.py           #   入口（JSON-RPC）
-│   ├── designer.py         #   网络设计协调层（含 Scale-Up 接入）
-│   ├── scaleup_topology.py #   Scale-Up 拓扑（NVLink/UALink/UB）
+│   ├── facade.py           #   CLI 入口（JSON-RPC + 设计流程编排）
+│   ├── engine.py           #   action 分发（design/validate/export/estimate）
+│   ├── designer.py         #   网络设计协调层（四网 + 三合一融合网）
+│   ├── dual_plane_topology.py # 双平面拓扑
+│   ├── zcube_topology.py   #   ZCube 扁平二部图拓扑
 │   ├── ub_topology.py      #   UB（昇腾）拓扑
+│   ├── network_plugin.py   #   插件化接线（HuaweiSuperNode 等）
 │   ├── rail_topology.py    #   Rail-Optimized 拓扑算法
 │   ├── rack_allocation.py  #   多约束机柜分配
-│   ├── validation.py       #   19 条校验规则引擎
-│   ├── optical_selector.py #   光模块智能选型
+│   ├── validation.py       #   22 条校验规则引擎（V001-V022）
+│   ├── optical_selector.py #   光模块智能选型（含 1 分 2 分裂线缆）
 │   ├── exporter.py         #   Excel/PDF 导出
-│   └── device_library.py   #   设备库加载器
-├── electron/               # Electron 主进程（IPC / 更新服务）
+│   └── device_library.py   #   设备库加载器（120 款）
+├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
-├── template/               # 设备库（118 款）+ 16 套场景模板
+├── template/               # 设备库（120 款）+ 19 套场景模板
+├── scripts/                # pyinstaller.spec / validate_templates / gen_golden
 ├── docs/                   # 产品文档 / 用户指南 / PRD
 └── tests/backend/          # Python 后端测试
 ```
@@ -233,7 +266,7 @@ AutoLink/
 A: Scale-Out 支持 IB、RoCE、UEC 三种；Scale-Up 支持 NVLink、UALink、UB 三种。可组合出 NVL72、CloudMatrix 384、UALink 1024 GPU Pod 等主流智算中心形态。
 
 **Q: 支持多大的集群规模？**
-A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 16 套模板可直接使用，也可从空项目自定义。
+A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 19 套模板可直接使用，也可从空项目自定义。
 
 **Q: 生成的报告包含哪些内容？**
 A: 连接表、布线指导表、BOM 成本、设备清单、机柜表（Excel），以及 9 章节 PDF 报告（概览/架构/功耗/光模块/成本/校验/设备清单/收敛比/机柜），全部基于真实计算值。

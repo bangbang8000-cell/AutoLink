@@ -1,4 +1,4 @@
-# AutoLink V2.7 部署指南
+# AutoLink V3.0.2 部署指南
 
 ## 环境准备
 
@@ -7,11 +7,11 @@
 # 1. 安装 Node.js (>= 22)
 winget install OpenJS.NodeJS.LTS
 
-# 2. 安装 Python (>= 3.10)
+# 2. 安装 Python (>= 3.12)
 winget install Python.Python.3.12
 
 # 3. 安装 Python 依赖
-pip install openpyxl pandas reportlab
+pip install -r backend/requirements.txt
 
 # 4. 克隆仓库
 git clone https://github.com/bangbang8000-cell/AutoLink.git
@@ -28,7 +28,7 @@ brew install node
 brew install python@3.12
 
 # 3. 安装 Python 依赖
-pip3 install openpyxl pandas reportlab
+pip3 install -r backend/requirements.txt
 
 # 4. 克隆仓库
 git clone https://github.com/bangbang8000-cell/AutoLink.git
@@ -46,7 +46,7 @@ sudo apt-get install -y nodejs
 sudo apt-get install -y python3 python3-pip
 
 # 3. 安装 Python 依赖
-pip3 install openpyxl pandas reportlab
+pip3 install -r backend/requirements.txt
 
 # 4. 克隆仓库
 git clone https://github.com/bangbang8000-cell/AutoLink.git
@@ -66,22 +66,24 @@ npm run dev
 
 ## 构建安装包
 
+> V3.0.0 起，`npm run dist:*` 前会自动执行 **PyInstaller** 打包 Python 引擎（`scripts/pyinstaller.spec`），产物输出到 `dist/backend-dist`，安装包无需用户预装 Python。
+
 ### Windows (NSIS 安装包)
 ```bash
 npm run dist:win
-# 输出: release/AutoLink-Setup-2.7.0-win.exe
+# 输出: release/AutoLink-Setup-3.0.2-win.exe
 ```
 
 ### macOS (DMG)
 ```bash
 npm run dist:mac
-# 输出: release/AutoLink-2.7.0-mac-x64.dmg / AutoLink-2.7.0-mac-arm64.dmg
+# 输出: release/AutoLink-3.0.2-mac-x64.dmg / AutoLink-3.0.2-mac-arm64.dmg
 ```
 
 ### Linux (AppImage + DEB)
 ```bash
 npm run dist:linux
-# 输出: release/AutoLink-2.7.0-linux.AppImage / .deb
+# 输出: release/AutoLink-3.0.2-linux.AppImage / .deb
 ```
 
 ## 生产部署
@@ -93,7 +95,7 @@ npm run dist:linux
 3. **macOS**：将 `.app` 拖入 Applications 文件夹
 4. **Linux**：`chmod +x AutoLink-*.AppImage && ./AutoLink-*.AppImage` 或 `sudo dpkg -i AutoLink-*.deb`
 
-安装后首次启动会自动创建 3 个示例项目（H100-100台/H100-128台/L20-推理-64），内置 11 套场景模板和 109+ 款设备库。
+安装后首次启动会自动创建 3 个示例项目（H100-100台/H100-128台/L20-推理-64），内置 19 套场景模板和 120 款设备库。
 
 ### 方式二：从源码运行
 
@@ -104,14 +106,14 @@ npm start
 
 ## Python 引擎说明
 
-AutoLink 通过子进程调用 Python 引擎 (`backend/engine.py`)，通信方式为 JSON stdin/stdout。
+AutoLink 通过子进程调用 Python 引擎（`backend/facade.py` CLI 入口），通信方式为 JSON stdin/stdout。
 
-- 引擎在 `backend/` 目录下（打包后位于 `resourcesPath/backend`）
-- 默认使用系统 `python` 命令，Windows 支持 `py` launcher 回退
-- 需要 `openpyxl`、`pandas`、`reportlab` 依赖
+- 引擎在 `backend/` 目录下（打包后位于 `resourcesPath/backend`；V3.0.0+ 优先使用 PyInstaller 产物 `resourcesPath/backend-dist`，免 Python 运行）
+- 开发模式默认使用系统 `python` 命令，Windows 支持 `py` launcher 回退
+- 依赖见 `backend/requirements.txt`（pandas / openpyxl / reportlab），CI/打包额外使用 `backend/requirements-dev.txt`（pytest / PyInstaller）
 - 支持 6 种 action：
-  - `design`：生成拓扑（含 PUE/收敛比估算）
-  - `validate`：拓扑校验
+  - `design`：生成拓扑（含 PUE/收敛比估算、三合一融合网、1 分 2 扇出）
+  - `validate`：拓扑校验（22 条规则 V001-V022）
   - `export`：导出 Excel/PDF（连接表/布线表/BOM/设备清单/PDF 报告）
   - `estimate`：参数化 PUE/收敛比重新估算
   - `report`：生成完整报告数据
@@ -119,14 +121,15 @@ AutoLink 通过子进程调用 Python 引擎 (`backend/engine.py`)，通信方�
 
 ## 打包资源说明
 
-V2.6 安装包内置以下资源（通过 `extraResources` 打包）：
+V3.0.0 安装包内置以下资源（通过 `extraResources` 打包）：
 
 | 资源 | 位置 | 说明 |
 |------|------|------|
-| 后端引擎 | `resourcesPath/backend` | Python 引擎与算法 |
-| 模板 | `resourcesPath/template` | 11 套场景模板 |
-| 设备库 | `resourcesPath/template/device_library` | 109+ 款设备 JSON |
-| 光模块库 | `resourcesPath/template/device_library/optical_modules` | 30 款光模块 |
+| 后端引擎 | `resourcesPath/backend-dist` | PyInstaller 打包产物（V3.0.0+，免 Python 运行） |
+| 后端源码 | `resourcesPath/backend` | Python 引擎与算法（开发模式回退） |
+| 模板 | `resourcesPath/template` | 19 套场景模板 |
+| 设备库 | `resourcesPath/template/device_library` | 120 款设备 JSON |
+| 光模块库 | `resourcesPath/template/device_library/optical_modules` | 35 款光模块（含 1 分 2 分裂线缆） |
 | 用户指南 | `resourcesPath/docs` | Markdown 格式离线用户指南 |
 | 品牌资源 | `resourcesPath/branding` | Logo SVG 与设计规范 |
 
@@ -206,20 +209,22 @@ V2.6.2+ 拓扑与机柜数据按项目持久化：
 向 `main` 分支推送代码或创建 PR 自动运行：
 - TypeScript 类型检查
 - ESLint 代码检查
-- Vite 前端构建
-- 前端 vitest 测试（196 cases）
-- 后端 pytest 测试（299 cases）
+- Vite 前端构建 + Electron 主进程/preload 编译
+- 前端 vitest 测试（362 cases）
+- 后端 pytest 测试（688 cases）
+- 模板验证（`validate_templates.py`，19 模板）
+- golden 基线比对（`gen_golden.py --check`）
 
 ### 触发 Release 构建
 ```bash
-# 更新 package.json version
-# 提交代码（含 [skip ci] 避免触发 Actions 编译）
-git commit -m "release: v2.7.0 [skip ci]"
-# 打 tag 并推送
-git tag v2.7.0
-git push origin main v2.7.0
-# 手动触发 CI 构建
-gh workflow run build.yml --ref v2.7.0
+# 1. 更新 package.json version（含 VERSION 文件）
+# 2. 提交代码（含 [skip ci] 避免触发 Actions 编译）
+git commit -m "chore: v3.0.2 版本号更新 [skip ci]"
+# 3. 合并到 main 后打 tag 并推送（tag 推送即触发 build.yml 三平台编译 + 自动创建 Release）
+git checkout main && git merge --no-ff feat/3.0.0-refactor
+git push origin main
+git tag v3.0.2
+git push origin v3.0.2
 ```
 
 GitHub Actions 自动构建三平台安装包并发布到 Releases 页面：
@@ -227,7 +232,8 @@ GitHub Actions 自动构建三平台安装包并发布到 Releases 页面：
 - **macOS**：DMG（x64 + arm64）
 - **Linux**：AppImage + DEB
 
-构建矩阵配置见 [.github/workflows/build.yml](../.github/workflows/build.yml)。
+> 注意：tag 必须推送在 `main`（默认分支）路径上才会触发 `build.yml`（`on.push.tags: ['v*']`）；打在未合并分支上的 tag 不会触发。
+> 构建矩阵配置见 [.github/workflows/build.yml](../.github/workflows/build.yml)。
 
 ## 常见问题
 

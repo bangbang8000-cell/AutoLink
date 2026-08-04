@@ -266,6 +266,19 @@ export function AboutDialog({ onClose }: Props) {
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 px-6 leading-relaxed">
           {t('app.description')}
         </p>
+        {/* 主要功能 - 参考 MagicCommander 关于格式 */}
+        <div className="mt-4 px-6 text-left">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+            {t('about.featuresTitle')}
+          </p>
+          <ul className="space-y-1">
+            {(t('about.features', { returnObjects: true }) as string[]).map((f, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                · {f}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       {/* 信息区：软件栈 + 快捷链接 - T4: 优化字号和布局层次 */}

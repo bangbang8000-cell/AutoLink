@@ -1,5 +1,5 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AIデータセンターネットワーク計画・可視化ツール", "description": "AIデータセンター向けネットワーク計画・可視化ツール。GPUクラスター、ストレージ、ビジネス、帯域外管理の4ネットワーク協調設計をサポートし、トポロジー自動生成、ラック智能計画、接続関係エクスポートなどの全流程機能を提供します。" },
+  "app": { "title": "AutoLink", "subtitle": "AIデータセンターネットワーク計画・可視化ツール", "description": "AIデータセンター向けネットワーク計画・可視化ツール。GPU Scale-Up デュアルスタック（NVLink/UALink/UB）と Scale-Out（IB/RoCE/UEC）の一体設計に対応し、トポロジー自動生成、デバイス選定、ラック計画、スマート検証、納品レポートの全プロセス機能を提供します。" },
   "search": "検索",
   "cancel": "キャンセル",
   "confirm": "確認",
@@ -274,6 +274,15 @@
     "repository": "GitHub リポジトリ",
     "logoSpec": "Logo 設計仕様",
     "copyright": "© 2026 AutoLink Team. MIT License.",
+    "featuresTitle": "主な機能",
+    "features": [
+      "トポロジー設計 - GPU Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）デュアルスタック自動生成",
+      "デバイス選定 - 120 機種のデバイスライブラリ + 光モジュールスマート選定",
+      "スマート検証 - 22 のハードルール（接続性/ポート容量/光モジュール/電力）",
+      "ラック計画 - 多制約自動パッキングと U 位置ビジュアル管理",
+      "融合ファブリック - ストレージ+業務+帯域内管理の融合、1分2 高速ポート分岐",
+      "納品レポート - ケーブリング/BOM/デバイス一覧/ラック表 + PDF レポート"
+    ],
     "close": "閉じる",
     "checkUpdate": "更新を確認",
     "checking": "確認中…",

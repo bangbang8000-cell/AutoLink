@@ -2,7 +2,7 @@
   "app": {
     "title": "AutoLink",
     "subtitle": "AI智算中心网络规划与可视化工具",
-    "description": "面向 AI 智算中心的网络规划与可视化工具,支持 GPU 集群、存储、业务、带外管理四网协同设计,提供拓扑自动生成、机柜智能规划、连接关系导出等全流程能力。"
+    "description": "面向 AI 智算中心的网络规划与可视化工具,支持 GPU Scale-Up 双栈（NVLink/UALink/UB）与 Scale-Out（IB/RoCE/UEC）一体化设计,提供拓扑自动生成、设备选型、机柜规划、智能校验与交付报告全流程能力。"
   },
   "search": "搜索",
   "cancel": "取消",
@@ -286,6 +286,15 @@
     "repository": "GitHub 仓库",
     "logoSpec": "Logo 设计规范",
     "copyright": "© 2026 AutoLink Team. MIT License.",
+    "featuresTitle": "主要功能",
+    "features": [
+      "拓扑设计 - GPU Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）双栈自动生成",
+      "设备选型 - 120 款主流设备库 + 光模块智能选型",
+      "智能校验 - 22 条硬规则（连通性/端口容量/光模块/功耗）",
+      "机柜规划 - 多约束自动装箱与 U 位可视化管理",
+      "三合一融合网 - 存储+业务+带内管理融合组网,1分2 高速口扇出",
+      "交付报告 - 布线表/BOM/设备清单/机柜表 + PDF 报告"
+    ],
     "close": "关闭",
     "checkUpdate": "检查更新",
     "checking": "检查中…",

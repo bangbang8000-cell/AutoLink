@@ -2,7 +2,7 @@
   "app": {
     "title": "AutoLink",
     "subtitle": "AI Data Center Network Planning & Visualization",
-    "description": "A network planning and visualization tool for AI data centers. Supports collaborative design of GPU cluster, storage, business, and out-of-band management networks, with topology auto-generation, intelligent rack planning, and connection export."
+    "description": "A network planning and visualization tool for AI data centers. Supports integrated GPU Scale-Up dual-stack (NVLink/UALink/UB) and Scale-Out (IB/RoCE/UEC) design, with topology auto-generation, device selection, rack planning, intelligent validation, and delivery reports."
   },
   "search": "Search",
   "cancel": "Cancel",
@@ -286,6 +286,15 @@
     "repository": "GitHub Repository",
     "logoSpec": "Logo Design Spec",
     "copyright": "© 2026 AutoLink Team. MIT License.",
+    "featuresTitle": "Key Features",
+    "features": [
+      "Topology Design - Scale-Up (NVLink/UALink/UB) + Scale-Out (IB/RoCE/UEC) dual-stack auto-generation",
+      "Device Selection - 120 mainstream devices + intelligent optical module matching",
+      "Smart Validation - 22 hard rules (connectivity/port capacity/module/power)",
+      "Rack Planning - multi-constraint auto packing with U-position visualization",
+      "Combined Fabric - converged storage+business+inband management, 1-to-2 breakout",
+      "Delivery Reports - cabling table/BOM/device list/rack table + PDF report"
+    ],
     "close": "Close",
     "checkUpdate": "Check for Updates",
     "checking": "Checking…",

@@ -1,5 +1,5 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AI 데이터센터 네트워크 계획 및 시각화 도구", "description": "AI 데이터센터를 위한 네트워크 계획 및 시각화 도구. GPU 클러스터, 스토리지, 비즈니스, 대역외 관리 4개 네트워크 협업 설계를 지원하며, 토폴로지 자동 생성, 랙 스마트 계획, 연결 관계 내보내기 등 전체 프로세스 기능을 제공합니다." },
+  "app": { "title": "AutoLink", "subtitle": "AI 데이터센터 네트워크 계획 및 시각화 도구", "description": "AI 데이터센터를 위한 네트워크 계획 및 시각화 도구. GPU Scale-Up 듀얼 스택(NVLink/UALink/UB)과 Scale-Out(IB/RoCE/UEC) 통합 설계를 지원하며, 토폴로지 자동 생성, 장비 선정, 랙 계획, 스마트 검증, 납품 리포트 전체 프로세스 기능을 제공합니다." },
   "search": "검색",
   "cancel": "취소",
   "confirm": "확인",
@@ -274,6 +274,15 @@
     "repository": "GitHub 저장소",
     "logoSpec": "Logo 디자인 사양",
     "copyright": "© 2026 AutoLink Team. MIT License.",
+    "featuresTitle": "주요 기능",
+    "features": [
+      "토폴로지 설계 - GPU Scale-Up(NVLink/UALink/UB) + Scale-Out(IB/RoCE/UEC) 듀얼 스택 자동 생성",
+      "장비 선정 - 120종 메인스트림 장비 라이브러리 + 광모듈 스마트 선정",
+      "스마트 검증 - 22개 하드 규칙(연결성/포트 용량/광모듈/전력)",
+      "랙 계획 - 다중 제약 자동 패킹 및 U 위치 시각화 관리",
+      "융합 패브릭 - 스토리지+업무+대역내 관리 융합, 1분2 고속 포트 분기",
+      "납품 리포트 - 케이블링/BOM/장비 목록/랙 표 + PDF 리포트"
+    ],
     "close": "닫기",
     "checkUpdate": "업데이트 확인",
     "checking": "확인 중…",

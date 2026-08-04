@@ -1,5 +1,5 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AI 資料中心網路規劃與可視化工具", "description": "面向 AI 智算中心的網路規劃與視覺化工具,支援 GPU 叢集、儲存、業務、帶外管理四網協同設計,提供拓撲自動生成、機櫃智能規劃、連接關係匯出等全流程能力。" },
+  "app": { "title": "AutoLink", "subtitle": "AI 資料中心網路規劃與可視化工具", "description": "面向 AI 智算中心的網路規劃與視覺化工具,支援 GPU Scale-Up 雙棧（NVLink/UALink/UB）與 Scale-Out（IB/RoCE/UEC）一體化設計,提供拓撲自動生成、設備選型、機櫃規劃、智慧校驗與交付報告全流程能力。" },
   "search": "搜尋",
   "cancel": "取消",
   "confirm": "確認",
@@ -274,6 +274,15 @@
     "repository": "GitHub 儲存庫",
     "logoSpec": "Logo 設計規範",
     "copyright": "© 2026 AutoLink Team. MIT License.",
+    "featuresTitle": "主要功能",
+    "features": [
+      "拓撲設計 - GPU Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）雙棧自動生成",
+      "設備選型 - 120 款主流設備庫 + 光模組智慧選型",
+      "智慧校驗 - 22 條硬規則（連通性/連接埠容量/光模組/功耗）",
+      "機櫃規劃 - 多約束自動装箱與 U 位視覺化管理",
+      "三合一融合網 - 儲存+業務+帶內管理融合組網,1分2 高速口扇出",
+      "交付報告 - 佈線表/BOM/設備清單/機櫃表 + PDF 報告"
+    ],
     "close": "關閉",
     "checkUpdate": "檢查更新",
     "checking": "檢查中…",
