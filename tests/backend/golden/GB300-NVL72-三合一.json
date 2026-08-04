@@ -1,5 +1,5 @@
 {
-  "cabinets": 152,
+  "cabinets": 153,
   "connections": 7936,
   "counts": {
     "biz_access": 0,
@@ -30,6 +30,6 @@
   "rail_count": 8,
   "rail_mode": "standard",
   "topology_hash": "7e2ebc2daf2b817c",
-  "total_power_w": 1242880,
+  "total_power_w": 1244980,
   "valid": true
 }

@@ -15,6 +15,7 @@
   "port_type": "OSFP",
   "downlink_prefix": "IB",
   "uplink_prefix": "IB",
+  "breakout": {"physical_speed": "800G", "logical_speed": "400G", "count": 2, "cable": "MPO-1x2"},
   "tags": ["交换机", "NVIDIA", "Quantum-3", "800G", "IB", "NDR", "InfiniBand", "参数面", "Spine", "有网管口"],
   "applicable_networks": ["param"],
   "source": "builtin",

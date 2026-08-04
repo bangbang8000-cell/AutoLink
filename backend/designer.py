@@ -59,6 +59,10 @@ class NetworkDesignerV2:
         # V3.0.0-T0-3: 网络域列表（设计完成后填充；供插件化/AIHUB 上下文使用）
         self.domains = []
 
+        # V3.0.2-T2-11: 交换机 1 分 2 扇出（breakout）逻辑口因子（缺省 1 = 1:1 物理口）
+        self.param_breakout_count = self._profile_breakout_count('param_switch')
+        self.storage_breakout_count = self._profile_breakout_count('storage_switch')
+
         # --- 执行设计 ---
         self.calc_network_hierarchy()
         self.create_network_objects()
@@ -1175,7 +1179,8 @@ class NetworkDesignerV2:
             )
             slots.append((g, d))
         for sw in (self.param_leaves + self.param_spines + self.param_cores +
-                   self.storage_leaves + self.storage_spines + self.storage_cores):
+                   self.storage_leaves + self.storage_spines + self.storage_cores +
+                   getattr(self, 'combined_leaves', [])):
             slots.append((sw, self._make_switch_slot(sw)))
 
         allocator = RackAllocator(
@@ -1242,6 +1247,18 @@ class NetworkDesignerV2:
         if key:
             return self._device_profiles.get(key)
         return None
+
+    def _profile_breakout_count(self, key: str) -> int:
+        """V3.0.2-T2-11: 返回设备档案的 breakout 逻辑口数（缺省 1 = 1:1 物理口）
+
+        交换机 1 个物理高速口经 1 分 2 扇出为 count 个逻辑低速口
+        （如 Q3200 800G→2×400G、MQM9700 400G→2×200G）。
+        """
+        dev = self._device_profiles.get(key)
+        bk = getattr(dev, 'breakout', None) if dev else None
+        if bk and isinstance(bk, dict):
+            return int(bk.get('count', 1) or 1)
+        return 1
 
     def _apply_slot(self, obj, d):
         """将 DeviceSlot 分配结果回填到 NetworkObject"""

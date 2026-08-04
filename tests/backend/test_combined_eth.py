@@ -102,6 +102,20 @@ def test_combined_no_storage_biz_switches(tmp_path):
     assert d.oob_access and d.oob_agg
 
 
+def test_combined_switches_mounted(tmp_path):
+    """融合交换机并入 _allocate_rack_servers 统一分配：全部上架、无 U 冲突"""
+    d = _designer(tmp_path)
+    assert d.combined_leaves
+    unmounted = [sw.name for sw in d.combined_leaves if not sw.cabinet_id]
+    assert unmounted == [], f"融合交换机未上架: {unmounted}"
+    cabs = getattr(d, '_rack_cabinets', []) or []
+    for cab in cabs:
+        items = sorted(cab.devices, key=lambda x: x.start_u or 0)
+        for i in range(len(items) - 1):
+            assert items[i + 1].start_u > items[i].end_u, \
+                f"{cab.name} U位冲突: {items[i].name} 与 {items[i + 1].name}"
+
+
 # ---------- 接线（带内管理可达） ----------
 
 def test_combined_wiring(tmp_path):

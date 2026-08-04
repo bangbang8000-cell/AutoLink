@@ -9,6 +9,7 @@
   "vendors": ["NVIDIA", "Cisco", "Arista"],
   "price_range": "极高",
   "category": "optical_modules",
+  "breakout": {"input_speed": "1.6T", "output_speed": "800G", "count": 2},
   "description": "1.6T OSFP-XD DR8 单模光模块，传输距离500米，8x200G PAM4",
   "tags": ["1.6T", "OSFP-XD", "DR8", "SMF", "500m"]
 }

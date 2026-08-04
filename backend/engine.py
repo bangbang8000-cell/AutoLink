@@ -512,7 +512,8 @@ def handle_design(params):
                 "name": dev.cabinet_name or f"机柜{cid}",
                 "type": cabinet_type_map.get(cid, 'gpu'),
                 "power_watts": 0,
-                "cooling_method": getattr(designer, '_default_cooling_method', 'air'),
+                # 修复: designer 属性为 cooling_method（rack_config），非 _default_cooling_method
+                "cooling_method": getattr(designer, 'cooling_method', 'air'),
                 "items": [],
             }
         cabinet_map[cid]["power_watts"] += dev.power_watts or 0
@@ -581,6 +582,9 @@ def handle_design(params):
         "param_dl": getattr(designer, 'param_dl', 0),
         "storage_leaf_count": getattr(designer, 'storage_leaf_count', 0),
         "storage_dl": getattr(designer, 'storage_dl', 0),
+        # V3.0.2-T2-11: 交换机 1 分 2 扇出（breakout）逻辑口因子（V016 按逻辑口校验）
+        "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
+        "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
         "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),

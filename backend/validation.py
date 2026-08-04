@@ -345,8 +345,10 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
         num_servers = int(ctx.config.get('num_servers', 0) or 0)
         nics = int(ctx.config.get('param_nics_per_server', 8) or 8)
         required_per_plane = num_servers * nics
+        # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量
+        bk = int(ctx.config.get('param_breakout_count', 1) or 1)
         for pl in dp_stats:
-            capacity = int(pl.get('leaf_count', 0) or 0) * int(pl.get('downlink_per_leaf', 0) or 0)
+            capacity = int(pl.get('leaf_count', 0) or 0) * int(pl.get('downlink_per_leaf', 0) or 0) * bk
             if capacity > 0 and required_per_plane > capacity:
                 issues.append(ValidationIssue(
                     rule_id="V016",
@@ -369,7 +371,8 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
         leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
         dl = int(ctx.config.get('param_dl', 0) or 0)
         required = num_servers * ports_per_server
-        capacity = leaf_count * dl
+        # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量（物理口 × 扇出数）
+        capacity = leaf_count * dl * int(ctx.config.get('param_breakout_count', 1) or 1)
         if capacity > 0 and required > capacity:
             issues.append(ValidationIssue(
                 rule_id="V016",
@@ -386,7 +389,8 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
     storage_leaf = int(ctx.config.get('storage_leaf_count', 0) or 0)
     storage_dl = int(ctx.config.get('storage_dl', 0) or 0)
     s_required = total_servers * storage_ports
-    s_capacity = storage_leaf * storage_dl
+    # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量（如 TH5 400G 口 1 分 2 接 2×200G 存储）
+    s_capacity = storage_leaf * storage_dl * int(ctx.config.get('storage_breakout_count', 1) or 1)
     if s_capacity > 0 and s_required > s_capacity:
         issues.append(ValidationIssue(
             rule_id="V016",

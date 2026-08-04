@@ -9,6 +9,7 @@
   "vendors": ["NVIDIA", "华为", "H3C"],
   "price_range": "极高",
   "category": "optical_modules",
+  "breakout": {"input_speed": "800G", "output_speed": "400G", "count": 2},
   "description": "800G OSFP 2x400G FR4 单模光模块，传输距离2公里，双400G 8x100G PAM4 WDM",
   "tags": ["800G", "OSFP", "2xFR4", "SMF", "2km"]
 }

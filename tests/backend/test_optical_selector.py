@@ -157,7 +157,20 @@ class TestSelectOpticalModule:
         m3.description = "800G SR8"
         m3.vendors = []
 
-        lib.get_by_category.return_value = [m1, m2, m3]
+        # V3.0.2-T2-11: 1 分 2 分裂线缆（800G 物理口 → 2×400G 逻辑口）
+        m4 = MagicMock()
+        m4.id = "800G-2x400G-FR4"
+        m4.speed = "800G"
+        m4.distance_m = 2000
+        m4.spec = "2xFR4"
+        m4.form_factor = "OSFP"
+        m4.fiber_type = "SMF"
+        m4.price_range = "极高"
+        m4.description = "800G 2x400G FR4"
+        m4.vendors = ["VendorA"]
+        m4.breakout = {"input_speed": "800G", "output_speed": "400G", "count": 2}
+
+        lib.get_by_category.return_value = [m1, m2, m3, m4]
         return lib
 
     def test_select_400g_sr4_short(self, mock_library):
@@ -196,6 +209,42 @@ class TestSelectOpticalModule:
         lib.get_by_category.return_value = []
         result = select_optical_module("400G", 10.0, "", library=lib)
         assert result is None
+
+    def test_select_breakout_2x400g(self, mock_library):
+        """V3.0.2-T2-11: 800G 长距选中 1 分 2 分裂线缆并携带标注"""
+        result = select_optical_module("800G", 1500.0, "MPO", "SMF", library=mock_library)
+        assert result is not None
+        assert result.module_id == "800G-2x400G-FR4"
+        assert result.breakout == {"input_speed": "800G", "output_speed": "400G", "count": 2}
+        assert "1分2" in result.match_reason
+
+    def test_select_breakout_input_speed_priority(self):
+        """V3.0.2-T2-11: 分裂线缆按 input_speed 匹配物理速率（优先于 speed 字段）"""
+        lib = MagicMock()
+        m = MagicMock()
+        m.id = "2x200G-CABLE"
+        m.speed = "400G"  # speed 字段与 input_speed 不一致时,以 input_speed 为准
+        m.distance_m = 3
+        m.spec = "DAC"
+        m.form_factor = "QSFP-DD"
+        m.fiber_type = "copper"
+        m.price_range = "中"
+        m.description = "400G 2x200G DAC"
+        m.vendors = ["VendorA"]
+        m.breakout = {"input_speed": "400G", "output_speed": "200G", "count": 2}
+        lib.get_by_category.return_value = [m]
+
+        result = select_optical_module("400G", 2.0, "DAC", library=lib)
+        assert result is not None
+        assert result.module_id == "2x200G-CABLE"
+        assert result.breakout is not None
+        assert result.breakout["count"] == 2
+
+    def test_normal_module_no_breakout(self, mock_library):
+        """V3.0.2-T2-11: 常规模块返回结果 breakout 为 None"""
+        result = select_optical_module("400G", 25.0, "MPO", library=mock_library)
+        assert result is not None
+        assert result.breakout is None
 
 
 class TestSelectModuleForConnection:
