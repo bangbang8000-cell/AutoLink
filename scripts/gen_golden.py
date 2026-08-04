@@ -37,7 +37,9 @@ def _all_devices(d):
         d.param_leaves + d.param_spines + d.param_cores +
         d.storage_leaves + d.storage_spines + d.storage_cores +
         d.oob_access + d.oob_agg + d.biz_access + d.biz_agg +
-        list(getattr(d, 'scale_up_gpus', []))
+        list(getattr(d, 'scale_up_gpus', [])) +
+        # V3.0.2-T2-3: 华为超节点 NPU + Scale-Out 交换机
+        getattr(d, 'huawei_npus', []) + getattr(d, 'huawei_scaleout_switches', [])
     )
 
 
@@ -80,6 +82,8 @@ def _snapshot(d):
         'biz_access': len(d.biz_access),
         'biz_agg': len(d.biz_agg),
         'scale_up_gpus': len(getattr(d, 'scale_up_gpus', [])),
+        'huawei_npus': len(getattr(d, 'huawei_npus', [])),
+        'huawei_scaleout_switches': len(getattr(d, 'huawei_scaleout_switches', [])),
     }
     conns = _connections(d)
     net_conns = {}
@@ -254,6 +258,77 @@ def _run_zcube_scenarios(check):
     return diffs, generated
 
 
+# ================================================================
+# V3.0.2-T2-3: 华为超节点 golden 场景（UB 域内全对等 + 域间 800G Scale-Out）
+# ================================================================
+
+def _huawei_scenarios():
+    """返回 {name: project_config dict}（华为超节点验收场景，2+ 个）"""
+    from project_config import create_default_config
+
+    def base(name, npus, domain_size=0, so_switches=16, so_ports=2):
+        cfg = create_default_config(name)
+        cfg['topology'].update({
+            'num_gpu_servers': npus,
+            'param_network_mode': 'huawei_supernode',
+            'param_huawei_supernode': {
+                'num_npus': npus, 'npus_per_node': 8, 'ub_bandwidth_gbps': 2800,
+                'ub_domain_size': domain_size,
+                'num_scaleout_switches': so_switches, 'scaleout_ports_per_npu': so_ports,
+                'scaleout_speed': '800G', 'scaleout_switch_ports': 144,
+            },
+        })
+        return cfg
+
+    return {
+        # 384 NPU CloudMatrix：单 UB 域全对等 + 16 台 800G Scale-Out（PRD 4.1.3 验收）
+        'huawei_384_cloudmatrix': base('hs-384', 384),
+        # 768 NPU 双域：每域 384 全对等 + 8×2 台 Scale-Out 跨域全互联骨干
+        'huawei_768_two_domains': base('hs-768', 768, domain_size=384, so_switches=8),
+    }
+
+
+def _run_huawei_scenarios(check):
+    """生成/校验华为超节点场景快照（文件 huawei_*.json）"""
+    from designer import NetworkDesignerV2
+    import tempfile
+    import shutil
+
+    diffs = []
+    generated = 0
+    tmpdir = tempfile.mkdtemp(prefix='golden_hs_')
+    try:
+        for name, cfg in _huawei_scenarios().items():
+            cfg_path = os.path.join(tmpdir, 'project_config.json')
+            with open(cfg_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False)
+            try:
+                d = NetworkDesignerV2(cfg_path)
+                snap = _snapshot(d)
+            except Exception as e:  # 设计失败也记录快照（error）
+                snap = {'error': f'{type(e).__name__}: {e}'}
+
+            gf = os.path.join(golden_dir, name + '.json')
+            if check:
+                if not os.path.exists(gf):
+                    diffs.append(f'{name}: 缺少基线文件 {gf}')
+                    continue
+                with open(gf, encoding='utf-8') as f:
+                    expected = json.load(f)
+                if snap != expected:
+                    diffs.append(
+                        f'{name}: 与基线不一致\n'
+                        f'    基线: {json.dumps(expected, ensure_ascii=False)}\n'
+                        f'    当前: {json.dumps(snap, ensure_ascii=False)}')
+            else:
+                with open(gf, 'w', encoding='utf-8') as f:
+                    json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
+                generated += 1
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    return diffs, generated
+
+
 def main():
     check = '--check' in sys.argv
     os.makedirs(golden_dir, exist_ok=True)
@@ -299,6 +374,11 @@ def main():
     diffs.extend(zc_diffs)
     generated += zc_generated
 
+    # V3.0.2-T2-3: 华为超节点场景 golden
+    hs_diffs, hs_generated = _run_huawei_scenarios(check)
+    diffs.extend(hs_diffs)
+    generated += hs_generated
+
     if check:
         if diffs:
             print(f'golden --check 失败（{len(diffs)} 项差异）：')
@@ -307,7 +387,8 @@ def main():
             sys.exit(1)
         print(f'golden --check 通过：{len(templates)}/{len(templates)} 模板与基线一致'
               f'（含 {len(_dual_plane_scenarios())} 个双平面 + '
-              f'{len(_zcube_scenarios())} 个 ZCube 场景）')
+              f'{len(_zcube_scenarios())} 个 ZCube + '
+              f'{len(_huawei_scenarios())} 个华为超节点场景）')
     else:
         print(f'golden 基线生成完成：{generated} 个模板写入 {golden_dir}')
         if skipped:

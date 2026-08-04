@@ -355,27 +355,45 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
 
 
 def _validate_param_mode(config: dict) -> str | None:
-    """V3.0.2-T2-1: 参数网组网模式校验
+    """V3.0.2-T2-1/T2-3: 参数网组网模式校验
 
-    - param_network_mode: 'standard' | 'zcube'（缺省 standard，兼容 2.9.9）
+    - param_network_mode: 'standard' | 'zcube' | 'huawei_supernode'（缺省 standard，兼容 2.9.9）
     - param_zcube: 可选 {nics_per_gpu>0, leaf_count>0, switch_ports>0}
+    - param_huawei_supernode: 可选 {num_npus>0, npus_per_node>0, ub_bandwidth_gbps>0,
+      ub_domain_size>=0, num_scaleout_switches>=0, scaleout_ports_per_npu>0}
     """
     topo = config.get('topology') or {}
     mode = topo.get('param_network_mode')
-    if mode is not None and mode not in ('standard', 'zcube'):
-        return "topology.param_network_mode 必须是 'standard' 或 'zcube'"
+    if mode is not None and mode not in ('standard', 'zcube', 'huawei_supernode'):
+        return "topology.param_network_mode 必须是 'standard'、'zcube' 或 'huawei_supernode'"
     zc = topo.get('param_zcube')
-    if zc is None:
+    if zc is not None:
+        if not isinstance(zc, dict):
+            return "topology.param_zcube 必须是 JSON 对象"
+        for k in ('nics_per_gpu', 'switch_ports'):
+            if k in zc and (not isinstance(zc.get(k), (int, float)) or zc.get(k, 0) <= 0):
+                return f"topology.param_zcube.{k} 必须是正数"
+        # leaf_count=0 表示自动推导（最小满足容量），允许
+        lc = zc.get('leaf_count')
+        if lc is not None and (not isinstance(lc, (int, float)) or lc < 0):
+            return "topology.param_zcube.leaf_count 必须是非负整数（0=自动推导）"
+    # V3.0.2-T2-3: 华为超节点段校验（param_huawei_supernode）
+    hs = topo.get('param_huawei_supernode')
+    if hs is None:
         return None
-    if not isinstance(zc, dict):
-        return "topology.param_zcube 必须是 JSON 对象"
-    for k in ('nics_per_gpu', 'switch_ports'):
-        if k in zc and (not isinstance(zc.get(k), (int, float)) or zc.get(k, 0) <= 0):
-            return f"topology.param_zcube.{k} 必须是正数"
-    # leaf_count=0 表示自动推导（最小满足容量），允许
-    lc = zc.get('leaf_count')
-    if lc is not None and (not isinstance(lc, (int, float)) or lc < 0):
-        return "topology.param_zcube.leaf_count 必须是非负整数（0=自动推导）"
+    if not isinstance(hs, dict):
+        return "topology.param_huawei_supernode 必须是 JSON 对象"
+    for k in ('num_npus', 'npus_per_node'):
+        if k in hs and (not isinstance(hs.get(k), (int, float)) or hs.get(k, 0) <= 0):
+            return f"topology.param_huawei_supernode.{k} 必须是正数"
+    if 'ub_bandwidth_gbps' in hs and (not isinstance(hs.get('ub_bandwidth_gbps'), (int, float)) or hs.get('ub_bandwidth_gbps', 0) <= 0):
+        return "topology.param_huawei_supernode.ub_bandwidth_gbps 必须是正数"
+    if 'ub_domain_size' in hs and (not isinstance(hs.get('ub_domain_size'), (int, float)) or hs.get('ub_domain_size', 0) < 0):
+        return "topology.param_huawei_supernode.ub_domain_size 必须是非负整数（0=单域）"
+    if 'num_scaleout_switches' in hs and (not isinstance(hs.get('num_scaleout_switches'), (int, float)) or hs.get('num_scaleout_switches', 0) < 0):
+        return "topology.param_huawei_supernode.num_scaleout_switches 必须是非负整数（0=不生成 Scale-Out）"
+    if 'scaleout_ports_per_npu' in hs and (not isinstance(hs.get('scaleout_ports_per_npu'), (int, float)) or hs.get('scaleout_ports_per_npu', 0) <= 0):
+        return "topology.param_huawei_supernode.scaleout_ports_per_npu 必须是正数"
     return None
 
 

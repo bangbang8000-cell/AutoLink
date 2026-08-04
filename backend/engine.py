@@ -356,6 +356,12 @@ def handle_design(params):
             "config": getattr(designer, 'scale_up_config', None),
             "stats": getattr(designer, 'scale_up_stats', {}),
         },
+        # V3.0.2-T2-3: 华为超节点配置与统计
+        "huaweiSuperNode": {
+            "enabled": getattr(designer, 'param_network_mode', '') == 'huawei_supernode',
+            "config": getattr(designer, 'huawei_config', None),
+            "stats": getattr(designer, 'huawei_stats', {}),
+        },
     }
 
     # Build topology data for visualization
@@ -431,6 +437,23 @@ def handle_design(params):
             "startU": gpu.start_u, "endU": gpu.end_u,
             "powerWatts": gpu.power_watts, "uHeight": gpu.u_height,
         })
+
+    # V3.0.2-T2-3: 华为超节点 NPU 节点 + Scale-Out 交换机
+    for npu in getattr(designer, 'huawei_npus', []):
+        nodes.append({
+            "id": npu.name, "type": npu.obj_type, "group": npu.group,
+            "podid": npu.podid,
+            "domainId": npu.domain_id,
+            "protocol": npu.protocol,
+            "networkType": npu.network_type,
+            "network_type": npu.network_type,
+            "layerHint": npu.layer_hint,
+            "cabinetId": npu.cabinet_id, "cabinetName": npu.cabinet_name,
+            "startU": npu.start_u, "endU": npu.end_u,
+            "powerWatts": npu.power_watts, "uHeight": npu.u_height,
+        })
+    for sw in getattr(designer, 'huawei_scaleout_switches', []):
+        nodes.append(_sw_node(sw))
 
     # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
     # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
@@ -563,6 +586,8 @@ def handle_design(params):
         "param_network_mode": getattr(designer, 'param_network_mode', 'standard'),
         "param_zcube": getattr(designer, 'zcube_config', {}),
         "zcube_stats": getattr(designer, 'zcube_stats', None),
+        # V3.0.2-T2-3: 华为超节点校验数据（V021）
+        "huawei_stats": getattr(designer, 'huawei_stats', {}),
         "param_spine_count": getattr(designer, 'param_spine_count', 0),
         "param_core_count": getattr(designer, 'param_core_count', 0),
     }

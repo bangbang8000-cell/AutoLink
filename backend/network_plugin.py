@@ -189,11 +189,12 @@ def unregister_plugin(name: str) -> bool:
 # 传统 designer 原生支持的组网模式（无需插件，走 NetworkDesignerV2 既有路径）。
 # 组合形态：standard / fat_tree（同义）与 rail / rail_optimized（同义，Rail-Optimized）。
 # 网络域级：param/storage/biz/oob/scale_up（对应既有四网 + Scale-Up）。
-# V3.0.1-T1-2/V3.0.2-T2-1: dual_plane（param_planes 配置）、zcube（param_network_mode='zcube'）。
+# V3.0.1-T1-2/V3.0.2-T2-1/T2-3: dual_plane（param_planes 配置）、zcube（param_network_mode='zcube'）、
+# huawei_supernode（param_network_mode='huawei_supernode'）。
 NATIVE_NETWORK_MODES = frozenset({
     'standard', 'fat_tree', 'rail', 'rail_optimized',
     'param', 'storage', 'biz', 'oob', 'scale_up',
-    'dual_plane', 'zcube',
+    'dual_plane', 'zcube', 'huawei_supernode',
 })
 
 
@@ -698,6 +699,96 @@ class ZcubeNetworkPlugin(NetworkPlugin):
         }
 
 
+class HuaweiSuperNodePlugin(NetworkPlugin):
+    """华为超节点组网插件（V3.0.2-T2-3，PRD 4.1.3）
+
+    UB 域内全对等（2800G） + 域间 800G Scale-Out 上联。
+    与 Designer 原生路径共用 ub_topology.UBTopology（插件接口的合规封装）。
+    """
+
+    _VALID_PROTOCOLS = ["UB"]
+
+    def get_info(self) -> NetworkPluginInfo:
+        return NetworkPluginInfo(
+            name="huawei_supernode",
+            display_name="华为超节点",
+            tier=NetworkTier.SCALE_UP,
+            protocols=self._VALID_PROTOCOLS,
+            description="华为昇腾超节点（CloudMatrix）：UB 域内全对等 + 域间 800G Scale-Out",
+        )
+
+    def validate_config(self, config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        if config.get("num_npus", 0) <= 0:
+            errors.append("num_npus 必须大于 0")
+        if config.get("npus_per_node", 0) <= 0:
+            errors.append("npus_per_node 必须大于 0")
+        return errors
+
+    def generate_topology(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        from ub_topology import UBConfig, UBTopology
+
+        ht = UBTopology(UBConfig(
+            num_npus=int(config.get("num_npus", 384)),
+            npus_per_node=int(config.get("npus_per_node", 8)),
+            ub_bandwidth_gbps=float(config.get("ub_bandwidth_gbps", 2800)),
+            num_cpus=int(config.get("num_cpus", 0)),
+            ub_domain_size=int(config.get("ub_domain_size", 0)),
+            protocol=str(config.get("protocol", "UB")),
+            num_scaleout_switches=int(config.get("num_scaleout_switches", 16)),
+            scaleout_ports_per_npu=int(config.get("scaleout_ports_per_npu", 2)),
+            scaleout_speed=str(config.get("scaleout_speed", "800G")),
+            scaleout_switch_ports=int(config.get("scaleout_switch_ports", 144)),
+        ))
+        ub_edges = ht.to_dict_list()
+        so_edges = ht.to_scaleout_dict_list()
+        stats = ht.get_stats()
+
+        num_domains = int(stats["num_domains"])
+        npus_per_domain = int(stats.get("npus_per_domain") or stats["num_npus"])
+        nodes: List[Dict[str, Any]] = [
+            {"id": f"NPU_{i}", "type": "npu", "network_type": "ub", "protocol": "UB",
+             "domain_id": i // npus_per_domain if npus_per_domain else 0,
+             "podid": f"ub-domain-{i // npus_per_domain + 1}" if npus_per_domain else "ub-domain-1"}
+            for i in range(int(stats["num_npus"]))
+        ]
+        so_per_domain = int(stats["num_scaleout_switches_per_domain"])
+        for d in range(num_domains):
+            for j in range(1, so_per_domain + 1):
+                nodes.append({
+                    "id": f"ScaleOut_{d + 1}_{j}", "type": "huawei_scaleout",
+                    "role": "scaleout", "network_type": "scale_out", "domain_id": d,
+                    "podid": f"ub-domain-{d + 1}",
+                })
+
+        return {
+            "network_type": "huawei_supernode",
+            "nodes": nodes,
+            "edges": ub_edges + so_edges,
+            "stats": {
+                "num_npus": stats["num_npus"],
+                "num_domains": num_domains,
+                "num_scaleout_switches": stats["num_scaleout_switches"],
+                "ub_full_mesh": True,
+                "scale_out": stats["scaleout_enabled"],
+            },
+        }
+
+    def get_default_config(self) -> Dict[str, Any]:
+        return {
+            "num_npus": 384,
+            "npus_per_node": 8,
+            "ub_bandwidth_gbps": 2800,
+            "num_cpus": 192,
+            "ub_domain_size": 0,
+            "protocol": "UB",
+            "num_scaleout_switches": 16,
+            "scaleout_ports_per_npu": 2,
+            "scaleout_speed": "800G",
+            "scaleout_switch_ports": 144,
+        }
+
+
 def register_builtin_plugins() -> None:
     """注册所有内置插件
 
@@ -708,6 +799,7 @@ def register_builtin_plugins() -> None:
       - oob      带外管理网 (Ethernet)
       - scale_up Scale-Up 网 (NVLink/UALink/UB)
       - zcube    ZCube 扁平化二部图（V3.0.2-T2-1）
+      - huawei_supernode  华为超节点（V3.0.2-T2-3）
     """
     register_plugin("param", ParamNetworkPlugin())
     register_plugin("storage", StorageNetworkPlugin())
@@ -715,3 +807,4 @@ def register_builtin_plugins() -> None:
     register_plugin("oob", OOBNetworkPlugin())
     register_plugin("scale_up", ScaleUpNetworkPlugin())
     register_plugin("zcube", ZcubeNetworkPlugin())
+    register_plugin("huawei_supernode", HuaweiSuperNodePlugin())

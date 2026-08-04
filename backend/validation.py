@@ -598,6 +598,83 @@ def _rule_zcube_structure(ctx: ValidationContext) -> List[ValidationIssue]:
     return issues
 
 
+def _rule_huawei_supernode_structure(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V021: 华为超节点结构校验 (V3.0.2-T2-3)
+
+    华为超节点模式（param_network_mode == 'huawei_supernode'）专属规则：
+      - 层级一致性：不得出现传统参数网 Leaf/Spine/Core 交换机（超节点仅 Scale-Out 交换机）
+      - UB 域内全对等：network_type='ub' 边数 = num_npus × (num_npus-1) / 2
+      - Scale-Out 上联：network_type='scale_out' 的 NPU 上联边数 = num_npus × scaleout_ports_per_npu
+      - 域一致性：域内 NPU 数可整除（无残域导致统计异常）
+    """
+    issues = []
+    if (str(ctx.config.get('param_network_mode', '') or '').strip().lower()) != 'huawei_supernode':
+        return issues
+
+    stats = ctx.config.get('huawei_stats') or {}
+    num_npus = int(stats.get('num_npus') or 0)
+    if num_npus <= 0:
+        return issues
+
+    # --- 层级一致性：无传统参数 Leaf/Spine/Core ---
+    legacy_sw = [sw.get('name', '') for sw in ctx.switches
+                 if ('Leaf' in sw.get('name', '') or 'Spine' in sw.get('name', ''))
+                 and 'ScaleOut' not in sw.get('name', '')]
+    if legacy_sw:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"华为超节点不允许传统参数网 Leaf/Spine 交换机，但存在: {', '.join(legacy_sw[:5])}",
+            affected_items=legacy_sw,
+            recommendation="华为超节点组网仅含 Scale-Out 交换机与 NPU，删除参数网 Leaf/Spine/Core",
+        ))
+
+    # --- UB 域内全对等边数与 Scale-Out 上联边数 ---
+    ub_edges = 0
+    so_uplink = 0
+    for conn in ctx.connections:
+        net = conn.get('network_type') or conn.get('networkType', '')
+        if net == 'ub':
+            ub_edges += 1
+        elif net == 'scale_out' and str(conn.get('source', '')).startswith('NPU_'):
+            so_uplink += 1
+    expected_ub = num_npus * (num_npus - 1) // 2
+    if ub_edges != expected_ub:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"华为超节点 UB 域内全对等边数 {ub_edges} ≠ 期望 {expected_ub} (N×(N-1)/2)",
+            affected_items=["huawei-ub"],
+            recommendation="UB 域内应全对等互联，每对 NPU 恰好一条双向链路",
+        ))
+    expected_so = num_npus * int(stats.get('scaleout_ports_per_npu') or 0)
+    if expected_so > 0 and so_uplink != expected_so:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"华为超节点 Scale-Out 上联边数 {so_uplink} ≠ 期望 {expected_so} (NPU×上联口)",
+            affected_items=["huawei-scaleout"],
+            recommendation="每 NPU 按 scaleout_ports_per_npu 接入域内 Scale-Out 交换机",
+        ))
+
+    # --- 域一致性：域内 NPU 数可整除 ---
+    npus_per_domain = int(stats.get('npus_per_domain') or 0)
+    num_domains = int(stats.get('num_domains') or 0)
+    if num_domains > 0 and npus_per_domain > 0 and num_npus % npus_per_domain != 0:
+        issues.append(ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message=f"华为超节点 NPU 总数 {num_npus} 不能被域内 NPU 数 {npus_per_domain} 整除",
+            affected_items=["huawei-domains"],
+            recommendation="调整 num_npus 或 ub_domain_size，使域划分无残域",
+        ))
+    return issues
+
+
 def _rule_rail_consistency(ctx: ValidationContext) -> List[ValidationIssue]:
     """V007: Rail-Optimized 一致性校验
 
@@ -830,4 +907,6 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V019", "物理规则", _rule_total_power_supply)
     # V3.0.2-T2-1: ZCube 专属结构规则
     engine.register_rule("V020", "拓扑规则", _rule_zcube_structure)
+    # V3.0.2-T2-3: 华为超节点专属结构规则
+    engine.register_rule("V021", "拓扑规则", _rule_huawei_supernode_structure)
     return engine

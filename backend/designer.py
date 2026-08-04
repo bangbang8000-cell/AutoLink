@@ -265,16 +265,41 @@ class NetworkDesignerV2:
             # 双平面语义要求双口网卡（每卡口1→平面A、口2→平面B）
             self.ports_per_nic = 2
 
-        # --- V3.0.2-T2-1: ZCube 组网模式（param_network_mode: standard/zcube） ---
+        # --- V3.0.2-T2-1/T2-3: ZCube / 华为超节点 组网模式（param_network_mode） ---
         # 单集群场景：cluster.network_mode 桥接（正交模型前向兼容）
         _cluster_mode = ''
         if len(self.clusters) == 1:
             _cluster_mode = (self.clusters[0].get('network_mode') or '').strip().lower()
         self.param_network_mode = (str(topo.get('param_network_mode') or '') or _cluster_mode or 'standard').strip().lower()
-        if self.param_network_mode not in ('standard', 'zcube'):
+        if self.param_network_mode not in ('standard', 'zcube', 'huawei_supernode'):
             self.param_network_mode = 'standard'
         self.zcube_config = topo.get('param_zcube') or {}
         self.zcube_stats = {}
+
+        # --- V3.0.2-T2-3: 华为超节点配置（param_huawei_supernode） ---
+        self.huawei_config = topo.get('param_huawei_supernode') or {}
+        self.huawei_stats = {}
+        self.huawei_npus = []                  # NPU 节点（obj_type='npu'，域内全对等）
+        self.huawei_scaleout_switches = []     # Scale-Out 交换机（obj_type='huawei_scaleout'）
+        self.huawei_connections = []           # UB 全对等 + Scale-Out 连接
+        if self.param_network_mode == 'huawei_supernode':
+            # 超节点组网独占：UB 域内全对等 + 域间 800G Scale-Out，
+            # 无传统参数/存储/业务/OOB 四网（NPU 由 huawei_npus 承担，不创建传统服务器）
+            self.param_enabled = False
+            self.storage_enabled = False
+            self.biz_enabled = False
+            self.oob_enabled = False
+            self.num_servers = 0
+            self.additional_storage = 0
+            self.additional_compute = 0
+            self.total_servers = 0
+            self.param_3tier_needed = False
+            self.param_leaf_count = 0
+            self.param_spine_count = 0
+            self.param_core_count = 0
+            self.param_pods = 0
+            self.param_servers_per_pod = 0
+            self.param_servers_per_group = 0
 
         # --- 下行端口限制 ---
         self._resolve_downlink_limits()
@@ -631,6 +656,14 @@ class NetworkDesignerV2:
     # ================================================================
     def calc_network_hierarchy(self):
         """计算参数网络和存储网络的层次结构"""
+        # --- V3.0.2-T2-3: 华为超节点（UB 域内全对等 + Scale-Out，无传统四网） ---
+        if getattr(self, 'param_network_mode', 'standard') == 'huawei_supernode':
+            self._calc_huawei_supernode_hierarchy()
+            self.param_3tier_needed = False
+            self.param_pods = 0
+            self.param_servers_per_pod = 0
+            self.param_servers_per_group = max(1, self.num_servers)
+
         # --- V3.0.2-T2-1: ZCube 组网（param_network_mode='zcube'，无 Spine） ---
         if getattr(self, 'param_network_mode', 'standard') == 'zcube':
             self._calc_zcube_hierarchy()
@@ -647,8 +680,9 @@ class NetworkDesignerV2:
             self.param_servers_per_pod = 0
             self.param_servers_per_group = max(1, self.num_servers)
 
-        # --- 参数网络（双平面/ZCube 启用时跳过传统计算） ---
-        if not getattr(self, 'dual_plane_enabled', False) and getattr(self, 'param_network_mode', 'standard') != 'zcube':
+        # --- 参数网络（双平面/ZCube/华为超节点 启用时跳过传统计算） ---
+        if (not getattr(self, 'dual_plane_enabled', False)
+                and getattr(self, 'param_network_mode', 'standard') not in ('zcube', 'huawei_supernode')):
             param_topology = FatTreeTopology(
                 self.param_ports_per_server, self.param_switch_ports,
                 self.param_speed, self.cable_types['param'], "param"
@@ -806,8 +840,11 @@ class NetworkDesignerV2:
             self.podid_map[s.name] = s.podid
 
         # 参数网络交换机
-        # V3.0.2-T2-1: ZCube（无 Spine）优先；V3.0.1-T1-2: 双平面 16 Leaf 次之；再 Rail/传统 Fat-Tree
-        if getattr(self, 'param_network_mode', 'standard') == 'zcube':
+        # V3.0.2-T2-3: 华为超节点（NPU + Scale-Out 交换机）优先；
+        # V3.0.2-T2-1: ZCube（无 Spine）次之；V3.0.1-T1-2: 双平面 16 Leaf 再之；再 Rail/传统 Fat-Tree
+        if getattr(self, 'param_network_mode', 'standard') == 'huawei_supernode':
+            self._create_huawei_supernode_objects(param_switch_profile)
+        elif getattr(self, 'param_network_mode', 'standard') == 'zcube':
             self._create_zcube_switches(param_switch_profile)
         elif getattr(self, 'dual_plane_enabled', False):
             self._create_dual_plane_switches(param_switch_profile)
@@ -853,8 +890,9 @@ class NetworkDesignerV2:
         return self.all_switch_lists()
 
     def all_devices(self):
-        """全部设备：服务器 + 交换机 + Scale-Up GPU"""
-        return self.servers + self.all_switch_lists() + list(getattr(self, 'scale_up_gpus', []))
+        """全部设备：服务器 + 交换机 + Scale-Up GPU + 华为超节点 NPU/Scale-Out 交换机"""
+        return (self.servers + self.all_switch_lists() + list(getattr(self, 'scale_up_gpus', [])) +
+                getattr(self, 'huawei_npus', []) + getattr(self, 'huawei_scaleout_switches', []))
 
     def all_switch_groups(self):
         """按 obj_type 分组返回 {obj_type: [switches]}，供导出/机柜按网段展开"""
@@ -903,6 +941,25 @@ class NetworkDesignerV2:
                     ports_per_server=getattr(self, 'param_ports_per_server', 8),
                     leaf_count=len(self.param_leaves),
                 ))
+        # V3.0.2-T2-3: 华为超节点域（UB 域内全对等 scale_up + 域间 800G Scale-Out scale_out）
+        if getattr(self, 'param_network_mode', 'standard') == 'huawei_supernode':
+            hs = getattr(self, 'huawei_stats', {}) or {}
+            self.domains.append(NetworkDomain(
+                type='scale_up', planes=1, tiers=1,
+                protocol=str(hs.get('protocol') or 'UB'),
+                speed=f"{int(hs.get('ub_bandwidth_gbps') or 0)}G",
+                ports_per_server=1,
+                leaf_count=0,
+                network_mode='huawei_supernode',
+            ))
+            self.domains.append(NetworkDomain(
+                type='scale_out', planes=1, tiers=1,
+                protocol='RoCE',
+                speed=str(hs.get('scaleout_speed') or '800G'),
+                ports_per_server=int(hs.get('scaleout_ports_per_npu') or 2),
+                leaf_count=int(hs.get('num_scaleout_switches') or 0),
+                network_mode='huawei_supernode',
+            ))
         if getattr(self, 'storage_enabled', True):
             self.domains.append(NetworkDomain(
                 type='storage',
@@ -1272,6 +1329,129 @@ class NetworkDesignerV2:
         dp.cores = self.param_cores
         dp.generate_connections(gpu_servers)
 
+    # ================================================================
+    #  V3.0.2-T2-3: 华为超节点（UB 域内全对等 + 域间 Scale-Out）
+    # ================================================================
+    def _huawei_supernode_topology(self):
+        """V3.0.2-T2-3: 构造华为超节点 UB 拓扑对象（配置自 self.huawei_config / param_network_mode）"""
+        from ub_topology import UBConfig, UBTopology
+        hc = self.huawei_config or {}
+        return UBTopology(UBConfig(
+            num_npus=int(hc.get('num_npus', 384)),
+            npus_per_node=int(hc.get('npus_per_node', 8)),
+            ub_bandwidth_gbps=float(hc.get('ub_bandwidth_gbps', 2800)),
+            num_cpus=int(hc.get('num_cpus', 0)),
+            ub_domain_size=int(hc.get('ub_domain_size', 0)),
+            protocol=str(hc.get('protocol', 'UB')),
+            num_scaleout_switches=int(hc.get('num_scaleout_switches', 16)),
+            scaleout_ports_per_npu=int(hc.get('scaleout_ports_per_npu', 2)),
+            scaleout_speed=str(hc.get('scaleout_speed', '800G')),
+            scaleout_switch_ports=int(hc.get('scaleout_switch_ports', 144)),
+        ))
+
+    def _calc_huawei_supernode_hierarchy(self):
+        """V3.0.2-T2-3: 华为超节点层次（UB 域 + Scale-Out 交换机，无传统参数交换机）"""
+        ht = self._huawei_supernode_topology()
+        ht.generate_connections()
+        self.huawei_stats = ht.get_stats()
+        self.param_leaf_count = 0
+        self.param_spine_count = 0
+        self.param_core_count = 0
+        self.param_dl = 0
+
+    def _create_huawei_supernode_objects(self, profile=None):
+        """V3.0.2-T2-3: 创建 NPU 节点与 Scale-Out 交换机
+
+        - NPU 节点（obj_type='npu'）：按 UB 域分组（podid=ub-domain-{N}），
+          端口数 = 域内全对等口数 + Scale-Out 上联口数
+        - Scale-Out 交换机（obj_type='huawei_scaleout'）：每域 N 台，800G，
+          layer_hint='spine' 置于拓扑上层
+        """
+        ht = self._huawei_supernode_topology()
+        ht.generate_connections()
+        stats = ht.get_stats()
+        num_npus = int(stats['num_npus'])
+        npus_per_domain = int(stats['npus_per_domain'] or 0)
+        num_domains = int(stats['num_domains'])
+        so_per_domain = int(stats['num_scaleout_switches_per_domain'])
+        so_switch_ports = int(stats['scaleout_switch_ports'])
+        so_ports_per_npu = int(stats['scaleout_ports_per_npu'])
+        ub_ports_per_npu = int(stats['max_ports_per_npu'])
+
+        self.huawei_npus = []
+        for i in range(num_npus):
+            domain = i // npus_per_domain if npus_per_domain > 0 else 0
+            npu = NetworkObject(
+                name=f"NPU_{i}", obj_type='npu',
+                group=f"超节点域{domain + 1}", podid=f"ub-domain-{domain + 1}",
+                max_ports=max(1, ub_ports_per_npu + so_ports_per_npu),
+                power_watts=900, u_height=1, layer_hint='server',
+            )
+            npu.protocol = 'UB'
+            npu.network_type = 'ub'
+            npu.domain_id = domain
+            self.huawei_npus.append(npu)
+            self.podid_map[npu.name] = npu.podid
+
+        self.huawei_scaleout_switches = []
+        for d in range(num_domains):
+            for j in range(1, so_per_domain + 1):
+                sw = NetworkObject(
+                    name=f"ScaleOut_{d + 1}_{j}", obj_type='huawei_scaleout',
+                    group=f"超节点域{d + 1}ScaleOut组", podid=f"ub-domain-{d + 1}",
+                    max_ports=so_switch_ports, layer_hint='spine',
+                )
+                sw.protocol = 'RoCE'
+                sw.network_type = 'scale_out'
+                sw.domain_id = d
+                self.huawei_scaleout_switches.append(sw)
+                self.switch_groups[sw.name] = sw.group
+                self.podid_map[sw.name] = sw.podid
+
+    def _wire_huawei_supernode(self):
+        """V3.0.2-T2-3: 华为超节点连接（UB 域内全对等 + Scale-Out 上联/域间互联）"""
+        ht = self._huawei_supernode_topology()
+        ht.generate_connections()
+        npu_map = {n.name: n for n in self.huawei_npus}
+        so_map = {s.name: s for s in self.huawei_scaleout_switches}
+        ub_speed = f"{int(ht.config.ub_bandwidth_gbps)}G"
+        so_speed = ht.config.scaleout_speed
+
+        def _pair(a, a_port, a_mod, z, z_port, z_mod, cable, desc, net):
+            c1 = Connection(a.name, a_port, a_mod, z.name, z_port, z_mod, cable, desc,
+                            a_cabinet_id=a.cabinet_id, a_cabinet_name=a.cabinet_name,
+                            a_start_u=a.start_u, a_end_u=a.end_u,
+                            z_cabinet_id=z.cabinet_id, z_cabinet_name=z.cabinet_name,
+                            z_start_u=z.start_u, z_end_u=z.end_u,
+                            network_type=net)
+            c2 = Connection(z.name, z_port, z_mod, a.name, a_port, a_mod, cable, desc,
+                            a_cabinet_id=z.cabinet_id, a_cabinet_name=z.cabinet_name,
+                            a_start_u=z.start_u, a_end_u=z.end_u,
+                            z_cabinet_id=a.cabinet_id, z_cabinet_name=a.cabinet_name,
+                            z_start_u=a.start_u, z_end_u=a.end_u,
+                            network_type=net)
+            a.add_connection(c1)
+            z.add_connection(c2)
+            self.huawei_connections.extend([c1, c2])
+
+        # 1. UB 域内全对等（双向 Connection，network_type='ub'）
+        for e in ht.to_dict_list():
+            a = npu_map.get(e['source'])
+            z = npu_map.get(e['target'])
+            if not a or not z:
+                continue
+            _pair(a, e['source_port'], ub_speed, z, e['target_port'], ub_speed,
+                  e['cable_type'], e['description'], 'ub')
+
+        # 2. Scale-Out 上联 + 域间互联（双向 Connection，network_type='scale_out'）
+        for e in ht.to_scaleout_dict_list():
+            a = npu_map.get(e['source']) or so_map.get(e['source'])
+            z = npu_map.get(e['target']) or so_map.get(e['target'])
+            if not a or not z:
+                continue
+            _pair(a, e['source_port'], so_speed, z, e['target_port'], so_speed,
+                  e['cable_type'], e['description'], 'scale_out')
+
     def _zcube_topology(self):
         """V3.0.2-T2-1: 构造 ZCube 拓扑对象（配置自 self.zcube_config / param_network_mode）"""
         from zcube_topology import ZcubeTopology
@@ -1400,8 +1580,10 @@ class NetworkDesignerV2:
     def generate_connections(self):
         gpu_servers = self.servers[:self.num_servers]
 
-        # V3.0.2-T2-1: ZCube 连接优先；V3.0.1-T1-2: 双平面连接次之
-        if getattr(self, 'param_network_mode', 'standard') == 'zcube':
+        # V3.0.2-T2-3: 华为超节点优先；V3.0.2-T2-1: ZCube 次之；V3.0.1-T1-2: 双平面再之
+        if getattr(self, 'param_network_mode', 'standard') == 'huawei_supernode':
+            self._wire_huawei_supernode()
+        elif getattr(self, 'param_network_mode', 'standard') == 'zcube':
             self._wire_zcube(gpu_servers)
         elif getattr(self, 'dual_plane_enabled', False):
             self._wire_dual_plane(gpu_servers)
