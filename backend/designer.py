@@ -890,11 +890,14 @@ class NetworkDesignerV2:
             else:
                 # V3.0.1-T1-2: 双平面域 planes=2（其余字段取平面 A 语义）
                 dp_planes = len(getattr(self, 'param_planes', []) or [])
+                # V3.0.1-T1-5: 双平面 3-tier 时 tiers 取逐平面 tier（2/3），否则回退 param_3tier_needed
+                dp_stats = getattr(self, 'dual_plane_stats', None)
+                dp_tier = int(dp_stats[0]['tier']) if dp_stats else 0
                 self.domains.append(NetworkDomain(
                     type='param',
                     planes=dp_planes or 1,
-                    tiers=_leaf_tiers(True, getattr(self, 'param_3tier_needed', False),
-                                      self.param_leaves, self.param_spines, self.param_cores),
+                    tiers=dp_tier or _leaf_tiers(True, getattr(self, 'param_3tier_needed', False),
+                                                 self.param_leaves, self.param_spines, self.param_cores),
                     protocol=getattr(self, 'param_protocol', 'RoCE'),
                     speed=getattr(self, 'param_speed', '400G'),
                     ports_per_server=getattr(self, 'param_ports_per_server', 8),

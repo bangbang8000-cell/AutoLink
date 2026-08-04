@@ -306,15 +306,21 @@ export const useDesignStore = create<DesignState>()(
   loadConfig: async (projectName) => {
     set({ generating: true, error: null })
     try {
+      // V3.0.2-T2-2: 配置来源与后端一致 —— 优先 project_config.json(v2 完整配置,
+      // 含 param_protocol/param_planes 等扩展字段),network_config.ini 仅补漏。
+      // 修复:旧流程只读 INI,导致 v2 INI 的 num_gpu_servers 被 parseINI 忽略,
+      // config 回落默认值(100 台/RoCE),渲染时覆盖 JSON 的正确配置。
+      let iniStr = ''
       if (window.electron?.project?.getConfigFile) {
-        const configStr = await window.electron.project.getConfigFile(projectName)
-        if (configStr) {
-          const config = parseINI(configStr)
-          set({ config, configLoaded: true, projectName })
-        } else {
-          set({ config: { ...defaultDesignConfig }, configLoaded: true, projectName })
-        }
+        // getConfigFile 内置 V2.7.2-T10 自动迁移(INI→JSON),先调用确保 JSON 存在
+        iniStr = (await window.electron.project.getConfigFile(projectName)) ?? ''
       }
+      let jsonStr = ''
+      if (window.electron?.project?.getFile) {
+        jsonStr = (await window.electron.project.getFile(projectName, 'project_config.json')) ?? ''
+      }
+      const config = buildConfigFromSources(iniStr, jsonStr)
+      set({ config, configLoaded: true, projectName })
     } catch (err) {
       set({ error: `加载配置失败: ${(err as Error).message}` })
     } finally {
@@ -580,11 +586,12 @@ function parseINI(ini: string): DesignConfig {
     config[key] = val
   }
 
+  // V3.0.2-T2-2: 兼容 v2 INI 字段名(createWithConfig 生成 num_gpu_servers/num_storage_servers/num_compute_servers)
   return {
     downlink_mode: (config['downlink_mode'] as 'full' | 'custom') || 'custom',
-    num_servers: parseInt(config['num_servers']) || 100,
-    additional_storage_servers: parseInt(config['additional_storage_servers']) || 0,
-    additional_compute_servers: parseInt(config['additional_compute_servers']) || 0,
+    num_servers: parseInt(config['num_servers']) || parseInt(config['num_gpu_servers']) || 100,
+    additional_storage_servers: parseInt(config['additional_storage_servers']) || parseInt(config['num_storage_servers']) || 0,
+    additional_compute_servers: parseInt(config['additional_compute_servers']) || parseInt(config['num_compute_servers']) || 0,
     param_ports_per_server: parseInt(config['param_ports_per_server']) || 8,
     storage_ports_per_server: parseInt(config['storage_ports_per_server']) || 1,
     param_switch_ports: parseInt(config['param_switch_ports']) || 64,
@@ -601,4 +608,57 @@ function parseINI(ini: string): DesignConfig {
     rail_count: parseInt(config['rail_count']) || 8,
     param_protocol: (config['param_protocol'] as 'IB' | 'RoCE') || 'RoCE',
   }
+}
+
+/**
+ * V3.0.2-T2-2: 从 project_config.json(v2,优先) + network_config.ini(v1/v2,补漏)
+ * 重建前端 design config。JSON 是后端权威来源(engine._get_config_file 优先 JSON),
+ * 前端 config 需与之一致,避免渲染时 INI 覆盖 JSON 的正确配置。
+ */
+function buildConfigFromSources(ini: string, jsonStr: string): DesignConfig {
+  const iniConfig = ini ? parseINI(ini) : null
+  if (!jsonStr) {
+    return iniConfig ?? { ...defaultDesignConfig }
+  }
+  let parsed: Record<string, unknown> | null = null
+  try {
+    parsed = JSON.parse(jsonStr) as Record<string, unknown>
+  } catch {
+    return iniConfig ?? { ...defaultDesignConfig }
+  }
+  const topo = (parsed.topology ?? {}) as Record<string, unknown>
+  const networks = (parsed.networks ?? {}) as Record<string, unknown>
+
+  const num = (v: unknown, fallback: number): number => {
+    const n = parseInt(String(v ?? ''))
+    return Number.isNaN(n) ? fallback : n
+  }
+  // 存储: v1 拆分字段(全闪+混闪) 或 v2 单字段
+  const storageCount =
+    topo.num_all_flash_storage != null || topo.num_hybrid_flash_storage != null
+      ? num(topo.num_all_flash_storage, 0) + num(topo.num_hybrid_flash_storage, 0)
+      : num(topo.num_storage_servers, iniConfig?.additional_storage_servers ?? 0)
+
+  const fromJson: DesignConfig = {
+    downlink_mode: (topo.downlink_mode as 'full' | 'custom') || iniConfig?.downlink_mode || 'custom',
+    num_servers: num(topo.num_gpu_servers, iniConfig?.num_servers ?? 100),
+    additional_storage_servers: storageCount,
+    additional_compute_servers: num(topo.num_compute_servers, iniConfig?.additional_compute_servers ?? 0),
+    param_ports_per_server: num(topo.param_ports_per_server, iniConfig?.param_ports_per_server ?? 8),
+    storage_ports_per_server: num(topo.storage_ports_per_server, iniConfig?.storage_ports_per_server ?? 1),
+    param_switch_ports: num(topo.param_switch_ports, iniConfig?.param_switch_ports ?? 64),
+    storage_switch_ports: num(topo.storage_switch_ports, iniConfig?.storage_switch_ports ?? 40),
+    param_speed: (topo.param_speed as string) || iniConfig?.param_speed || '400G',
+    storage_speed: (topo.storage_speed as string) || iniConfig?.storage_speed || '200G',
+    param_downlink_limit: num(topo.param_downlink_limit, iniConfig?.param_downlink_limit ?? 25),
+    storage_downlink_limit: num(topo.storage_downlink_limit, iniConfig?.storage_downlink_limit ?? 20),
+    biz_downlink_limit: num(topo.biz_downlink_limit, iniConfig?.biz_downlink_limit ?? 25),
+    oob_downlink_limit: num(topo.oob_downlink_limit, iniConfig?.oob_downlink_limit ?? 25),
+    oob_enabled: networks.oob_network != null ? networks.oob_network !== false : (iniConfig?.oob_enabled ?? true),
+    biz_enabled: networks.biz_network != null ? networks.biz_network !== false : (iniConfig?.biz_enabled ?? true),
+    rail_mode: (topo.rail_mode as 'standard' | 'rail_optimized') || iniConfig?.rail_mode || 'standard',
+    rail_count: num(topo.rail_count, iniConfig?.rail_count ?? 8),
+    param_protocol: (topo.param_protocol as 'IB' | 'RoCE') || iniConfig?.param_protocol || 'RoCE',
+  }
+  return fromJson
 }
