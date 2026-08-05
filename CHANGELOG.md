@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## [3.1.3] - 2026-08-05
+
+### 对话管理 + 需求/示例生成 + 容量规划内核（AI 能力增强）
+
+v3.1.3 落地 AIHUB 管理域对话工具集与"轨道 B"需求生成闭环：设备/模板/项目管理对话查询、自然语言需求 → ProjectConfig 预览 → 确认落盘、示例文件解析、容量规划内核（解析法预估值）、共享选型规则双端一致。
+
+#### 对话管理工具集（T7-1）
+- 后端新增管理域只读 action：`device:list`（复用 device_library.py）/ `template:list` / `template:view` / `project:list` / `project:info`
+- AIHUB 注册 5 工具（权限 AUTO）：`device_query` / `template_list` / `template_view` / `project_list` / `project_info` ——"有哪些 H100 服务器？""列出可用模板""打开项目 X"四类管理对话闭环
+
+#### 需求生成（T7-2）
+- `project:generate`：migrate_config → `_deep_merge` 默认值补全缺失键 → `validate_config(strict=False)` 宽松校验 → `_annotate` 置信度/缺失字段标注（只预览不落盘）
+- AIHUB 工具 `generate_project`（NOTIFY）+ 技能 `requirements-generation.md`（规模/协议/速率/网络/机柜要素抽取 + ```project-config``` 预览输出块约定）
+- 前端 `ProjectConfigPreview` 卡片：对话内预览（可编辑）+ 置信度徽标 + 缺失字段 chips + 校验问题 + 确认创建落盘
+
+#### 示例文件解析（T7-3）
+- 新增 `backend/file_parser.py`：Excel(pandas)/JSON(project-config 结构识别)/CSV/文本 → 结构化数据（只读 + 截断）
+- AIHUB 工具 `parse_file`（AUTO）+ agent 附件路径注入（parse_file 前置）+ 技能 `parse-examples.md`（示例 → 要素 → generate_project 闭环）
+
+#### 容量规划内核（T7-4）
+- 新增 `backend/capacity_planning/` 包：12 模型档案 + 模型解析 + 通信量估算（AllReduce/All-to-All/P2P，预研文档公式）+ 拓扑推荐（Scale-Up/Scale-Out/收敛比/层数）+ 经验规则（MoE≤1.2/FP8×1.5/长上下文 NVLink/>1024 三 tier/预算档位）
+- `capacity:recommend` / `capacity:list-presets` action + AIHUB 工具 `capacity_recommend`（AUTO）+ CLI schema
+- 前端 `CapacityRecommendModal`：模型/GPU/预算 → 推荐结果 → 一键应用映射（param_speed/param_protocol/num_servers）+ DesignTab 顶部入口
+
+#### 预估值/置信度标注（T7-5）
+- `project:generate` 返回 `annotations{confidence, missingFields, derivedFields}`；`capacity:recommend` 返回 `estimated=true` + `estimation{label/method/accuracy/note}`（解析法预估值 ±15-20%）
+- 工具描述注明预估值/置信度提示，LLM 需向用户说明
+
+#### 共享选型规则（T7-6）
+- `src/utils/device-defaults.ts` + `backend/device_defaults.py` 双端同一套映射（IB 按 GPU 世代 h100→MQM9700 400G / b300、gb300→Q3400 800G；RoCE→H3C；存储按协议 IB→Quantum HDR 200G / RoCE、UEC→CE6881；业务/带外固定默认）
+- WizardStepDevices 内联规则全部移出改 import；`device:defaults` action + AIHUB 工具 `device_defaults`（AUTO）+ 技能 `device-selection.md`——LLM 与向导共用同一份默认映射
+
+#### 版本与回归（T7-7）
+- 版本号 3.1.2 → 3.1.3（VERSION / package.json / package-lock.json / README）
+- 回归：后端 868 用例全绿（v3.1.2 基线 853），前端 436 用例全绿（基线 429），typecheck + electron tsc 通过
+- PRD §5.10 验收标准 3 项全部达标：轨道 B 闭环（1024×B300 双平面 800G IB 收敛比 1.2 ≤1.5）/ 管理域四类对话闭环 / 示例解析 + 容量一键应用
+
+---
+
 ## [3.1.2] - 2026-08-05
 
 ### AIHUB 响应延迟优化（纯性能版 · 不加新功能）
