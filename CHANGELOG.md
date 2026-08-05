@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## [3.1.1] - 2026-08-05
+
+### AIHUB 对话框架 + 命令审计日志（3.X 系列 · AI 能力）
+
+v3.1.1 落地 AIHUB 对话框架移植（复用 engine 进程，零新增子进程）：Agent 循环 / 工具白名单 / 9 厂商 LLM Provider / 前端对话与智能答疑闭环；AI 每次工具调用经 `cli.execute` 自动落审计日志（R5.7 留轨迹）。
+
+#### AIHUB 后端移植（T5-1 ~ T5-3）
+- 新增 `backend/autolink_hub/`：config（secrets 落 `$AUTOLINK_USER_DATA/ai_secrets.json`，键名脱敏）、llm/provider（9 厂商 OpenAI 兼容 + reasoning_content 收集）、agent（run_stream 循环 + validator + recovery + planner + context + 权限分级表）、memory / skills / prompts（JSON 持久化 + md 拼接 system prompt）
+- 工具层白名单：13 工具（设计/导出/机房/配置/项目配置域）经 `cli.execute(action, params, argv=["ai:..."])` 同进程直调 —— UI / CLI / AI 三入口同一执行路径，权限分级 AUTO🟢/NOTIFY🟡/CONFIRM🔴
+- 引擎注册 7 个 `ai:*` action（chat/providers/config/config-default/test/models/clear），流式回复复用 `emit_event` 通道；`ai:*` 自动映射为 CLI `ai` 域
+
+#### 智能答疑 + 审计（T5-6 ~ T5-7）
+- 统一校验管线 `_run_validation`：`validate` action 现返回 `{valid, errors, validationIssues}` —— validation 引擎 22 条规则（V001-V022）每条含 `recommendation` 修复建议，供 AI 直接引用答疑
+- 命令审计日志：每次执行写 `userData/audit/cli-audit.jsonl`（时间/action/命令/参数脱敏/结果）；设置新增「诊断」分类，展示 CLI 能力信息 + 审计日志（AI 调用以 AI 徽标标记）
+
+#### 前端对话（T5-4 ~ T5-5）
+- IPC 桥接：`ai:chat` 独立通道（流式 `aihub:stream` 带 sessionId）+ preload `aihub` 命名空间 + 类型完备
+- `chat.store`（会话/消息/流式追加/首条标题/附件/60s 超时）+ `ChatPanel`/`ChatMessageBubble`（markdown + 计划块可视化）/`ChatInput`/`PlanDisplay` 组件
+- ActivityBar AI 入口（Ctrl+Shift+A）+ Settings AI Tab（9 厂商 BYO-Key 密码显隐/测试连接/拉模型/设默认）+ `chat` 命名空间 5 语言 + i18n 完整性测试
+- 无 Provider / 无网络时降级 mock 回复（设置徽标提示）
+
+#### 测试与打包（T5-8）
+- 新增 `tests/backend/test_autolink_hub.py` 23 用例（provider 注册/工具白名单/权限分级/validator/recovery/tool_call 3 格式解析/agent 循环 mock LLM/审计留痕与脱敏）
+- 新增 `src/test/chat.store.test.ts` 12 用例（会话/消息/模式/附件/流式追加/mock 降级）
+- `requirements.txt` 加 `openai`/`httpx`；`pyinstaller.spec` 补 hiddenimports（openai）与 datas（prompts/skills md）
+
+#### 版本与回归
+- 版本号 3.1.0 → 3.1.1（package.json / VERSION / package-lock.json / README）
+- 回归：后端 784 用例（+23 test_autolink_hub）全绿，前端 413 用例（+12 chat.store + i18n 完整性）全绿，typecheck 通过
+
 ## [3.1.0] - 2026-08-05
 
 ### CLI 显式能力层（3.X 系列 · 对外接口）
