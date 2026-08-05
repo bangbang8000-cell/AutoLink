@@ -83,6 +83,60 @@ interface Window {
       estimate: (projectName: string, estimateParams?: Record<string, unknown>) => Promise<unknown>
       report: (projectName: string) => Promise<unknown>
     }
+    // V3.1.3-T7-4: 容量规划（模型档案 + 推荐）
+    capacity: {
+      listPresets: () => Promise<{
+        presets: Array<{
+          id: string
+          name: string
+          model_type: string
+          num_params: number
+          context_length: number
+          precision: string
+          num_experts: number
+        }>
+        total: number
+      }>
+      recommend: (params: {
+        model: string
+        numGpus: number
+        budget?: string
+        precision?: string
+        contextLength?: number
+      }) => Promise<{
+        success: boolean
+        error?: string
+        estimated?: boolean
+        estimation?: {
+          label: string
+          method: string
+          accuracy: string
+          note: string
+        }
+        model?: {
+          name: string
+          model_type: string
+          num_params_b: number
+          context_length: number
+          precision: string
+          num_experts: number
+        }
+        comm?: {
+          total_gib: number
+          comm_ratio: number
+        }
+        recommendation?: {
+          scale_up_protocol: string
+          scale_up_domain: number
+          scale_out_protocol: string
+          scale_out_speed: string
+          convergence_ratio: number
+          tier_count: number
+          estimated_comm_overhead: number
+        }
+        notes?: Array<{ level: string; message: string }>
+      }>
+    }
     // V3.0.4-T3-1: 机房矩阵
     room: {
       createMatrix: (rows: string[], cols: number[], name?: string) => Promise<{

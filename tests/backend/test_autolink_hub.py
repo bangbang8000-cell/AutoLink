@@ -88,12 +88,15 @@ class TestTools:
     def test_whitelist_registered(self):
         init_tools()
         defs = get_tool_definitions()
-        assert len(defs) >= 13
+        assert len(defs) >= 21
         names = {d['function']['name'] for d in defs}
         for expected in ('generate_design', 'validate_design', 'estimate', 'report',
                          'export_outputs', 'room_create', 'room_validate',
                          'list_config_schema', 'apply_config_preset', 'config_export',
-                         'config_import', 'project_config_migrate', 'project_config_to_ini'):
+                         'config_import', 'project_config_migrate', 'project_config_to_ini',
+                         'device_query', 'template_list', 'template_view',
+                         'project_list', 'project_info', 'generate_project', 'parse_file',
+                         'capacity_recommend'):
             assert expected in names
 
     def test_unknown_tool_returns_error(self):
@@ -105,6 +108,64 @@ class TestTools:
         result = asyncio.run(execute_tool('list_config_schema', {}))
         assert result['success'] is True
         assert 'schema' in str(result['result']).lower() or 'preset' in str(result['result']).lower()
+
+    def test_manage_tools_readonly(self):
+        # device_query：分类前缀过滤
+        r = asyncio.run(execute_tool('device_query', {'category': 'switches'}))
+        assert r['success'] is True
+        assert r['result']['total'] >= 1
+        for d in r['result']['devices']:
+            assert d['category'].startswith('switches')
+        # template_list / template_view
+        r = asyncio.run(execute_tool('template_list', {}))
+        assert r['success'] is True and r['result']['total'] >= 10
+        r = asyncio.run(execute_tool('template_view', {'name': 'DP3Tier-1024'}))
+        assert r['success'] is True and 'config' in r['result']['template']
+        # project_list / project_info（未知项目返回成功但 success=False）
+        r = asyncio.run(execute_tool('project_list', {}))
+        assert r['success'] is True and 'projects' in r['result']
+        r = asyncio.run(execute_tool('project_info', {'name': '__no_such_project__'}))
+        assert r['success'] is True and r['result']['success'] is False
+
+    def test_generate_project_tool(self):
+        # 需求生成：规范化 + 标注（只预览不落盘）
+        r = asyncio.run(execute_tool('generate_project', {
+            'name': 'B300集群',
+            'config': {'topology': {'num_gpu_servers': 1024, 'param_protocol': 'IB'}},
+        }))
+        assert r['success'] is True
+        res = r['result']
+        assert res['config']['meta']['name'] == 'B300集群'
+        assert res['config']['topology']['num_gpu_servers'] == 1024
+        assert 'annotations' in res
+        assert res['annotations']['confidence'] < 1.0
+        # 缺 config 参数 → 返回 success False
+        r2 = asyncio.run(execute_tool('generate_project', {}))
+        assert r2['success'] is True and r2['result']['success'] is False
+
+    def test_parse_file_tool(self, tmp_path):
+        # 文本示例解析
+        p = tmp_path / '需求.txt'
+        p.write_text('1024 台 B300 双平面 800G IB', encoding='utf-8')
+        r = asyncio.run(execute_tool('parse_file', {'path': str(p)}))
+        assert r['success'] is True
+        res = r['result']
+        assert res['file']['type'] == 'text'
+        assert 'B300' in res['parsed']['content']
+        # 不存在文件 → success False
+        r2 = asyncio.run(execute_tool('parse_file', {'path': '/no/such/file.xlsx'}))
+        assert r2['success'] is True and r2['result']['success'] is False
+
+    def test_capacity_recommend_tool(self):
+        r = asyncio.run(execute_tool('capacity_recommend', {'model': 'deepseek-v3', 'num_gpus': 1024}))
+        assert r['success'] is True
+        rec = r['result']['recommendation']
+        assert rec['scale_out_protocol'] == 'UEC'
+        assert rec['scale_out_speed'] == '800G'
+        assert rec['convergence_ratio'] <= 1.2
+        # 缺参数 → success False
+        r2 = asyncio.run(execute_tool('capacity_recommend', {'model': 'llama3-8b'}))
+        assert r2['success'] is True and r2['result']['success'] is False
 
 
 # ============================================================
@@ -118,6 +179,18 @@ class TestPermissions:
         assert get_tool_permission('generate_design') == ToolPermission.NOTIFY
         assert get_tool_permission('room_create') == ToolPermission.NOTIFY
         assert get_tool_permission('delete_project') == ToolPermission.CONFIRM
+        # 管理域只读工具 AUTO（V3.1.3-T7-1）
+        assert get_tool_permission('device_query') == ToolPermission.AUTO
+        assert get_tool_permission('template_list') == ToolPermission.AUTO
+        assert get_tool_permission('template_view') == ToolPermission.AUTO
+        assert get_tool_permission('project_list') == ToolPermission.AUTO
+        assert get_tool_permission('project_info') == ToolPermission.AUTO
+        # 需求生成 NOTIFY（V3.1.3-T7-2：生成预览，前端确认后落盘）
+        assert get_tool_permission('generate_project') == ToolPermission.NOTIFY
+        # 示例文件解析 AUTO（V3.1.3-T7-3：只读）
+        assert get_tool_permission('parse_file') == ToolPermission.AUTO
+        # 容量规划推荐 AUTO（V3.1.3-T7-4：纯计算）
+        assert get_tool_permission('capacity_recommend') == ToolPermission.AUTO
         # 未注册工具默认 CONFIRM
         assert get_tool_permission('unknown_tool') == ToolPermission.CONFIRM
 
@@ -278,6 +351,27 @@ class TestAgentLoop:
 
         text = asyncio.run(collect())
         assert 'AI Provider' in text
+
+
+# ============================================================
+# 附件路径注入（V3.1.3-T7-3，parse_file 前置）
+# ============================================================
+
+class TestAttachmentPaths:
+    def test_add_user_message_includes_paths(self):
+        session = AgentSession()
+        session.add_user_message('按示例生成配置', [
+            {'name': '需求清单.xlsx', 'type': 'excel', 'path': 'C:/tmp/需求清单.xlsx'},
+        ])
+        user_msg = session.messages[0]['content']
+        assert '需求清单.xlsx' in user_msg
+        assert 'C:/tmp/需求清单.xlsx' in user_msg
+        assert 'parse_file' in user_msg
+
+    def test_add_user_message_without_attachments(self):
+        session = AgentSession()
+        session.add_user_message('普通消息')
+        assert session.messages[0]['content'] == '普通消息'
 
 
 # ============================================================

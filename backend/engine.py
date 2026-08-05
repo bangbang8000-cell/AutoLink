@@ -1353,6 +1353,86 @@ def handle_export(params):
     }
 
 
+# ================================================================
+# V3.1.3-T7-1: 对话管理域只读查询（设备库/模板/项目 → AIHUB 管理工具）
+# 全部只读：列表/详情，不创建或修改文件（权限 AUTO）
+# ================================================================
+
+@register_action('device:list')
+def handle_device_list(params):
+    """V3.1.3-T7-1: 设备库列表（category 分类/厂商/型号 或 query 关键词过滤）"""
+    from manage import list_devices
+    return list_devices(
+        category=params.get('category', ''),
+        query=params.get('query', ''),
+        limit=params.get('limit', 50),
+    )
+
+
+@register_action('device:defaults')
+def handle_device_defaults(params):
+    """V3.1.3-T7-6: 共享设备选型规则（协议 + GPU 世代 → 全部默认交换机，与向导一致）"""
+    from device_defaults import defaults
+    return defaults(params)
+
+
+@register_action('template:list')
+def handle_template_list(params):
+    """V3.1.3-T7-1: 模板列表（内置 + 用户模板，含规模摘要）"""
+    from manage import list_templates
+    return list_templates()
+
+
+@register_action('template:view')
+def handle_template_view(params):
+    """V3.1.3-T7-1: 查看模板详情（含完整 ProjectConfig）"""
+    from manage import view_template
+    return view_template(params.get('name', ''))
+
+
+@register_action('project:list')
+def handle_project_list(params):
+    """V3.1.3-T7-1: 项目列表（扫描工作区）"""
+    from manage import list_projects
+    return list_projects()
+
+
+@register_action('project:info')
+def handle_project_info(params):
+    """V3.1.3-T7-1: 项目详情（meta + ProjectConfig + 宽松校验摘要）"""
+    from manage import project_info
+    return project_info(params.get('name', ''))
+
+
+@register_action('project:generate')
+def handle_project_generate(params):
+    """V3.1.3-T7-2: 需求生成（轨道 B）——LLM 抽取的 ProjectConfig → 规范化补全 + 置信度标注，只预览不落盘"""
+    from manage import generate_project
+    return generate_project(name=params.get('name', ''), config=params.get('config') or {})
+
+
+@register_action('file:parse')
+def handle_file_parse(params):
+    """V3.1.3-T7-3: 示例文件解析（Excel/JSON/CSV/文本 → 结构化数据，只读）"""
+    from file_parser import parse_file
+    return parse_file(path=params.get('path', ''), file_type=params.get('type', ''))
+
+
+@register_action('capacity:list-presets')
+def handle_capacity_list_presets(params):
+    """V3.1.3-T7-4: 容量规划模型档案清单（前端选择器用）"""
+    from capacity_planning import get_presets
+    presets = get_presets()
+    return {'presets': presets, 'total': len(presets)}
+
+
+@register_action('capacity:recommend')
+def handle_capacity_recommend(params):
+    """V3.1.3-T7-4: 容量规划推荐（模型 + GPU 规模 → Scale-Up/Scale-Out/收敛比/层数）"""
+    from capacity_planning import recommend
+    return recommend(params)
+
+
 def _write_line(obj: dict) -> None:
     """V3.0.0-T0-6: 单行 NDJSON 输出 + flush（持久进程逐行协议）"""
     sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")

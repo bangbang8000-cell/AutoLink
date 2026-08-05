@@ -134,6 +134,102 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
              'required': True, 'help': '导出的配置包裹 JSON 文件路径', 'file_json': True},
         ],
     },
+    # V3.1.3-T7-1: 对话管理域只读查询（设备库/模板/项目）
+    'device:list': {
+        'sub': 'list',
+        'domain': 'device',
+        'params': [
+            {'name': 'category', 'flags': ['--category'], 'type': str,
+             'required': False, 'help': '分类 id / 厂商 / 型号过滤'},
+            {'name': 'query', 'flags': ['--query'], 'type': str,
+             'required': False, 'help': '关键词搜索（vendor/model/description）'},
+            {'name': 'limit', 'flags': ['--limit'], 'type': int,
+             'required': False, 'help': '最大返回数（默认 50）'},
+        ],
+    },
+    'device:defaults': {
+        'sub': 'defaults',
+        'domain': 'device',
+        'params': [
+            {'name': 'protocol', 'flags': ['--protocol'], 'type': str,
+             'required': False, 'help': '参数网协议：IB/RoCE/UEC（默认 IB）'},
+            {'name': 'gpu_library_id', 'flags': ['--gpu-library-id'], 'type': str,
+             'required': False, 'help': 'GPU 设备库 id（决定 IB 世代：gb300/nvl72/b200/b300 → 800G，其余 400G）'},
+        ],
+    },
+    'template:list': {
+        'sub': 'list',
+        'domain': 'template',
+        'params': [],
+    },
+    'template:view': {
+        'sub': 'view',
+        'domain': 'template',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '模板名（内置或用户模板）'},
+        ],
+    },
+    'project:list': {
+        'sub': 'list',
+        'domain': 'project',
+        'params': [],
+    },
+    'project:info': {
+        'sub': 'info',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '项目名（工作区项目）'},
+        ],
+    },
+    # V3.1.3-T7-2: 需求生成（轨道 B）——LLM 抽取配置 → 规范化补全 + 置信度标注（只预览不落盘）
+    'project:generate': {
+        'sub': 'generate',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': False, 'help': '项目名（缺省取 config.meta.name）'},
+            {'name': 'config', 'flags': ['--config'], 'type': str,
+             'required': True, 'help': 'LLM 抽取的项目配置 JSON 文件路径', 'file_json': True},
+        ],
+    },
+    # V3.1.3-T7-3: 示例文件解析（Excel/JSON/CSV/文本 → 结构化数据）
+    'file:parse': {
+        'sub': 'parse',
+        'domain': 'file',
+        'params': [
+            {'name': 'path', 'flags': ['--path'], 'type': str,
+             'required': True, 'help': '文件路径'},
+            {'name': 'type', 'flags': ['--type'], 'type': str,
+             'required': False, 'help': '文件类型（excel/json/csv/text，缺省按扩展名识别）'},
+        ],
+    },
+    # V3.1.3-T7-4: 容量规划（模型档案 + 推荐）
+    'capacity:list-presets': {
+        'sub': 'list-presets',
+        'domain': 'capacity',
+        'params': [],
+    },
+    'capacity:recommend': {
+        'sub': 'recommend',
+        'domain': 'capacity',
+        'params': [
+            {'name': 'model', 'flags': ['--model'], 'type': str,
+             'required': True, 'help': '模型档案 id（如 deepseek-v3/llama3-70b）或自定义模型名'},
+            {'name': 'num_gpus', 'flags': ['--num-gpus'], 'type': int,
+             'required': True, 'help': '目标 GPU 数量'},
+            {'name': 'budget', 'flags': ['--budget'], 'type': str,
+             'required': False, 'help': '预算档位（economy/standard/premium，默认 standard）'},
+            {'name': 'tp', 'flags': ['--tp'], 'type': int, 'required': False, 'help': '张量并行（默认 8）'},
+            {'name': 'dp', 'flags': ['--dp'], 'type': int, 'required': False, 'help': '数据并行（默认 1）'},
+            {'name': 'pp', 'flags': ['--pp'], 'type': int, 'required': False, 'help': '流水线并行（默认 1）'},
+            {'name': 'precision', 'flags': ['--precision'], 'type': str,
+             'required': False, 'help': '训练精度覆盖（fp8/fp16/bf16）'},
+            {'name': 'context_length', 'flags': ['--context-length'], 'type': int,
+             'required': False, 'help': '上下文长度覆盖（token）'},
+        ],
+    },
 }
 
 

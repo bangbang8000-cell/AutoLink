@@ -51,13 +51,17 @@ class AgentSession:
         self.messages.append(msg)
 
     def add_user_message(self, content: str, attachments: Optional[list[dict]] = None):
-        """添加用户消息，可选附件信息"""
+        """添加用户消息，可选附件信息（含路径，供 parse_file 工具使用）"""
         msg = content
         if attachments:
             file_list = "\n".join(
-                f"- {a.get('name')} ({a.get('type')})" for a in attachments
+                f"- {a.get('name')} ({a.get('type')}) — {a.get('path')}" for a in attachments
             )
-            msg = f"用户上传了以下附件：\n{file_list}\n\n用户消息：{content}"
+            # V3.1.3-T7-3: 提示 LLM 用 parse_file 解析附件
+            msg = (
+                "用户上传了以下附件（如需解析请调用 parse_file 工具，参数 path=附件路径）：\n"
+                f"{file_list}\n\n用户消息：{content}"
+            )
         self.add_message("user", msg)
 
     async def run_stream(self, max_tool_rounds: int = 5) -> AsyncIterator[str]:

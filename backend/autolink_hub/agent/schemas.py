@@ -23,6 +23,20 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "report": ToolPermission.AUTO,
     "room_validate": ToolPermission.AUTO,
     "list_config_schema": ToolPermission.AUTO,
+    # 管理域只读查询（V3.1.3-T7-1，AUTO）
+    "device_query": ToolPermission.AUTO,
+    # 共享选型规则（V3.1.3-T7-6，AUTO：只读映射查询）
+    "device_defaults": ToolPermission.AUTO,
+    "template_list": ToolPermission.AUTO,
+    "template_view": ToolPermission.AUTO,
+    "project_list": ToolPermission.AUTO,
+    "project_info": ToolPermission.AUTO,
+    # 需求生成（V3.1.3-T7-2，NOTIFY：生成预览 + 前端确认后落盘）
+    "generate_project": ToolPermission.NOTIFY,
+    # 示例文件解析（V3.1.3-T7-3，AUTO：只读解析）
+    "parse_file": ToolPermission.AUTO,
+    # 容量规划推荐（V3.1.3-T7-4，AUTO：纯计算只读）
+    "capacity_recommend": ToolPermission.AUTO,
     # 写操作（NOTIFY）
     "generate_design": ToolPermission.NOTIFY,
     "create_project": ToolPermission.NOTIFY,

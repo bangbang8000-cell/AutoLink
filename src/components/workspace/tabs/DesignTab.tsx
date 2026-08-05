@@ -4,16 +4,18 @@ import {
   Wrench, Play, RefreshCw,
   Server, HardDrive, Network, Zap,
   AlertTriangle, ChevronDown, ChevronRight, Loader2,
-  Settings2,
+  Settings2, Gauge,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore, type DesignConfig, type DesignSummary, type EstimateParams } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useRackStore } from '@/stores/rack.store'
+import { useToastStore } from '@/stores/toast.store'
 import { NumberInput, Toggle } from '@/components/ui'
 import { PUEEstimatePanel } from './PUEEstimatePanel'
 import { ReportViewPanel } from './ReportViewPanel'
 import { ValidationPanel } from './ValidationPanel'
+import { CapacityRecommendModal } from '@/components/capacity/CapacityRecommendModal'
 
 /* -------------------------------------------------- */
 /*  Sub-components (same as DesignPanel)              */
@@ -146,6 +148,10 @@ export function DesignTab() {
   } = useDesignStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
   const initFromTopology = useRackStore((s) => s.initFromTopology)
+  const addToast = useToastStore((s) => s.addToast)
+
+  // V3.1.3-T7-4: 容量规划推荐向导（apply 回调置于 handleUpdateConfig 之后）
+  const [showCapacity, setShowCapacity] = useState(false)
 
   // V2.9.2-T4: 配置变更标记 dirty(关闭需确认); 重置后清除
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
@@ -164,6 +170,11 @@ export function DesignTab() {
     markDirty()
     updateConfig(patch)
   }, [markDirty, updateConfig])
+
+  const handleCapacityApply = useCallback((patch: Partial<DesignConfig>) => {
+    handleUpdateConfig(patch)
+    addToast('success', '容量推荐已应用到设计配置', 3000)
+  }, [handleUpdateConfig, addToast])
 
   useEffect(() => {
     if (selectedProjectName) {
@@ -219,6 +230,14 @@ export function DesignTab() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* V3.1.3-T7-4: 容量规划推荐入口 */}
+          <button
+            onClick={() => setShowCapacity(true)}
+            className="flex items-center gap-1 px-2.5 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
+          >
+            <Gauge size={12} />
+            容量推荐
+          </button>
           <button
             onClick={() => { resetConfig(); clearResults(); clearDirty() }}
             className="flex items-center gap-1 px-2.5 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
@@ -228,6 +247,14 @@ export function DesignTab() {
           </button>
         </div>
       </div>
+
+      {/* V3.1.3-T7-4: 容量规划推荐向导（一键应用） */}
+      <CapacityRecommendModal
+        open={showCapacity}
+        onClose={() => setShowCapacity(false)}
+        onApply={handleCapacityApply}
+        initialNumServers={config.num_servers}
+      />
 
       {/* Content - full width layout */}
       <div className="flex-1 overflow-auto p-6">

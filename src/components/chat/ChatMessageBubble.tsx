@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import { useMemo } from 'react'
 import type { ChatMessage } from '@/types/chat'
 import { PlanDisplay, parsePlanSteps } from './PlanDisplay'
+import { ProjectConfigPreview, parseProjectConfigBlock } from './ProjectConfigPreview'
 
 interface Props {
   message: ChatMessage
@@ -16,6 +17,11 @@ export function ChatMessageBubble({ message }: Props) {
   const isUser = message.role === 'user'
   const planSteps = useMemo(() => (isUser ? [] : parsePlanSteps(message.content)), [message.content, isUser])
   const showPlan = !isUser && planSteps.length > 0
+  // V3.1.3-T7-2: 需求生成预览卡片（project-config 块 / 工具结果 json 块）
+  const projectPreview = useMemo(
+    () => (isUser ? null : parseProjectConfigBlock(message.content)),
+    [message.content, isUser],
+  )
 
   return (
     <div className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -63,6 +69,9 @@ export function ChatMessageBubble({ message }: Props) {
 
         {/* 执行计划 */}
         {showPlan && <PlanDisplay steps={planSteps} />}
+
+        {/* V3.1.3-T7-2: 需求生成预览卡片 */}
+        {projectPreview && <ProjectConfigPreview preview={projectPreview} />}
       </div>
     </div>
   )

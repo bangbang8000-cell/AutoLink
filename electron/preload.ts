@@ -72,6 +72,13 @@ const electronAPI = {
     report: (projectName: string) =>
       ipcRenderer.invoke('design:report', projectName),
   },
+  // V3.1.3-T7-4: 容量规划（模型档案 + 推荐）
+  capacity: {
+    listPresets: () =>
+      ipcRenderer.invoke('capacity:list-presets'),
+    recommend: (params: { model: string; numGpus: number; budget?: string; precision?: string; contextLength?: number }) =>
+      ipcRenderer.invoke('capacity:recommend', params),
+  },
   // V3.0.4-T3-1: 机房矩阵（创建/校验）
   room: {
     createMatrix: (rows: string[], cols: number[], name?: string) =>

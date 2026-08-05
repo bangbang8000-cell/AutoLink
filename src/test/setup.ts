@@ -19,6 +19,10 @@ const mockElectron = {
     generate: vi.fn(),
     validate: vi.fn(),
   },
+  capacity: {
+    listPresets: vi.fn(),
+    recommend: vi.fn(),
+  },
   room: {
     createMatrix: vi.fn(),
     validateLayout: vi.fn(),

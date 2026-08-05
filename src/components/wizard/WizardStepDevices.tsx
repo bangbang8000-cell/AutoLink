@@ -3,84 +3,18 @@ import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import { DEVICE_REF_KEYS } from '@/types/project-config'
-import type { ProjectNetworks, ParamProtocol } from '@/types/project-config'
+import type { ProjectNetworks } from '@/types/project-config'
 import type { LibraryDevice, DeviceRef } from '@/types/device-profile'
+import {
+  getDefaultRefs,
+  resolveIBDefaults,
+  IB_DEFAULTS_BY_GPU,
+  ROCE_DEFAULTS,
+  STORAGE_DEFAULTS_BY_PROTOCOL,
+  STORAGE_DEFAULT_IDS,
+} from '@/utils/device-defaults'
 import { DeviceLibraryPicker } from './DeviceLibraryPicker'
 import { Plus, X, Zap, HardDrive, Network, Monitor } from 'lucide-react'
-
-/* ---------- IB/RoCE default switch IDs ---------- */
-
-/** IB protocol defaults by GPU generation */
-const IB_DEFAULTS_BY_GPU: Record<string, Record<string, string>> = {
-  // H100 and below (400G NDR era): three-tier all MQM9700
-  h100_and_below: {
-    param_leaf_switch: 'nvidia_mqm9700_64_400g_ib',
-    param_spine_switch: 'nvidia_mqm9700_64_400g_ib',
-    param_core_switch: 'nvidia_mqm9700_64_400g_ib',
-  },
-  // B200/B300 (800G NDR era): Leaf/Spine/Core 全系 Q3400(144口,支持 72 Leaf 下行 3-tier)
-  b300: {
-    param_leaf_switch: 'nvidia_q3400_144_800g_ib',
-    param_spine_switch: 'nvidia_q3400_144_800g_ib',
-    param_core_switch: 'nvidia_q3400_144_800g_ib',
-  },
-  // GB300 NVL72 (800G NDR, large scale): all Q3400
-  gb300: {
-    param_leaf_switch: 'nvidia_q3400_144_800g_ib',
-    param_spine_switch: 'nvidia_q3400_144_800g_ib',
-    param_core_switch: 'nvidia_q3400_144_800g_ib',
-  },
-}
-
-/** RoCE protocol default: H3C switches */
-const ROCE_DEFAULTS: Record<string, string> = {
-  param_leaf_switch: 'h3c_s9850_64h',
-  param_spine_switch: 'h3c_s9820_64h',
-  param_core_switch: 'h3c_s9820_8c',
-}
-
-/** Fallback IB defaults (used when GPU type is unknown) */
-const IB_DEFAULTS_FALLBACK: Record<string, string> = {
-  param_leaf_switch: 'nvidia_mqm9700_64_400g_ib',
-  param_spine_switch: 'nvidia_mqm9700_64_400g_ib',
-  param_core_switch: 'nvidia_mqm9700_64_400g_ib',
-}
-
-/** T5: 存储交换机按协议分流 */
-const STORAGE_DEFAULTS_BY_PROTOCOL: Record<ParamProtocol, Record<string, string>> = {
-  // IB: 复用 Quantum HDR 交换机(IB 存储与参数面共用 Quantum 系列)
-  IB: {
-    storage_leaf_switch: 'nvidia_mqm8700_40_200g_ib',
-    storage_spine_switch: 'nvidia_mqm8700_40_200g_ib',
-  },
-  // RoCE: 专用存储接入交换机(ce6881,支持 RoCEv2/FC-NVMe)
-  RoCE: {
-    storage_leaf_switch: 'huawei_ce6881_48s6cq',
-    storage_spine_switch: 'huawei_ce6881_48s6cq',
-  },
-  // UEC: 基于以太网,存储接入与 RoCE 一致
-  UEC: {
-    storage_leaf_switch: 'huawei_ce6881_48s6cq',
-    storage_spine_switch: 'huawei_ce6881_48s6cq',
-  },
-}
-
-/** 已知的存储默认设备 ID(用于判断用户是否手动改过) */
-const STORAGE_DEFAULT_IDS = new Set<string>([
-  ...Object.values(STORAGE_DEFAULTS_BY_PROTOCOL.IB),
-  ...Object.values(STORAGE_DEFAULTS_BY_PROTOCOL.RoCE),
-])
-
-const BIZ_DEFAULTS: Record<string, string> = {
-  // T9: 业务接入对齐 biz_port_speed=25G(原 h3c_s5560x_54s_ei 为 10G)
-  biz_access_switch: 'h3c_s6850_56hf',
-  biz_agg_switch: 'h3c_s6520x_54qc_ei',
-}
-
-const OOB_DEFAULTS: Record<string, string> = {
-  oob_access_switch: 'h3c_s5130s_52p_ei',
-  oob_agg_switch: 'h3c_s5120v3_52p_ei',
-}
 
 /* ---------- device ref key groups per network ---------- */
 
@@ -139,46 +73,6 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     serverRefKeys: [],
   },
 ]
-
-/* ---------- helper: resolve IB defaults for GPU ---------- */
-
-function resolveIBDefaults(gpuLibraryId: string | undefined): Record<string, string> {
-  if (!gpuLibraryId) return IB_DEFAULTS_FALLBACK
-  const id = gpuLibraryId.toLowerCase()
-  if (id.includes('gb300') || id.includes('nvl72')) return IB_DEFAULTS_BY_GPU.gb300
-  if (id.includes('b200') || id.includes('b300')) return IB_DEFAULTS_BY_GPU.b300
-  return IB_DEFAULTS_BY_GPU.h100_and_below
-}
-
-/* ---------- helper: get default device refs ---------- */
-
-function getDefaultRefs(protocol: ParamProtocol, gpuLibraryId?: string): Record<string, DeviceRef> {
-  const refs: Record<string, DeviceRef> = {}
-
-  // Param switches based on protocol and GPU type
-  const paramDefaults = protocol === 'IB' ? resolveIBDefaults(gpuLibraryId) : ROCE_DEFAULTS
-  for (const [key, deviceId] of Object.entries(paramDefaults)) {
-    refs[key] = { library_id: deviceId }
-  }
-
-  // T5: Storage defaults by protocol
-  const storageDefaults = STORAGE_DEFAULTS_BY_PROTOCOL[protocol]
-  for (const [key, deviceId] of Object.entries(storageDefaults)) {
-    refs[key] = { library_id: deviceId }
-  }
-
-  // Biz defaults
-  for (const [key, deviceId] of Object.entries(BIZ_DEFAULTS)) {
-    refs[key] = { library_id: deviceId }
-  }
-
-  // OOB defaults
-  for (const [key, deviceId] of Object.entries(OOB_DEFAULTS)) {
-    refs[key] = { library_id: deviceId }
-  }
-
-  return refs
-}
 
 /* ---------- component ---------- */
 

@@ -175,4 +175,76 @@ def init_tools() -> None:
         _make_cli_handler("project_config_to_ini"),
     )
 
+    # ---- 管理域（只读查询，V3.1.3-T7-1）----
+    register_tool(
+        "device_query", "设备库查询：按分类（如 switches/gpu_servers，支持前缀）、厂商/型号关键词过滤，返回设备摘要",
+        _schema({
+            "category": _str_param("category", "设备分类 id/前缀/厂商/型号，如 switches、gpu_servers"),
+            "query": _str_param("query", "关键词（匹配厂商/型号/描述）"),
+            "limit": _str_param("limit", "返回条数上限（默认 50）"),
+        }, []),
+        _make_cli_handler("device:list"),
+    )
+    register_tool(
+        "device_defaults", "共享设备选型规则（与向导一致）：按协议（IB/RoCE/UEC）+ GPU 世代（gb300/nvl72/b200/b300 → 800G，其余 400G）返回参数网/存储网/业务网/带外网默认交换机（refKey → 设备库 id）。回答\"默认用什么交换机/设备\"时优先调用本工具",
+        _schema({
+            "protocol": _str_param("protocol", "参数网协议：IB/RoCE/UEC（默认 IB）"),
+            "gpu_library_id": _str_param("gpu_library_id", "GPU 设备库 id（可选，决定 IB 交换机世代）"),
+        }, []),
+        _make_cli_handler("device:defaults"),
+    )
+    register_tool(
+        "template_list", "模板清单（内置 + 用户），含规模摘要（GPU 服务器数/存储数/协议/机架类型）",
+        _schema({}, []),
+        _make_cli_handler("template:list"),
+    )
+    register_tool(
+        "template_view", "模板详情：按名称查看完整 ProjectConfig",
+        _schema({"name": _str_param("name", "模板名称", True)}, required=["name"]),
+        _make_cli_handler("template:view"),
+    )
+    register_tool(
+        "project_list", "项目清单：扫描工作区，返回项目摘要（名称/描述/时间/是否含配置）",
+        _schema({}, []),
+        _make_cli_handler("project:list"),
+    )
+    register_tool(
+        "project_info", "项目详情：完整 ProjectConfig + 宽松校验摘要",
+        _schema({"name": _str_param("name", "项目名称", True)}, required=["name"]),
+        _make_cli_handler("project:info"),
+    )
+
+    # ---- 需求生成（V3.1.3-T7-2/T7-5，轨道 B）----
+    register_tool(
+        "generate_project", "需求生成（轨道 B）：将 LLM 从用户需求抽取的 ProjectConfig 规范化（migrate_config + 默认值补全缺失键 + 宽松校验 + 置信度标注），返回可预览的完整 config（只生成预览、不落盘）。返回含 annotations{confidence, missingFields} 置信度/缺失字段标注，缺失字段为默认推导值需向用户说明",
+        _schema({
+            "name": _str_param("name", "项目名（可选，缺省取 config.meta.name）"),
+            "config": _str_param("config", "LLM 从需求抽取的 ProjectConfig JSON 对象：topology(规模/协议/速率)、networks(开关)、rack_config(机柜约束)、meta.name"),
+        }, required=["config"]),
+        _make_cli_handler("project:generate"),
+    )
+
+    # ---- 示例文件解析（V3.1.3-T7-3）----
+    register_tool(
+        "parse_file", "解析用户上传的示例文件（Excel/JSON/CSV/文本）为结构化数据（表格行/JSON/文本摘录），供需求生成与模板参考；返回 result.parsed 结构",
+        _schema({
+            "path": _str_param("path", "文件绝对路径（来自用户附件）", True),
+            "type": _str_param("type", "文件类型：excel/json/csv/text（缺省按扩展名识别）"),
+        }, required=["path"]),
+        _make_cli_handler("file:parse"),
+    )
+
+    # ---- 容量规划（V3.1.3-T7-4/T7-5）----
+    register_tool(
+        "capacity_recommend", "容量规划推荐：训练模型 + GPU 规模 → Scale-Up/Scale-Out 协议与速率/收敛比/层数/通信开销估算（回答\"某模型 N 卡怎么配网络\"）。返回结果为解析法预估值（estimated=true，误差 ±15-20%），需向用户说明",
+        _schema({
+            "model": _str_param("model", "模型档案 id（如 deepseek-v3/llama3-70b/qwen2.5-72b）或模型名", True),
+            "num_gpus": _str_param("num_gpus", "目标 GPU 数量", True),
+            "budget": _str_param("budget", "预算档位：economy/standard/premium（默认 standard）"),
+            "precision": _str_param("precision", "训练精度覆盖：fp8/fp16/bf16"),
+            "context_length": _str_param("context_length", "上下文长度覆盖（token）"),
+        }, required=["model", "num_gpus"]),
+        _make_cli_handler("capacity:recommend"),
+    )
+
     logger.info(f"AutoLink AI Hub: registered {len(_tools)} tools")

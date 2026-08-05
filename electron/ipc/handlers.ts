@@ -806,6 +806,30 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return pythonService.call('report', { configFile: configPath }, 60000)
   }))
 
+  // V3.1.3-T7-4: 容量规划（模型档案 + 推荐，纯计算只读）
+  ipcMain.handle('capacity:list-presets', wrapHandler(async () => {
+    return pythonService.call('capacity:list-presets', {}, 10000)
+  }))
+
+  ipcMain.handle('capacity:recommend', wrapHandler(async (_event, params: {
+    model: string
+    numGpus: number
+    budget?: string
+    precision?: string
+    contextLength?: number
+  }) => {
+    if (!params?.model || !params?.numGpus) {
+      throw new Error('缺少参数：model / numGpus')
+    }
+    return pythonService.call('capacity:recommend', {
+      model: params.model,
+      num_gpus: params.numGpus,
+      budget: params.budget,
+      precision: params.precision,
+      context_length: params.contextLength,
+    }, 15000)
+  }))
+
   // ===== Render =====
   ipcMain.handle('render:exportConnections', wrapHandler(async (_event, projectName: string, outputTypes: string[]) => {
     sanitizeName(projectName)
