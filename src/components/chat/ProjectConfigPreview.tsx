@@ -100,8 +100,8 @@ export function ProjectConfigPreview({ preview }: { preview: GeneratedProjectPre
     try {
       await createProjectWithConfig(config)
       addToast('success', `项目「${config.meta.name}」已创建`, 4000)
-    } catch (err: any) {
-      addToast('error', err?.message || '项目创建失败', 5000)
+    } catch (err: unknown) {
+      addToast('error', err instanceof Error ? err.message : '项目创建失败', 5000)
     } finally {
       setCreating(false)
     }

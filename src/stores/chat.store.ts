@@ -128,7 +128,7 @@ export const useChatStore = create<ChatState>()(
 
         const newMsg: ChatMessage = {
           ...message,
-          id: (message as any).id || generateId(),
+          id: message.id || generateId(),
           timestamp: Date.now(),
           mode: message.mode || get().currentMode,
         }
@@ -153,7 +153,7 @@ export const useChatStore = create<ChatState>()(
       setMode: (mode) => set({ currentMode: mode }),
 
       addAttachment: async (file: File) => {
-        const path = (file as any).path || file.name
+        const path = (file as File & { path?: string }).path || file.name
         const attachment: ChatAttachment = {
           id: generateId(),
           name: file.name,
@@ -270,7 +270,7 @@ export async function sendMessage(
 
   // 创建 AI 消息占位
   const aiMsgId = generateId()
-  store.addMessage({ id: aiMsgId, role: 'assistant', content: '', mode } as any)
+  store.addMessage({ id: aiMsgId, role: 'assistant', content: '', mode })
 
   // 尝试真实 AI
   try {
@@ -371,8 +371,8 @@ export async function sendMessage(
     flushStream()
     unsub()
     store.setIsSending(false)
-  } catch (err: any) {
-    const errorMsg = err?.message || i18n.t('chat:aihub.error.unknown')
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : i18n.t('chat:aihub.error.unknown')
 
     const currentMsg = useChatStore.getState().sessions
       .find((s) => s.id === sessionId)

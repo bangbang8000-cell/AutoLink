@@ -7,7 +7,7 @@ import {
   FolderTree, Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { useUIStore, type ThemeMode } from '@/stores/ui.store'
+import { useUIStore, type ThemeMode, type AIConfig } from '@/stores/ui.store'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -563,9 +563,9 @@ function useRequireToast() {
 // V3.0.4-T3-4: 分组重置为默认（移除该组 localStorage keys）
 function GroupReset({ group }: { group: string }) {
   const { t } = useTranslation()
+  const addToast = useRequireToast()
   const keys = GROUP_LOCALSTORAGE_KEYS[group] || []
   if (keys.length === 0) return null
-  const addToast = useRequireToast()
   return (
     <div className="pt-3 mt-2 border-t border-gray-200 dark:border-edge-subtle">
       <button
@@ -808,8 +808,8 @@ function AISettings() {
     try {
       await syncToHub(selected)
       toast('success', t('common:explorer.settings.ai.saved'))
-    } catch (e: any) {
-      toast('error', e?.message || 'save failed')
+    } catch (e: unknown) {
+      toast('error', e instanceof Error ? e.message : 'save failed')
     }
   }
 
@@ -929,7 +929,7 @@ function AISettings() {
       <SettingsRow label={t('common:explorer.settings.ai.autonomyMode')}>
         <select
           value={aiConfig.autonomyMode}
-          onChange={(e) => setAIConfig({ autonomyMode: e.target.value as any })}
+          onChange={(e) => setAIConfig({ autonomyMode: e.target.value as AIConfig['autonomyMode'] })}
           className={INPUT_CLASS}
         >
           <option value="advisor">Advisor</option>

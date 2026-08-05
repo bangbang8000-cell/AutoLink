@@ -349,16 +349,16 @@ export function DataCenterLayout() {
     }
   }, [placements, params])
 
-  // 机房矩阵优先
-  if (matrix) {
-    return <RoomMatrixView matrix={matrix} />
-  }
-
   const rowNames = useMemo(
     () => Array.from({ length: rowsInput }, (_, i) => String.fromCharCode(65 + i)),
     [rowsInput],
   )
   const colNums = useMemo(() => Array.from({ length: colsInput }, (_, i) => i + 1), [colsInput])
+
+  // 机房矩阵优先
+  if (matrix) {
+    return <RoomMatrixView matrix={matrix} />
+  }
 
   return (
     <div className="w-full h-full flex flex-col">

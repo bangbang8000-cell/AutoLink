@@ -95,8 +95,8 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
         const res = await window.electron.capacity.listPresets()
         setPresets(res.presets)
         if (!model && res.presets.length > 0) setModel(res.presets[0].id)
-      } catch (err: any) {
-        addToast('error', err?.message || '加载模型档案失败', 4000)
+      } catch (err: unknown) {
+        addToast('error', err instanceof Error ? err.message : '加载模型档案失败', 4000)
       }
     }
     load()
@@ -116,8 +116,8 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
         addToast('error', res.error || '推荐计算失败', 4000)
       }
       setResult(res)
-    } catch (err: any) {
-      addToast('error', err?.message || '推荐计算失败', 4000)
+    } catch (err: unknown) {
+      addToast('error', err instanceof Error ? err.message : '推荐计算失败', 4000)
     } finally {
       setLoading(false)
     }
