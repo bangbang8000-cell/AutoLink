@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [3.1.0] - 2026-08-05
+
+### CLI 显式能力层（3.X 系列 · 对外接口）
+
+v3.1.0 落地 CLI 显式能力层：全部后端能力经 `autolink-cli` 命令行对外暴露，UI 与 CLI 共用同一执行路径（engine 路由经 `cli.execute()`），行为完全一致，并为 v3.1.1 AIHUB 的 AI 留轨迹（R5.7）铺路。
+
+#### CLI 能力层（T4-1 ~ T4-2）
+- 新增 `backend/cli.py`：注册表驱动 argparse 子命令树（`a:b` → `a b`，新增 action 零改动自动获得 CLI）、9 域 14 action、`ACTION_PARAM_SCHEMA` flag 定义 + 通用 `--json '<params>'` 兜底（无 schema 新 action 自动降级可用）
+- 输出层 `--format json/ndjson/text`（stdout 仅含命令输出，模块调试 print 重定向 stderr，管道解析安全）；统一入口 `execute(action, params, argv)`（handler 校验 + 审计 + 执行）
+- `engine.py` main() stdin 路由改经 `cli.execute` —— UI 与 CLI 同一执行路径，python.service.ts 协议层零改动
+
+#### IPC 桥接与审计（T4-3）
+- handlers.ts / preload / electron.d.ts 新增 `cli:info`（CLI 版本 + action 清单）与 `cli:audit`（审计日志 tail 查询，limit 默认 200）IPC
+- python.service.ts spawn 注入 `AUTOLINK_USER_DATA`，每次执行写 `userData/audit/cli-audit.jsonl`（时间/action/命令/参数脱敏/结果，失败留痕），v3.1.1 AI 留轨迹直接复用
+
+#### 测试与文档（T4-4 ~ T4-5）
+- 新增 `tests/backend/test_cli.py` 25 用例（自动映射/参数解析/输出格式/命令级 golden/审计脱敏），并入后端 pytest 门禁
+- 新增 `docs/cli.md`：安装使用 / 9 域速查表 / 每命令示例 / JSON-NDJSON 输出 / GUI 等价性 / 审计日志说明 / 退出码
+
+#### 版本与回归
+- 版本号 3.0.4 → 3.1.0（package.json / VERSION / package-lock.json）
+- 回归：后端 768 用例（+25 test_cli）全绿，typecheck 通过
+
 ## [3.0.4] - 2026-08-05
 
 ### 机房矩阵可视化 + 配置体系重构 + 质量闭环（3.X 系列 · 引擎与组网基础）
