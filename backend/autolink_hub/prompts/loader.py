@@ -11,6 +11,17 @@ PROMPTS_DIR = Path(__file__).parent
 # 缓存
 _cache: dict[str, str] = {}
 
+# T6-2: system prompt 缓存（键: (mode, project_name, version)），命中不重建
+_system_prompt_cache: dict[tuple, str] = {}
+_cache_version = 0
+
+
+def invalidate_system_prompt_cache() -> None:
+    """T6-2: 使 system prompt 缓存失效（prompts/skills/memory 内容变更时调用）"""
+    global _cache_version
+    _cache_version += 1
+    _system_prompt_cache.clear()
+
 
 def load_prompt(name: str) -> str:
     """加载指定名称的 prompt 文件"""
@@ -32,7 +43,14 @@ def load_prompt(name: str) -> str:
 
 
 def get_system_prompt(mode: Optional[str] = None, project_name: str = "") -> str:
-    """获取完整的系统提示词（基础 + planner + skills + tools + mode + context + memory）"""
+    """获取完整的系统提示词（基础 + planner + skills + tools + mode + context + memory）
+
+    T6-2: 按 (mode, project_name, version) 缓存，prompts/skills/memory 变更时失效重建。
+    """
+    key = (mode, project_name, _cache_version)
+    if key in _system_prompt_cache:
+        return _system_prompt_cache[key]
+
     base = load_prompt("system")
     tools = load_prompt("mc-tools")
 
@@ -54,12 +72,15 @@ def get_system_prompt(mode: Optional[str] = None, project_name: str = "") -> str
     if memory_prompt:
         parts.append(memory_prompt)
 
-    return "\n\n".join(parts)
+    result = "\n\n".join(parts)
+    _system_prompt_cache[key] = result
+    return result
 
 
 def reload_prompts() -> None:
     """重新加载所有 prompt（用于热更新）"""
     _cache.clear()
+    invalidate_system_prompt_cache()
 
 
 def _get_default_prompt(name: str) -> str:

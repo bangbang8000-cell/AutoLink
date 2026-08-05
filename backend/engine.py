@@ -1144,6 +1144,19 @@ def handle_cli_info(params):
 
 _current_request_id: str = ''
 
+# T6-3: 复用的全局 asyncio 事件循环（避免每次对话新建/泄漏）
+_ai_loop = None
+
+
+def _get_ai_loop():
+    """T6-3: 获取（惰性创建）全局 asyncio 事件循环，跨 ai:* action 复用"""
+    import asyncio
+    global _ai_loop
+    if _ai_loop is None or _ai_loop.is_closed():
+        _ai_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_ai_loop)
+    return _ai_loop
+
 
 def emit_event_current(chunk: str) -> None:
     """V3.1.1-T5-3: 发送流式事件到当前请求（AI 对话 handler 用）"""
@@ -1164,7 +1177,6 @@ def handle_ai_chat(params):
     引擎模式（main 循环）逐 chunk emit_event 流式输出；
     CLI 模式（无 request_id）收集全部 chunk 后以非流式返回完整回复。
     """
-    import asyncio
     from autolink_hub.agent.agent import get_or_create_session, clear_session
 
     _init_ai_hub()
@@ -1200,7 +1212,7 @@ def handle_ai_chat(params):
             'reply': ''.join(collected) if not request_id else None,
         }
 
-    return asyncio.new_event_loop().run_until_complete(_run())
+    return _get_ai_loop().run_until_complete(_run())
 
 
 @register_action('ai:providers')
@@ -1236,10 +1248,9 @@ def handle_ai_config_default(params):
 @register_action('ai:test')
 def handle_ai_test(params):
     """V3.1.1-T5-3: 测试 Provider 连接"""
-    import asyncio
     from autolink_hub.hub import test_connection
     _init_ai_hub()
-    return asyncio.new_event_loop().run_until_complete(test_connection(
+    return _get_ai_loop().run_until_complete(test_connection(
         params.get('provider', ''),
         params.get('apiKey', ''),
         params.get('baseUrl', ''),
@@ -1250,10 +1261,9 @@ def handle_ai_test(params):
 @register_action('ai:models')
 def handle_ai_models(params):
     """V3.1.1-T5-3: 拉取模型列表（OpenAI 兼容端点 /models）"""
-    import asyncio
     from autolink_hub.hub import fetch_models
     _init_ai_hub()
-    return asyncio.new_event_loop().run_until_complete(fetch_models(
+    return _get_ai_loop().run_until_complete(fetch_models(
         params.get('baseUrl', ''),
         params.get('apiKey', ''),
     ))
@@ -1369,6 +1379,12 @@ def main():
     """
     # V3.0.0-T0-3: 持久进程启动即注册内置网络插件（action 分派就绪）
     _ensure_plugins_ready()
+    # V3.1.2-T6-4: 启动预热 AI Hub（幂等），首次 AI 对话零冷启动
+    try:
+        _init_ai_hub()
+    except Exception as _e:
+        # 预热失败不阻塞启动（首次 ai:* action 仍会懒加载）
+        print(f"AI Hub 预热失败（延迟懒加载）: {_e}", file=sys.stderr)
     for raw in sys.stdin:
         raw = raw.strip()
         if not raw:

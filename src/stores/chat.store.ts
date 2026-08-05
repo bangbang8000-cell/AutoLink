@@ -12,6 +12,9 @@ import { generateId } from '@/types/chat'
 
 export type AIHubStatus = 'ready' | 'no_provider' | 'error'
 
+// T6-6: 会话 id 递增序号（配合 Date.now 保证唯一）
+let sessionSeq = 0
+
 interface ChatState {
   // 会话管理
   sessions: ChatSession[]
@@ -68,7 +71,8 @@ export const useChatStore = create<ChatState>()(
 
       createSession: (mode?: ChatMode) => {
         const m = mode || get().currentMode
-        const id = `session_${Date.now()}`
+        // T6-6: id 加递增序号，避免同毫秒创建会话 id 冲突（误删/覆盖）
+        const id = `session_${Date.now()}_${(sessionSeq += 1)}`
         const session: ChatSession = {
           id,
           title: i18n.t('chat:session.newChat'),
@@ -224,6 +228,25 @@ function getAttachmentTypeByExt(fileName: string): AttachmentType {
 /**
  * 发送消息（真实 AI 流式响应；无 Provider 配置时降级 mock 回复）
  */
+
+// T6-1: 已同步的 Provider 配置指纹（provider → 配置指纹）与默认 Provider。
+// 连续对话仅首次/配置变更时下发到后端，避免每次对话全量重建。
+const syncedProviderFingerprints: Record<string, string> = {}
+let syncedDefaultProvider = ''
+
+/** T6-1: 计算 Provider 配置指纹（apiKey/model/baseUrl 任一变化即重新同步） */
+function providerFingerprint(cfg: { apiKey?: string; model?: string; baseUrl?: string }): string {
+  return [cfg.apiKey || '', cfg.model || '', cfg.baseUrl || ''].join('|')
+}
+
+/** T6-1: 重置同步指纹（测试用，模拟应用重启） */
+export function resetSyncedProviderConfigs(): void {
+  for (const k of Object.keys(syncedProviderFingerprints)) {
+    delete syncedProviderFingerprints[k]
+  }
+  syncedDefaultProvider = ''
+}
+
 export async function sendMessage(
   store: ReturnType<typeof useChatStore.getState>,
   content: string,
@@ -257,14 +280,17 @@ export async function sendMessage(
     const { useUIStore } = await import('@/stores/ui.store')
     const aiConfig = useUIStore.getState().aiConfig
 
-    // 同步 Provider 配置到后端 secrets（热重载）
+    // T6-1: Provider 配置去重同步（仅首次/变更时下发，避免每次对话全量重建）
     for (const [key, cfg] of Object.entries(aiConfig.providers)) {
-      if (cfg.apiKey) {
-        await aiHub.config({ provider: key, apiKey: cfg.apiKey, model: cfg.model, baseUrl: cfg.baseUrl })
-      }
+      if (!cfg.apiKey) continue
+      const fp = providerFingerprint(cfg)
+      if (syncedProviderFingerprints[key] === fp) continue
+      await aiHub.config({ provider: key, apiKey: cfg.apiKey, model: cfg.model, baseUrl: cfg.baseUrl })
+      syncedProviderFingerprints[key] = fp
     }
-    if (aiConfig.defaultProvider) {
+    if (aiConfig.defaultProvider && aiConfig.defaultProvider !== syncedDefaultProvider) {
       await aiHub.configDefault(aiConfig.defaultProvider)
+      syncedDefaultProvider = aiConfig.defaultProvider
     }
 
     const provider = aiConfig.defaultProvider
@@ -274,25 +300,56 @@ export async function sendMessage(
 
     // 监听流式响应（按 sessionId 过滤）
     let fullContent = ''
+    // T6-6: 流式渲染节流——rAF 合并 chunk 批量更新，仅更新目标消息，
+    // 避免每 token 全量 sessions/messages map 重建导致的长会话卡顿
+    let pendingContent = ''
+    let rafId = 0
+    const flushStream = () => {
+      rafId = 0
+      if (!pendingContent) return
+      const content = pendingContent
+      pendingContent = ''
+      useChatStore.setState((s) => {
+        const sesIdx = s.sessions.findIndex((ses) => ses.id === sessionId)
+        if (sesIdx < 0) return {}
+        const ses = s.sessions[sesIdx]
+        const msgIdx = ses.messages.findIndex((m) => m.id === aiMsgId)
+        if (msgIdx < 0) return {}
+        const newMessages = [...ses.messages]
+        newMessages[msgIdx] = { ...newMessages[msgIdx], content }
+        const newSessions = [...s.sessions]
+        newSessions[sesIdx] = { ...ses, messages: newMessages }
+        return { sessions: newSessions }
+      })
+    }
     const unsub = aiHub.onStream(({ sessionId: sid, chunk }) => {
       if (sid !== sessionId) return
       fullContent += chunk
-      useChatStore.setState((s) => ({
-        sessions: s.sessions.map((ses) =>
-          ses.id === sessionId
-            ? {
-                ...ses,
-                messages: ses.messages.map((m) =>
-                  m.id === aiMsgId ? { ...m, content: fullContent } : m,
-                ),
-              }
-            : ses,
-        ),
-      }))
+      pendingContent = fullContent
+      // T6-7: 活跃超时——有输出则重置计时（长工具链不因 60s 硬超时中断）
+      scheduleTimeout()
+      if (!rafId) {
+        rafId = requestAnimationFrame(flushStream)
+      }
     })
 
-    // 发送请求（带超时）
+    // T6-7: 60s 硬超时改为活跃超时：最后一次 chunk 起算 60s 无输出才超时
     const timeoutMs = 60000
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let rejectActiveTimeout: (reason?: unknown) => void = () => {}
+    const scheduleTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        timeoutId = null
+        rejectActiveTimeout(new Error(i18n.t('chat:aihub.error.timeout')))
+      }, timeoutMs)
+    }
+    const timeoutPromise = new Promise<unknown>((_, reject) => {
+      rejectActiveTimeout = reject
+    })
+    scheduleTimeout()
+
+    // 发送请求（带超时）
     const chatPromise = aiHub.chat({
       sessionId,
       message: content,
@@ -304,11 +361,14 @@ export async function sendMessage(
         : undefined,
     })
 
-    const timeoutPromise = new Promise<unknown>((_, reject) =>
-      setTimeout(() => reject(new Error(i18n.t('chat:aihub.error.timeout'))), timeoutMs),
-    )
-
     await Promise.race([chatPromise, timeoutPromise])
+    if (timeoutId) clearTimeout(timeoutId)
+    // T6-6: 同步冲刷残留 chunk（取消未执行的帧，保证返回时内容完整）
+    if (rafId) {
+      cancelAnimationFrame(rafId)
+      rafId = 0
+    }
+    flushStream()
     unsub()
     store.setIsSending(false)
   } catch (err: any) {

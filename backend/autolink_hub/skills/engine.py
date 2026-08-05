@@ -52,6 +52,7 @@ class SkillsEngine:
         self.skills.clear()
         self._loaded = False
         self.load_all()
+        self._invalidate_prompt_cache()
 
     def save_skill(self, name: str, content: str) -> Skill:
         safe_name = name.lower().replace(" ", "-").replace("/", "-")
@@ -59,7 +60,14 @@ class SkillsEngine:
         file_path.write_text(content, encoding="utf-8")
         skill = Skill(name=safe_name, file_path=file_path, content=content)
         self.skills[safe_name] = skill
+        self._invalidate_prompt_cache()
         return skill
+
+    @staticmethod
+    def _invalidate_prompt_cache() -> None:
+        """T6-2: skills 内容变更 → system prompt 缓存失效（函数内 import 避免循环依赖）"""
+        from autolink_hub.prompts.loader import invalidate_system_prompt_cache
+        invalidate_system_prompt_cache()
 
     def record_usage(self, name: str) -> None:
         if name in self.skills:

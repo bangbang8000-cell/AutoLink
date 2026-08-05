@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useChatStore, sendMessage } from '@/stores/chat.store'
+import { useChatStore, sendMessage, resetSyncedProviderConfigs } from '@/stores/chat.store'
 import { useUIStore } from '@/stores/ui.store'
 
 /** 构造 aihub 桥接 mock（chat/onStream/config/configDefault） */
@@ -37,6 +37,7 @@ describe('ChatStore', () => {
         providers: { deepseek: { apiKey: 'sk-test', model: 'deepseek-chat', baseUrl: '' } },
       },
     } as never)
+    resetSyncedProviderConfigs()
     vi.clearAllMocks()
   })
 
@@ -185,6 +186,103 @@ describe('ChatStore', () => {
       await sendMessage(useChatStore.getState(), 'hello', 'general', useChatStore.getState().pendingAttachments)
       expect(useChatStore.getState().inputValue).toBe('')
       expect(useChatStore.getState().pendingAttachments).toHaveLength(0)
+    })
+
+    it('流式 chunk 合并渲染，返回时内容完整（T6-6）', async () => {
+      let resolveChat: (v: unknown) => void = () => {}
+      const mock = makeAiHubMock(
+        () => new Promise((r) => { resolveChat = r }),
+      )
+      globalThis.window.electron = { aihub: mock } as never
+
+      useChatStore.getState().createSession()
+      const sessionId = useChatStore.getState().activeSessionId!
+      const p = sendMessage(useChatStore.getState(), 'hi', 'general', [])
+
+      await vi.waitFor(() => expect(mock.onStream).toHaveBeenCalled())
+      // 高频连续 chunk（rAF 合并为批量更新，最终内容完整）
+      mock.emit('配置', sessionId)
+      mock.emit('schema', sessionId)
+      mock.emit('清单', sessionId)
+      resolveChat({ sessionId, status: 'ok', messages: 1 })
+      await p
+
+      const ses = useChatStore.getState().getActiveSession()!
+      const aiMsg = ses.messages.find((m) => m.role === 'assistant')
+      expect(aiMsg?.content).toBe('配置schema清单')
+      expect(useChatStore.getState().isSending).toBe(false)
+    })
+
+    it('活跃超时：有流式输出时重置 60s 计时（T6-7）', async () => {
+      vi.useFakeTimers()
+      try {
+        let resolveChat: (v: unknown) => void = () => {}
+        const mock = makeAiHubMock(
+          () => new Promise((r) => { resolveChat = r }),
+        )
+        globalThis.window.electron = { aihub: mock } as never
+
+        useChatStore.getState().createSession()
+        const sessionId = useChatStore.getState().activeSessionId!
+        const p = sendMessage(useChatStore.getState(), 'hi', 'general', [])
+
+        // 等待 onStream 注册（flush microtasks）
+        await vi.advanceTimersByTimeAsync(10)
+        expect(mock.onStream).toHaveBeenCalled()
+
+        // 每 30s 有输出 → 60s 活跃超时被持续重置，不超时
+        mock.emit('a', sessionId)
+        await vi.advanceTimersByTimeAsync(30000)
+        mock.emit('b', sessionId)
+        await vi.advanceTimersByTimeAsync(30000)
+        mock.emit('c', sessionId)
+        await vi.advanceTimersByTimeAsync(30000)
+        mock.emit('d', sessionId)
+        await vi.advanceTimersByTimeAsync(30000)
+
+        resolveChat({ sessionId, status: 'ok', messages: 1 })
+        await p
+
+        const aiMsg = useChatStore.getState().getActiveSession()!.messages.find((m) => m.role === 'assistant')
+        expect(aiMsg?.content).toBe('abcd')
+        expect(useChatStore.getState().isSending).toBe(false)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('连续对话仅首次同步 Provider 配置（T6-1）', async () => {
+      const mock = makeAiHubMock()
+      globalThis.window.electron = { aihub: mock } as never
+      useChatStore.getState().createSession()
+      await sendMessage(useChatStore.getState(), 'a', 'general', [])
+      expect(mock.config).toHaveBeenCalledTimes(1)
+      expect(mock.configDefault).toHaveBeenCalledTimes(1)
+      // 第二次发送：配置未变化 → 不再下发
+      await sendMessage(useChatStore.getState(), 'b', 'general', [])
+      expect(mock.config).toHaveBeenCalledTimes(1)
+      expect(mock.configDefault).toHaveBeenCalledTimes(1)
+    })
+
+    it('Provider 配置变化后重新同步（T6-1）', async () => {
+      const mock = makeAiHubMock()
+      globalThis.window.electron = { aihub: mock } as never
+      useChatStore.getState().createSession()
+      await sendMessage(useChatStore.getState(), 'a', 'general', [])
+      expect(mock.config).toHaveBeenCalledTimes(1)
+      // 修改 apiKey → 指纹变化 → 重新同步
+      useUIStore.setState({
+        aiConfig: {
+          defaultProvider: 'deepseek',
+          autonomyMode: 'semi_auto',
+          providers: { deepseek: { apiKey: 'sk-new', model: 'deepseek-chat', baseUrl: '' } },
+        },
+      } as never)
+      await sendMessage(useChatStore.getState(), 'b', 'general', [])
+      expect(mock.config).toHaveBeenCalledTimes(2)
+      // 再发一次（配置未再变）→ 不再下发
+      await sendMessage(useChatStore.getState(), 'c', 'general', [])
+      expect(mock.config).toHaveBeenCalledTimes(2)
     })
   })
 })

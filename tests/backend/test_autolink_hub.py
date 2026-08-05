@@ -51,6 +51,34 @@ class TestProviderRegistry:
         assert r2['default_provider'] == 'deepseek'
         assert settings.default_provider == 'deepseek'
 
+    def test_configure_provider_idempotent(self, tmp_path, monkeypatch):
+        """T6-1: 相同配置重复下发不重建（changed=False），配置变化时重建（changed=True）"""
+        from autolink_hub.hub import configure_provider
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        settings.user_data_dir = str(tmp_path)
+        r1 = configure_provider('deepseek', 'sk-test', 'deepseek-chat', '')
+        assert r1['changed'] is True
+        r2 = configure_provider('deepseek', 'sk-test', 'deepseek-chat', '')
+        assert r2['changed'] is False
+        # 任一字段变化（apiKey/model/base_url）都触发重建
+        r3 = configure_provider('deepseek', 'sk-test', 'deepseek-v4', '')
+        assert r3['changed'] is True
+        r4 = configure_provider('deepseek', 'sk-test', 'deepseek-v4', 'https://api.example.com/v1')
+        assert r4['changed'] is True
+
+    def test_set_default_provider_idempotent(self, tmp_path, monkeypatch):
+        """T6-1: 默认 Provider 未变化不重载（changed=False）"""
+        from autolink_hub.hub import configure_provider, set_default_provider
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        settings.user_data_dir = str(tmp_path)
+        configure_provider('deepseek', 'sk-test', 'deepseek-chat')
+        r1 = set_default_provider('deepseek')
+        assert r1['changed'] is True
+        r2 = set_default_provider('deepseek')
+        assert r2['changed'] is False
+        r3 = set_default_provider('openai')
+        assert r3['changed'] is True
+
 
 # ============================================================
 # 工具白名单（直调 cli.execute）
@@ -253,6 +281,85 @@ class TestAgentLoop:
 
 
 # ============================================================
+# 工具调用流式早停（T6-5）
+# ============================================================
+
+class TestEarlyStop:
+    def _run(self, responses, msg='查 schema'):
+        session = AgentSession()
+        session.session_id = 'test-early'
+        session.provider = MockProvider(list(responses))
+        session.add_user_message(msg)
+
+        async def collect():
+            parts = []
+            async for c in session.run_stream(max_tool_rounds=3):
+                parts.append(c)
+            return ''.join(parts)
+
+        return asyncio.run(collect())
+
+    def test_early_stop_json_block(self):
+        """T6-5: ```tool_call 代码块完整后立即早停，后续文本不再消费"""
+        text = self._run([
+            ['我查一下。\n```tool_call\n{"name": "list_config_schema", "arguments": {}}\n```\n',
+             '这后面是多余的文本，不应被消费'],
+            [],
+        ])
+        assert '正在调用工具' in text
+        assert '多余的文本' not in text
+
+    def test_early_stop_inline_json(self):
+        """T6-5: 独立 JSON 完整闭合后早停"""
+        text = self._run([
+            ['{"name": "list_config_schema", "arguments": {}}', '后缀文本'],
+            [],
+        ])
+        assert '正在调用工具' in text
+        assert '后缀文本' not in text
+
+    def test_early_stop_xml(self):
+        """T6-5: XML <invoke>...</invoke> 完整闭合后早停（无需等 </tool_calls>）"""
+        text = self._run([
+            ['<tool_calls><invoke name="list_config_schema"><parameter name="configFile">/a.json</parameter></invoke>',
+             '</tool_calls>多余'],
+            [],
+        ])
+        assert '正在调用工具' in text
+        assert '多余' not in text
+
+    def test_no_early_stop_without_complete_call(self):
+        """T6-5: 无完整 tool call 时不早停，普通文本流正常完整消费"""
+        text = self._run([
+            ['这是一个普通回答', '，继续输出。', '结束。'],
+        ], msg='hi')
+        assert '这是一个普通回答，继续输出。结束。' in text
+
+
+# ============================================================
+# 历史摘要压缩（T6-7）
+# ============================================================
+
+class TestHistoryCompression:
+    def test_compress_over_threshold(self):
+        """T6-7: 超阈值时压缩历史，保留最近消息 + 摘要占位"""
+        from autolink_hub.agent.agent import _compress_history
+        messages = [{'role': 'user', 'content': 'x' * 5000}] * 8  # 40000 字符 > 24000
+        compressed = _compress_history(messages, max_chars=24000, keep_recent=3)
+        assert len(compressed) == 4  # 1 摘要占位 + 3 保留
+        assert '压缩' in compressed[0]['content']
+        assert compressed[-3:] == messages[-3:]
+        # 占位消息中带省略轮数
+        assert '5 轮' in compressed[0]['content']
+
+    def test_no_compress_under_threshold(self):
+        """T6-7: 未超阈值不压缩（原样返回）"""
+        from autolink_hub.agent.agent import _compress_history
+        small = [{'role': 'user', 'content': 'hi'}, {'role': 'assistant', 'content': 'hello'}]
+        assert _compress_history(small) == small
+
+
+# ============================================================
 # 审计留痕 + 脱敏（R5.7：AI 每调一次工具自动落 cli-audit.jsonl）
 # ============================================================
 
@@ -277,3 +384,75 @@ class TestAuditTrail:
         # 脱敏：apiKey 等敏感键被替换为 ***
         redacted = _redact({'apiKey': 'sk-secret-123', 'name': 'ok', 'token': 't'})
         assert redacted == {'apiKey': '***', 'name': 'ok', 'token': '***'}
+
+
+# ============================================================
+# system prompt 缓存（T6-2）
+# ============================================================
+
+class TestSystemPromptCache:
+    def test_get_system_prompt_cached(self):
+        """T6-2: 相同 (mode, project) 命中缓存（同一对象）；不同 project 不共享"""
+        from autolink_hub.prompts.loader import get_system_prompt
+        p1 = get_system_prompt('general', 'proj-a')
+        p2 = get_system_prompt('general', 'proj-a')
+        assert p1 is p2
+        p3 = get_system_prompt('general', 'proj-b')
+        assert p1 is not p3
+        # 不同 mode 不共享
+        p4 = get_system_prompt('config', 'proj-a')
+        assert p1 is not p4
+
+    def test_reload_prompts_invalidates_cache(self):
+        """T6-2: reload_prompts 后缓存失效重建"""
+        from autolink_hub.prompts.loader import get_system_prompt, reload_prompts
+        p1 = get_system_prompt('config', '')
+        reload_prompts()
+        p2 = get_system_prompt('config', '')
+        assert p1 is not p2
+        # 重建后再次命中缓存
+        p3 = get_system_prompt('config', '')
+        assert p2 is p3
+
+    def test_memory_update_invalidates_cache(self, tmp_path, monkeypatch):
+        """T6-2: 用户画像更新后 prompt 重建并包含新记忆"""
+        from autolink_hub.prompts.loader import get_system_prompt
+        from autolink_hub.memory.engine import get_memory_engine
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        settings.user_data_dir = str(tmp_path)
+        get_memory_engine().init_dir(str(tmp_path))
+        p1 = get_system_prompt('general', '')
+        get_memory_engine().update_user_profile(preferred_vendors=['Huawei'])
+        p2 = get_system_prompt('general', '')
+        assert p1 is not p2
+        assert 'Huawei' in p2
+
+
+# ============================================================
+# asyncio 事件循环复用（T6-3）
+# ============================================================
+
+class TestAIEventLoop:
+    def test_ai_loop_reused(self):
+        """T6-3: _get_ai_loop 返回同一实例且未关闭（避免每次对话新建/泄漏）"""
+        from engine import _get_ai_loop
+        l1 = _get_ai_loop()
+        l2 = _get_ai_loop()
+        assert l1 is l2
+        assert not l1.is_closed()
+
+
+# ============================================================
+# AI Hub 启动预热（T6-4）
+# ============================================================
+
+class TestStartupWarmup:
+    def test_engine_warmup_idempotent(self, tmp_path, monkeypatch):
+        """T6-4: engine 预热函数幂等（重复调用不重复初始化）"""
+        from engine import _init_ai_hub
+        from autolink_hub import hub as hub_module
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        _init_ai_hub()
+        assert hub_module._hub_initialized is True
+        _init_ai_hub()
+        assert hub_module._hub_initialized is True

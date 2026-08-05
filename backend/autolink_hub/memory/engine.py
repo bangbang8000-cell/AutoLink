@@ -53,6 +53,9 @@ class MemoryEngine:
                 setattr(self.user_profile, k, v)
         self.user_profile.updated_at = now_iso()
         self._save_json("user_profile.json", self.user_profile.__dict__)
+        # T6-2: 用户画像变更影响记忆 prompt，使 system prompt 缓存失效
+        from autolink_hub.prompts.loader import invalidate_system_prompt_cache
+        invalidate_system_prompt_cache()
 
     def record_operation(self, project_name: str, operation: str) -> None:
         if project_name not in self.project_histories:

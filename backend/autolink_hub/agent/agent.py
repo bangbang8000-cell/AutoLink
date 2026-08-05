@@ -81,6 +81,14 @@ class AgentSession:
                 async for chunk in stream:
                     full_content += chunk
                     yield chunk  # 实时流式输出给前端
+                    # T6-5: 流式早停——检测到完整 tool call 立即终止生成并执行
+                    # （不等 LLM 完整输出，显著降低工具执行前延迟 TTA）
+                    if _has_complete_tool_call(full_content):
+                        try:
+                            await stream.aclose()
+                        except Exception:
+                            pass
+                        break
 
             except Exception as e:
                 logger.error(f"Agent stream error: {e}")
@@ -205,6 +213,47 @@ class AgentSession:
         async for chunk in self.run_stream(max_tool_rounds=max_tool_rounds):
             result_parts.append(chunk)
         return "".join(result_parts)
+
+
+def _compress_history(messages: list[dict], max_chars: int = 24000, keep_recent: int = 10) -> list[dict]:
+    """T6-7: 上下文超阈值时压缩历史（保留最近消息，早期历史折叠为摘要占位）
+
+    确定性截断压缩（不引入额外 LLM 摘要调用，避免增加延迟）：
+    估算消息总字符数，超过 max_chars 且消息数超过 keep_recent 时，
+    将最早的消息折叠为一条带标记的占位消息，保留最近 keep_recent 条。
+    """
+    total = sum(len(str(m.get("content", "")) or "") for m in messages)
+    if total <= max_chars or len(messages) <= keep_recent:
+        return messages
+    dropped = messages[:-keep_recent]
+    kept = messages[-keep_recent:]
+    dropped_chars = sum(len(str(m.get("content", "")) or "") for m in dropped)
+    summary = {
+        "role": "user",
+        "content": (
+            f"（历史对话已压缩：省略了此前 {len(dropped)} 轮约 {dropped_chars} 字符的内容，"
+            "任务目标保持不变，请基于最近对话继续）"
+        ),
+    }
+    return [summary] + kept
+
+
+def _has_complete_tool_call(content: str) -> bool:
+    """T6-5: 检测内容中是否已出现「完整闭合」的 tool call（用于流式早停）
+
+    仅认可完整闭合，避免流中途误触发：
+    - ```tool_call JSON 代码块（``` 闭合）
+    - 独立 JSON 对象（name + arguments 且 } 闭合）
+    - XML <invoke name="...">...</invoke>（</invoke> 闭合）
+    与 _parse_tool_call 的解析规则保持一致（早停后必能解析出同一 tool call）。
+    """
+    if re.search(r"```tool_call\s*\n.*?\n```", content, re.DOTALL):
+        return True
+    if re.search(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{[^}]*\}\s*\}', content):
+        return True
+    if re.search(r'<invoke\s+name="[^"]+"[^>]*>.*?</invoke>', content, re.DOTALL):
+        return True
+    return False
 
 
 def _parse_tool_call(content: str) -> Optional[dict]:

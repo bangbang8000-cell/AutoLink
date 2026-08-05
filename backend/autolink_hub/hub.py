@@ -41,27 +41,42 @@ def init_hub(user_data_dir: str = "") -> None:
 # ============================================================
 
 def configure_provider(provider: str, api_key: str, model: str = "", base_url: str = "") -> dict:
-    """保存 Provider 配置（BYO-Key）并热重载"""
+    """保存 Provider 配置（BYO-Key）并热重载
+
+    T6-1: diff 更新——配置无变化时跳过写文件与 init_providers（幂等），
+    返回 changed 字段供前端判断（连续对话不再全量重建）。
+    """
     secrets = load_secrets()
-    secrets[provider] = {
+    new_cfg = {
         "api_key": api_key,
         "model": model or "",
         "base_url": base_url or "",
     }
+    existing = secrets.get(provider, {})
+    changed = not (
+        (existing.get("api_key", "") or "") == new_cfg["api_key"]
+        and (existing.get("model", "") or "") == new_cfg["model"]
+        and (existing.get("base_url", "") or "") == new_cfg["base_url"]
+    )
+    if not changed:
+        return {"status": "ok", "provider": provider, "changed": False}
+    secrets[provider] = new_cfg
     save_secrets(secrets)
     apply_secrets()
     init_providers()
-    return {"status": "ok", "provider": provider}
+    return {"status": "ok", "provider": provider, "changed": True}
 
 
 def set_default_provider(provider: str) -> dict:
-    """设置默认 Provider"""
+    """设置默认 Provider（T6-1：未变化跳过重载，幂等）"""
     secrets = load_secrets()
+    if secrets.get("default_provider") == provider and settings.default_provider == provider:
+        return {"status": "ok", "default_provider": provider, "changed": False}
     secrets["default_provider"] = provider
     save_secrets(secrets)
     apply_secrets()
     init_providers()
-    return {"status": "ok", "default_provider": provider}
+    return {"status": "ok", "default_provider": provider, "changed": True}
 
 
 async def test_connection(provider: str, api_key: str, base_url: str, model: str) -> dict:
