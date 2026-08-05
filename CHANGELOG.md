@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [3.0.4] - 2026-08-05
+
+### 机房矩阵可视化 + 配置体系重构 + 质量闭环（3.X 系列 · 引擎与组网基础）
+
+v3.0.4 落地原 v3.0.3 规划的两大能力：机房矩阵可视化（矩阵定义/占位类型标记/手动落位约束校验）与配置体系重构（四类配置统一 schema/预设/导入导出），并完成用户指南补充与全量回归。
+
+#### 机房矩阵数据层与可视化（T3-1 ~ T3-3）
+- 新增 `backend/room.py`：`RoomMatrix`（行×列命名自定义、如 A15~O15=225 柜）、`RoomCell`（占位/类型/机柜关联）、`RoomConstraints`（占位阻止/类型设备域/功率上限）、`room_layout.json` 持久化（schema 版本化 + 校验）
+- 引擎新增 `room:create` / `room:validate` action；IPC 桥接（handlers/preload/electron.d.ts）
+- 前端 `room.store.ts` + `DataCenterLayout.tsx`：矩阵创建面板、SVG 网格渲染（占位斜纹/位置名/机柜名/类型标签）、9 种标记工具（选择/空调/柱子/GPU/网络/存储/通算/组合/清除，点击即标、同项再点切换）
+- **手动落位与调整**：左侧机柜面板拖拽上架/移动，落位即时校验（占位阻止、机柜类型域、U 位溢出、功率超限阻塞；功率密度 >350W/U 散热警告）；选中已上架格子可移除；保存前经后端校验
+- 5 语言 rack.json 新增 room 命名空间与落位交互文案
+
+#### 配置体系重构（T3-4）
+- 新增 `backend/config_schema.py`：四类配置统一模型（appSettings 17 字段 / project / template / wizard），每类 schema 版本 + 字段元数据（类型/默认值/枚举/分组）+ 宽松校验（未知键放行）+ 迁移链框架
+- 内置 4 个场景预设（IB 全闪 H100 集群 / RoCE 通用 / L20 推理 / UEC 数据中心），一键套用覆盖设计配置
+- 配置导入导出：统一包裹格式 `autolink-config`（format + version + exportedAt + appSettings + projectConfig），导入校验格式/版本/字段类型
+- 引擎新增 `config:list-schema` / `config:apply-preset` / `config:export` / `config:import` action（预留 3.1.0 CLI 接口）
+- `SettingsPanel` 重构：设置搜索框（过滤分类）、各分组「重置为默认」、新增「配置模板」分类（预设套用 + 导入/导出）
+
+#### 质量闭环（T3-5 ~ T3-6）
+- 用户指南新增「6.4 机房矩阵」与「10.6 配置模板与预设」章节
+- 全量回归：后端 743 用例（+31 config_schema / room 24）与前端 401 用例（+39 room.store / i18n 完整性）全绿，typecheck 通过
+
+#### 版本与回归
+- 版本号 3.0.3 → 3.0.4（package.json / VERSION / package-lock.json）
+
 ## [3.0.3] - 2026-08-05
 
 ### Release 说明自动更新与发布体验（3.X 系列 · 发布链路）

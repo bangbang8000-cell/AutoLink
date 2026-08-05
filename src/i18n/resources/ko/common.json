@@ -448,7 +448,8 @@
         "network": "네트워크",
         "explorer": "탐색기",
         "data": "데이터",
-        "about": "정보"
+        "about": "정보",
+        "configPresets": "설정 템플릿"
       },
       "appearance": {
         "title": "외관 설정",
@@ -523,6 +524,22 @@
         "smartGroupDesc": "파일 용도별 가상 그룹화(입력/출력/토폴로지)",
         "rawGroup": "실제 그룹",
         "rawGroupDesc": "파일 시스템 실제 디렉토리로 표시"
+      },
+      "searchPlaceholder": "설정 검색...",
+      "resetGroup": "이 그룹을 기본값으로 초기화",
+      "resetGroupDone": "기본값으로 초기화되었습니다",
+      "configPresets": {
+        "title": "설정 템플릿 및 프리셋",
+        "desc": "시나리오별 프리셋을 원클릭 적용하거나 설정 내보내기/가져오기",
+        "apply": "적용",
+        "applied": "프리셋 적용됨: {{name}}",
+        "export": "설정 내보내기",
+        "import": "설정 가져오기",
+        "exported": "설정이 내보내졌습니다",
+        "imported": "설정이 가져와졌습니다",
+        "importFailed": "가져오기 실패: {{error}}",
+        "loadFailed": "프리셋 로드 실패",
+        "noPresets": "사용 가능한 프리셋이 없습니다"
       },
       "about": {
         "title": "AutoLink 정보",

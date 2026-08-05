@@ -6,7 +6,7 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.0.2-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.0.4-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -137,6 +137,18 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **ZCube 扁平二部图**：无 Spine 双口混合接入，CloudMatrix 384/512 模板
 - **华为超节点（huawei_supernode）**：UB 域内全对等 + 域间 800G Scale-Out 上联，V021 校验
 
+### 14. 机房矩阵可视化（v3.0.4）
+
+- **矩阵定义**：行×列命名自定义（如 A15~O15=225 柜），`room_layout.json` 按项目持久化
+- **占位与类型标记**：空调/柱子占位、GPU/网络/存储/通算/组合机柜类型，点击即标（同项再点切换）
+- **手动落位与调整**：机柜面板拖拽上架/移动，落位即时校验（占位阻止/类型域/U 位/功率/散热密度警告）
+
+### 15. 配置体系（v3.0.4）
+
+- **统一配置模型**：应用设置/项目配置/模板/向导四类 schema 版本化 + 宽松校验 + 迁移链框架
+- **场景预设**：IB 全闪 H100 / RoCE 通用 / L20 推理 / UEC 数据中心一键套用
+- **导入导出**：统一包裹格式（format + version）导出/导入，设置搜索与分组重置
+
 ---
 
 ## 📦 快速开始
@@ -145,9 +157,9 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.0.2-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.0.2-mac-x64.dmg` / `AutoLink-3.0.2-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.0.2-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.0.4-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.0.4-mac-x64.dmg` / `AutoLink-3.0.4-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.0.4-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 

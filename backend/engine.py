@@ -804,6 +804,103 @@ def handle_project_config_to_ini(params):
         return {"valid": False, "error": f"INI 生成失败: {e}", "ini": None}
 
 
+@register_action('room:create')
+def handle_room_create(params):
+    """V3.0.4-T3-1: 创建机房矩阵（默认全部 empty、无占位）
+
+    参数:
+        rows: 行命名列表，如 ['A', 'B', ..., 'O']
+        cols: 列编号列表，如 [1, 2, ..., 15]
+        name: 机房名称（可选，默认 '机房'）
+    返回:
+        矩阵 dict（schemaVersion/name/rows/cols/cells）
+    """
+    from room import create_default_room, MAX_MATRIX_CELLS
+    rows = params.get('rows') or []
+    cols = params.get('cols') or []
+    if not rows or not cols:
+        return {"error": "rows/cols 不能为空"}
+    if len(rows) * len(cols) > MAX_MATRIX_CELLS:
+        return {"error": f"矩阵规模过大（> {MAX_MATRIX_CELLS}）"}
+    matrix = create_default_room(rows, cols, name=str(params.get('name') or '机房'))
+    return matrix.to_dict()
+
+
+@register_action('room:validate')
+def handle_room_validate(params):
+    """V3.0.4-T3-1: 校验 room_layout.json 数据（保存前防写入损坏布局）
+
+    参数:
+        layout: RoomMatrix 字典
+    返回:
+        {valid: bool, errors: [str]}
+    """
+    from room import validate_room_layout
+    data = params.get('layout')
+    if not isinstance(data, dict):
+        return {"valid": False, "errors": ["layout 必须是 JSON 对象"]}
+    errors = validate_room_layout(data)
+    return {"valid": not errors, "errors": errors}
+
+
+# ================================================================
+# V3.0.4-T3-4: 统一配置体系（config:*，模型/文件层，预留 CLI 接口）
+# ================================================================
+
+@register_action('config:list-schema')
+def handle_config_list_schema(params):
+    """V3.0.4-T3-4: 返回四类配置 schema 元数据 + 预设列表
+
+    返回:
+        {schemas: {type: {schemaVersion, fields}}, presets: [...]}
+    """
+    from config_schema import list_schemas, list_presets
+    return {'schemas': list_schemas(), 'presets': list_presets()}
+
+
+@register_action('config:apply-preset')
+def handle_config_apply_preset(params):
+    """V3.0.4-T3-4: 套用配置预设（覆盖当前配置 + 宽松校验）
+
+    参数:
+        presetId: 预设 id（如 'ib-allflash'）
+        config: 当前设计配置（扁平字段）
+    返回:
+        {config: dict, errors: [str]}
+    """
+    from config_schema import apply_preset
+    config, errors = apply_preset(str(params.get('presetId', '')), params.get('config'))
+    return {'config': config, 'errors': errors}
+
+
+@register_action('config:export')
+def handle_config_export(params):
+    """V3.0.4-T3-4: 导出统一配置包裹
+
+    参数:
+        appSettings: 应用设置（localStorage 收集的 autolink-* 扁平键）
+        projectConfig: 当前设计配置
+    返回:
+        {payload: {format, version, exportedAt, appSettings, projectConfig}}
+    """
+    from config_schema import export_config
+    payload = export_config(params.get('appSettings'), params.get('projectConfig'))
+    return {'payload': payload}
+
+
+@register_action('config:import')
+def handle_config_import(params):
+    """V3.0.4-T3-4: 导入统一配置包裹（校验 + 宽松合并）
+
+    参数:
+        payload: 导出时生成的统一包裹 JSON
+    返回:
+        {appSettings: dict, projectConfig: dict, errors: [str]}
+    """
+    from config_schema import import_config
+    return import_config(params.get('payload'))
+
+
 @register_action('export')
 def handle_export(params):
     """处理渲染导出请求"""

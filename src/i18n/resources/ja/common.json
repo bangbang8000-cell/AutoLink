@@ -448,7 +448,8 @@
         "network": "ネットワーク",
         "explorer": "エクスプローラー",
         "data": "データ",
-        "about": "について"
+        "about": "について",
+        "configPresets": "設定テンプレート"
       },
       "appearance": {
         "title": "外観設定",
@@ -523,6 +524,22 @@
         "smartGroupDesc": "ファイル用途別に仮想グループ化(入力/出力/トポロジー)",
         "rawGroup": "リアルグループ",
         "rawGroupDesc": "ファイルシステムの実際のディレクトリで表示"
+      },
+      "searchPlaceholder": "設定を検索...",
+      "resetGroup": "このグループをデフォルトに戻す",
+      "resetGroupDone": "デフォルト値に戻しました",
+      "configPresets": {
+        "title": "設定テンプレートとプリセット",
+        "desc": "シナリオに応じたプリセットをワンクリック適用、または設定をエクスポート/インポート",
+        "apply": "適用",
+        "applied": "プリセットを適用しました: {{name}}",
+        "export": "設定をエクスポート",
+        "import": "設定をインポート",
+        "exported": "設定をエクスポートしました",
+        "imported": "設定をインポートしました",
+        "importFailed": "インポートに失敗しました: {{error}}",
+        "loadFailed": "プリセットの読み込みに失敗しました",
+        "noPresets": "利用可能なプリセットがありません"
       },
       "about": {
         "title": "AutoLinkについて",

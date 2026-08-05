@@ -569,6 +569,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   const PROJECT_SAVE_FILE_WHITELIST = new Set([
     'topology.json',
     'rack_layout.json',
+    // V3.0.4-T3-1: 机房矩阵布局（RoomMatrix 持久化）
+    'room_layout.json',
   ])
   ipcMain.handle('project:saveFile', wrapHandler(async (_event, name: string, relativePath: string, content: string) => {
     sanitizeName(name)
@@ -584,6 +586,32 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const fullPath = sanitizePath([name, baseName])
     fs.writeFileSync(fullPath, content, 'utf-8')
     return fullPath
+  }))
+
+  // ===== Room（V3.0.4-T3-1: 机房矩阵） =====
+  ipcMain.handle('room:create', wrapHandler(async (_event, rows: string[], cols: number[], name?: string) => {
+    return pythonService.call('room:create', { rows, cols, name: name ?? '机房' })
+  }))
+
+  ipcMain.handle('room:validate', wrapHandler(async (_event, layout: unknown) => {
+    return pythonService.call('room:validate', { layout })
+  }))
+
+  // ===== Config（V3.0.4-T3-4: 统一配置体系） =====
+  ipcMain.handle('config:list-schema', wrapHandler(async () => {
+    return pythonService.call('config:list-schema', {})
+  }))
+
+  ipcMain.handle('config:apply-preset', wrapHandler(async (_event, presetId: string, config: unknown) => {
+    return pythonService.call('config:apply-preset', { presetId, config })
+  }))
+
+  ipcMain.handle('config:export', wrapHandler(async (_event, appSettings: unknown, projectConfig: unknown) => {
+    return pythonService.call('config:export', { appSettings, projectConfig })
+  }))
+
+  ipcMain.handle('config:import', wrapHandler(async (_event, payload: unknown) => {
+    return pythonService.call('config:import', { payload })
   }))
 
   // ===== Design =====

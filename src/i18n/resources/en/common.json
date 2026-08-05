@@ -460,7 +460,8 @@
         "network": "Network",
         "explorer": "Explorer",
         "data": "Data",
-        "about": "About"
+        "about": "About",
+        "configPresets": "Config Templates"
       },
       "appearance": {
         "title": "Appearance",
@@ -535,6 +536,22 @@
         "smartGroupDesc": "Group by file purpose (input/output/topology)",
         "rawGroup": "Raw Group",
         "rawGroupDesc": "Display by real file system directory"
+      },
+      "searchPlaceholder": "Search settings...",
+      "resetGroup": "Reset group to defaults",
+      "resetGroupDone": "Reset to defaults",
+      "configPresets": {
+        "title": "Config Templates & Presets",
+        "desc": "Apply preset configurations by scenario, or export/import full configuration",
+        "apply": "Apply",
+        "applied": "Preset applied: {{name}}",
+        "export": "Export Config",
+        "import": "Import Config",
+        "exported": "Config exported",
+        "imported": "Config imported",
+        "importFailed": "Import failed: {{error}}",
+        "loadFailed": "Failed to load presets",
+        "noPresets": "No presets available"
       },
       "about": {
         "title": "About AutoLink",

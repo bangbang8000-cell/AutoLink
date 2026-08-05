@@ -13,10 +13,21 @@ const mockElectron = {
     getFile: vi.fn(),
     listOutputFiles: vi.fn(),
     saveConfigFile: vi.fn(),
+    saveFile: vi.fn(),
   },
   design: {
     generate: vi.fn(),
     validate: vi.fn(),
+  },
+  room: {
+    createMatrix: vi.fn(),
+    validateLayout: vi.fn(),
+  },
+  config: {
+    listSchema: vi.fn(),
+    applyPreset: vi.fn(),
+    exportConfig: vi.fn(),
+    importConfig: vi.fn(),
   },
   render: {
     exportConnections: vi.fn(),

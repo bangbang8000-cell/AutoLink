@@ -72,6 +72,24 @@ const electronAPI = {
     report: (projectName: string) =>
       ipcRenderer.invoke('design:report', projectName),
   },
+  // V3.0.4-T3-1: 机房矩阵（创建/校验）
+  room: {
+    createMatrix: (rows: string[], cols: number[], name?: string) =>
+      ipcRenderer.invoke('room:create', rows, cols, name),
+    validateLayout: (layout: unknown) =>
+      ipcRenderer.invoke('room:validate', layout),
+  },
+  // V3.0.4-T3-4: 统一配置体系（schema/预设/导入导出）
+  config: {
+    listSchema: () =>
+      ipcRenderer.invoke('config:list-schema'),
+    applyPreset: (presetId: string, config: unknown) =>
+      ipcRenderer.invoke('config:apply-preset', presetId, config),
+    exportConfig: (appSettings: unknown, projectConfig: unknown) =>
+      ipcRenderer.invoke('config:export', appSettings, projectConfig),
+    importConfig: (payload: unknown) =>
+      ipcRenderer.invoke('config:import', payload),
+  },
   // V3.0.0-T0-6: Python 持久 Agent 流式通道（AIHUB 对话/进度复用）
   ai: {
     call: (action: string, params?: unknown) => ipcRenderer.invoke('ai:call', action, params),

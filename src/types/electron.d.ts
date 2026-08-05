@@ -83,6 +83,57 @@ interface Window {
       estimate: (projectName: string, estimateParams?: Record<string, unknown>) => Promise<unknown>
       report: (projectName: string) => Promise<unknown>
     }
+    // V3.0.4-T3-1: 机房矩阵
+    room: {
+      createMatrix: (rows: string[], cols: number[], name?: string) => Promise<{
+        schemaVersion?: number
+        name?: string
+        rows?: string[]
+        cols?: number[]
+        cells?: Array<{
+          row: string
+          col: number
+          type: string
+          placeholder: string | null
+          cabinetId: number | null
+        }>
+        error?: string
+      }>
+      validateLayout: (layout: unknown) => Promise<{ valid: boolean; errors: string[] }>
+    }
+    // V3.0.4-T3-4: 统一配置体系
+    config: {
+      listSchema: () => Promise<{
+        schemas: Record<string, { schemaVersion: number; fields: Array<{
+          key: string
+          type: 'string' | 'number' | 'boolean'
+          default: unknown
+          group: string
+          label: string
+          description: string
+          enum: unknown[]
+        }> }>
+        presets: Array<{ id: string; name: string; description: string }>
+      }>
+      applyPreset: (presetId: string, config: unknown) => Promise<{
+        config: Record<string, unknown>
+        errors: string[]
+      }>
+      exportConfig: (appSettings: unknown, projectConfig: unknown) => Promise<{
+        payload: {
+          format: string
+          version: number
+          exportedAt: string
+          appSettings: Record<string, unknown>
+          projectConfig: Record<string, unknown>
+        }
+      }>
+      importConfig: (payload: unknown) => Promise<{
+        appSettings: Record<string, unknown> | null
+        projectConfig: Record<string, unknown> | null
+        errors: string[]
+      }>
+    }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
       onProgress: (callback: (data: unknown) => void) => () => void

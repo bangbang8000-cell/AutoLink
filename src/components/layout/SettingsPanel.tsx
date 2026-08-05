@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Sun, Moon, Monitor, Globe, Keyboard, Info, Palette, FileOutput,
-  Cpu, Wifi, Database, Shield, Download,
+  Cpu, Wifi, Database, Shield, Download, Layers, Search,
   Upload, RotateCcw, ExternalLink, Check,
   FolderTree,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useUIStore, type ThemeMode } from '@/stores/ui.store'
+import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useToastStore } from '@/stores/toast.store'
@@ -28,25 +29,62 @@ const SETTINGS_CATEGORIES = [
   { key: 'network', label: 'network', icon: Wifi },
   { key: 'explorer', label: 'explorer', icon: FolderTree },
   { key: 'data', label: 'data', icon: Shield },
+  // V3.0.4-T3-4: 配置模板与预设
+  { key: 'configPresets', label: 'configPresets', icon: Layers },
   { key: 'about', label: 'about', icon: Info },
 ] as const
 
 type SettingsCategory = typeof SETTINGS_CATEGORIES[number]['key']
 
+// V3.0.4-T3-4: 各设置分组对应的 localStorage keys（用于"重置本组为默认"）
+const GROUP_LOCALSTORAGE_KEYS: Record<string, string[]> = {
+  appearance: ['autolink-font-size', 'autolink-animations'],
+  language: [],
+  projectDefaults: ['autolink-default-rack', 'autolink-default-power', 'autolink-default-port-speed'],
+  output: ['autolink-output-format', 'autolink-output-dir', 'autolink-autosave-interval'],
+  keyboard: [],
+  deviceLibrary: ['autolink-device-data-dir', 'autolink-device-auto-update', 'autolink-device-tab-reuse'],
+  network: ['autolink-auto-update-check', 'autolink-proxy-host', 'autolink-proxy-port'],
+  explorer: [],
+  data: [],
+  configPresets: [],
+  about: [],
+}
+
 export function SettingsExplorer() {
   const { t } = useTranslation()
   const [activeCat, setActiveCat] = useState<SettingsCategory>('appearance')
   const [aboutOpen, setAboutOpen] = useState(false)
+  // V3.0.4-T3-4: 设置搜索（过滤分类）
+  const [search, setSearch] = useState('')
+  const keyword = search.trim().toLowerCase()
+  const visibleCats = SETTINGS_CATEGORIES.filter((cat) => {
+    if (!keyword) return true
+    const label = t(`common:explorer.settings.categories.${cat.label}`).toLowerCase()
+    return label.includes(keyword) || cat.key.toLowerCase().includes(keyword)
+  })
 
   return (
     <div className="h-full flex flex-col">
       <div className="px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.settings.title')}</span>
       </div>
+      {/* V3.0.4-T3-4: 搜索框 */}
+      <div className="px-3 py-1.5 border-b border-gray-200 dark:border-edge-subtle shrink-0">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
+          <Search size={12} className="text-gray-400 shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('common:explorer.settings.searchPlaceholder')}
+            className="w-full text-xs bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400"
+          />
+        </div>
+      </div>
       <div className="flex-1 flex overflow-hidden">
         {/* Left: category nav */}
         <div className="w-36 shrink-0 border-r border-gray-200 dark:border-edge-subtle overflow-auto py-1">
-          {SETTINGS_CATEGORIES.map((cat) => {
+          {visibleCats.map((cat) => {
             const Icon = cat.icon
             return (
               <button
@@ -78,6 +116,7 @@ export function SettingsExplorer() {
             {activeCat === 'network' && <NetworkSettings />}
             {activeCat === 'explorer' && <ExplorerSettings />}
             {activeCat === 'data' && <DataSettings />}
+            {activeCat === 'configPresets' && <ConfigPresetsSettings />}
             {activeCat === 'about' && <AboutSettings onOpenAbout={() => setAboutOpen(true)} />}
           </div>
         </div>
@@ -136,6 +175,7 @@ function AppearanceSettings() {
       <SettingsRow label={t('common:explorer.settings.appearance.animations')}>
         <Toggle checked={animations} onChange={setAnimations} />
       </SettingsRow>
+      <GroupReset group="appearance" />
     </SettingsSection>
   )
 }
@@ -237,6 +277,7 @@ function OutputSettings() {
           onChange={(e) => setAutoSaveInterval(Number(e.target.value))}
           className="w-16 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
       </SettingsRow>
+      <GroupReset group="output" />
     </SettingsSection>
   )
 }
@@ -330,6 +371,7 @@ function NetworkSettings() {
             className={clsx('w-20', INPUT_CLASS)} />
         </div>
       </SettingsRow>
+      <GroupReset group="network" />
     </SettingsSection>
   )
 }
@@ -509,6 +551,179 @@ function AboutSettings({ onOpenAbout }: { onOpenAbout: () => void }) {
 
 function useRequireToast() {
   return useToastStore.getState().addToast
+}
+
+// V3.0.4-T3-4: 分组重置为默认（移除该组 localStorage keys）
+function GroupReset({ group }: { group: string }) {
+  const { t } = useTranslation()
+  const keys = GROUP_LOCALSTORAGE_KEYS[group] || []
+  if (keys.length === 0) return null
+  const addToast = useRequireToast()
+  return (
+    <div className="pt-3 mt-2 border-t border-gray-200 dark:border-edge-subtle">
+      <button
+        onClick={() => {
+          keys.forEach((k) => localStorage.removeItem(k))
+          addToast('success', t('common:explorer.settings.resetGroupDone'))
+        }}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
+      >
+        <RotateCcw size={13} />{t('common:explorer.settings.resetGroup')}
+      </button>
+    </div>
+  )
+}
+
+// V3.0.4-T3-4: 配置模板与预设（一键套用 + 导入导出）
+interface ConfigPreset {
+  id: string
+  name: string
+  description: string
+}
+
+function ConfigPresetsSettings() {
+  const { t } = useTranslation()
+  const addToast = useRequireToast()
+  const config = useDesignStore((s) => s.config)
+  const updateConfig = useDesignStore((s) => s.updateConfig)
+  const [presets, setPresets] = useState<ConfigPreset[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    window.electron?.config?.listSchema?.()
+      .then((r) => {
+        if (mounted) {
+          setPresets(r?.presets || [])
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setLoading(false)
+          addToast('error', t('common:explorer.settings.configPresets.loadFailed'))
+        }
+      })
+    return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const applyPreset = async (preset: ConfigPreset) => {
+    if (!window.electron?.config?.applyPreset) return
+    try {
+      const r = await window.electron.config.applyPreset(preset.id, config as unknown as Record<string, unknown>)
+      if (r.errors.length > 0) {
+        r.errors.forEach((e) => addToast('error', e, 5000))
+        return
+      }
+      updateConfig(r.config as Partial<DesignConfig>)
+      addToast('success', t('common:explorer.settings.configPresets.applied', { name: preset.name }))
+    } catch (err) {
+      addToast('error', t('common:explorer.settings.configPresets.importFailed', { error: String(err) }))
+    }
+  }
+
+  const collectAppSettings = (): Record<string, unknown> => {
+    const appSettings: Record<string, unknown> = {}
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)!
+      if (k.startsWith('autolink-')) {
+        try { appSettings[k] = JSON.parse(localStorage.getItem(k)!) } catch { appSettings[k] = localStorage.getItem(k) }
+      }
+    }
+    return appSettings
+  }
+
+  const exportConfig = async () => {
+    if (!window.electron?.config?.exportConfig) return
+    try {
+      const r = await window.electron.config.exportConfig(collectAppSettings(), config)
+      const blob = new Blob([JSON.stringify(r.payload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `autolink-config-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      addToast('success', t('common:explorer.settings.configPresets.exported'))
+    } catch (err) {
+      addToast('error', t('common:explorer.settings.configPresets.importFailed', { error: String(err) }))
+    }
+  }
+
+  const importConfig = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      try {
+        const payload = JSON.parse(await file.text())
+        const r = await window.electron.config.importConfig(payload)
+        if (r.errors.length > 0) {
+          r.errors.forEach((er) => addToast('error', er, 5000))
+          return
+        }
+        if (r.appSettings) {
+          for (const [k, v] of Object.entries(r.appSettings)) {
+            if (!k.startsWith('autolink-')) continue
+            localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v))
+          }
+        }
+        if (r.projectConfig) {
+          updateConfig(r.projectConfig as Partial<DesignConfig>)
+        }
+        addToast('success', t('common:explorer.settings.configPresets.imported'))
+      } catch (err) {
+        addToast('error', t('common:explorer.settings.configPresets.importFailed', { error: String(err) }))
+      }
+    }
+    input.click()
+  }
+
+  return (
+    <SettingsSection title={t('common:explorer.settings.configPresets.title')}>
+      <p className="text-2xs text-gray-400 mb-2">{t('common:explorer.settings.configPresets.desc')}</p>
+      {loading ? (
+        <div className="text-xs text-gray-400 py-2">{t('common:loading')}</div>
+      ) : presets.length === 0 ? (
+        <div className="text-xs text-gray-400 py-2">{t('common:explorer.settings.configPresets.noPresets')}</div>
+      ) : (
+        presets.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between gap-2 px-2.5 py-2 mb-1.5 rounded border border-gray-200 dark:border-gray-600"
+          >
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{p.name}</div>
+              <div className="text-2xs text-gray-400 mt-0.5">{p.description}</div>
+            </div>
+            <button
+              onClick={() => applyPreset(p)}
+              className="shrink-0 px-2 py-1 text-2xs rounded bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+            >
+              {t('common:explorer.settings.configPresets.apply')}
+            </button>
+          </div>
+        ))
+      )}
+      <div className="pt-3 mt-1 border-t border-gray-200 dark:border-edge-subtle space-y-1.5">
+        <button
+          onClick={exportConfig}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
+        >
+          <Download size={13} />{t('common:explorer.settings.configPresets.export')}
+        </button>
+        <button
+          onClick={importConfig}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
+        >
+          <Upload size={13} />{t('common:explorer.settings.configPresets.import')}
+        </button>
+      </div>
+    </SettingsSection>
+  )
 }
 
 /* ---------- mini form components for explorers ---------- */
