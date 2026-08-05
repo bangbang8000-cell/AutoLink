@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## [3.1.2] - 2026-08-05
+
+### AIHUB 响应延迟优化（纯性能版 · 不加新功能）
+
+v3.1.2 聚焦 AIHUB 对话链路响应延迟：首字延迟 TTFT / 工具执行前延迟 TTA / 流式渲染流畅度 / 长任务可靠性。本地 mock 基准实测（同一脚本在 v3.1.1 tag 与 v3.1.2 对比）：**TTA 降 57.3%（1.087s → 0.464s）**、本地链路口径 **TTFT 降 62.5%（0.419s → 0.157s）**、配置同步固定开销 **-99.3%（~264ms → ~1.9ms/次）**。
+
+#### TTFT 优化（T6-1 ~ T6-4）
+- Provider 配置去重同步：前端记录配置指纹（apiKey/model/baseURL），仅首次/变更时下发；后端 `configure_provider`/`set_default_provider` diff 更新，无变化跳过写文件与全量重建（幂等，返回 `changed`）——连续对话仅首次同步
+- system prompt 缓存：`get_system_prompt` 按 (mode, project, version) 缓存，reload/skills/memory 变更时失效重建——连续对话不重建
+- asyncio 事件循环复用：engine 全局 `_get_ai_loop`，`ai:chat`/`ai:test`/`ai:models` 复用而非每次新建（消除 loop 泄漏隐患）
+- AI Hub 启动预热：engine main 启动即 `init_hub()`（幂等，失败延迟懒加载）——首次对话零冷启动
+
+#### TTA 优化（T6-5）
+- 工具调用流式早停：`run_stream` 增量检测完整闭合的 tool call（```tool_call JSON / 独立 JSON / XML `<invoke>`），完整即终止生成并立即执行（`stream.aclose()` 清理）——不再等 LLM 完整输出，工具执行前延迟显著下降（实测 -57.3%）
+
+#### 流式渲染流畅度（T6-6）
+- rAF 节流合并 chunk：每帧批量 setState，仅更新目标消息（避免全量 sessions/messages map 重建）——长会话流式不卡顿
+- 修复 `createSession` 同毫秒 id 冲突（`session_${Date.now()}` → 加递增序号，避免误删/覆盖）
+
+#### 长任务可靠性（T6-7）
+- 60s 硬超时改为活跃超时：最后一次 chunk 起算 60s 无输出才超时——长工具链 >60s 不中断
+- 历史摘要压缩：`_compress_history` 上下文字符超阈值（24k）时，早期历史折叠为摘要占位 + 保留最近 10 条——LLM 输入 token 受控，越聊越慢问题消除
+
+#### 性能基准与回归（T6-8）
+- 新增 `scripts/bench_aihub_latency.py`：TTFT/吞吐 + 工具早停 TTA + 配置同步 3 场景，同一脚本可在 v3.1.1 tag 与 v3.1.2 下对比运行
+- 新增用例：后端 +13（配置幂等/默认幂等/prompt 缓存 ×3/事件循环/预热/早停 ×4/历史压缩 ×2），前端 +4（去重同步 ×2/流式合并/活跃超时）
+
+#### 版本与回归
+- 版本号 3.1.1 → 3.1.2（package.json / VERSION / package-lock.json / README）
+- 回归：后端 804 用例全绿（v3.1.1 基线 784），前端 417 用例全绿（基线 413），typecheck 通过
+
+---
+
 ## [3.1.1] - 2026-08-05
 
 ### AIHUB 对话框架 + 命令审计日志（3.X 系列 · AI 能力）
