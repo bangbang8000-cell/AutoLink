@@ -1,0 +1,38 @@
+{
+  "session": {
+    "newChat": "New Chat",
+    "history": "History",
+    "clear": "Clear Session",
+    "clearConfirm": "Clear all messages in this session?",
+    "delete": "Delete Session"
+  },
+  "input": {
+    "placeholder": "Type a message. Enter to send, Shift+Enter for newline…",
+    "send": "Send",
+    "attach": "Attach files"
+  },
+  "aihub": {
+    "status": {
+      "ready": "AI Ready",
+      "noProvider": "No AI service configured",
+      "error": "AI service error"
+    },
+    "provider": "Model",
+    "error": {
+      "noModel": "Configure a model service and API Key in Settings → AI first",
+      "hubFailed": "Failed to start AI service",
+      "timeout": "Connection timed out",
+      "unknown": "Unknown error"
+    }
+  },
+  "tool": {
+    "calling": "Calling tool",
+    "confirm": "This action requires confirmation. Reply CONFIRM to continue, or CANCEL to abort.",
+    "result": "Tool result"
+  },
+  "mock": {
+    "general": "Hi! I'm the AutoLink AI assistant. I can help you with:\n\n- Automatic network topology design (IB / RoCE / UEC)\n- Scale estimation and convergence ratio checks\n- Data center room matrix planning and layout validation\n- Design config validation and fix suggestions\n- Deliverable export (connection tables / device lists / cabling guides / BOM / reports)\n\nConfigure a model service and API Key in Settings → AI for full capability.",
+    "template": "Template help mode. Configure a model service in Settings → AI to get started.",
+    "config": "Config Q&A mode. Configure a model service in Settings → AI to get started."
+  }
+}

@@ -13,7 +13,8 @@
     "design": "設計",
     "visualization": "視覺化",
     "visualizationWithProject": "視覺化 - {{name}}",
-    "deviceLibrary": "設備庫"
+    "deviceLibrary": "設備庫",
+    "chat": "AI 助手"
   },
   "confirmDelete": {
     "title": {
@@ -144,6 +145,7 @@
     "deviceLibrary": "設備庫",
     "outputResults": "輸出結果",
     "settings": "設定",
+    "ai": "AI 助手",
     "hideSidebar": "隱藏側邊欄",
     "showSidebar": "顯示側邊欄",
     "newProject": "新建專案",
@@ -449,7 +451,9 @@
         "explorer": "瀏覽器",
         "data": "資料",
         "about": "關於",
-        "configPresets": "配置模板"
+        "configPresets": "配置模板",
+        "ai": "AI 設定",
+        "diagnostics": "診斷"
       },
       "appearance": {
         "title": "外觀設定",
@@ -540,6 +544,29 @@
         "importFailed": "匯入失敗：{{error}}",
         "loadFailed": "預設清單載入失敗",
         "noPresets": "暫無可用預設"
+      },
+      "ai": {
+        "title": "AI 服務設定",
+        "desc": "設定 9 家模型服務廠商（DeepSeek/OpenAI/Claude/Gemini/Qwen/GLM/Grok/Ollama/自訂）。API Key 僅保存在本機 userData，請勿洩漏。",
+        "apiKey": "API Key",
+        "model": "模型",
+        "baseUrl": "Base URL",
+        "autonomyMode": "自主模式",
+        "save": "儲存",
+        "test": "測試連線",
+        "setDefault": "設為預設",
+        "fetchModels": "取得模型清單",
+        "saved": "AI 設定已儲存",
+        "defaultSet": "已設為預設模型服務"
+      },
+      "diagnostics": {
+        "title": "診斷",
+        "desc": "CLI 能力資訊與命令審計日誌（AI 發起的調用以 AI 徽章標記）。",
+        "cliVersion": "CLI 版本",
+        "actionsCount": "命令數",
+        "refresh": "重新整理",
+        "auditTitle": "命令審計日誌",
+        "empty": "暫無審計記錄（執行任意操作後將記錄於此）"
       },
       "about": {
         "title": "關於 AutoLink",

@@ -17,7 +17,8 @@
     "design": "Topology Design",
     "visualization": "Visualization",
     "visualizationWithProject": "Visualization - {{name}}",
-    "deviceLibrary": "Device Library"
+    "deviceLibrary": "Device Library",
+    "chat": "AI Assistant"
   },
   "confirmDelete": {
     "title": {
@@ -148,6 +149,7 @@
     "outputResults": "Output",
     "deviceLibrary": "Device Library",
     "settings": "Settings",
+    "ai": "AI Assistant",
     "hideSidebar": "Hide Sidebar",
     "showSidebar": "Show Sidebar",
     "newProject": "New Project",
@@ -461,7 +463,9 @@
         "explorer": "Explorer",
         "data": "Data",
         "about": "About",
-        "configPresets": "Config Templates"
+        "configPresets": "Config Templates",
+        "ai": "AI Settings",
+        "diagnostics": "Diagnostics"
       },
       "appearance": {
         "title": "Appearance",
@@ -552,6 +556,29 @@
         "importFailed": "Import failed: {{error}}",
         "loadFailed": "Failed to load presets",
         "noPresets": "No presets available"
+      },
+      "ai": {
+        "title": "AI Service Configuration",
+        "desc": "Configure 9 model providers (DeepSeek/OpenAI/Claude/Gemini/Qwen/GLM/Grok/Ollama/Custom). API Keys are stored locally in userData only.",
+        "apiKey": "API Key",
+        "model": "Model",
+        "baseUrl": "Base URL",
+        "autonomyMode": "Autonomy Mode",
+        "save": "Save",
+        "test": "Test Connection",
+        "setDefault": "Set as Default",
+        "fetchModels": "Fetch Models",
+        "saved": "AI config saved",
+        "defaultSet": "Set as default provider"
+      },
+      "diagnostics": {
+        "title": "Diagnostics",
+        "desc": "CLI capability info and command audit log (AI-initiated calls are tagged with an AI badge).",
+        "cliVersion": "CLI version",
+        "actionsCount": "Actions",
+        "refresh": "Refresh",
+        "auditTitle": "Command Audit Log",
+        "empty": "No audit records yet (any executed action will appear here)"
       },
       "about": {
         "title": "About AutoLink",

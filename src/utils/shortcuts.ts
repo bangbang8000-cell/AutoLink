@@ -17,6 +17,7 @@ export type ShortcutAction =
   | 'view-workbench'
   | 'view-visualization'
   | 'view-deviceLibrary'
+  | 'view-ai'
   | 'closeTab'
   | 'reopenTab'
   | 'showShortcuts'
@@ -61,6 +62,7 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
       { keys: 'Ctrl+Shift+W', action: 'view-workbench', descKey: 'workbenchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'w' },
       { keys: 'Ctrl+Shift+V', action: 'view-visualization', descKey: 'visualizationView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'v' },
       { keys: 'Ctrl+Shift+L', action: 'view-deviceLibrary', descKey: 'deviceLibraryView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'l' },
+      { keys: 'Ctrl+Shift+A', action: 'view-ai', descKey: 'aiView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'a' },
     ],
   },
   {

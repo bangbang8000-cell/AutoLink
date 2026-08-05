@@ -7,12 +7,27 @@ export type ActivityType =
   | 'workbench'
   | 'visualization'
   | 'device_library'
+  | 'ai'
   | 'settings'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 /** 项目浏览器分组模式:smart=智能分组(按文件用途),raw=真实分组(按文件系统目录) */
 export type ExplorerGroupMode = 'smart' | 'raw'
+
+/** V3.1.1-T5-5: AI Provider 配置（BYO-Key） */
+export interface AIProviderConfig {
+  apiKey: string
+  model: string
+  baseUrl: string
+}
+
+/** V3.1.1-T5-5: AI 全局配置 */
+export interface AIConfig {
+  defaultProvider: string
+  autonomyMode: 'advisor' | 'semi_auto' | 'full_auto'
+  providers: Record<string, AIProviderConfig>
+}
 
 interface UIState {
   activeActivity: ActivityType
@@ -28,6 +43,8 @@ interface UIState {
   templateForWizard: string | null
   showAboutDialog: boolean
   showShortcutsDialog: boolean
+  /** V3.1.1-T5-5: AI 配置（默认厂商/自主模式/各厂商 BYO-Key） */
+  aiConfig: AIConfig
 
   setActiveActivity: (activity: ActivityType) => void
   toggleSidebar: () => void
@@ -42,6 +59,10 @@ interface UIState {
   openWizardFromTemplate: (name: string) => void
   setShowAboutDialog: (show: boolean) => void
   setShowShortcutsDialog: (show: boolean) => void
+  /** V3.1.1-T5-5: AI 配置更新（浅合并） */
+  setAIConfig: (updates: Partial<AIConfig>) => void
+  /** V3.1.1-T5-5: 更新单个 Provider 配置 */
+  setProviderConfig: (key: string, cfg: AIProviderConfig) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -59,6 +80,11 @@ export const useUIStore = create<UIState>()(
       templateForWizard: null,
       showAboutDialog: false,
       showShortcutsDialog: false,
+      aiConfig: {
+        defaultProvider: 'deepseek',
+        autonomyMode: 'semi_auto',
+        providers: {},
+      },
 
       setActiveActivity: (activity) => set({ activeActivity: activity }),
 
@@ -100,6 +126,17 @@ export const useUIStore = create<UIState>()(
       setShowAboutDialog: (show) => set({ showAboutDialog: show }),
 
       setShowShortcutsDialog: (show) => set({ showShortcutsDialog: show }),
+
+      setAIConfig: (updates) =>
+        set((s) => ({ aiConfig: { ...s.aiConfig, ...updates } })),
+
+      setProviderConfig: (key, cfg) =>
+        set((s) => ({
+          aiConfig: {
+            ...s.aiConfig,
+            providers: { ...s.aiConfig.providers, [key]: cfg },
+          },
+        })),
     }),
     {
       name: 'autolink-ui-state',
@@ -110,6 +147,7 @@ export const useUIStore = create<UIState>()(
         panelVisible: state.panelVisible,
         explorerProjectListHeight: state.explorerProjectListHeight,
         explorerGroupMode: state.explorerGroupMode,
+        aiConfig: state.aiConfig,
       }),
     },
   ),

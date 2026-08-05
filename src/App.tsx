@@ -152,7 +152,6 @@ export default function App() {
     if (config) {
       // design / device_library: don't auto-open — user clicks sidebar to open specific tabs
       if (activity === 'design' || activity === 'device_library') return
-
       // Resolve dynamic title
       let title = t(config.titleKey)
       if (activity === 'visualization' && selectedProjectName) {
@@ -187,6 +186,7 @@ export default function App() {
         case 'view-workbench': handleActivityClick('workbench'); break
         case 'view-visualization': handleActivityClick('visualization'); break
         case 'view-deviceLibrary': handleActivityClick('device_library'); break
+        case 'view-ai': handleActivityClick('ai'); break
         case 'closeTab': if (activeTabId) closeTab(activeTabId); break
         case 'reopenTab': reopenLastClosed(); break
         case 'showShortcuts': setShowShortcutsDialog(true); break

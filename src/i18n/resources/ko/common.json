@@ -13,7 +13,8 @@
     "design": "설계",
     "visualization": "시각화",
     "visualizationWithProject": "시각화 - {{name}}",
-    "deviceLibrary": "장치 라이브러리"
+    "deviceLibrary": "장치 라이브러리",
+    "chat": "AI 어시스턴트"
   },
   "confirmDelete": {
     "title": {
@@ -449,7 +450,9 @@
         "explorer": "탐색기",
         "data": "데이터",
         "about": "정보",
-        "configPresets": "설정 템플릿"
+        "configPresets": "설정 템플릿",
+        "ai": "AI 설정",
+        "diagnostics": "진단"
       },
       "appearance": {
         "title": "외관 설정",
@@ -540,6 +543,29 @@
         "importFailed": "가져오기 실패: {{error}}",
         "loadFailed": "프리셋 로드 실패",
         "noPresets": "사용 가능한 프리셋이 없습니다"
+      },
+      "ai": {
+        "title": "AI 서비스 설정",
+        "desc": "9개 모델 제공업체(DeepSeek/OpenAI/Claude/Gemini/Qwen/GLM/Grok/Ollama/사용자 정의)를 구성합니다. API Key는 로컬 userData에만 저장됩니다.",
+        "apiKey": "API Key",
+        "model": "모델",
+        "baseUrl": "Base URL",
+        "autonomyMode": "자율 모드",
+        "save": "저장",
+        "test": "연결 테스트",
+        "setDefault": "기본으로 설정",
+        "fetchModels": "모델 목록 가져오기",
+        "saved": "AI 설정이 저장되었습니다",
+        "defaultSet": "기본 제공업체로 설정되었습니다"
+      },
+      "diagnostics": {
+        "title": "진단",
+        "desc": "CLI 기능 정보와 명령 감사 로그(AI가 실행한 호출은 AI 배지로 표시).",
+        "cliVersion": "CLI 버전",
+        "actionsCount": "명령 수",
+        "refresh": "새로고침",
+        "auditTitle": "명령 감사 로그",
+        "empty": "아직 감사 기록이 없습니다(작업 실행 시 여기에 기록됩니다)"
       },
       "about": {
         "title": "AutoLink 정보",

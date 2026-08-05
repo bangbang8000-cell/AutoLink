@@ -17,7 +17,8 @@
     "design": "设计",
     "visualization": "可视化",
     "visualizationWithProject": "可视化 - {{name}}",
-    "deviceLibrary": "设备库"
+    "deviceLibrary": "设备库",
+    "chat": "AI 助手"
   },
   "confirmDelete": {
     "title": {
@@ -461,7 +462,9 @@
         "explorer": "浏览器",
         "data": "数据",
         "about": "关于",
-        "configPresets": "配置模板"
+        "configPresets": "配置模板",
+        "ai": "AI 设置",
+        "diagnostics": "诊断"
       },
       "appearance": {
         "title": "外观设置",
@@ -552,6 +555,29 @@
         "importFailed": "导入失败：{{error}}",
         "loadFailed": "预设列表加载失败",
         "noPresets": "暂无可用预设"
+      },
+      "ai": {
+        "title": "AI 服务配置",
+        "desc": "配置 9 家模型服务厂商（DeepSeek/OpenAI/Claude/Gemini/Qwen/GLM/Grok/Ollama/自定义）。API Key 仅保存在本机 userData，请勿泄露。",
+        "apiKey": "API Key",
+        "model": "模型",
+        "baseUrl": "Base URL",
+        "autonomyMode": "自主模式",
+        "save": "保存",
+        "test": "测试连接",
+        "setDefault": "设为默认",
+        "fetchModels": "获取模型列表",
+        "saved": "AI 配置已保存",
+        "defaultSet": "已设为默认模型服务"
+      },
+      "diagnostics": {
+        "title": "诊断",
+        "desc": "CLI 能力信息与命令审计日志（AI 发起的调用以 AI 徽标标记）。",
+        "cliVersion": "CLI 版本",
+        "actionsCount": "命令数",
+        "refresh": "刷新",
+        "auditTitle": "命令审计日志",
+        "empty": "暂无审计记录（执行任意操作后将记录于此）"
       },
       "about": {
         "title": "关于 AutoLink",

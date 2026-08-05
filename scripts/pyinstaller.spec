@@ -16,6 +16,7 @@ project_root = os.path.dirname(SPECPATH)
 
 backend_dir = os.path.join(project_root, 'backend')
 template_dir = os.path.join(project_root, 'template')
+hub_dir = os.path.join(backend_dir, 'autolink_hub')
 
 a = Analysis(
     [os.path.join(backend_dir, 'engine.py')],
@@ -25,11 +26,18 @@ a = Analysis(
     # 打包后 __file__=backend-dist/_internal/device_library.py → backend-dist/template/
     datas=[
         (template_dir, 'template'),
+        # V3.1.1-T5-8: AI Hub 提示词与技能 md（运行时按 __file__ 相对定位）
+        (os.path.join(hub_dir, 'prompts'), 'autolink_hub/prompts'),
+        (os.path.join(hub_dir, 'skills', 'skills'), 'autolink_hub/skills/skills'),
     ],
     hiddenimports=[
         # exporter.py 函数内延迟导入的图表库（静态分析可捕获，这里显式声明兜底）
         'matplotlib',
         'matplotlib.backends.backend_agg',
+        # V3.1.1-T5-8: AI Hub OpenAI 兼容客户端（动态 Import 兜底）
+        'openai',
+        'openai.resources',
+        'openai.resources.chat',
     ],
     hookspath=[],
     hooksconfig={},

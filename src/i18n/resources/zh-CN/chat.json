@@ -1,0 +1,38 @@
+{
+  "session": {
+    "newChat": "新对话",
+    "history": "历史",
+    "clear": "清空会话",
+    "clearConfirm": "确定清空当前会话的全部消息吗？",
+    "delete": "删除会话"
+  },
+  "input": {
+    "placeholder": "输入消息，Enter 发送，Shift+Enter 换行…",
+    "send": "发送",
+    "attach": "添加附件"
+  },
+  "aihub": {
+    "status": {
+      "ready": "AI 已就绪",
+      "noProvider": "未配置 AI 服务",
+      "error": "AI 服务异常"
+    },
+    "provider": "模型",
+    "error": {
+      "noModel": "请先在「设置 → AI」中配置模型服务与 API Key",
+      "hubFailed": "AI 服务启动失败",
+      "timeout": "连接超时",
+      "unknown": "发生未知错误"
+    }
+  },
+  "tool": {
+    "calling": "正在调用工具",
+    "confirm": "操作需要确认。请回复「确认」继续，或「取消」中止。",
+    "result": "工具执行结果"
+  },
+  "mock": {
+    "general": "您好！我是 AutoLink AI 助手，可以帮助您：\n\n- 网络拓扑自动设计（IB / RoCE / UEC）\n- 规模估算与收敛比校验\n- 机房矩阵规划与布局校验\n- 设计配置校验与修复建议\n- 交付物导出（连接表/设备清单/布线指南/BOM/报告）\n\n请在「设置 → AI」中配置模型服务与 API Key 后获得完整能力。",
+    "template": "当前处于模板帮助模式，可协助您查看与使用场景模板。请先在「设置 → AI」中配置模型服务。",
+    "config": "当前处于配置问答模式，可协助您校验设计配置并解释校验结果。请先在「设置 → AI」中配置模型服务。"
+  }
+}

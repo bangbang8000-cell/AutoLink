@@ -299,6 +299,224 @@ def _get_config_file(params):
     return config_file, None
 
 
+def _run_validation(designer):
+    """V3.1.1-T5-6: 统一校验管线（design / validate / AI 答疑共用）
+
+    UI、CLI、AI 三入口走同一执行路径，校验结果一致：
+      - `designer.validate_topology()` 旧版端口溢出校验（errors 列表）
+      - `validation.py` 引擎 22 条规则（V001-V022，每条含 rule_id/severity/
+        category/message/affected_items/recommendation —— recommendation 即修复建议）
+
+    返回: {valid, errors, validationIssues, estimation}
+    """
+    # V2.4.3: 统一访问器（消除 11 类硬编码聚合）
+    all_switches = designer.all_switches()
+    all_devices = designer.all_devices()
+
+    # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
+    # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
+    edges = []
+    seen_conns = set()
+    for dev in all_devices:
+        for conn in dev.connections:
+            # 只在 a_device 侧输出一次，避免双向存储导致的重复
+            if conn.a_device != dev.name:
+                continue
+            pair_key = tuple(sorted([conn.a_device, conn.z_device])) + (conn.a_port,)
+            if pair_key in seen_conns:
+                continue
+            seen_conns.add(pair_key)
+            edges.append({
+                "source": conn.a_device,
+                "target": conn.z_device,
+                "speed": conn.a_module,
+                "aSpeed": conn.a_module,   # v2.7.2: 供 V004 端口规格匹配校验
+                "zSpeed": conn.z_module,   # v2.7.2: 供 V004 端口规格匹配校验
+                "cableType": conn.cable_type,
+                "description": conn.description,
+                "networkType": conn.network_type,
+                "network_type": conn.network_type,  # v2.7.2: 供 V005/V009 校验读取
+                "aCabinetId": conn.a_cabinet_id,
+                "aCabinetName": conn.a_cabinet_name,
+                "aStartU": conn.a_start_u,
+                "aEndU": conn.a_end_u,
+                "zCabinetId": conn.z_cabinet_id,
+                "zCabinetName": conn.z_cabinet_name,
+                "zStartU": conn.z_start_u,
+                "zEndU": conn.z_end_u,
+            })
+
+    # V2.7.2: 接入 validation.py 规则校验引擎(结构化校验)
+    validate_result = designer.validate_topology()
+
+    # V2.7.2: 构造 ValidationContext,传入 validation.py 引擎
+    # 1. 收集机柜信息(含设备 U 位用于 V006)
+    # V2.9.0: 统计范围含交换机,并标注机柜类型(来自 rack_allocation 分配)
+    cabinet_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
+    cabinet_map = {}
+    for dev in all_devices:
+        if dev.cabinet_id is None:
+            continue
+        cid = dev.cabinet_id
+        if cid not in cabinet_map:
+            cabinet_map[cid] = {
+                "name": dev.cabinet_name or f"机柜{cid}",
+                "type": cabinet_type_map.get(cid, 'gpu'),
+                "power_watts": 0,
+                # 修复: designer 属性为 cooling_method（rack_config），非 _default_cooling_method
+                "cooling_method": getattr(designer, 'cooling_method', 'air'),
+                "items": [],
+            }
+        cabinet_map[cid]["power_watts"] += dev.power_watts or 0
+        cabinet_map[cid]["items"].append({
+            "device_name": dev.name,
+            "start_u": dev.start_u or 0,
+            "end_u": dev.end_u or 0,
+        })
+
+    cabinets_ctx = []
+    for cid, info in cabinet_map.items():
+        # V002: 机柜功率密度校验(每机柜一条记录)
+        cabinets_ctx.append({
+            "name": info["name"],
+            "power_watts": info["power_watts"],
+            "cooling_method": info["cooling_method"],
+            "power_limit": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+        })
+        # V006: U 位冲突校验(每个设备一条记录)
+        for item in info["items"]:
+            cabinets_ctx.append({
+                "name": info["name"],
+                "device_name": item["device_name"],
+                "start_u": item["start_u"],
+                "end_u": item["end_u"],
+            })
+
+    # 2. 收集交换机信息(含 network_type 用于 V008)
+    switches_ctx = []
+    for sw in all_switches:
+        # 推断交换机所属网络类型
+        if sw.obj_type.startswith('param'):
+            net_type = 'param'
+        elif sw.obj_type.startswith('storage'):
+            net_type = 'storage'
+        elif sw.obj_type.startswith('oob'):
+            net_type = 'oob'
+        elif sw.obj_type.startswith('biz'):
+            net_type = 'biz'
+        elif sw.obj_type.startswith('combined'):
+            net_type = 'combined'
+        else:
+            net_type = ''
+        switches_ctx.append({
+            "name": sw.name,
+            "obj_type": sw.obj_type,
+            "network_type": net_type,
+            "max_ports": sw.max_ports,
+        })
+
+    # 3. 构造 config 字典(用于 V007 Rail 一致性校验)
+    config_ctx = {
+        "rail_mode": getattr(designer, 'rail_mode', 'standard'),
+        "rail_count": getattr(designer, 'rail_count', 8),
+        "num_rails": getattr(designer, 'rail_count', 8),
+        "param_ports_per_server": getattr(designer, 'param_ports_per_server', 8),
+        "ports_per_server": getattr(designer, 'param_ports_per_server', 8),
+        "oob_enabled": getattr(designer, 'oob_enabled', True),
+        # V2.9.3: 机柜配置 (供 V014/V015 读取)
+        "rack_type": getattr(designer, 'rack_type', 42),
+        "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+        # V2.9.3-T5: V016/V018 容量与规模校验数据
+        "num_servers": designer.num_servers,
+        "total_servers": designer.total_servers,
+        "param_leaf_count": getattr(designer, 'param_leaf_count', 0),
+        "param_dl": getattr(designer, 'param_dl', 0),
+        "storage_leaf_count": getattr(designer, 'storage_leaf_count', 0),
+        "storage_dl": getattr(designer, 'storage_dl', 0),
+        # V3.0.2-T2-11: 交换机 1 分 2 扇出（breakout）逻辑口因子（V016 按逻辑口校验）
+        "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
+        "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
+        "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
+        "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
+        "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
+        "scale_up": getattr(designer, 'scale_up_config', None),
+        # V3.0.1-T1-3: 双平面按平面校验数据（V016 扩展）
+        "param_nics_per_server": getattr(designer, 'param_nics_per_server', 8),
+        "ports_per_nic": getattr(designer, 'ports_per_nic', 1),
+        "dual_plane_stats": getattr(designer, 'dual_plane_stats', None),
+        # V3.0.2-T2-1: ZCube 校验数据（V020）
+        "param_network_mode": getattr(designer, 'param_network_mode', 'standard'),
+        "param_zcube": getattr(designer, 'zcube_config', {}),
+        "zcube_stats": getattr(designer, 'zcube_stats', None),
+        # V3.0.2-T2-3: 华为超节点校验数据（V021）
+        "huawei_stats": getattr(designer, 'huawei_stats', {}),
+        # V3.0.2-T2-5: 三合一融合网校验数据（V022）
+        "eth_combined": getattr(designer, 'eth_combined', False),
+        "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
+        "param_spine_count": getattr(designer, 'param_spine_count', 0),
+        "param_core_count": getattr(designer, 'param_core_count', 0),
+    }
+
+    # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
+    try:
+        estimation = _estimate_design(designer)
+    except Exception as e:
+        estimation = {"error": f"估算失败: {e}"}
+
+    pue_result_ctx = estimation.get("pue") if isinstance(estimation, dict) else None
+    convergence_results_ctx = estimation.get("convergence", {}) if isinstance(estimation, dict) else {}
+
+    # 5. 调用 validation 引擎
+    validation_engine = create_default_engine()
+    val_ctx = ValidationContext(
+        servers=[{"name": s.name, "cabinet_id": s.cabinet_id} for s in designer.servers],
+        switches=switches_ctx,
+        connections=edges,
+        cabinets=cabinets_ctx,
+        config=config_ctx,
+        pue_result=pue_result_ctx,
+        convergence_results=convergence_results_ctx,
+    )
+    rule_issues = validation_engine.validate(val_ctx)
+
+    # V2.4.6: 旧版端口溢出校验结果(保留作为补充)
+    port_overflow_issues = [
+        {
+            "rule_id": "PORT_OVERFLOW" if "端口溢出" in e else "CONN_COUNT",
+            "severity": "error",
+            "category": "拓扑校验",
+            "message": e,
+            "affected_items": [e.split()[0]] if e.split() else [],
+            "recommendation": "调整服务器数量或交换机端口数" if "端口溢出" in e else "检查连接生成逻辑",
+        }
+        for e in validate_result.get("errors", [])
+    ]
+
+    # V2.7.2: 合并 validation 引擎结果 + 旧版端口溢出结果
+    validation_issues = port_overflow_issues + [
+        {
+            "rule_id": issue.rule_id,
+            "severity": issue.severity.value,
+            "category": issue.category,
+            "message": issue.message,
+            "affected_items": issue.affected_items,
+            "recommendation": issue.recommendation,
+        }
+        for issue in rule_issues
+    ]
+
+    # valid 字段:旧版端口溢出校验 + 新版规则校验均无 ERROR 才为 True
+    has_error = any(i["severity"] == "error" for i in validation_issues)
+    is_valid = validate_result["valid"] and not has_error
+
+    return {
+        "valid": is_valid,
+        "errors": validate_result.get("errors", []),
+        "validationIssues": validation_issues,
+        "estimation": estimation,
+    }
+
+
 @register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""
@@ -742,14 +960,18 @@ def _calculate_power_summary(designer):
 
 @register_action('validate')
 def handle_validate(params):
-    """处理拓扑验证请求"""
+    """处理拓扑验证请求（V3.1.1-T5-6: 返回完整校验问题 + 修复建议，供 AI 答疑）"""
     config_file, error = _get_config_file(params)
     if error:
         return {"error": error}
 
     designer = NetworkDesignerV2(config_file)
-    result = designer.validate_topology()
-    return {"valid": result["valid"]}
+    validation = _run_validation(designer)
+    return {
+        "valid": validation["valid"],
+        "errors": validation["errors"],
+        "validationIssues": validation["validationIssues"],
+    }
 
 
 @register_action('migrate')
@@ -914,6 +1136,138 @@ def handle_cli_info(params):
     }
 
 
+# ================================================================
+# V3.1.1-T5-3: AI 对话 action（autolink_hub 懒加载，首次调用 init_hub）
+#  - ai:chat 流式回复经 emit_event（引擎模式）或收集返回（CLI 模式）
+#  - 工具调用经 cli.execute（自动写 cli-audit.jsonl，R5.7 AI 留轨迹）
+# ================================================================
+
+_current_request_id: str = ''
+
+
+def emit_event_current(chunk: str) -> None:
+    """V3.1.1-T5-3: 发送流式事件到当前请求（AI 对话 handler 用）"""
+    _write_line({"type": "event", "requestId": _current_request_id, "chunk": chunk})
+
+
+def _init_ai_hub() -> None:
+    """懒加载初始化 AI Hub（幂等）"""
+    from autolink_hub.hub import init_hub
+    init_hub(os.environ.get('AUTOLINK_USER_DATA', ''))
+
+
+@register_action('ai:chat')
+def handle_ai_chat(params):
+    """V3.1.1-T5-3: AI 对话（流式）
+
+    参数: sessionId/message/mode/provider/autonomyMode/projectName/attachments。
+    引擎模式（main 循环）逐 chunk emit_event 流式输出；
+    CLI 模式（无 request_id）收集全部 chunk 后以非流式返回完整回复。
+    """
+    import asyncio
+    from autolink_hub.agent.agent import get_or_create_session, clear_session
+
+    _init_ai_hub()
+
+    session_id = params.get('sessionId') or 'default'
+    message = params.get('message') or ''
+    mode = params.get('mode') or 'general'
+    provider = params.get('provider')
+    autonomy_mode = params.get('autonomyMode') or 'semi_auto'
+    project_name = params.get('projectName') or ''
+    attachments = params.get('attachments')
+
+    session = get_or_create_session(session_id)
+    session.set_mode(mode, project_name)
+    if provider:
+        session.set_provider(provider)
+    session.autonomy_mode = autonomy_mode
+    session.add_user_message(message, attachments)
+
+    request_id = _current_request_id
+    collected: list[str] = []
+
+    async def _run():
+        async for chunk in session.run_stream():
+            if request_id:
+                emit_event(request_id, chunk)
+            else:
+                collected.append(chunk)
+        return {
+            'sessionId': session_id,
+            'status': 'completed',
+            'messages': len(session.messages),
+            'reply': ''.join(collected) if not request_id else None,
+        }
+
+    return asyncio.new_event_loop().run_until_complete(_run())
+
+
+@register_action('ai:providers')
+def handle_ai_providers(params):
+    """V3.1.1-T5-3: 可用 Provider 列表（含 enabled/is_default）"""
+    from autolink_hub.hub import init_hub, list_providers
+    from autolink_hub.config import settings
+    _init_ai_hub()
+    return {'providers': list_providers(), 'default': settings.default_provider}
+
+
+@register_action('ai:config')
+def handle_ai_config(params):
+    """V3.1.1-T5-3: 保存 Provider 配置（BYO-Key）并热重载"""
+    from autolink_hub.hub import configure_provider
+    _init_ai_hub()
+    return configure_provider(
+        params.get('provider', ''),
+        params.get('apiKey', ''),
+        params.get('model', ''),
+        params.get('baseUrl', ''),
+    )
+
+
+@register_action('ai:config-default')
+def handle_ai_config_default(params):
+    """V3.1.1-T5-3: 设置默认 Provider"""
+    from autolink_hub.hub import set_default_provider
+    _init_ai_hub()
+    return set_default_provider(params.get('provider', ''))
+
+
+@register_action('ai:test')
+def handle_ai_test(params):
+    """V3.1.1-T5-3: 测试 Provider 连接"""
+    import asyncio
+    from autolink_hub.hub import test_connection
+    _init_ai_hub()
+    return asyncio.new_event_loop().run_until_complete(test_connection(
+        params.get('provider', ''),
+        params.get('apiKey', ''),
+        params.get('baseUrl', ''),
+        params.get('model', ''),
+    ))
+
+
+@register_action('ai:models')
+def handle_ai_models(params):
+    """V3.1.1-T5-3: 拉取模型列表（OpenAI 兼容端点 /models）"""
+    import asyncio
+    from autolink_hub.hub import fetch_models
+    _init_ai_hub()
+    return asyncio.new_event_loop().run_until_complete(fetch_models(
+        params.get('baseUrl', ''),
+        params.get('apiKey', ''),
+    ))
+
+
+@register_action('ai:clear')
+def handle_ai_clear(params):
+    """V3.1.1-T5-3: 清除会话"""
+    from autolink_hub.agent.agent import clear_session
+    _init_ai_hub()
+    clear_session(params.get('sessionId') or 'default')
+    return {'status': 'ok'}
+
+
 @register_action('export')
 def handle_export(params):
     """处理渲染导出请求"""
@@ -1023,6 +1377,8 @@ def main():
         try:
             request = json.loads(raw)
             request_id = request.get('requestId', '')
+            global _current_request_id
+            _current_request_id = request_id  # V3.1.1-T5-3: AI 流式事件定位当前请求
             action = request.get('action', '')
             params = request.get('params', {})
             handler = get_action_handler(action)

@@ -20,6 +20,8 @@ const DeviceLibraryTab = lazy(() => import('./tabs/DeviceLibraryTab').then(m => 
 const FileViewerTab = lazy(() => import('./tabs/FileViewerTab').then(m => ({ default: m.FileViewerTab })))
 const DataCenterTab = lazy(() => import('./tabs/DataCenterTab').then(m => ({ default: m.DataCenterTab })))
 const GuideTab = lazy(() => import('./tabs/GuideTab').then(m => ({ default: m.GuideTab })))
+// V3.1.1-T5-5: AI 对话 Tab（懒加载）
+const ChatTab = lazy(() => import('../chat/ChatPanel').then(m => ({ default: m.ChatPanel })))
 
 const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
   workbench: LayoutDashboard,
@@ -35,6 +37,8 @@ const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?
   fileViewer: Monitor,
   datacenter: Building2,
   guide: BookOpen,
+  // V3.1.1-T5-5: AI 对话
+  chat: Sparkles,
 }
 
 export function WorkspaceView() {
@@ -128,6 +132,8 @@ export function WorkspaceView() {
       }
       case 'datacenter': return <DataCenterTab />
       case 'guide': return <GuideTab />
+      // V3.1.1-T5-5: AI 对话
+      case 'chat': return <ChatTab />
     }
   }, [activeTab])
 

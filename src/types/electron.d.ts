@@ -139,6 +139,28 @@ interface Window {
       info: () => Promise<{ cliVersion: string; actions: string[] }>
       audit: (limit?: number) => Promise<{ entries: Array<Record<string, unknown>>; path: string }>
     }
+    // V3.1.1-T5-4: AI 对话桥接
+    aihub: {
+      chat: (params: {
+        sessionId: string
+        message: string
+        mode?: string
+        provider?: string
+        autonomyMode?: string
+        projectName?: string
+        attachments?: unknown[]
+      }) => Promise<{ sessionId: string; status: string; messages: number; reply?: string | null }>
+      onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => () => void
+      providers: () => Promise<{
+        providers: Array<{ key: string; name: string; model: string; models: string[]; enabled: boolean; is_default: boolean }>
+        default: string
+      }>
+      config: (cfg: { provider: string; apiKey: string; model?: string; baseUrl?: string }) => Promise<{ status: string; provider: string }>
+      configDefault: (provider: string) => Promise<{ status: string; default_provider: string }>
+      test: (cfg: { provider: string; apiKey: string; baseUrl: string; model: string }) => Promise<{ status: string; message: string }>
+      models: (cfg: { baseUrl: string; apiKey: string }) => Promise<{ status: string; models: string[]; message?: string }>
+      clear: (sessionId: string) => Promise<{ status: string }>
+    }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
       onProgress: (callback: (data: unknown) => void) => () => void

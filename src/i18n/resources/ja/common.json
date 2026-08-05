@@ -13,7 +13,8 @@
     "design": "設計",
     "visualization": "可視化",
     "visualizationWithProject": "可視化 - {{name}}",
-    "deviceLibrary": "デバイスライブラリ"
+    "deviceLibrary": "デバイスライブラリ",
+    "chat": "AI アシスタント"
   },
   "confirmDelete": {
     "title": {
@@ -449,7 +450,9 @@
         "explorer": "エクスプローラー",
         "data": "データ",
         "about": "について",
-        "configPresets": "設定テンプレート"
+        "configPresets": "設定テンプレート",
+        "ai": "AI 設定",
+        "diagnostics": "診断"
       },
       "appearance": {
         "title": "外観設定",
@@ -540,6 +543,29 @@
         "importFailed": "インポートに失敗しました: {{error}}",
         "loadFailed": "プリセットの読み込みに失敗しました",
         "noPresets": "利用可能なプリセットがありません"
+      },
+      "ai": {
+        "title": "AI サービス設定",
+        "desc": "9 つのモデルプロバイダー（DeepSeek/OpenAI/Claude/Gemini/Qwen/GLM/Grok/Ollama/カスタム）を設定します。API Key は本機の userData にのみ保存されます。",
+        "apiKey": "API Key",
+        "model": "モデル",
+        "baseUrl": "Base URL",
+        "autonomyMode": "自律モード",
+        "save": "保存",
+        "test": "接続テスト",
+        "setDefault": "デフォルトに設定",
+        "fetchModels": "モデル一覧を取得",
+        "saved": "AI 設定を保存しました",
+        "defaultSet": "デフォルトプロバイダーに設定しました"
+      },
+      "diagnostics": {
+        "title": "診断",
+        "desc": "CLI 能力情報とコマンド監査ログ（AI が実行した呼び出しは AI バッジで表示）。",
+        "cliVersion": "CLI バージョン",
+        "actionsCount": "コマンド数",
+        "refresh": "更新",
+        "auditTitle": "コマンド監査ログ",
+        "empty": "監査記録はまだありません（操作を実行するとここに記録されます）"
       },
       "about": {
         "title": "AutoLinkについて",

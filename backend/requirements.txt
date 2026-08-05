@@ -4,3 +4,6 @@ openpyxl>=3.1.0
 pandas>=2.0.0
 reportlab>=4.0.0
 matplotlib>=3.7.0
+# V3.1.1-T5-8: AI Hub LLM 客户端（openai 官方库 OpenAI 兼容 + httpx 直连测试）
+openai>=1.40.0
+httpx>=0.27.0

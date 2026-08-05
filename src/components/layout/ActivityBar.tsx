@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server,
+  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -18,6 +18,8 @@ const activities: ActivityItem[] = [
   { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
   { id: 'visualization', icon: <Network size={20} />, labelKey: 'menu.visualization', shortcut: 'Ctrl+Shift+V' },
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
+  // V3.1.1-T5-5: AI 对话入口
+  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
 

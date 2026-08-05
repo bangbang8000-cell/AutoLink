@@ -725,6 +725,22 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     )
   }))
 
+  // V3.1.1-T5-4: AI 对话专用通道（流式事件带 sessionId → aihub:stream，前端按会话过滤）
+  ipcMain.handle('ai:chat', wrapHandler(async (event, params?: unknown) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const p = (params as Record<string, unknown>) ?? {}
+    const sessionId = String(p.sessionId ?? 'default')
+    return pythonService.callWithEvents(
+      'ai:chat',
+      p,
+      (ev) => {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('aihub:stream', { sessionId, chunk: ev.chunk })
+        }
+      },
+    )
+  }))
+
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)

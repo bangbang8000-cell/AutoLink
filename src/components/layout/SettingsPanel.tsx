@@ -4,7 +4,7 @@ import {
   Sun, Moon, Monitor, Globe, Keyboard, Info, Palette, FileOutput,
   Cpu, Wifi, Database, Shield, Download, Layers, Search,
   Upload, RotateCcw, ExternalLink, Check,
-  FolderTree,
+  FolderTree, Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useUIStore, type ThemeMode } from '@/stores/ui.store'
@@ -28,9 +28,13 @@ const SETTINGS_CATEGORIES = [
   { key: 'deviceLibrary', label: 'deviceLibrary', icon: Database },
   { key: 'network', label: 'network', icon: Wifi },
   { key: 'explorer', label: 'explorer', icon: FolderTree },
+  // V3.1.1-T5-5: AI 对话配置
+  { key: 'ai', label: 'ai', icon: Sparkles },
   { key: 'data', label: 'data', icon: Shield },
   // V3.0.4-T3-4: 配置模板与预设
   { key: 'configPresets', label: 'configPresets', icon: Layers },
+  // V3.1.1-T5-7: 诊断（CLI 能力 + 命令审计）
+  { key: 'diagnostics', label: 'diagnostics', icon: ScrollText },
   { key: 'about', label: 'about', icon: Info },
 ] as const
 
@@ -48,6 +52,7 @@ const GROUP_LOCALSTORAGE_KEYS: Record<string, string[]> = {
   explorer: [],
   data: [],
   configPresets: [],
+  ai: [],
   about: [],
 }
 
@@ -115,8 +120,10 @@ export function SettingsExplorer() {
             {activeCat === 'deviceLibrary' && <DeviceLibrarySettings />}
             {activeCat === 'network' && <NetworkSettings />}
             {activeCat === 'explorer' && <ExplorerSettings />}
+            {activeCat === 'ai' && <AISettings />}
             {activeCat === 'data' && <DataSettings />}
             {activeCat === 'configPresets' && <ConfigPresetsSettings />}
+            {activeCat === 'diagnostics' && <DiagnosticsSettings />}
             {activeCat === 'about' && <AboutSettings onOpenAbout={() => setAboutOpen(true)} />}
           </div>
         </div>
@@ -750,5 +757,299 @@ export function SelectMini({ label, value, onChange, options }: {
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
+  )
+}
+
+/* ================================================== */
+/*  AI 服务配置（V3.1.1-T5-5）                        */
+/* ================================================== */
+
+/** 9 厂商目录（与 backend/autolink_hub/config.py PROVIDER_CATALOG 一致） */
+const AI_PROVIDER_CATALOG: Record<string, { name: string; baseUrl: string; models: string[] }> = {
+  deepseek: { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', models: ['deepseek-v4-pro', 'deepseek-v4', 'deepseek-chat'] },
+  openai: { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', models: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'] },
+  claude: { name: 'Claude', baseUrl: 'https://api.anthropic.com/v1', models: ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4'] },
+  gemini: { name: 'Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', models: ['gemini-3.5-pro', 'gemini-3.5-flash'] },
+  qwen: { name: 'Qwen', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: ['qwen3.7-max', 'qwen3.7-plus'] },
+  glm: { name: 'GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-5.2', 'glm-5.1'] },
+  grok: { name: 'Grok', baseUrl: 'https://api.x.ai/v1', models: ['grok-4.5'] },
+  ollama: { name: 'Ollama (本地)', baseUrl: 'http://localhost:11434/v1', models: ['qwen3:latest', 'llama4:latest', 'deepseek-v4:latest'] },
+  custom: { name: '自定义', baseUrl: '', models: [] },
+}
+
+function AISettings() {
+  const { t } = useTranslation()
+  const aiConfig = useUIStore((s) => s.aiConfig)
+  const setProviderConfig = useUIStore((s) => s.setProviderConfig)
+  const setAIConfig = useUIStore((s) => s.setAIConfig)
+  const toast = useToastStore((s) => s.addToast)
+
+  const [selected, setSelected] = useState<string>(aiConfig.defaultProvider || 'deepseek')
+  const [showKey, setShowKey] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [statusMsg, setStatusMsg] = useState('')
+
+  const cfg = aiConfig.providers[selected] || { apiKey: '', model: '', baseUrl: '' }
+  const catalog = AI_PROVIDER_CATALOG[selected] || AI_PROVIDER_CATALOG.custom
+
+  const syncToHub = async (provider: string) => {
+    const c = aiConfig.providers[provider]
+    const aiHub = window.electron?.aihub
+    if (!aiHub || !c?.apiKey) return
+    await aiHub.config({ provider, apiKey: c.apiKey, model: c.model || '', baseUrl: c.baseUrl || '' })
+  }
+
+  const handleSave = async () => {
+    setProviderConfig(selected, {
+      apiKey: cfg.apiKey,
+      model: cfg.model || catalog.models[0] || '',
+      baseUrl: cfg.baseUrl || catalog.baseUrl,
+    })
+    try {
+      await syncToHub(selected)
+      toast('success', t('common:explorer.settings.ai.saved'))
+    } catch (e: any) {
+      toast('error', e?.message || 'save failed')
+    }
+  }
+
+  const handleTest = async () => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub) return
+    setBusy(true)
+    setStatusMsg('')
+    try {
+      const r = await aiHub.test({
+        provider: selected,
+        apiKey: cfg.apiKey,
+        baseUrl: cfg.baseUrl || catalog.baseUrl,
+        model: cfg.model || catalog.models[0] || '',
+      })
+      setStatusMsg(r.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleFetchModels = async () => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub) return
+    setBusy(true)
+    try {
+      const r = await aiHub.models({ baseUrl: cfg.baseUrl || catalog.baseUrl, apiKey: cfg.apiKey })
+      if (r.status === 'ok' && r.models.length > 0) {
+        setProviderConfig(selected, { ...cfg, baseUrl: cfg.baseUrl || catalog.baseUrl, model: r.models[0] })
+        setStatusMsg(`models: ${r.models.join(', ')}`)
+      } else {
+        setStatusMsg(r.message || 'no models')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSetDefault = async () => {
+    setAIConfig({ defaultProvider: selected })
+    try {
+      await window.electron?.aihub?.configDefault(selected)
+      toast('success', t('common:explorer.settings.ai.defaultSet'))
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <SettingsSection title={t('common:explorer.settings.ai.title')}>
+      <p className="text-2xs text-gray-400 mb-2">{t('common:explorer.settings.ai.desc')}</p>
+
+      {/* 厂商选择 */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {Object.entries(AI_PROVIDER_CATALOG).map(([key, p]) => (
+          <button
+            key={key}
+            onClick={() => setSelected(key)}
+            className={clsx(
+              'inline-flex items-center gap-1 px-2 py-1 text-2xs rounded border transition-colors',
+              selected === key
+                ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover',
+            )}
+          >
+            {p.name}
+            {aiConfig.defaultProvider === key && <Star size={10} className="text-warning-500" />}
+          </button>
+        ))}
+      </div>
+
+      {/* API Key */}
+      <SettingsRow label={t('common:explorer.settings.ai.apiKey')}>
+        <div className="flex items-center gap-1">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={cfg.apiKey}
+            onChange={(e) => setProviderConfig(selected, { ...cfg, apiKey: e.target.value })}
+            className={INPUT_CLASS + ' flex-1'}
+            placeholder="sk-..."
+          />
+          <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" onClick={() => setShowKey(!showKey)}>
+            {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+        </div>
+      </SettingsRow>
+
+      {/* 模型 */}
+      <SettingsRow label={t('common:explorer.settings.ai.model')}>
+        <div className="flex items-center gap-1 flex-1">
+          <input
+            value={cfg.model}
+            onChange={(e) => setProviderConfig(selected, { ...cfg, model: e.target.value })}
+            className={INPUT_CLASS + ' flex-1'}
+            placeholder={catalog.models[0] || ''}
+          />
+          <button
+            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            onClick={handleFetchModels}
+            title={t('common:explorer.settings.ai.fetchModels')}
+            disabled={busy}
+          >
+            <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </SettingsRow>
+
+      {/* Base URL */}
+      <SettingsRow label={t('common:explorer.settings.ai.baseUrl')}>
+        <input
+          value={cfg.baseUrl}
+          onChange={(e) => setProviderConfig(selected, { ...cfg, baseUrl: e.target.value })}
+          className={INPUT_CLASS + ' flex-1'}
+          placeholder={catalog.baseUrl}
+        />
+      </SettingsRow>
+
+      {/* 自主模式 */}
+      <SettingsRow label={t('common:explorer.settings.ai.autonomyMode')}>
+        <select
+          value={aiConfig.autonomyMode}
+          onChange={(e) => setAIConfig({ autonomyMode: e.target.value as any })}
+          className={INPUT_CLASS}
+        >
+          <option value="advisor">Advisor</option>
+          <option value="semi_auto">Semi-auto</option>
+          <option value="full_auto">Full auto</option>
+        </select>
+      </SettingsRow>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-1.5 mt-1">
+        <button
+          onClick={handleSave}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-2xs rounded bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+        >
+          <Check size={12} />{t('common:explorer.settings.ai.save')}
+        </button>
+        <button
+          onClick={handleTest}
+          disabled={busy}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover disabled:opacity-40"
+        >
+          <WifiIcon size={12} />{t('common:explorer.settings.ai.test')}
+        </button>
+        <button
+          onClick={handleSetDefault}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
+        >
+          <Star size={12} />{t('common:explorer.settings.ai.setDefault')}
+        </button>
+      </div>
+
+      {statusMsg && <p className="mt-2 text-2xs text-gray-500 dark:text-gray-400 break-all">{statusMsg}</p>}
+    </SettingsSection>
+  )
+}
+
+// V3.1.1-T5-7: 诊断（CLI 能力信息 + 命令审计日志，AI 调用以 ai: 前缀标记）
+function DiagnosticsSettings() {
+  const { t } = useTranslation()
+  const [info, setInfo] = useState<{ cliVersion: string; actions: string[] } | null>(null)
+  const [entries, setEntries] = useState<Array<Record<string, unknown>>>([])
+  const [path, setPath] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [reloadFlag, setReloadFlag] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    const cli = window.electron?.cli
+    if (!cli) {
+      setLoading(false)
+      return
+    }
+    Promise.all([cli.info(), cli.audit(200)])
+      .then(([infoRes, auditRes]) => {
+        if (cancelled) return
+        setInfo(infoRes)
+        setEntries(auditRes.entries)
+        setPath(auditRes.path)
+      })
+      .catch(() => { /* IPC 不可用时静默 */ })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [reloadFlag])
+
+  return (
+    <SettingsSection title={t('common:explorer.settings.diagnostics.title')}>
+      <p className="text-2xs text-gray-400 mb-2">{t('common:explorer.settings.diagnostics.desc')}</p>
+
+      {/* CLI 能力信息 */}
+      <div className="flex items-center gap-2 mb-3 text-2xs">
+        <span className="text-gray-500 dark:text-gray-400">{t('common:explorer.settings.diagnostics.cliVersion')}</span>
+        <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-app-hover">{info?.cliVersion ?? '—'}</code>
+        <span className="text-gray-500 dark:text-gray-400">{t('common:explorer.settings.diagnostics.actionsCount')}</span>
+        <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-app-hover">{info?.actions.length ?? '—'}</code>
+        <button
+          onClick={() => setReloadFlag((f) => f + 1)}
+          disabled={loading}
+          className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover disabled:opacity-40"
+        >
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          {t('common:explorer.settings.diagnostics.refresh')}
+        </button>
+      </div>
+
+      {/* 命令审计日志（AI 调用留痕，脱敏） */}
+      <div className="rounded border border-gray-200 dark:border-gray-600 overflow-hidden">
+        <div className="px-2.5 py-1.5 text-2xs font-medium bg-gray-50 dark:bg-app-hover flex items-center justify-between gap-2">
+          <span>{t('common:explorer.settings.diagnostics.auditTitle')}（{entries.length}）</span>
+          {path && <code className="text-[10px] text-gray-400 break-all max-w-[60%] text-right">{path}</code>}
+        </div>
+        <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 dark:divide-edge-subtle">
+          {entries.length === 0 && (
+            <div className="px-2.5 py-3 text-2xs text-gray-400">{t('common:explorer.settings.diagnostics.empty')}</div>
+          )}
+          {entries.map((e, idx) => {
+            const action = String(e.action ?? '')
+            const isAi = Array.isArray(e.argv) && e.argv.some((a) => String(a).startsWith('ai:'))
+            const ok = e.ok !== false
+            return (
+              <div key={idx} className="px-2.5 py-1.5 text-2xs flex items-start gap-2">
+                <span className={ok ? 'text-success-500' : 'text-danger-500'}>{ok ? '✓' : '✗'}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <code className="font-medium">{action}</code>
+                    {isAi && (
+                      <span className="px-1 rounded text-[10px] text-fuchsia-500 border border-fuchsia-300 dark:border-fuchsia-700">AI</span>
+                    )}
+                    {e.error ? <span className="text-danger-500 break-all">{String(e.error)}</span> : null}
+                  </div>
+                  <div className="text-gray-400 truncate">
+                    {String(e.ts ?? '')}
+                    {Array.isArray(e.argv) && e.argv.length > 0 ? ` · ${e.argv.join(' ')}` : ''}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </SettingsSection>
   )
 }

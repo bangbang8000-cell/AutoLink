@@ -106,6 +106,27 @@ const electronAPI = {
       return () => ipcRenderer.removeListener('ai:stream', handler)
     },
   },
+  // V3.1.1-T5-4: AI 对话专用桥接（chat 走 ai:chat 独立通道，其余复用 ai:call）
+  aihub: {
+    chat: (params: { sessionId: string; message: string; mode?: string; provider?: string; autonomyMode?: string; projectName?: string; attachments?: unknown[] }) =>
+      ipcRenderer.invoke('ai:chat', params),
+    onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { sessionId: string; chunk: string }) => callback(data)
+      ipcRenderer.on('aihub:stream', handler)
+      return () => ipcRenderer.removeListener('aihub:stream', handler)
+    },
+    providers: () => ipcRenderer.invoke('ai:call', 'ai:providers', {}),
+    config: (cfg: { provider: string; apiKey: string; model?: string; baseUrl?: string }) =>
+      ipcRenderer.invoke('ai:call', 'ai:config', cfg),
+    configDefault: (provider: string) =>
+      ipcRenderer.invoke('ai:call', 'ai:config-default', { provider }),
+    test: (cfg: { provider: string; apiKey: string; baseUrl: string; model: string }) =>
+      ipcRenderer.invoke('ai:call', 'ai:test', cfg),
+    models: (cfg: { baseUrl: string; apiKey: string }) =>
+      ipcRenderer.invoke('ai:call', 'ai:models', cfg),
+    clear: (sessionId: string) =>
+      ipcRenderer.invoke('ai:call', 'ai:clear', { sessionId }),
+  },
   render: {
     exportConnections: (projectName: string, outputTypes: string[]) =>
       ipcRenderer.invoke('render:exportConnections', projectName, outputTypes),
