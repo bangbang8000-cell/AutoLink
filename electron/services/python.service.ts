@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from 'child_process'
 import type { StdioOptions } from 'child_process'
 import * as path from 'path'
 import * as fs from 'fs'
+import { app } from 'electron'
 import { getBackendPath } from '../config.js'
 
 interface NdjsonLine {
@@ -164,7 +165,12 @@ class PythonService {
     const exeName = process.platform === 'win32' ? 'engine.exe' : 'engine'
     const bundled = path.join(getBackendPath(), '..', 'backend-dist', exeName)
     const stdio: StdioOptions = ['pipe', 'pipe', 'pipe']
-    const env = { ...process.env, PYTHONIOENCODING: 'utf-8' }
+    const env = {
+      ...process.env,
+      PYTHONIOENCODING: 'utf-8',
+      // V3.1.0-T4-3: 注入用户数据目录，供 cli 审计日志（userData/audit/cli-audit.jsonl）落位
+      AUTOLINK_USER_DATA: app.getPath('userData'),
+    }
     try {
       if (fs.existsSync(bundled)) {
         return spawn(bundled, [], { stdio, env })

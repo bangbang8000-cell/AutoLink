@@ -901,6 +901,19 @@ def handle_config_import(params):
     return import_config(params.get('payload'))
 
 
+@register_action('cli:info')
+def handle_cli_info(params):
+    """V3.1.0-T4-3: CLI 能力信息（版本 + 全部 action 清单）
+
+    供 cli:info IPC / 前端排查使用；action 清单来自注册表（与 CLI 子命令树一致）。
+    """
+    from cli import CLI_VERSION
+    return {
+        'cliVersion': CLI_VERSION,
+        'actions': list_registered_actions(),
+    }
+
+
 @register_action('export')
 def handle_export(params):
     """处理渲染导出请求"""
@@ -1017,7 +1030,9 @@ def main():
                 _write_line({"type": "result", "requestId": request_id,
                              "success": False, "error": f"未知 action: {action}"})
                 continue
-            result = handler(params)
+            # V3.1.0-T4-1: 统一经 CLI 执行层（参数校验/审计/执行），UI 与 CLI 行为一致
+            from cli import execute as cli_execute
+            result = cli_execute(action, params)
             _write_line({"type": "result", "requestId": request_id, "success": True, "data": result})
         except json.JSONDecodeError as e:
             _write_line({"type": "error", "requestId": request_id, "error": f"JSON 解析失败: {e}"})

@@ -614,6 +614,23 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return pythonService.call('config:import', { payload })
   }))
 
+  // ===== CLI（V3.1.0-T4-3: 显式能力层信息与审计） =====
+  ipcMain.handle('cli:info', wrapHandler(async () => {
+    return pythonService.call('cli:info', {})
+  }))
+
+  ipcMain.handle('cli:audit', wrapHandler(async (_event, limit = 200) => {
+    const auditPath = path.join(app.getPath('userData'), 'audit', 'cli-audit.jsonl')
+    if (!fs.existsSync(auditPath)) {
+      return { entries: [], path: auditPath }
+    }
+    const lines = fs.readFileSync(auditPath, 'utf-8').trim().split('\n').filter(Boolean)
+    const entries = lines.slice(-Math.max(1, Number(limit) || 200))
+      .map((l) => { try { return JSON.parse(l) } catch { return null } })
+      .filter((e): e is Record<string, unknown> => e !== null)
+    return { entries, path: auditPath }
+  }))
+
   // ===== Design =====
   // v2.7.2 B5: design:generate 改为合并更新 project_config.json(非删除)
   // 原逻辑删除 JSON 会导致 rail_mode/param_protocol 等扩展字段永久丢失

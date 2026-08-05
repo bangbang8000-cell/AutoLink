@@ -134,6 +134,11 @@ interface Window {
         errors: string[]
       }>
     }
+    // V3.1.0-T4-3: CLI 能力层信息与审计日志
+    cli: {
+      info: () => Promise<{ cliVersion: string; actions: string[] }>
+      audit: (limit?: number) => Promise<{ entries: Array<Record<string, unknown>>; path: string }>
+    }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
       onProgress: (callback: (data: unknown) => void) => () => void

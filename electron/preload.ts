@@ -90,6 +90,13 @@ const electronAPI = {
     importConfig: (payload: unknown) =>
       ipcRenderer.invoke('config:import', payload),
   },
+  // V3.1.0-T4-3: CLI 能力层信息与审计日志
+  cli: {
+    info: () =>
+      ipcRenderer.invoke('cli:info'),
+    audit: (limit?: number) =>
+      ipcRenderer.invoke('cli:audit', limit),
+  },
   // V3.0.0-T0-6: Python 持久 Agent 流式通道（AIHUB 对话/进度复用）
   ai: {
     call: (action: string, params?: unknown) => ipcRenderer.invoke('ai:call', action, params),
