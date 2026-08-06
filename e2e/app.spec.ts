@@ -12,6 +12,12 @@ async function openMainWindow(app: ElectronApplication): Promise<Page> {
   // 等待 splash 关闭；若 first 即主窗口（splash 过快消失）则超时容忍
   await first.waitForEvent('close', { timeout: 8000 }).catch(() => {})
   const main = app.windows()[0]
+  // 关闭首次启动引导弹窗（CI 全新 userData 必现）：ESC 触发 closeOnEsc，
+  // 否则 fixed 全屏遮罩会拦截设置按钮点击导致测试失败
+  const dialog = main.locator('[role="dialog"]')
+  await dialog.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {})
+  await main.keyboard.press('Escape').catch(() => {})
+  await dialog.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
   return main
 }
 
