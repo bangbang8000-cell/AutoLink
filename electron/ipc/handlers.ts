@@ -33,6 +33,23 @@ function resolveCategoryDir(cat: { id: string; directory?: string }): string {
   return cat.directory || DEVICE_CATEGORY_PATH_MAP[cat.id] || path.basename(cat.id)
 }
 import { updateService } from '../services/update.service.js'
+import { redactSensitive } from '../utils/redact.js'
+import {
+  actionSchema,
+  aiChatSchema,
+  assertParsed,
+  capacityRecommendSchema,
+  configPayloadSchema,
+  createWithConfigSchema,
+  deviceSaveSchema,
+  exportSaveFileSchema,
+  httpsUrlSchema,
+  optimizeApplySchema,
+  paramsObjectSchema,
+  projectNameSchema,
+  repairApplySchema,
+  roomOptimizeSchema,
+} from './schemas.js'
 
 /**
  * 文件树节点类型(electron 端内联定义,避免跨 rootDir 导入 src/types)
@@ -105,7 +122,8 @@ function wrapHandler<T>(handler: (...args: any[]) => Promise<T>) {
     try {
       return await handler(event, ...args)
     } catch (err) {
-      console.error(`[IPC Error] ${event}:`, err)
+      // V3.2.2-R11.1: 错误日志脱敏后再输出，避免 apiKey/token 等凭据泄漏
+      console.error(`[IPC Error] ${event}:`, redactSensitive(err instanceof Error ? err.message : String(err)))
       throw err
     }
   }
@@ -327,6 +345,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     device_refs: Record<string, unknown>
     rack_config: Record<string, unknown>
   }) => {
+    // V3.2.2-R11.1: 载荷形状校验（门禁；写入仍用原始 config 保留扩展字段）
+    assertParsed(createWithConfigSchema, config, 'project:createWithConfig')
     sanitizeName(config.meta.name)
     const wsp = getWorkspacePath()
     const projectDir = path.join(wsp, config.meta.name)
@@ -599,13 +619,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // V3.1.4-T8-2: 机房智能落位（约束满足 + 多目标优化；复用 backend room:optimize）
   ipcMain.handle('room:optimize', wrapHandler(async (_event, params?: Record<string, unknown>) => {
+    // V3.2.2-R11.1: 载荷形状校验（替代原手写缺参检查）
+    assertParsed(roomOptimizeSchema, params ?? {}, 'room:optimize')
     const p = params ?? {}
-    if (!p.matrix && !p.project) {
-      throw new Error('缺少参数：matrix（机房矩阵）或 project')
-    }
-    if (!p.counts && !p.cabinets) {
-      throw new Error('缺少参数：counts（类型数量）或 cabinets（机柜列表）')
-    }
     return pythonService.call('room:optimize', {
       matrix: p.matrix,
       project: p.project,
@@ -624,6 +640,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('config:apply-preset', wrapHandler(async (_event, presetId: string, config: unknown) => {
+    // V3.2.2-R11.1: presetId 形状 + config 对象校验
+    assertParsed(projectNameSchema, presetId, 'config:apply-preset.presetId')
+    assertParsed(configPayloadSchema, config ?? {}, 'config:apply-preset.config')
     return pythonService.call('config:apply-preset', { presetId, config })
   }))
 
@@ -632,6 +651,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('config:import', wrapHandler(async (_event, payload: unknown) => {
+    // V3.2.2-R11.1: 导入载荷必须为对象
+    assertParsed(configPayloadSchema, payload ?? {}, 'config:import')
     return pythonService.call('config:import', { payload })
   }))
 
@@ -734,6 +755,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // V3.0.0-T0-6: 流式调用（engine {type:'event'} 行逐行透传 → webContents.send('ai:stream')）
   ipcMain.handle('ai:call', wrapHandler(async (event, action: string, params?: unknown) => {
+    // V3.2.2-R11.1: action 形状 + params 普通对象校验（动态 action 派发最高风险通道）
+    assertParsed(actionSchema, action, 'ai:call.action')
+    assertParsed(paramsObjectSchema, params ?? {}, 'ai:call.params')
     const win = BrowserWindow.fromWebContents(event.sender)
     return pythonService.callWithEvents(
       action,
@@ -748,12 +772,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // V3.1.1-T5-4: AI 对话专用通道（流式事件带 sessionId → aihub:stream，前端按会话过滤）
   ipcMain.handle('ai:chat', wrapHandler(async (event, params?: unknown) => {
+    // V3.2.2-R11.1: 对话载荷形状校验
+    const p = assertParsed(aiChatSchema, params ?? {}, 'ai:chat')
     const win = BrowserWindow.fromWebContents(event.sender)
-    const p = (params as Record<string, unknown>) ?? {}
     const sessionId = String(p.sessionId ?? 'default')
     return pythonService.callWithEvents(
       'ai:chat',
-      p,
+      (params as Record<string, unknown>) ?? {},
       (ev) => {
         if (win && !win.isDestroyed()) {
           win.webContents.send('aihub:stream', { sessionId, chunk: ev.chunk })
@@ -839,9 +864,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     precision?: string
     contextLength?: number
   }) => {
-    if (!params?.model || !params?.numGpus) {
-      throw new Error('缺少参数：model / numGpus')
-    }
+    // V3.2.2-R11.1: 推荐载荷形状校验
+    assertParsed(capacityRecommendSchema, params ?? {}, 'capacity:recommend')
     return pythonService.call('capacity:recommend', {
       model: params.model,
       num_gpus: params.numGpus,
@@ -902,10 +926,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     projectName: string
     suggestions: Array<{ category?: string; title?: string; patch: Record<string, Record<string, unknown>> }>
   }) => {
+    // V3.2.2-R11.1: 载荷形状校验（替代原手写数组检查）
+    assertParsed(optimizeApplySchema, params ?? {}, 'optimize:apply')
     sanitizeName(params.projectName)
-    if (!Array.isArray(params.suggestions) || params.suggestions.length === 0) {
-      throw new Error('缺少选中的建议（suggestions）')
-    }
     const projectDir = path.join(getWorkspacePath(), params.projectName)
     const configPath = path.join(projectDir, 'network_config.ini')
     if (!fs.existsSync(configPath)) {
@@ -934,10 +957,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     projectName: string
     fixes: Array<{ rule_id?: string; message?: string; patch: Record<string, Record<string, unknown>> }>
   }) => {
+    // V3.2.2-R11.1: 载荷形状校验（替代原手写数组检查）
+    assertParsed(repairApplySchema, params ?? {}, 'repair:apply')
     sanitizeName(params.projectName)
-    if (!Array.isArray(params.fixes) || params.fixes.length === 0) {
-      throw new Error('缺少选中的修复项（fixes）')
-    }
     const projectDir = path.join(getWorkspacePath(), params.projectName)
     const configPath = path.join(projectDir, 'network_config.ini')
     if (!fs.existsSync(configPath)) {
@@ -989,6 +1011,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // ===== Export =====
   ipcMain.handle('export:saveFile', wrapHandler(async (_event, projectName: string, fileName: string, base64Data: string) => {
+    // V3.2.2-R11.1: fileName 单层文件名 + base64 边界校验（防路径穿越/超大载荷）
+    assertParsed(exportSaveFileSchema, { projectName, fileName, base64Data }, 'export:saveFile')
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
     const outputDir = path.join(projectDir, 'output')
@@ -1100,10 +1124,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('shell:openExternal', wrapHandler(async (_event, url: string) => {
-    // 仅允许 https 协议，防止任意协议执行
-    if (!url.startsWith('https://')) {
-      throw new Error('仅允许打开 https 链接')
-    }
+    // V3.2.2-R11.1: 仅允许 https 协议，防止任意协议执行
+    assertParsed(httpsUrlSchema, url, 'shell:openExternal')
     await shell.openExternal(url)
   }))
 
@@ -1171,6 +1193,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('device-library:save', wrapHandler(async (_event, device: { id: string; category: string }) => {
+    // V3.2.2-R11.1: id/category 边界校验（防路径穿越）
+    assertParsed(deviceSaveSchema, device ?? {}, 'device-library:save')
     saveDeviceToFile(device)
   }))
 
@@ -1179,7 +1203,12 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('device-library:import', wrapHandler(async (_event, devices: { id: string; category: string }[]) => {
+    // V3.2.2-R11.1: 批量导入逐项校验
+    if (!Array.isArray(devices) || devices.length > 500) {
+      throw new Error('设备导入数量非法')
+    }
     for (const device of devices) {
+      assertParsed(deviceSaveSchema, device ?? {}, 'device-library:import')
       saveDeviceToFile(device)
     }
   }))

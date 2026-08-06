@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, shell, session } from 'electron'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { isDev, initializeAppDirs, ensureDemoProjects } from './config.js'
 import { setupIpcHandlers } from './ipc/handlers.js'
 import { updateService } from './services/update.service.js'
 import { pythonService } from './services/python.service.js'
+import { initCrashReporting, registerProcessGuards, watchRendererCrashes } from './utils/crash.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -15,14 +16,51 @@ class AutoLinkApp {
   private splashStartTime = 0
 
   async initialize(): Promise<void> {
+    initCrashReporting()
+    registerProcessGuards()
     await app.whenReady()
     initializeAppDirs()
     ensureDemoProjects()
+    this.registerCsp()
     this.splashStartTime = Date.now()
     this.createSplashWindow()
     Menu.setApplicationMenu(null)
     setupIpcHandlers(this.mainWindow!)
     this.registerAppEvents()
+  }
+
+  /**
+   * V3.2.2-R11.1: CSP 注入
+   *  - dev 需放宽：React Refresh preamble 是 inline script（script-src 加 'unsafe-inline'），
+   *    Vite HMR 需 ws://localhost:5173；prod 收紧为纯 self（与 meta 宽松版交集后仍为严格）
+   *  - 与 index.html / splash.html 的 meta CSP 配合（双保险）
+   */
+  private registerCsp(): void {
+    const scriptSrc = isDev
+      ? ["script-src 'self' 'unsafe-inline'"]
+      : ["script-src 'self'"]
+    const base = [
+      "default-src 'self'",
+      ...scriptSrc,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "font-src 'self' data:",
+      "worker-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ]
+    const connectSrc = isDev
+      ? ["connect-src 'self' http://localhost:5173 ws://localhost:5173"]
+      : ["connect-src 'self'", "frame-ancestors 'none'"]
+    const csp = [...base, ...connectSrc].join('; ')
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [csp],
+        },
+      })
+    })
   }
 
   private createSplashWindow(): void {
@@ -74,7 +112,8 @@ class AutoLinkApp {
         preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false,
+        // V3.2.2-R11.1: preload 仅用 contextBridge/ipcRenderer/process.versions（sandbox 均支持），可安全开启
+        sandbox: true,
       },
     })
 
@@ -88,6 +127,9 @@ class AutoLinkApp {
       shell.openExternal(url)
       return { action: 'deny' }
     })
+
+    // V3.2.2-R11.2: 渲染进程崩溃监控（脱敏留痕 + 自动恢复）
+    watchRendererCrashes(this.mainWindow)
 
     // Show main window and close splash when ready (min 1.5s splash display)
     this.mainWindow.once('ready-to-show', () => {

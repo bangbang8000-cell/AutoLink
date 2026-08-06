@@ -62,6 +62,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Skip macOS code signing (no certificate in CI)
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # V3.2.2-R11.5: Windows 代码签名（可选启用）。
+          # 配置仓库 secrets CSC_LINK（pfx base64）与 CSC_KEY_PASSWORD 后，
+          # electron-builder 自动签名 NSIS 安装包（SmartScreen 白名单）；
+          # 未配置时保持未签名（已知限制，latest.yml 哈希仍保证下载完整性）。
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
 
       - name: List release artifacts
         shell: bash

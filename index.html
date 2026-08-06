@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- V3.2.2-R11.1: CSP 基线。script-src 含 'unsafe-inline' 供 dev React Refresh；
+         prod 由 main.ts header 注入严格版收紧（交集取严格） -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:5173 ws://localhost:5173; worker-src 'self'; object-src 'none'; base-uri 'self'"
+    />
     <title>AutoLink</title>
   </head>
   <body>

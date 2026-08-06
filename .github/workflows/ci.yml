@@ -26,13 +26,24 @@ jobs:
       - run: npm run build:renderer
       # V3.0.0-T0-8: Electron 主进程/preload 编译门禁
       - run: npm run build:electron
+      # V3.2.2-R11.1: 渲染层安全断言 — 0 直接网络 / 0 Node 访问（一切经 preload IPC 桥接）
+      - name: Security baseline (renderer IPC-only)
+        run: |
+          if grep -rEn "\bfetch\(|XMLHttpRequest|require\(|process\." src --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx"; then
+            echo "FAIL: renderer must not access network or Node APIs directly"
+            exit 1
+          fi
+          echo "PASS: renderer is isolated (IPC-only)"
       # V2.9.8-T3: 模板验证纳入 CI — 16 内置模板损坏时构建失败
       - run: python scripts/validate_templates.py
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
       - run: python scripts/gen_golden.py --check
       # V3.0.0-T0-8: 后端全量 pytest
       - run: python -m pytest tests/backend -q
+      # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
+      - run: python scripts/bench_perf.py --rounds 1
   # V3.2.1-T11-4: Electron E2E（构建产物启动冒烟 + 主题色切换）
+  # V3.2.2-R11.4: 扩展业务链路 E2E（建项目→渲染→导出→落位），生成拓扑需 Python 引擎
   e2e:
     runs-on: ubuntu-latest
     needs: check
@@ -41,7 +52,12 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - run: npm ci
+      # 业务链路 E2E 的 design:generate/render:exportConnections 走 Python 引擎
+      - run: pip install -r backend/requirements-dev.txt
       # E2E 启动需 dist-electron/main.js（package.json main 入口），先编译主进程/preload
       - run: npm run build:electron
       # E2E 以 dev 模式启动（playwright webServer 拉起 vite :5173）

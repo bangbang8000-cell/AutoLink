@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { app } from 'electron'
 import { getBackendPath } from '../config.js'
+import { redactSensitive } from '../utils/redact.js'
 
 interface NdjsonLine {
   type?: 'result' | 'event' | 'error'
@@ -143,7 +144,8 @@ class PythonService {
       proc.stdout?.on('data', (data: string) => this.onStdout(data))
       proc.stderr?.setEncoding('utf-8')
       proc.stderr?.on('data', (data: string) => {
-        this.stderrTail = (this.stderrTail + data).slice(-4000)
+        // V3.2.2-R11.1: 边收边脱敏，防止 stderr 尾部（可能含 apiKey/token）泄漏到错误信息
+        this.stderrTail = redactSensitive((this.stderrTail + data)).slice(-4000)
       })
 
       proc.on('error', (err: Error) => {
@@ -187,9 +189,10 @@ class PythonService {
     this.proc = null
     const pendingSize = this.pending.size
     if (pendingSize > 0) {
+      const safeReason = redactSensitive(reason)
       for (const [, p] of this.pending) {
         clearTimeout(p.timer)
-        p.reject(new Error(`${reason}: ${this.stderrTail.slice(-200)}`))
+        p.reject(new Error(`${safeReason}: ${this.stderrTail.slice(-200)}`))
       }
       this.pending.clear()
       this.activeCount = Math.max(0, this.activeCount - pendingSize)
@@ -316,7 +319,7 @@ class PythonService {
     try {
       this.proc.stdin.write(`${JSON.stringify(request)}\n`)
     } catch (err) {
-      this.settleAndRun(request.requestId, (p) => p.reject(new Error(`写入 Python 进程失败: ${(err as Error).message}`)))
+      this.settleAndRun(request.requestId, (p) => p.reject(new Error(`写入 Python 进程失败: ${redactSensitive((err as Error).message)}`)))
     }
   }
 }
