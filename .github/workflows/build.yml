@@ -62,6 +62,7 @@ jobs:
       # 未配置时**不注入**（保持与 3.2.1 一致：mac 由 CSC_IDENTITY_AUTO_DISCOVERY 跳过，
       # Windows 未签名，latest.yml 哈希仍保证下载完整性）。
       - name: Package with electron-builder
+        shell: bash
         run: |
           if [ -n "${{ secrets.CSC_LINK }}" ]; then
             echo "CSC_LINK=${{ secrets.CSC_LINK }}" >> "$GITHUB_ENV"
