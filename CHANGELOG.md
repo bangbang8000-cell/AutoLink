@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## [3.1.4] - 2026-08-06
+
+### AI 智能落位 + 质量闭环
+
+v3.1.4 落地机房智能落位全链路：约束满足 + 多目标优化内核、矩阵落位可视化与手动调整、对话驱动落位闭环（AI 工具 + 技能），机房体验与 AI 体验双升级。
+
+#### 落位优化内核（T8-1）
+- 新增 `backend/room_optimizer.py`：`room optimize` CLI / action，输入双模式（`counts` 类型→数量含中文键别名 / `cabinets` 具体机柜优先）
+- 约束满足：占位（空调/柱）跳过、机柜类型域匹配（combined/empty 任意）、单柜功率上限超限整体拒放、保留手动放置（`reset_existing` 清空重排）
+- 算法：全局互斥候选格 + 贪心分簇（类型簇中心 + 功率降序 + 区域负载最低优先 + 离簇近）+ 时间预算内迭代重分配；**约束最多优先**排序修复类型互斥挤占（225 柜 100% 落位）
+- 四维可配置目标评分：功率均衡（区域功率变异系数）/ 散热分区（高功率柜至空调柱距离）/ 网络就近（网络簇聚度）/ 布线最短（同类型簇内聚度），0~1 + 加权总分；225 柜实测 <120ms ≤5s
+- 输出 `{placements, scores, issues, stats}`；`engine.py` 注册 `room:optimize`（matrix dict 优先，缺省按 project 读 room_layout.json）
+
+#### 落位结果可视化 + 手动调整（T8-2）
+- electron IPC `room.optimize`（preload + handlers + electron.d.ts）；`room.store.ts` 新增 `runOptimize` / `optimizeCabinets`（默认仅提交未上架机柜，避免与已上架格重复；resetExisting 全量重排）/ `optimizeCounts` / `applyOptimize`（cabinetId + 类型标记更新，保留手动放置，占位越界保护）
+- 机房矩阵工具栏「✨ 智能落位」入口 + `RoomOptimizeModal`：按机柜 / 按数量双模式，方案预览（已落位/未放置 + 四维评分 + issues），确认应用后可继续拖拽手动调整（复用 checkMount 即时校验）
+
+#### 对话驱动落位闭环（T8-3）
+- `room:set-type`（标记类型）/ `room:place`（上架/移除，复用 RoomConstraints 占位/类型域/功率校验 + 移动语义）/ `room:create` 支持 `project` 落盘（补齐对话矩阵创建），均兼容 `projectName` 别名
+- AIHUB 注册 `room_optimize` / `room_set_type` / `room_place`（NOTIFY：方案返回 / 写操作需前端确认应用）+ 别名修正 + 技能 `room-layout.md`（"225 柜按 120 GPU+60 网络+45 存储落位，柱子别挡" → 矩阵检查/创建 → counts 解析 → optimize → 前端确认应用闭环）
+
+#### 版本与回归（T8-4）
+- 版本号 3.1.3 → 3.1.4（VERSION / package.json / package-lock.json / README）
+- 回归：后端 916 用例全绿（新增 room_optimizer 22 + room_edit 18 + AIHUB 工具/权限 5），前端 457 用例全绿（room.store +18、RoomOptimizeModal 组件 5），typecheck / electron tsc / lint 通过
+- PRD §5.11 验收标准 4 项全部达标；用户指南新增 6.5「机房智能落位」章节
+
+---
+
 ## [3.1.3] - 2026-08-05
 
 ### 对话管理 + 需求/示例生成 + 容量规划内核（AI 能力增强）
