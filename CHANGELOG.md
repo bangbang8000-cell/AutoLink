@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## [3.2.0] - 2026-08-06
+
+### 智能化增强（容量规划 v2 + ATOP 拓扑优化 + 批量优化/智能修复闭环 + 国产档案库）
+
+v3.2.0 落地智能化增强全链路：FP8 精确容量计算与 TCO 成本估算、ATOP 式自动拓扑推荐（模型通信特征 → ZCube 拓扑）、批量优化与智能修复双闭环、国产芯片场景档案库扩充——从"算得准"到"推荐优、改得快、覆盖广"。
+
+#### 容量规划 v2（T9-1）
+- `comm_calculator.py` 新增 FP8 分块精度模型：激活/梯度/优化器状态按块结构精确估算通信量，输出与解析法误差对照（实测 12.5% < 15%）
+- Pipeline 建模：`estimate_pipeline_memory` 按 pp 分段（每 stage 参数 1/pp + 激活峰值）
+- 新增 `cost_estimator.py`：TCO 全口径（交换机/网卡/光模块硬件 + 电力含 PUE + 机柜空间分项 + 单价覆盖）
+- `presets.py` 支持自定义档案（`register_preset` / 工作区 capacity_presets.json 加载）；`capacity:recommend` 返回 `{exact, pipeline, cost}`；前端 `CapacityRecommendModal` 增 FP8 精确通信量（误差对照）/ Pipeline 分段显存 / TCO 分项展示
+
+#### ATOP 式自动拓扑优化（T9-2）
+- 新建 `backend/atop/`：`features.py`（模型通信特征：AllReduce/All-to-All/P2P + 通信占比提取）+ `recommender.py`（特征 → ZCube 2D/3D cube 尺寸/分组/拓扑推荐 + V020 校验接入）
+- `zcube_topology.py` 新增 `build_cube_topology_data`：GPU 按 cube_rank 编号、A/B 组均衡分组着色（zcube_group/plane_id）、双向边链路元数据，输出前端拓扑 schema
+- action `atop:recommend` + AIHUB 工具 `atop_recommend`（AUTO）+ CLI schema + IPC 桥接
+- 前端 `TopologyTab` 新增 ATOP 按钮 + `ATOPRecommendModal`（特征摘要/cube 维度/Leaf 统计/校验结果/推荐理由 + 一键应用到画布，复用双平面着色）；端到端 deepseek-v3 1024 卡：alltoall 主导、11×11×9 3D cube、V020 校验通过、1056 节点 8704 链路可渲染
+
+#### 批量优化（T9-3）
+- 新建 `backend/optimization.py`：确定性规则引擎批量产出结构化建议 `{category, title, description, patch, impact}`（收敛比双路径降下联/提交换机端口档位、成本降档、散热匹配）
+- `optimize:suggest`（AUTO 只读）+ `optimize:apply`（NOTIFY 写）+ CLI schema + AIHUB 工具 + 别名
+- 前端 `ChatPanel` 工具栏「批量优化」+ `BatchOptimizePanel`（建议分组列表 + 全选/逐条 → 批量应用落盘）
+
+#### 智能修复（T9-4）
+- 新建 `backend/fixit.py`：7 个 rule_id 级修复器（V002 机柜功率 / V007 Rail / V010 收敛比 / V016 网卡容量 / V018 Scale-Up 域 / V019 供电 / V020 ZCube）
+- `repair:plan`（只读：校验 → 可自动修复项生成 patch）+ `repair:apply`（写：应用 patch → 落盘 → **复核** remainingErrors 下降闭环）
+- 修复预存 bug：V001/V010 收敛比规则读取 snake_case 而 engine 输出 camelCase → 收敛比 error 从未触发；新增 `_cv` 双键兼容读取恢复生效
+- 前端 `ChatPanel` 工具栏「智能修复」+ `RepairPanel`（错误项列表 + 修复 patch 预览 + 需人工处理分组 + 全选/逐条 → 一键修复 → 显示复核结果）
+
+#### 国产档案库扩充（T9-5）
+- `presets.py` 新增 5 个国产场景档案（昇腾 910B / 910C、寒武纪思元 590、海光 DCU、昆仑芯 P800），内置档案 12 → **17**
+- 每项带来源标注（`source` 内置/国产 + `vendor` 芯片厂商）；`capacity:list-presets` 返回 `domesticCount` 统计；`resolve_preset` 支持名称子串模糊匹配（'昇腾 910B'）
+- 前端 `CapacityRecommendModal` 下拉国产档案带「国产」前缀标注
+
+#### 版本与回归
+- 版本号 3.1.4 → 3.2.0（package.json / package-lock.json / VERSION / README）
+- 回归：后端 991 用例全绿（含 AIHUB 47，新增容量规划 + 国产档案用例），前端 467 用例全绿（28 文件），typecheck / lint（0 error）通过
+- PRD §5.12 验收标准 4 项全部达标
+
+---
+
 ## [3.1.4] - 2026-08-06
 
 ### AI 智能落位 + 质量闭环
