@@ -154,6 +154,24 @@ interface Window {
         error?: string
       }>
       validateLayout: (layout: unknown) => Promise<{ valid: boolean; errors: string[] }>
+      // V3.1.4-T8-2: 机房智能落位
+      optimize: (params: {
+        matrix?: unknown
+        project?: string
+        counts?: Record<string, number>
+        cabinets?: Array<{ id: number; type: string; power_watts: number }>
+        objectives?: Record<string, number>
+        constraints?: { powerLimitPerRack?: number }
+        timeBudgetS?: number
+        resetExisting?: boolean
+      }) => Promise<{
+        success: boolean
+        error?: string
+        placements: Array<{ position: string; type: string; cabinetId: number | null; powerWatts: number }>
+        scores: Record<string, number>
+        issues: string[]
+        stats: { total_items: number; placed: number; unplaced: number; elapsed_ms: number | null }
+      }>
     }
     // V3.0.4-T3-4: 统一配置体系
     config: {

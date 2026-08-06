@@ -26,6 +26,7 @@ const mockElectron = {
   room: {
     createMatrix: vi.fn(),
     validateLayout: vi.fn(),
+    optimize: vi.fn(),
   },
   config: {
     listSchema: vi.fn(),

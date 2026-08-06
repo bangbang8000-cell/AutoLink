@@ -597,6 +597,27 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return pythonService.call('room:validate', { layout })
   }))
 
+  // V3.1.4-T8-2: 机房智能落位（约束满足 + 多目标优化；复用 backend room:optimize）
+  ipcMain.handle('room:optimize', wrapHandler(async (_event, params?: Record<string, unknown>) => {
+    const p = params ?? {}
+    if (!p.matrix && !p.project) {
+      throw new Error('缺少参数：matrix（机房矩阵）或 project')
+    }
+    if (!p.counts && !p.cabinets) {
+      throw new Error('缺少参数：counts（类型数量）或 cabinets（机柜列表）')
+    }
+    return pythonService.call('room:optimize', {
+      matrix: p.matrix,
+      project: p.project,
+      counts: p.counts,
+      cabinets: p.cabinets,
+      objectives: p.objectives,
+      constraints: p.constraints,
+      time_budget_s: p.timeBudgetS,
+      reset_existing: p.resetExisting,
+    }, 20000)
+  }))
+
   // ===== Config（V3.0.4-T3-4: 统一配置体系） =====
   ipcMain.handle('config:list-schema', wrapHandler(async () => {
     return pythonService.call('config:list-schema', {})

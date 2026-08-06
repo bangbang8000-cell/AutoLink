@@ -92,6 +92,7 @@ class TestTools:
         names = {d['function']['name'] for d in defs}
         for expected in ('generate_design', 'validate_design', 'estimate', 'report',
                          'export_outputs', 'room_create', 'room_validate',
+                         'room_optimize', 'room_set_type', 'room_place',
                          'list_config_schema', 'apply_config_preset', 'config_export',
                          'config_import', 'project_config_migrate', 'project_config_to_ini',
                          'device_query', 'template_list', 'template_view',
@@ -191,6 +192,10 @@ class TestPermissions:
         assert get_tool_permission('parse_file') == ToolPermission.AUTO
         # 容量规划推荐 AUTO（V3.1.3-T7-4：纯计算）
         assert get_tool_permission('capacity_recommend') == ToolPermission.AUTO
+        # 机房智能落位 NOTIFY（V3.1.4-T8-3：返回方案/写操作，前端确认应用）
+        assert get_tool_permission('room_optimize') == ToolPermission.NOTIFY
+        assert get_tool_permission('room_set_type') == ToolPermission.NOTIFY
+        assert get_tool_permission('room_place') == ToolPermission.NOTIFY
         # 未注册工具默认 CONFIRM
         assert get_tool_permission('unknown_tool') == ToolPermission.CONFIRM
 
@@ -221,6 +226,57 @@ class TestAliases:
         assert r.permission == ToolPermission.AUTO
         r2 = validate_tool_call('generate_design', {}, available)
         assert r2.permission == ToolPermission.NOTIFY
+
+    def test_room_tool_aliases(self):
+        assert resolve_tool_name('optimize_room')[0] == 'room_optimize'
+        assert resolve_tool_name('mark_room_type')[0] == 'room_set_type'
+        assert resolve_tool_name('place_cabinet')[0] == 'room_place'
+        # validator 会把 project → projectName（room 系列 action 兼容）
+        r = validate_tool_call('room_set_type', {'project': 'P', 'position': 'A1', 'type': 'gpu'}, {'room_set_type'})
+        assert r.name == 'room_set_type'
+        assert r.args['projectName'] == 'P'
+
+
+# ============================================================
+# 机房智能落位工具（V3.1.4-T8-3）
+# ============================================================
+
+class TestRoomLayoutTools:
+    def test_room_optimize_tool(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        r = asyncio.run(execute_tool('room_create', {'rows': ['A', 'B', 'C'], 'cols': [1, 2, 3], 'project': 'P'}))
+        assert r['success'] is True
+        r = asyncio.run(execute_tool('room_optimize', {'project': 'P', 'counts': {'gpu': 4}}))
+        assert r['success'] is True
+        assert r['result']['success'] is True
+        assert r['result']['stats']['placed'] == 4
+
+    def test_room_set_type_and_place_tools(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        r = asyncio.run(execute_tool('room_create', {'rows': ['A', 'B', 'C'], 'cols': [1, 2, 3], 'project': 'P'}))
+        assert r['success'] is True
+        r = asyncio.run(execute_tool('room_set_type', {'project': 'P', 'position': 'A1', 'type': 'network'}))
+        assert r['success'] is True and r['result']['success'] is True
+        # 类型匹配上架成功
+        r = asyncio.run(execute_tool('room_place', {'project': 'P', 'position': 'A1', 'cabinet_id': 5, 'cabinet_type': 'network'}))
+        assert r['success'] is True and r['result']['success'] is True
+        # 类型域不匹配拒绝（gpu 放 network 格）
+        r = asyncio.run(execute_tool('room_place', {'project': 'P', 'position': 'B1', 'cabinet_id': 6, 'cabinet_type': 'gpu'}))
+        assert r['success'] is True and r['result']['success'] is True  # B1 是 empty 格，任意类型可放
+        r = asyncio.run(execute_tool('room_set_type', {'project': 'P', 'position': 'B1', 'type': 'gpu'}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('room_place', {'project': 'P', 'position': 'B1', 'cabinet_id': 7, 'cabinet_type': 'network'}))
+        assert r['success'] is True and r['result']['success'] is False
+        assert '不允许放置' in r['result']['error']
+
+    def test_room_tools_accept_project_name(self, tmp_path, monkeypatch):
+        """对话链路 validator 归一后传 projectName，engine 兼容"""
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        r = asyncio.run(execute_tool('room_create', {'rows': ['A', 'B', 'C'], 'cols': [1, 2, 3], 'projectName': 'P'}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('room_optimize', {'projectName': 'P', 'counts': {'network': 3}}))
+        assert r['success'] is True and r['result']['success'] is True
+        assert r['result']['stats']['placed'] == 3
 
 
 # ============================================================

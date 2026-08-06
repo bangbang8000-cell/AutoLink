@@ -85,6 +85,17 @@ const electronAPI = {
       ipcRenderer.invoke('room:create', rows, cols, name),
     validateLayout: (layout: unknown) =>
       ipcRenderer.invoke('room:validate', layout),
+    // V3.1.4-T8-2: 机房智能落位（backend room:optimize）
+    optimize: (params: {
+      matrix?: unknown
+      project?: string
+      counts?: Record<string, number>
+      cabinets?: Array<{ id: number; type: string; power_watts: number }>
+      objectives?: Record<string, number>
+      constraints?: { powerLimitPerRack?: number }
+      timeBudgetS?: number
+      resetExisting?: boolean
+    }) => ipcRenderer.invoke('room:optimize', params),
   },
   // V3.0.4-T3-4: 统一配置体系（schema/预设/导入导出）
   config: {

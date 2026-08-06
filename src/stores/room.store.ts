@@ -36,6 +36,42 @@ export interface RoomMatrixData {
   cells: RoomCellData[]
 }
 
+// ================================================================
+// V3.1.4-T8-2: 机房智能落位（对齐 backend room:optimize 输出/入参）
+// ================================================================
+
+/** 落位方案中的单个机柜放置（backend placements[]） */
+export interface RoomOptimizePlacement {
+  position: string
+  type: string
+  cabinetId: number | null   // counts 模式为 null（用类型标记可视化）
+  powerWatts: number
+}
+
+/** room:optimize 返回结果 */
+export interface RoomOptimizeResult {
+  success: boolean
+  error?: string
+  placements: RoomOptimizePlacement[]
+  scores: Record<string, number>   // power_balance/thermal_zones/network_locality/shortest_cable/total
+  issues: string[]
+  stats: { total_items: number; placed: number; unplaced: number; elapsed_ms: number | null }
+}
+
+/** 智能落位入参（cabinets / counts 二选一；matrix 缺省取 store 当前矩阵） */
+export interface RoomOptimizeParams {
+  matrix?: RoomMatrixData
+  counts?: Record<string, number>
+  cabinets?: Array<{ id: number; type: string; power_watts: number }>
+  objectives?: Record<string, number>
+  constraints?: { powerLimitPerRack?: number }
+  timeBudgetS?: number
+  resetExisting?: boolean
+}
+
+/** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值） */
+const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined'])
+
 /** 标记工具：select 选择；ac/pillar 占位；类型标记；clear 清除标记 */
 export type RoomMarkTool =
   | 'select'
@@ -88,6 +124,11 @@ interface RoomState {
   selectPosition: (position: string | null) => void
   mountCabinet: (position: string, cabinetId: number) => MountCheck
   unmountCabinet: (position: string) => MountCheck
+  // V3.1.4-T8-2: 机房智能落位
+  runOptimize: (params: RoomOptimizeParams) => Promise<RoomOptimizeResult | null>
+  optimizeCabinets: (opts?: { resetExisting?: boolean }) => Promise<RoomOptimizeResult | null>
+  optimizeCounts: (counts: Record<string, number>) => Promise<RoomOptimizeResult | null>
+  applyOptimize: (result: RoomOptimizeResult) => { ok: boolean; errors: string[] }
   reset: () => void
 }
 
@@ -284,6 +325,111 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       selectedPosition: position,
     })
     return { ok: true, errors: [], warnings: [] }
+  },
+
+  // ===== V3.1.4-T8-2: 机房智能落位 =====
+
+  runOptimize: async (params) => {
+    const { matrix } = get()
+    if (!matrix) {
+      useToastStore.getState().addToast('error', '机房矩阵未加载', 5000)
+      return null
+    }
+    if (!params.counts && !params.cabinets) {
+      useToastStore.getState().addToast('error', '请提供落位机柜或数量', 5000)
+      return null
+    }
+    if (!window.electron?.room?.optimize) {
+      useToastStore.getState().addToast('error', '智能落位能力不可用（Electron 桥接未就绪）', 5000)
+      return null
+    }
+    try {
+      const res = await window.electron.room.optimize({ matrix, ...params })
+      if (!res.success) {
+        useToastStore.getState().addToast('error', res.error || res.issues?.[0] || '落位计算失败', 5000)
+        return null
+      }
+      return res
+    } catch (err) {
+      console.error('runOptimize:', err)
+      useToastStore.getState().addToast('error', err instanceof Error ? err.message : '落位计算失败', 5000)
+      return null
+    }
+  },
+
+  optimizeCabinets: async (opts) => {
+    const { matrix } = get()
+    const resetExisting = opts?.resetExisting ?? false
+    const allCabs = useRackStore.getState().cabinets
+    // 保留手动放置（resetExisting=false）：仅将未上架机柜交给后端（已上架格被排除在候选外，避免重复落位）；
+    // 清空重排（true）：全部机柜重新落位
+    const mountedIds = resetExisting
+      ? new Set<number>()
+      : new Set((matrix?.cells ?? []).filter((c) => c.cabinetId != null).map((c) => c.cabinetId))
+    const items = allCabs
+      .filter((c) => !mountedIds.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        type: c.type,
+        power_watts: c.devices.reduce((s, d) => s + d.power_watts, 0),
+      }))
+    if (items.length === 0) {
+      useToastStore.getState().addToast('warning', '暂无可落位机柜（未上架机柜为空）', 4000)
+      return null
+    }
+    return get().runOptimize({ cabinets: items, resetExisting })
+  },
+
+  optimizeCounts: async (counts) => {
+    // 过滤零值数量，仅提交非空类型
+    const clean = Object.fromEntries(
+      Object.entries(counts).filter(([, n]) => (Number(n) || 0) > 0),
+    )
+    if (Object.keys(clean).length === 0) {
+      useToastStore.getState().addToast('error', '请填写至少一种机柜数量', 5000)
+      return null
+    }
+    return get().runOptimize({ counts: clean })
+  },
+
+  applyOptimize: (result) => {
+    const { matrix } = get()
+    if (!matrix) return { ok: false, errors: ['机房矩阵未加载'] }
+    if (!result?.placements?.length) return { ok: false, errors: ['无可用落位方案'] }
+    const errors: string[] = []
+    const byPos = new Map<string, RoomOptimizePlacement>()
+    for (const p of result.placements) byPos.set(p.position, p)
+    // 方案中出现的机柜 id（用于清除被重新落位机柜的旧位置）
+    const placedIds = new Set(
+      result.placements.filter((p) => p.cabinetId != null).map((p) => p.cabinetId as number),
+    )
+    const cells = matrix.cells.map((cell) => {
+      const pos = `${cell.row}${cell.col}`
+      const pl = byPos.get(pos)
+      // 机柜被方案移到别处 → 清除旧位置（保留未参与方案的机柜，即手动放置）
+      if (cell.cabinetId != null && placedIds.has(cell.cabinetId) && pl?.cabinetId !== cell.cabinetId) {
+        return { ...cell, cabinetId: null }
+      }
+      if (!pl) return cell
+      if (cell.placeholder) {
+        errors.push(`位置 ${pos} 是占位（${cell.placeholder}），跳过落位`)
+        return cell
+      }
+      const next: RoomCellData = { ...cell }
+      if (pl.cabinetId != null) {
+        next.cabinetId = pl.cabinetId
+      } else if (cell.cabinetId != null) {
+        // counts 模式落在原有机柜格（清空重排场景）→ 移除旧机柜
+        next.cabinetId = null
+      }
+      // 类型标记：仅填充空/组合格（counts 模式无 cabinetId，用类型可视化落位结果）
+      if ((cell.type === 'empty' || cell.type === 'combined') && ROOM_MARK_TYPES.has(pl.type)) {
+        next.type = pl.type
+      }
+      return next
+    })
+    set({ matrix: { ...matrix, cells }, selectedPosition: null })
+    return { ok: errors.length === 0, errors }
   },
 
   reset: () => set({ matrix: null, selectedPosition: null }),

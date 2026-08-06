@@ -11,6 +11,7 @@ import { useMemo, useEffect, useState } from 'react'
 import { useDataCenterStore, getPowerColor } from '@/stores/datacenter.store'
 import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS } from '@/stores/rack.store'
 import { useRoomStore, ROOM_TOOL_LABEL_KEYS, type RoomMatrixData, type RoomMarkTool } from '@/stores/room.store'
+import { RoomOptimizeModal } from '@/components/datacenter/RoomOptimizeModal'
 import { useProjectContext } from '@/stores/ProjectContext'
 import { useTranslation } from 'react-i18next'
 
@@ -46,6 +47,9 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
   const unmountCabinet = useRoomStore((s) => s.unmountCabinet)
   const { currentProject } = useProjectContext()
   const saveMatrix = useRoomStore((s) => s.saveMatrix)
+
+  // V3.1.4-T8-2: 智能落位向导开关
+  const [showOptimize, setShowOptimize] = useState(false)
 
   const cellMap = useMemo(() => {
     const map = new Map<string, RoomMatrixData['cells'][number]>()
@@ -128,6 +132,13 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
             {t('rack:room.unmount')}
           </button>
         )}
+        {/* V3.1.4-T8-2: 智能落位入口 */}
+        <button
+          onClick={() => setShowOptimize(true)}
+          className="px-3 py-1 rounded text-xs font-medium bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+        >
+          ✨ 智能落位
+        </button>
         <button
           onClick={() => currentProject && saveMatrix(currentProject)}
           className="px-3 py-1 rounded text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
@@ -135,6 +146,9 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           {t('rack:room.save')}
         </button>
       </div>
+
+      {/* V3.1.4-T8-2: 智能落位向导 */}
+      <RoomOptimizeModal open={showOptimize} onClose={() => setShowOptimize(false)} />
 
       {/* 主体：机柜面板 + 矩阵网格 */}
       <div className="flex-1 min-h-0 flex">

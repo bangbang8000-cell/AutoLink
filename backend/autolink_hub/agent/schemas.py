@@ -47,6 +47,10 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "config_import": ToolPermission.NOTIFY,
     "project_config_migrate": ToolPermission.NOTIFY,
     "project_config_to_ini": ToolPermission.NOTIFY,
+    # 机房智能落位（V3.1.4-T8-3，NOTIFY：返回方案需前端确认应用 / 写操作）
+    "room_optimize": ToolPermission.NOTIFY,
+    "room_set_type": ToolPermission.NOTIFY,
+    "room_place": ToolPermission.NOTIFY,
     # 高风险（CONFIRM）
     "delete_project": ToolPermission.CONFIRM,
 }
@@ -64,6 +68,16 @@ TOOL_NAME_ALIASES: dict[str, str] = {
     "report": "report",
     "room_create_matrix": "room_create",
     "room_validate_layout": "room_validate",
+    # 机房智能落位（V3.1.4-T8-3）
+    "optimize_room": "room_optimize",
+    "room_opt": "room_optimize",
+    "room_layout_optimize": "room_optimize",
+    "set_room_type": "room_set_type",
+    "mark_room_type": "room_set_type",
+    "room_mark_type": "room_set_type",
+    "place_cabinet": "room_place",
+    "room_place_cabinet": "room_place",
+    "mount_cabinet": "room_place",
     "list_config": "list_config_schema",
     "config_schema": "list_config_schema",
     "apply_preset": "apply_config_preset",

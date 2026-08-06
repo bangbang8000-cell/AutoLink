@@ -1034,8 +1034,10 @@ def handle_room_create(params):
         rows: 行命名列表，如 ['A', 'B', ..., 'O']
         cols: 列编号列表，如 [1, 2, ..., 15]
         name: 机房名称（可选，默认 '机房'）
+        project: 项目名（可选，V3.1.4-T8-3 对话场景：提供则落盘到项目 room_layout.json；
+                 前端调用不传 project 时仅返回矩阵 dict，行为不变；兼容 projectName 别名）
     返回:
-        矩阵 dict（schemaVersion/name/rows/cols/cells）
+        矩阵 dict（未传 project）；{success, matrix, issues}（传 project 时）
     """
     from room import create_default_room, MAX_MATRIX_CELLS
     rows = params.get('rows') or []
@@ -1045,6 +1047,15 @@ def handle_room_create(params):
     if len(rows) * len(cols) > MAX_MATRIX_CELLS:
         return {"error": f"矩阵规模过大（> {MAX_MATRIX_CELLS}）"}
     matrix = create_default_room(rows, cols, name=str(params.get('name') or '机房'))
+    project = params.get('project') or params.get('projectName')
+    if project:
+        import os
+        from manage import workspace_dir
+        from room import LAYOUT_FILENAME, save_room_layout
+        layout_path = os.path.join(workspace_dir(), str(project), LAYOUT_FILENAME)
+        save_room_layout(layout_path, matrix)
+        return {'success': True, 'matrix': matrix.to_dict(),
+                'issues': [f'已创建并保存 {project} 机房矩阵（{len(rows)}×{len(cols)}）']}
     return matrix.to_dict()
 
 
@@ -1063,6 +1074,149 @@ def handle_room_validate(params):
         return {"valid": False, "errors": ["layout 必须是 JSON 对象"]}
     errors = validate_room_layout(data)
     return {"valid": not errors, "errors": errors}
+
+
+@register_action('room:optimize')
+def handle_room_optimize(params):
+    """V3.1.4-T8-1: 机房智能落位（约束满足 + 多目标优化：功率均衡/散热分区/网络就近/布线最短）
+
+    参数:
+        matrix: RoomMatrix 字典（优先；缺省按 project 读 room_layout.json）
+        project: 项目名（matrix 缺省时读取该项目的机房矩阵；兼容 projectName 别名）
+        counts: 类型→数量（对话场景，如 {gpu:120, network:60, storage:45}）
+        cabinets: 具体机柜列表 [{id, type, power_watts}]（与 counts 二选一，cabinets 优先）
+        objectives: 目标权重 {power_balance, thermal_zones, network_locality, shortest_cable}
+        constraints: 上架约束 {powerLimitPerRack, typeDeviceMap}
+        time_budget_s: 时间预算（默认 5s）；reset_existing: 是否清空已落位重排（默认 False 保留手动放置）
+    返回:
+        {success, placements[{position,type,cabinetId,powerWatts}], scores, issues, stats}
+    """
+    from room_optimizer import optimize_from_params
+    params = dict(params or {})
+    # AIHUB normalize_params 会把 project → projectName（历史别名），兼容两种键
+    if 'projectName' in params and 'project' not in params:
+        params['project'] = params['projectName']
+    return optimize_from_params(params)
+
+
+@register_action('room:set-type')
+def handle_room_set_type(params):
+    """V3.1.4-T8-3: 标记矩阵位置机柜类型（对话驱动：AI 按用户需求标记类型域，落盘到项目矩阵）
+
+    参数:
+        project: 项目名（必填；兼容 projectName 别名）
+        position: 位置，如 'A1'
+        type: 类型（gpu/network/storage/compute/combined/empty）
+    返回:
+        {success, matrix, issues}
+    """
+    import os
+    from manage import workspace_dir
+    from room import LAYOUT_FILENAME, ROOM_TYPES, load_room_layout, save_room_layout
+
+    project = str(params.get('project') or params.get('projectName') or '').strip()
+    position = str(params.get('position') or '').strip().upper()
+    cell_type = str(params.get('type') or '').strip().lower()
+    if not project:
+        return {'success': False, 'error': '缺少参数：project（项目名）'}
+    if not position:
+        return {'success': False, 'error': '缺少参数：position（位置，如 A1）'}
+    if cell_type not in ROOM_TYPES:
+        return {'success': False, 'error': f'类型非法：{cell_type}（可选 {sorted(ROOM_TYPES)}）'}
+    layout_path = os.path.join(workspace_dir(), project, LAYOUT_FILENAME)
+    try:
+        matrix = load_room_layout(layout_path)
+    except FileNotFoundError:
+        return {'success': False, 'error': f'项目 {project} 无 {LAYOUT_FILENAME}（请先创建机房矩阵）'}
+    except (OSError, ValueError, TypeError) as e:
+        return {'success': False, 'error': f'读取 {project} 机房矩阵失败: {e}'}
+    if position not in matrix.cells:
+        return {'success': False, 'error': f'矩阵位置不存在: {position}'}
+    matrix.set_type(position, cell_type)
+    save_room_layout(layout_path, matrix)
+    return {'success': True, 'matrix': matrix.to_dict(),
+            'issues': [f'已标记 {position} 类型为 {cell_type}']}
+
+
+@register_action('room:place')
+def handle_room_place(params):
+    """V3.1.4-T8-3: 上架/移除机柜到矩阵位置（对话驱动；复用 RoomConstraints 校验并落盘）
+
+    参数:
+        project: 项目名（必填；兼容 projectName 别名）
+        position: 位置，如 'A1'
+        cabinet_id: 机柜 id（必填；0/null 表示移除该位置机柜）
+        cabinet_type: 机柜类型（可选，提供时做类型域校验，如 gpu/network/storage/compute）
+        power_watts: 机柜功率（可选，用于单柜功率上限校验）
+        constraints: 上架约束 {powerLimitPerRack, typeDeviceMap}（可选）
+    返回:
+        {success, matrix, issues}
+    """
+    import os
+    from manage import workspace_dir
+    from room import (
+        LAYOUT_FILENAME, ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY,
+        RoomConstraints, load_room_layout, save_room_layout,
+    )
+
+    project = str(params.get('project') or params.get('projectName') or '').strip()
+    position = str(params.get('position') or '').strip().upper()
+    if not project:
+        return {'success': False, 'error': '缺少参数：project（项目名）'}
+    if not position:
+        return {'success': False, 'error': '缺少参数：position（位置，如 A1）'}
+    layout_path = os.path.join(workspace_dir(), project, LAYOUT_FILENAME)
+    try:
+        matrix = load_room_layout(layout_path)
+    except FileNotFoundError:
+        return {'success': False, 'error': f'项目 {project} 无 {LAYOUT_FILENAME}（请先创建机房矩阵）'}
+    except (OSError, ValueError, TypeError) as e:
+        return {'success': False, 'error': f'读取 {project} 机房矩阵失败: {e}'}
+    cell = matrix.cells.get(position)
+    if cell is None:
+        return {'success': False, 'error': f'矩阵位置不存在: {position}'}
+
+    # 移除模式
+    if params.get('cabinet_id') in (None, '', 0, '0'):
+        matrix.remove_cabinet(position)
+        save_room_layout(layout_path, matrix)
+        return {'success': True, 'matrix': matrix.to_dict(),
+                'issues': [f'已移除 {position} 机柜']}
+
+    try:
+        cabinet_id = int(params.get('cabinet_id'))
+    except (TypeError, ValueError):
+        return {'success': False, 'error': f'cabinet_id 非法: {params.get("cabinet_id")!r}'}
+
+    # 复用 RoomConstraints：占位 / 类型域（提供 cabinet_type 时）/ 单柜功率上限
+    constraints = (RoomConstraints.from_dict(params['constraints'])
+                   if isinstance(params.get('constraints'), dict) else RoomConstraints())
+    issues = []
+    if not cell.is_available():
+        issues.append(f'位置 {position} 是占位（{cell.placeholder}），不可放置机柜')
+    power = int(params.get('power_watts') or 0)
+    if power and power > constraints.power_limit_per_rack:
+        issues.append(f'位置 {position} 功率 {power}W 超过上限 {constraints.power_limit_per_rack}W')
+    cabinet_type = str(params.get('cabinet_type') or '').strip().lower()
+    if cabinet_type and cell.type not in (ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY):
+        allowed = constraints.type_device_map.get(cell.type, [])
+        if cabinet_type not in allowed:
+            issues.append(f'位置 {position} 类型为 {cell.type}，不允许放置 {cabinet_type} 机柜')
+    if issues:
+        return {'success': False, 'error': '；'.join(issues), 'issues': issues}
+
+    # 位置冲突：已被其他机柜占用
+    if cell.cabinet_id is not None and cell.cabinet_id != cabinet_id:
+        msg = f'位置 {position} 已被机柜 {cell.cabinet_id} 占用，请先移除'
+        return {'success': False, 'error': msg, 'issues': [msg]}
+    # 移动语义：机柜已在别处 → 移除旧位置（与前端 mountCabinet 一致）
+    for pos, c in matrix.cells.items():
+        if c.cabinet_id == cabinet_id and pos != position:
+            c.cabinet_id = None
+    matrix.place_cabinet(position, cabinet_id)
+    save_room_layout(layout_path, matrix)
+    return {'success': True, 'matrix': matrix.to_dict(),
+            'issues': [f'机柜 {cabinet_id} 已上架到 {position}']}
 
 
 # ================================================================

@@ -134,6 +134,41 @@ def init_tools() -> None:
         _schema({"layout": _str_param("layout", "room_layout.json 路径")}, required=["layout"]),
         _make_cli_handler("room:validate"),
     )
+    # V3.1.4-T8-3: 机房智能落位工具族
+    register_tool(
+        "room_optimize", "机房智能落位：约束满足 + 多目标优化（功率均衡/散热分区/网络就近/布线最短），按 counts（类型→数量）或 cabinets（机柜列表）生成落位方案。返回 {success, placements[{position,type,cabinetId,powerWatts}], scores, issues, stats}；方案仅计算不落盘，需用户确认后由前端应用（NOTIFY）",
+        _schema({
+            "project": _str_param("project", "项目名（读取该项目机房矩阵）", True),
+            "counts": _str_param("counts", "类型→数量 JSON 对象，如 {gpu:120, network:60, storage:45}"),
+            "cabinets": _str_param("cabinets", "机柜列表 JSON [{id, type, power_watts}]（优先于 counts）"),
+            "objectives": _str_param("objectives", "目标权重 {power_balance, thermal_zones, network_locality, shortest_cable}"),
+            "constraints": _str_param("constraints", "上架约束 {powerLimitPerRack, typeDeviceMap}"),
+            "time_budget_s": _str_param("time_budget_s", "时间预算秒（默认 5）"),
+            "reset_existing": _str_param("reset_existing", "是否清空已落位重排（默认保留手动放置）"),
+        }, required=["project"]),
+        _make_cli_handler("room:optimize"),
+    )
+    register_tool(
+        "room_set_type", "标记机房矩阵位置机柜类型（gpu/network/storage/compute/combined/empty），如把 D/E/F 列标为网络柜区；写操作，落盘到项目矩阵（NOTIFY）",
+        _schema({
+            "project": _str_param("project", "项目名", True),
+            "position": _str_param("position", "位置，如 A1", True),
+            "type": _str_param("type", "类型：gpu/network/storage/compute/combined/empty", True),
+        }, required=["project", "position", "type"]),
+        _make_cli_handler("room:set-type"),
+    )
+    register_tool(
+        "room_place", "上架/移除机柜到机房矩阵位置（cabinet_id=0 表示移除）；复用 RoomConstraints 校验（占位/类型域/单柜功率）；写操作，落盘到项目矩阵（NOTIFY）",
+        _schema({
+            "project": _str_param("project", "项目名", True),
+            "position": _str_param("position", "位置，如 A1", True),
+            "cabinet_id": _str_param("cabinet_id", "机柜 id（0 表示移除）", True),
+            "cabinet_type": _str_param("cabinet_type", "机柜类型（提供时做类型域校验）"),
+            "power_watts": _str_param("power_watts", "机柜功率 W（提供时做上限校验）"),
+            "constraints": _str_param("constraints", "上架约束 {powerLimitPerRack, typeDeviceMap}"),
+        }, required=["project", "position", "cabinet_id"]),
+        _make_cli_handler("room:place"),
+    )
 
     # ---- 配置域 ----
     register_tool(
