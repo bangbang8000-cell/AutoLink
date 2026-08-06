@@ -42,6 +42,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      # E2E 启动需 dist-electron/main.js（package.json main 入口），先编译主进程/preload
+      - run: npm run build:electron
       # E2E 以 dev 模式启动（playwright webServer 拉起 vite :5173）
       # Electron 系统依赖（libgtk/gconf 等）；electron 二进制随 npm ci 安装
       - run: sudo npx playwright install-deps
