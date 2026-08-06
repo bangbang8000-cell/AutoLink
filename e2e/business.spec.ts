@@ -19,10 +19,11 @@ async function openMainWindow(app: ElectronApplication): Promise<Page> {
   await main.keyboard.press('Escape').catch(() => {})
   await dialog.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
   // 等待活动栏就绪（App 完成初始化），并切到项目浏览器侧栏
-  // （ui.store 持久化在系统 userData，多次运行可能残留其他 activity）
+  // （ui.store 持久化在系统 userData，多次运行可能残留其他 activity；
+  //  全新 userData 空状态卡片 "新建项目 从空白开始" 也会命中，需 exact 匹配）
   await main.locator('button[title*="Ctrl+Shift+E"]').waitFor({ state: 'visible', timeout: 30_000 })
   await main.locator('button[title*="Ctrl+Shift+E"]').click()
-  await main.getByRole('button', { name: '新建项目' }).waitFor({ state: 'visible', timeout: 15_000 })
+  await main.getByRole('button', { name: '新建项目', exact: true }).waitFor({ state: 'visible', timeout: 15_000 })
   return main
 }
 
@@ -34,7 +35,7 @@ test('业务链路：新建项目 → 生成拓扑 → 一键渲染 → 机房�
     const projectName = `e2e-biz-${Date.now().toString(36)}`
 
     // ── 1. 新建项目：5 步向导（仅保留参数网络，减少设备选择）──
-    await window.getByRole('button', { name: '新建项目' }).click()
+    await window.getByRole('button', { name: '新建项目', exact: true }).click()
     const dialog = window.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
