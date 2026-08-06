@@ -56,18 +56,22 @@ jobs:
       - name: Build backend (PyInstaller)
         run: python -m PyInstaller scripts/pyinstaller.spec
 
+      # V3.2.2-R11.5: Windows 代码签名（可选启用）。
+      # 配置仓库 secrets CSC_LINK（pfx base64）与 CSC_KEY_PASSWORD 后，注入 env
+      # 使 electron-builder 自动签名 NSIS 安装包（SmartScreen 白名单）；
+      # 未配置时**不注入**（保持与 3.2.1 一致：mac 由 CSC_IDENTITY_AUTO_DISCOVERY 跳过，
+      # Windows 未签名，latest.yml 哈希仍保证下载完整性）。
       - name: Package with electron-builder
-        run: npx electron-builder ${{ matrix.build_flag }} --publish=never
+        run: |
+          if [ -n "${{ secrets.CSC_LINK }}" ]; then
+            echo "CSC_LINK=${{ secrets.CSC_LINK }}" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=${{ secrets.CSC_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          fi
+          npx electron-builder ${{ matrix.build_flag }} --publish=never
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Skip macOS code signing (no certificate in CI)
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          # V3.2.2-R11.5: Windows 代码签名（可选启用）。
-          # 配置仓库 secrets CSC_LINK（pfx base64）与 CSC_KEY_PASSWORD 后，
-          # electron-builder 自动签名 NSIS 安装包（SmartScreen 白名单）；
-          # 未配置时保持未签名（已知限制，latest.yml 哈希仍保证下载完整性）。
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
 
       - name: List release artifacts
         shell: bash
