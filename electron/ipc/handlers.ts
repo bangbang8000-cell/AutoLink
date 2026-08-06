@@ -851,6 +851,104 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }, 15000)
   }))
 
+  // V3.2.0-T9-2: ATOP 自动拓扑优化（模型通信特征 → ZCube cube 拓扑推荐，只读计算）
+  ipcMain.handle('atop:recommend', wrapHandler(async (_event, params: {
+    numGpus: number
+    model?: string
+    modelType?: string
+    numExperts?: number
+    precision?: string
+    tp?: number
+    dp?: number
+    pp?: number
+    communicationPattern?: string
+    commRatio?: number
+    traffic?: Record<string, number>
+    switchPorts?: number
+  }) => {
+    if (!params?.numGpus) {
+      throw new Error('缺少参数：numGpus')
+    }
+    return pythonService.call('atop:recommend', {
+      num_gpus: params.numGpus,
+      model: params.model,
+      model_type: params.modelType,
+      num_experts: params.numExperts,
+      precision: params.precision,
+      tp: params.tp,
+      dp: params.dp,
+      pp: params.pp,
+      communication_pattern: params.communicationPattern,
+      comm_ratio: params.commRatio,
+      traffic: params.traffic,
+      switch_ports: params.switchPorts,
+    }, 15000)
+  }))
+
+  // V3.2.0-T9-3: 批量优化（收敛比/成本/散热建议生成 + 应用，轨道 B）
+  ipcMain.handle('optimize:suggest', wrapHandler(async (_event, params: {
+    projectName: string
+  }) => {
+    sanitizeName(params.projectName)
+    const projectDir = path.join(getWorkspacePath(), params.projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`项目配置不存在: ${configPath}`)
+    }
+    return pythonService.call('optimize:suggest', { configFile: configPath }, 15000)
+  }))
+
+  ipcMain.handle('optimize:apply', wrapHandler(async (_event, params: {
+    projectName: string
+    suggestions: Array<{ category?: string; title?: string; patch: Record<string, Record<string, unknown>> }>
+  }) => {
+    sanitizeName(params.projectName)
+    if (!Array.isArray(params.suggestions) || params.suggestions.length === 0) {
+      throw new Error('缺少选中的建议（suggestions）')
+    }
+    const projectDir = path.join(getWorkspacePath(), params.projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`项目配置不存在: ${configPath}`)
+    }
+    return pythonService.call('optimize:apply', {
+      configFile: configPath,
+      suggestions: params.suggestions,
+    }, 15000)
+  }))
+
+  // V3.2.0-T9-4: 智能修复闭环（校验错误 → 修复 patch → 复核 → 一键应用）
+  ipcMain.handle('repair:plan', wrapHandler(async (_event, params: {
+    projectName: string
+  }) => {
+    sanitizeName(params.projectName)
+    const projectDir = path.join(getWorkspacePath(), params.projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`项目配置不存在: ${configPath}`)
+    }
+    return pythonService.call('repair:plan', { configFile: configPath }, 15000)
+  }))
+
+  ipcMain.handle('repair:apply', wrapHandler(async (_event, params: {
+    projectName: string
+    fixes: Array<{ rule_id?: string; message?: string; patch: Record<string, Record<string, unknown>> }>
+  }) => {
+    sanitizeName(params.projectName)
+    if (!Array.isArray(params.fixes) || params.fixes.length === 0) {
+      throw new Error('缺少选中的修复项（fixes）')
+    }
+    const projectDir = path.join(getWorkspacePath(), params.projectName)
+    const configPath = path.join(projectDir, 'network_config.ini')
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`项目配置不存在: ${configPath}`)
+    }
+    return pythonService.call('repair:apply', {
+      configFile: configPath,
+      fixes: params.fixes,
+    }, 20000)
+  }))
+
   // ===== Render =====
   ipcMain.handle('render:exportConnections', wrapHandler(async (_event, projectName: string, outputTypes: string[]) => {
     sanitizeName(projectName)

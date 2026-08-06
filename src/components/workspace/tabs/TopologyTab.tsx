@@ -30,7 +30,7 @@ import '@xyflow/react/dist/style.css'
 import {
   Download, Filter, Network, X, Activity, RotateCcw, Save, Maximize2,
   Search, MousePointer2, Box, Undo2, Redo2, AlignStartHorizontal, AlignEndHorizontal,
-  AlignStartVertical, AlignEndVertical, Trash2, Tags, Loader2,
+  AlignStartVertical, AlignEndVertical, Trash2, Tags, Loader2, Sparkles,
 } from 'lucide-react'
 import { useDesignStore, type TopologyNode, type TopologyEdge } from '@/stores/design.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -49,6 +49,7 @@ import {
 } from './topology/PodGroupNode'
 import { useTopologyLayout } from '@/hooks/useTopologyLayout'
 import { normalizePodId } from './topology/topologyLayout'
+import { ATOPRecommendModal } from './topology/ATOPRecommendModal'
 
 /* ---------- node / edge types ---------- */
 
@@ -171,6 +172,7 @@ function useIsDark(): boolean {
 function TopologyFlowInner() {
   const { t } = useTranslation()
   const topology = useDesignStore((s) => s.topology)
+  const designConfig = useDesignStore((s) => s.config)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const addToast = useToastStore((s) => s.addToast)
   const reactFlow = useReactFlow()
@@ -208,6 +210,8 @@ function TopologyFlowInner() {
   const labelHiddenRef = useRef(false)
   // v2.8.2-T4: 空格临时平移
   const [spacePressed, setSpacePressed] = useState(false)
+  // V3.2.0-T9-2: ATOP 自动拓扑优化弹窗
+  const [atopOpen, setAtopOpen] = useState(false)
 
   /* ---------- V2.4.7: 撤销/重做 ---------- */
   // 历史栈存储完整拓扑快照（位置 + 节点/链路数据，v2.8.2-T6 扩展）
@@ -988,6 +992,15 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
 
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
 
+          {/* V3.2.0-T9-2: ATOP 自动拓扑优化（通信特征 → ZCube cube 拓扑推荐） */}
+          <button
+            onClick={() => setAtopOpen(true)}
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40"
+            title="ATOP 自动拓扑优化：模型通信特征 → ZCube 2D/3D cube 拓扑推荐"
+          >
+            <Sparkles size={11} />ATOP
+          </button>
+
           {/* Filter */}
           <div className="relative">
             <button onClick={() => setShowFilter(!showFilter)}
@@ -1249,6 +1262,13 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
           </div>
         )}
       </div>
+
+      {/* V3.2.0-T9-2: ATOP 自动拓扑优化弹窗 */}
+      <ATOPRecommendModal
+        open={atopOpen}
+        defaultNumGpus={designConfig?.num_servers || 1024}
+        onClose={() => setAtopOpen(false)}
+      />
     </div>
   )
 }

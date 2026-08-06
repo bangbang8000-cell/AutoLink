@@ -7,12 +7,8 @@ AutoLink V3.0.2-T2-1 - ZCube 拓扑（扁平化二部图，无 Spine）
   - 双口网卡单轨/多轨混合接入：每 GPU 端口分组 A / 组 B（默认双口 = 1+1）；
   - 无 Spine 层级一致性：全部节点仅 param_leaf，无 param_spine/param_core。
 
-模型：
-  两组 Leaf（组 A / 组 B），组间全二部互联（每组内 Leaf 与对组每个 Leaf 直连），
-  组内 Leaf 下联 GPU。Leaf 端口划分：
-    - 下联（GPU）：switch_ports - L 口（L = 每组 Leaf 数）
-    - 组间互联（Leaf↔Leaf）：L 口（与对组全互联）
-  L 自动推导：min L 使 L × (switch_ports - L) ≥ num_gpus × ports_to_group。
+V3.2.0-T9-2：新增 build_cube_topology_data —— ATOP 推荐场景的 cube 拓扑可渲染
+数据生成（GPU 按 2D/3D cube 维度分组着色 + 链路元数据，输出前端拓扑 schema）。
 """
 import math
 from typing import Dict, List, Any
@@ -181,3 +177,177 @@ class ZcubeTopology:
         a_dev.add_connection(c1)
         z_dev.add_connection(c2)
         out.extend([c1, c2])
+
+
+# ================================================================
+#  V3.2.0-T9-2: ATOP cube 拓扑可渲染数据（前端拓扑 schema + 分组着色元数据）
+# ================================================================
+
+def build_cube_topology_data(num_gpus: int, nics_per_gpu: int = 2,
+                             switch_ports: int = 144, leaf_count: int = 0,
+                             cube_dims=None, network_type: str = "param",
+                             prefix: str = "参数", speed: str = "400G") -> Dict[str, Any]:
+    """生成 ATOP 推荐场景的 cube 拓扑可渲染数据
+
+    复用 ZcubeTopology 的两组 Leaf 扁平二部图，附加 ATOP 渲染元数据：
+      - GPU 按 2D/3D cube 维度编号（cube_rank/cube_pos），前半（z 维切分）归组 A、
+        后半归组 B（zcube_group + plane_id 复用前端分组着色）；
+      - 链路元数据复用前端拓扑 schema（source/target/speed/cableType/description/networkType）。
+
+    Args:
+        num_gpus: GPU 数量
+        nics_per_gpu: 每 GPU 网卡数（双口/四口混合接入）
+        switch_ports: Leaf 交换机端口数
+        leaf_count: 每组 Leaf 数（0 = 自动推导）
+        cube_dims: cube 维度列表，如 [8, 16]（2D）或 [8, 8, 16]（3D）；缺省按
+                   num_gpus 推导为最接近的 2D/3D 因子
+        network_type / prefix / speed: 网络类型/命名前缀/链路速率
+
+    Returns:
+        {nodes, edges, stats, meta}：
+          nodes: [{id,type,group,podid,layerHint,maxPorts,cabinetId?,
+                   zcubeGroup,planeId,cubeRank,cubePos}]
+          edges: [{source,target,speed,cableType,description,networkType}]
+          stats: ZcubeTopology 统计（leaf_count/downlink_per_leaf 等）
+          meta:  {cubeDimensions, dim, numGpus, nicsPerGpu, leafCount,
+                  switchPorts, groups}
+    """
+    zc = ZcubeTopology(num_gpus=num_gpus, nics_per_gpu=nics_per_gpu,
+                       leaf_count=leaf_count, switch_ports=switch_ports,
+                       network_type=network_type, prefix=prefix)
+    stats = zc.calculate()
+    zc.create_objects()
+
+    # ---- cube 维度推导 ----
+    if not cube_dims:
+        cube_dims = _derive_cube_dims(num_gpus)
+    dims = [max(1, int(d)) for d in cube_dims]
+    if len(dims) < 2:
+        dims = [dims[0], max(1, int(math.ceil(num_gpus / dims[0])))]
+    # 对齐：dims 乘积不足时补最后一维
+    while _prod(dims) < num_gpus:
+        dims[-1] += 1
+    dims[-1] = min(dims[-1], num_gpus)  # 最后一维不超 GPU 数（余数为碎片）
+
+    # ---- GPU 节点（cube 分组着色：GPU 序号前半 → 组 A，后半 → 组 B，A/B 均衡） ----
+    split = (num_gpus + 1) // 2
+    servers: List[NetworkObject] = []
+    nodes: List[Dict[str, Any]] = []
+    gpu_nodes_a = 0
+    gpu_nodes_b = 0
+    for idx in range(1, num_gpus + 1):
+        rank = idx - 1
+        pos = _unravel(rank, dims)
+        group_label = 'A' if rank < split else 'B'
+        group_name = f"{prefix}{group_label}组"
+        srv = NetworkObject(
+            name=f"GPU_{idx}", obj_type='server', group=group_name,
+            podid=f"zcube-{group_label}", max_ports=nics_per_gpu,
+            layer_hint='server')
+        srv.server_index = idx            # wiring 依赖全局序号（与 designer 一致）
+        srv.port_prefix = f"{prefix}网卡"
+        servers.append(srv)
+        if group_label == 'A':
+            gpu_nodes_a += 1
+        else:
+            gpu_nodes_b += 1
+        nodes.append({
+            'id': f"GPU_{idx}",
+            'type': 'server',
+            'group': group_name,
+            'podid': f"zcube-{group_label}",
+            'layerHint': 'server',
+            'maxPorts': nics_per_gpu,
+            'zcubeGroup': group_label,
+            'planeId': 0 if group_label == 'A' else 1,
+            'cubeRank': rank,
+            'cubePos': pos,
+        })
+
+    # ---- Leaf 节点（复用 create_objects 的 zcube_group/plane_id 着色） ----
+    for leaf in zc.leaves:
+        nodes.append({
+            'id': leaf.name,
+            'type': leaf.obj_type,
+            'group': leaf.group,
+            'podid': leaf.podid,
+            'layerHint': 'leaf',
+            'maxPorts': leaf.max_ports,
+            'zcubeGroup': leaf.zcube_group,
+            'planeId': leaf.plane_id,
+        })
+
+    # ---- 链路（GPU → Leaf + 组 A↔B 全二部，转前端 schema） ----
+    conns = zc.generate_connections(servers)
+    edges: List[Dict[str, Any]] = []
+    seen = set()
+    for c in conns:
+        key = (c.a_device, c.z_device, c.a_port)  # 双向边各输出一次（与 design 一致）
+        if key in seen:
+            continue
+        seen.add(key)
+        edges.append({
+            'source': c.a_device,
+            'target': c.z_device,
+            'speed': speed,
+            'aSpeed': speed,
+            'zSpeed': speed,
+            'cableType': c.cable_type,
+            'description': c.description,
+            'networkType': network_type,
+            'network_type': network_type,
+        })
+
+    meta = {
+        'cubeDimensions': dims,
+        'dim': len(dims),
+        'numGpus': num_gpus,
+        'nicsPerGpu': nics_per_gpu,
+        'leafCount': stats['leaf_count'],
+        'switchPorts': switch_ports,
+        'groups': {'A': gpu_nodes_a, 'B': gpu_nodes_b},
+        'noSpine': True,
+    }
+    return {'nodes': nodes, 'edges': edges, 'stats': stats, 'meta': meta}
+
+
+def _derive_cube_dims(num_gpus: int) -> List[int]:
+    """GPU 数 → 最接近立方体的 2D/3D 维度（ATOP 推荐）
+
+    - num_gpus ≤ 512 → 2D cube [x, y]（x 尽量接近 sqrt，y = ceil(N/x)）
+    - num_gpus > 512 → 3D cube [x, y, z]（x,y 接近三次根，z = ceil(N/(x*y))）
+    """
+    n = max(1, int(num_gpus))
+    if n <= 512:
+        x = max(1, int(math.isqrt(n)))
+        while n % x != 0 and x > 1:
+            x -= 1
+        y = n // x if n % x == 0 else max(1, int(math.ceil(n / max(1, math.isqrt(n)))))
+        if n % x != 0:
+            x = max(1, math.isqrt(n))
+            y = max(1, int(math.ceil(n / x)))
+        return [x, y]
+    base = max(1, int(round(n ** (1 / 3))))
+    x = y = base
+    while x * y * base < n:
+        base += 1
+    x = y = max(1, base)
+    z = max(1, int(math.ceil(n / (x * y))))
+    return [x, y, z]
+
+
+def _prod(dims: List[int]) -> int:
+    p = 1
+    for d in dims:
+        p *= d
+    return p
+
+
+def _unravel(rank: int, dims: List[int]) -> List[int]:
+    """线性索引 → cube 多维坐标（行主序，与 dims 同长）"""
+    coords = []
+    r = rank
+    for d in reversed(dims):
+        coords.append(r % d)
+        r //= d
+    return list(reversed(coords))

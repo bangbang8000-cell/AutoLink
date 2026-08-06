@@ -274,6 +274,64 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
              'required': False, 'help': '上下文长度覆盖（token）'},
         ],
     },
+    # V3.2.0-T9-2: ATOP 式自动拓扑优化（模型通信特征 → ZCube cube 拓扑推荐）
+    'atop:recommend': {
+        'sub': 'recommend',
+        'domain': 'atop',
+        'params': [
+            {'name': 'num_gpus', 'flags': ['--num-gpus'], 'type': int,
+             'required': True, 'help': '目标 GPU 数量'},
+            {'name': 'model', 'flags': ['--model'], 'type': str,
+             'required': False, 'help': '模型档案 id（如 deepseek-v3/llama3-70b）或模型名'},
+            {'name': 'features', 'flags': ['--features'], 'type': str,
+             'required': False, 'help': '通信特征 JSON 文件（communication_pattern/comm_ratio/traffic）', 'file_json': True},
+            {'name': 'tp', 'flags': ['--tp'], 'type': int, 'required': False, 'help': '张量并行（默认 8）'},
+            {'name': 'dp', 'flags': ['--dp'], 'type': int, 'required': False, 'help': '数据并行（默认 1）'},
+            {'name': 'pp', 'flags': ['--pp'], 'type': int, 'required': False, 'help': '流水线并行（默认 1）'},
+            {'name': 'switch_ports', 'flags': ['--switch-ports'], 'type': int,
+             'required': False, 'help': 'Leaf 端口数（0 = 按规模自动档位）'},
+            {'name': 'leaf_count', 'flags': ['--leaf-count'], 'type': int,
+             'required': False, 'help': '每组 Leaf 数（0 = 自动推导）'},
+        ],
+    },
+    # V3.2.0-T9-3: 批量优化（收敛比/成本/散热建议生成 + 应用）
+    'optimize:suggest': {
+        'sub': 'suggest',
+        'domain': 'optimize',
+        'params': [
+            {'name': 'configFile', 'flags': ['--config-file', '--config'], 'type': str,
+             'required': True, 'help': 'project_config.json 或 network_config.ini 路径'},
+        ],
+    },
+    'optimize:apply': {
+        'sub': 'apply',
+        'domain': 'optimize',
+        'params': [
+            {'name': 'configFile', 'flags': ['--config-file', '--config'], 'type': str,
+             'required': True, 'help': '项目配置路径'},
+            {'name': 'suggestions', 'flags': ['--suggestions'], 'type': str,
+             'required': True, 'help': '选中的建议 JSON 文件（[{category,title,patch}]）', 'file_json': True},
+        ],
+    },
+    # V3.2.0-T9-4: 智能修复（校验错误 → 修复 patch → 复核 → 一键应用）
+    'repair:plan': {
+        'sub': 'plan',
+        'domain': 'repair',
+        'params': [
+            {'name': 'configFile', 'flags': ['--config-file', '--config'], 'type': str,
+             'required': True, 'help': 'project_config.json 或 network_config.ini 路径'},
+        ],
+    },
+    'repair:apply': {
+        'sub': 'apply',
+        'domain': 'repair',
+        'params': [
+            {'name': 'configFile', 'flags': ['--config-file', '--config'], 'type': str,
+             'required': True, 'help': '项目配置路径'},
+            {'name': 'fixes', 'flags': ['--fixes'], 'type': str,
+             'required': True, 'help': '选中的修复项 JSON 文件（[{rule_id,patch}]）', 'file_json': True},
+        ],
+    },
 }
 
 

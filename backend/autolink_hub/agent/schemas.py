@@ -37,6 +37,14 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "parse_file": ToolPermission.AUTO,
     # 容量规划推荐（V3.1.3-T7-4，AUTO：纯计算只读）
     "capacity_recommend": ToolPermission.AUTO,
+    # ATOP 自动拓扑优化（V3.2.0-T9-2，AUTO：只读计算，返回可渲染拓扑）
+    "atop_recommend": ToolPermission.AUTO,
+    # 批量优化（V3.2.0-T9-3，AUTO：建议只读计算 / NOTIFY：应用写操作）
+    "optimize_suggest": ToolPermission.AUTO,
+    "optimize_apply": ToolPermission.NOTIFY,
+    # 智能修复（V3.2.0-T9-4，AUTO：修复方案只读计算 / NOTIFY：应用修复并复核）
+    "repair_plan": ToolPermission.AUTO,
+    "repair_apply": ToolPermission.NOTIFY,
     # 写操作（NOTIFY）
     "generate_design": ToolPermission.NOTIFY,
     "create_project": ToolPermission.NOTIFY,
@@ -86,6 +94,24 @@ TOOL_NAME_ALIASES: dict[str, str] = {
     "export_config": "config_export",
     "list_projects": "list_projects",
     "list_templates": "list_templates",
+    # ATOP 自动拓扑优化（V3.2.0-T9-2）
+    "atop": "atop_recommend",
+    "atop_recommend": "atop_recommend",
+    "recommend_topology": "atop_recommend",
+    "topology_recommend": "atop_recommend",
+    # 批量优化（V3.2.0-T9-3）
+    "batch_optimize": "optimize_suggest",
+    "suggest_optimizations": "optimize_suggest",
+    "optimize_suggestions": "optimize_suggest",
+    "apply_optimizations": "optimize_apply",
+    "apply_suggestions": "optimize_apply",
+    # 智能修复（V3.2.0-T9-4）
+    "repair": "repair_plan",
+    "auto_fix": "repair_plan",
+    "repair_plan": "repair_plan",
+    "fix_design": "repair_plan",
+    "apply_repairs": "repair_apply",
+    "apply_fix": "repair_apply",
 }
 
 PARAM_ALIASES: dict[str, str] = {

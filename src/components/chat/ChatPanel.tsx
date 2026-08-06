@@ -1,14 +1,16 @@
 /**
  * V3.1.1-T5-5: AI 对话面板（会话管理 + 消息流 + 输入）
  */
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, Eraser, Wifi, WifiOff, Bot } from 'lucide-react'
+import { Plus, Trash2, Eraser, Wifi, WifiOff, Bot, ListChecks, Wrench } from 'lucide-react'
 import clsx from 'clsx'
 import { useChatStore, sendMessage } from '@/stores/chat.store'
 import { useUIStore } from '@/stores/ui.store'
 import { ChatMessageBubble } from './ChatMessageBubble'
 import { ChatInput } from './ChatInput'
+import { BatchOptimizePanel } from './BatchOptimizePanel'
+import { RepairPanel } from './RepairPanel'
 
 export function ChatPanel() {
   const { t } = useTranslation()
@@ -17,6 +19,10 @@ export function ChatPanel() {
   const isSending = useChatStore((s) => s.isSending)
   const aiConfig = useUIStore((s) => s.aiConfig)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // V3.2.0-T9-3: 批量优化面板
+  const [optimizeOpen, setOptimizeOpen] = useState(false)
+  // V3.2.0-T9-4: 智能修复面板
+  const [repairOpen, setRepairOpen] = useState(false)
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) || null,
@@ -64,6 +70,22 @@ export function ChatPanel() {
           {hasProvider ? t('chat:aihub.status.ready') : t('chat:aihub.status.noProvider')}
         </span>
         <div className="flex-1" />
+        {/* V3.2.0-T9-3: 批量优化（收敛比/成本/散热建议批量应用） */}
+        <button
+          onClick={() => setOptimizeOpen(true)}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40"
+          title="批量优化：生成收敛比/成本/散热建议并批量应用"
+        >
+          <ListChecks size={12} />批量优化
+        </button>
+        {/* V3.2.0-T9-4: 智能修复（校验错误 → 一键修复闭环） */}
+        <button
+          onClick={() => setRepairOpen(true)}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-700 bg-success-50 dark:bg-success-900/20 text-success-600 dark:text-success-400 hover:bg-success-100 dark:hover:bg-success-900/40"
+          title="智能修复：校验配置错误并一键应用修复，复核剩余问题"
+        >
+          <Wrench size={12} />智能修复
+        </button>
         <button
           onClick={() => useChatStore.getState().createSession()}
           className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-app-hover rounded"
@@ -121,6 +143,11 @@ export function ChatPanel() {
 
       {/* 输入 */}
       <ChatInput onSend={handleSend} disabled={isSending} />
+
+      {/* V3.2.0-T9-3: 批量优化面板 */}
+      <BatchOptimizePanel open={optimizeOpen} onClose={() => setOptimizeOpen(false)} />
+      {/* V3.2.0-T9-4: 智能修复面板 */}
+      <RepairPanel open={repairOpen} onClose={() => setRepairOpen(false)} />
     </div>
   )
 }

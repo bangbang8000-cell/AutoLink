@@ -79,6 +79,41 @@ const electronAPI = {
     recommend: (params: { model: string; numGpus: number; budget?: string; precision?: string; contextLength?: number }) =>
       ipcRenderer.invoke('capacity:recommend', params),
   },
+  // V3.2.0-T9-2: ATOP 自动拓扑优化（通信特征 → ZCube cube 拓扑推荐，只读）
+  atop: {
+    recommend: (params: {
+      numGpus: number
+      model?: string
+      modelType?: string
+      numExperts?: number
+      precision?: string
+      tp?: number
+      dp?: number
+      pp?: number
+      communicationPattern?: string
+      commRatio?: number
+      traffic?: Record<string, number>
+      switchPorts?: number
+    }) => ipcRenderer.invoke('atop:recommend', params),
+  },
+  // V3.2.0-T9-3: 批量优化（收敛比/成本/散热建议生成 + 应用）
+  optimize: {
+    suggest: (params: { projectName: string }) =>
+      ipcRenderer.invoke('optimize:suggest', params),
+    apply: (params: {
+      projectName: string
+      suggestions: Array<{ category?: string; title?: string; patch: Record<string, Record<string, unknown>> }>
+    }) => ipcRenderer.invoke('optimize:apply', params),
+  },
+  // V3.2.0-T9-4: 智能修复（校验错误 → 修复 patch → 复核 → 一键应用）
+  repair: {
+    plan: (params: { projectName: string }) =>
+      ipcRenderer.invoke('repair:plan', params),
+    apply: (params: {
+      projectName: string
+      fixes: Array<{ rule_id?: string; message?: string; patch: Record<string, Record<string, unknown>> }>
+    }) => ipcRenderer.invoke('repair:apply', params),
+  },
   // V3.0.4-T3-1: 机房矩阵（创建/校验）
   room: {
     createMatrix: (rows: string[], cols: number[], name?: string) =>

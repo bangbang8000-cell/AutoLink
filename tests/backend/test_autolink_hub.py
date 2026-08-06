@@ -168,6 +168,40 @@ class TestTools:
         r2 = asyncio.run(execute_tool('capacity_recommend', {'model': 'llama3-8b'}))
         assert r2['success'] is True and r2['result']['success'] is False
 
+    def test_repair_tools(self, tmp_path):
+        """智能修复闭环（V3.2.0-T9-4）：repair_plan 产出修复项 → repair_apply 应用并复核"""
+        from project_config import create_default_config
+        cfg = create_default_config('hub-repair')
+        cfg['topology'].update({
+            'downlink_mode': 'custom',
+            'num_gpu_servers': 100,
+            'num_all_flash_storage': 0,
+            'num_compute_servers': 0,
+            'param_protocol': 'IB',
+            'param_speed': '800G',
+            'param_ports_per_server': 8,
+            'param_switch_ports': 64,
+            'param_downlink_limit': 55,   # V010 收敛比阻塞
+        })
+        cfg['rack_config']['power_limit_per_rack'] = 100  # V002/V019
+        p = tmp_path / 'project_config.json'
+        p.write_text(json.dumps(cfg, ensure_ascii=False), encoding='utf-8')
+
+        plan = asyncio.run(execute_tool('repair_plan', {'configFile': str(p)}))
+        assert plan['success'] is True
+        res = plan['result']
+        assert res['success'] is True
+        assert res['fixable'] > 0
+        assert any(fx['rule_id'] == 'V010' for fx in res['fixes'])
+
+        apply = asyncio.run(execute_tool('repair_apply', {
+            'configFile': str(p), 'fixes': res['fixes']}))
+        assert apply['success'] is True
+        ares = apply['result']
+        assert ares['success'] is True
+        assert ares['validation'] is not None
+        assert not any(i['rule_id'] == 'V010' for i in ares['validation']['issues'])
+
 
 # ============================================================
 # 权限分级
@@ -192,6 +226,14 @@ class TestPermissions:
         assert get_tool_permission('parse_file') == ToolPermission.AUTO
         # 容量规划推荐 AUTO（V3.1.3-T7-4：纯计算）
         assert get_tool_permission('capacity_recommend') == ToolPermission.AUTO
+        # ATOP 自动拓扑优化 AUTO（V3.2.0-T9-2：只读计算）
+        assert get_tool_permission('atop_recommend') == ToolPermission.AUTO
+        # 批量优化（V3.2.0-T9-3：建议只读 AUTO / 应用写操作 NOTIFY）
+        assert get_tool_permission('optimize_suggest') == ToolPermission.AUTO
+        assert get_tool_permission('optimize_apply') == ToolPermission.NOTIFY
+        # 智能修复（V3.2.0-T9-4：方案只读 AUTO / 应用修复写操作 NOTIFY）
+        assert get_tool_permission('repair_plan') == ToolPermission.AUTO
+        assert get_tool_permission('repair_apply') == ToolPermission.NOTIFY
         # 机房智能落位 NOTIFY（V3.1.4-T8-3：返回方案/写操作，前端确认应用）
         assert get_tool_permission('room_optimize') == ToolPermission.NOTIFY
         assert get_tool_permission('room_set_type') == ToolPermission.NOTIFY
@@ -209,6 +251,10 @@ class TestAliases:
         assert resolve_tool_name('validate')[0] == 'validate_design'
         assert resolve_tool_name('design')[0] == 'generate_design'
         assert resolve_tool_name('export')[0] == 'export_outputs'
+        # 智能修复别名（V3.2.0-T9-4）
+        assert resolve_tool_name('auto_fix')[0] == 'repair_plan'
+        assert resolve_tool_name('repair')[0] == 'repair_plan'
+        assert resolve_tool_name('apply_repairs')[0] == 'repair_apply'
         name, msg = resolve_tool_name('unknown_tool')
         assert name == 'unknown_tool' and msg is None
 

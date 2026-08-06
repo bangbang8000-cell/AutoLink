@@ -86,13 +86,22 @@ class ValidationEngine:
 
 # ====== 内置校验规则 ======
 
+def _cv(result: dict, snake: str, camel: str, default=None):
+    """兼容读取结果字段：优先 snake_case，回退 camelCase（engine 输入为 camelCase）"""
+    if result is None:
+        return default
+    if snake in result:
+        return result.get(snake, default)
+    return result.get(camel, default)
+
+
 def _rule_convergence_ratio(ctx: ValidationContext) -> List[ValidationIssue]:
     """V001: 收敛比校验"""
     issues = []
     for net_type, result in ctx.convergence_results.items():
-        if not result.get("meets_target", True):
-            ratio = result.get("convergence_ratio", 0)
-            target = result.get("target_ratio", 1)
+        if not _cv(result, "meets_target", "meetsTarget", True):
+            ratio = _cv(result, "convergence_ratio", "convergenceRatio", 0)
+            target = _cv(result, "target_ratio", "targetRatio", 1)
             issues.append(ValidationIssue(
                 rule_id="V001",
                 severity=Severity.WARNING,
@@ -811,7 +820,7 @@ def _rule_param_oversubscription(ctx: ValidationContext) -> List[ValidationIssue
     issues = []
     param_result = ctx.convergence_results.get("param", {})
     if param_result:
-        ratio = param_result.get("convergence_ratio", 1)
+        ratio = _cv(param_result, "convergence_ratio", "convergenceRatio", 1)
         if ratio > 1.5:
             issues.append(ValidationIssue(
                 rule_id="V010",

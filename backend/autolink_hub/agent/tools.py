@@ -271,15 +271,73 @@ def init_tools() -> None:
 
     # ---- 容量规划（V3.1.3-T7-4/T7-5）----
     register_tool(
-        "capacity_recommend", "容量规划推荐：训练模型 + GPU 规模 → Scale-Up/Scale-Out 协议与速率/收敛比/层数/通信开销估算（回答\"某模型 N 卡怎么配网络\"）。返回结果为解析法预估值（estimated=true，误差 ±15-20%），需向用户说明",
+        "capacity_recommend", "容量规划推荐：训练模型 + GPU 规模 → Scale-Up/Scale-Out 协议与速率/收敛比/层数/通信开销估算（回答\"某模型 N 卡怎么配网络\"）。V3.2.0 起返回 FP8 分块精度通信（exact，含与解析法误差对照）、Pipeline 分段显存（pipeline）与 TCO 成本估算（cost：硬件/电力/空间分项）。返回结果为预估值（estimated=true，误差 ±15-20%），需向用户说明",
         _schema({
             "model": _str_param("model", "模型档案 id（如 deepseek-v3/llama3-70b/qwen2.5-72b）或模型名", True),
             "num_gpus": _str_param("num_gpus", "目标 GPU 数量", True),
             "budget": _str_param("budget", "预算档位：economy/standard/premium（默认 standard）"),
             "precision": _str_param("precision", "训练精度覆盖：fp8/fp16/bf16"),
             "context_length": _str_param("context_length", "上下文长度覆盖（token）"),
+            "tp": _str_param("tp", "张量并行度（默认 8）"),
+            "dp": _str_param("dp", "数据并行度（默认 1）"),
+            "pp": _str_param("pp", "流水线并行 stage 数（默认 1，>1 启用 Pipeline 建模）"),
+            "cost_params": _str_param("cost_params", "成本单价覆盖 JSON（如 {\"gpu_watts\": 1000, \"electricity_per_kwh\": 0.6}）"),
         }, required=["model", "num_gpus"]),
         _make_cli_handler("capacity:recommend"),
+    )
+
+    # ---- ATOP 自动拓扑优化（V3.2.0-T9-2）----
+    register_tool(
+        "atop_recommend", "ATOP 式自动拓扑优化（模型通信特征 → ZCube 2D/3D cube 拓扑推荐）：输入模型（如 deepseek-v3，MoE→All-to-All 主导）与 GPU 规模，输出通信特征（communication_pattern/comm_ratio/traffic_breakdown）、cube 维度（2D/3D）、可渲染拓扑（topology.nodes/edges，含 zcube_group/plane_id 分组着色元数据）、拓扑校验结果（validation，V020 结构规则无 error）与推荐理由（rationale）。回答\"某模型 N 卡怎么组网/用什么拓扑\"时优先调用本工具；返回拓扑可直接用于前端渲染（AUTO 只读计算）",
+        _schema({
+            "num_gpus": _str_param("num_gpus", "目标 GPU 数量", True),
+            "model": _str_param("model", "模型档案 id（如 deepseek-v3/llama3-70b/qwen2.5-72b）或模型名"),
+            "model_type": _str_param("model_type", "模型类型：dense/moe/multimodal（覆盖）"),
+            "num_experts": _str_param("num_experts", "MoE 专家数（>0 判定 alltoall 主导）"),
+            "precision": _str_param("precision", "训练精度：fp8/fp16/bf16"),
+            "tp": _str_param("tp", "张量并行度（默认 8）"),
+            "dp": _str_param("dp", "数据并行度（默认 1）"),
+            "pp": _str_param("pp", "流水线并行 stage 数（>1 引入 P2P 分量）"),
+            "communication_pattern": _str_param("communication_pattern", "通信模式覆盖：allreduce/alltoall/p2p"),
+            "comm_ratio": _str_param("comm_ratio", "通信占比覆盖（0~1）"),
+            "traffic": _str_param("traffic", "流量占比覆盖 JSON（如 {\"alltoall\":0.7,\"allreduce\":0.3}）"),
+            "switch_ports": _str_param("switch_ports", "Leaf 端口数（0=按规模自动档位）"),
+        }, required=["num_gpus"]),
+        _make_cli_handler("atop:recommend"),
+    )
+
+    # ---- 批量优化（V3.2.0-T9-3，轨道 B：建议批量产出 + 应用）----
+    register_tool(
+        "optimize_suggest", "批量优化建议：读取项目配置（configFile）→ 按规则批量产出收敛比/成本/散热建议（每条含 category/title/description/patch/impact，patch={section:{key:value}}）。回答\"怎么优化这个项目/有哪些改进点\"时优先调用；只读计算（AUTO）",
+        _schema({
+            "configFile": _str_param("configFile", "project_config.json 或 network_config.ini 路径", True),
+        }, required=["configFile"]),
+        _make_cli_handler("optimize:suggest"),
+    )
+    register_tool(
+        "optimize_apply", "批量应用优化建议：把选中的建议（含 patch）合并写入 project_config.json（宽松校验 + 落盘）。调用前应先用 optimize_suggest 获取建议列表供用户选择；写操作（NOTIFY）",
+        _schema({
+            "configFile": _str_param("configFile", "项目配置路径", True),
+            "suggestions": _str_param("suggestions", "选中的建议 JSON 数组（[{category,title,patch}]）", True),
+        }, required=["configFile", "suggestions"]),
+        _make_cli_handler("optimize:apply"),
+    )
+
+    # ---- 智能修复（V3.2.0-T9-4：校验错误 → 修复 → 复核闭环）----
+    register_tool(
+        "repair_plan", "智能修复方案：读取项目配置（configFile）→ 运行完整校验 → 为可自动修复的 error 级问题生成修复 patch（{section:{key:value}}，rule_id 级：V002 机柜功率/V007 Rail/V010 收敛比/V016 网卡容量/V018 Scale-Up 域/V019 供电/V020 ZCube）。回答\"这个配置有什么错误/怎么修复\"时优先调用；只读计算（AUTO）",
+        _schema({
+            "configFile": _str_param("configFile", "project_config.json 或 network_config.ini 路径", True),
+        }, required=["configFile"]),
+        _make_cli_handler("repair:plan"),
+    )
+    register_tool(
+        "repair_apply", "一键应用智能修复：把选中的修复项（含 patch）合并写入 project_config.json → 宽松校验 → 写回 → 复核（重新校验返回剩余错误）。调用前应先用 repair_plan 获取修复方案供用户选择；写操作（NOTIFY）",
+        _schema({
+            "configFile": _str_param("configFile", "项目配置路径", True),
+            "fixes": _str_param("fixes", "选中的修复项 JSON 数组（[{rule_id,patch}]）", True),
+        }, required=["configFile", "fixes"]),
+        _make_cli_handler("repair:apply"),
     )
 
     logger.info(f"AutoLink AI Hub: registered {len(_tools)} tools")

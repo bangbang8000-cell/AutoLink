@@ -1574,10 +1574,16 @@ def handle_file_parse(params):
 
 @register_action('capacity:list-presets')
 def handle_capacity_list_presets(params):
-    """V3.1.3-T7-4: 容量规划模型档案清单（前端选择器用）"""
+    """V3.1.3-T7-4: 容量规划模型档案清单（前端选择器用）
+    V3.2.0-T9-5: 每项带来源标注（source 内置/国产 + vendor 芯片厂商），汇总国产档案数
+    """
     from capacity_planning import get_presets
     presets = get_presets()
-    return {'presets': presets, 'total': len(presets)}
+    return {
+        'presets': presets,
+        'total': len(presets),
+        'domesticCount': sum(1 for p in presets if p.get('source') == '国产'),
+    }
 
 
 @register_action('capacity:recommend')
@@ -1585,6 +1591,86 @@ def handle_capacity_recommend(params):
     """V3.1.3-T7-4: 容量规划推荐（模型 + GPU 规模 → Scale-Up/Scale-Out/收敛比/层数）"""
     from capacity_planning import recommend
     return recommend(params)
+
+
+@register_action('atop:recommend')
+def handle_atop_recommend(params):
+    """V3.2.0-T9-2: ATOP 式自动拓扑优化（模型通信特征 → ZCube 2D/3D cube 拓扑推荐）
+
+    参数:
+        num_gpus: 目标 GPU 数（必填）
+        model: 模型档案 id（如 deepseek-v3/llama3-70b）或自定义模型字段
+        features 覆盖: communication_pattern（allreduce/alltoall/p2p）/
+                      comm_ratio（0~1）/ traffic（{allreduce,alltoall,p2p} 占比）
+        tp/dp/pp: 并行策略（pp>1 引入流水线 P2P 分量）
+        switch_ports: Leaf 端口数（0 = 按规模自动档位）
+        leaf_count: 每组 Leaf 数（0 = 自动推导）
+    返回:
+        {success, feature, cube, topology{nodes,edges}, zcube{stats,params,meta},
+         validation{valid,issues}, rationale{summary,points}}
+        拓扑已接入 validation（V020 结构规则校验，推荐拓扑无 error）
+    """
+    from atop import recommend
+    return recommend(params)
+
+
+@register_action('optimize:suggest')
+def handle_optimize_suggest(params):
+    """V3.2.0-T9-3: 批量优化建议（收敛比/成本/散热，只读计算）
+
+    参数:
+        configFile: project_config.json 或 network_config.ini 路径
+    返回:
+        {success, suggestions[{category, categoryLabel, title, description,
+                               patch, impact}], total, counts}
+        patch = {section: {key: value}}，可直接用于 optimize:apply 批量应用
+    """
+    from optimization import suggest
+    return suggest(params)
+
+
+@register_action('optimize:apply')
+def handle_optimize_apply(params):
+    """V3.2.0-T9-3: 批量应用优化建议（写操作，落盘 project_config.json）
+
+    参数:
+        configFile: 项目配置路径
+        suggestions: 选中的建议列表（含 patch）
+    返回:
+        {success, applied[{category,title,patch}], skipped, config, issues}
+    """
+    from optimization import apply
+    return apply(params)
+
+
+@register_action('repair:plan')
+def handle_repair_plan(params):
+    """V3.2.0-T9-4: 智能修复方案（校验错误 → 可自动修复 patch，只读计算）
+
+    参数:
+        configFile: project_config.json 或 network_config.ini 路径
+    返回:
+        {success, fixes[{rule_id, severity, message, recommendation, patch}],
+         fixable, totalErrors, valid, issues}
+        fixes 仅含可自动修复的 error 项（带 patch）；不可修复 error 在 issues 列出
+    """
+    from fixit import repair_plan
+    return repair_plan(params)
+
+
+@register_action('repair:apply')
+def handle_repair_apply(params):
+    """V3.2.0-T9-4: 应用修复并复核（写操作，落盘 + 重新校验）
+
+    参数:
+        configFile: 项目配置路径
+        fixes: 选中的修复项（含 patch）
+    返回:
+        {success, applied[{rule_id,message,patch}], skipped, issues,
+         validation{valid, remainingErrors, issues}}（复核结果）
+    """
+    from fixit import repair_apply
+    return repair_apply(params)
 
 
 def _write_line(obj: dict) -> None:

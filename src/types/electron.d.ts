@@ -94,8 +94,12 @@ interface Window {
           context_length: number
           precision: string
           num_experts: number
+          // V3.2.0-T9-5: 来源标注（内置/国产 + 芯片厂商）
+          source?: string
+          vendor?: string
         }>
         total: number
+        domesticCount?: number
       }>
       recommend: (params: {
         model: string
@@ -103,6 +107,10 @@ interface Window {
         budget?: string
         precision?: string
         contextLength?: number
+        tp?: number
+        dp?: number
+        pp?: number
+        costParams?: Record<string, number>
       }) => Promise<{
         success: boolean
         error?: string
@@ -134,7 +142,163 @@ interface Window {
           tier_count: number
           estimated_comm_overhead: number
         }
+        // V3.2.0-T9-1: FP8 精确通信 / Pipeline 显存 / TCO 成本
+        exact?: {
+          total_gib: number
+          comm_ratio: number
+          grad_bpp: number
+          memory_gib: number
+          pipeline_peak_gib: number
+          analytic_error_pct: number
+        }
+        pipeline?: {
+          pp_size: number
+          stages: number
+          params_per_stage_b: number
+          peak_per_stage_gib: number
+          activation_gib: number
+        }
+        cost?: {
+          total_usd: number
+          hardware: { switches: number; nic: number; modules: number; subtotal_usd: number }
+          power: { kwh_per_year: number; subtotal_usd: number }
+          space: { racks: number; subtotal_usd: number }
+        }
         notes?: Array<{ level: string; message: string }>
+      }>
+    }
+    // V3.2.0-T9-2: ATOP 自动拓扑优化（通信特征 → ZCube cube 拓扑推荐）
+    atop: {
+      recommend: (params: {
+        numGpus: number
+        model?: string
+        modelType?: string
+        numExperts?: number
+        precision?: string
+        tp?: number
+        dp?: number
+        pp?: number
+        communicationPattern?: string
+        commRatio?: number
+        traffic?: Record<string, number>
+        switchPorts?: number
+      }) => Promise<{
+        success: boolean
+        error?: string
+        estimated?: boolean
+        feature?: {
+          modelName: string
+          modelType: string
+          communicationPattern: 'allreduce' | 'alltoall' | 'p2p'
+          commRatio: number
+          precision: string
+          numExperts: number
+          trafficBreakdown: { allreduce: number; alltoall: number; p2p: number }
+          parallel: { tp: number; dp: number; pp: number }
+          nicsPerGpu: number
+        }
+        cube?: { dims: number[]; dim: number; volume: number; numGpus: number }
+        topology?: {
+          nodes: Array<{
+            id: string
+            type: string
+            group: string
+            podid: string
+            layerHint?: string
+            maxPorts?: number
+            zcubeGroup?: string
+            planeId?: number
+            cubeRank?: number
+            cubePos?: number[]
+          }>
+          edges: Array<{
+            source: string
+            target: string
+            speed: string
+            cableType: string
+            description: string
+            networkType?: string
+          }>
+        }
+        zcube?: {
+          stats: Record<string, number>
+          params: { nics_per_gpu: number; switch_ports: number; leaf_count: number }
+          meta: {
+            cubeDimensions: number[]
+            dim: number
+            numGpus: number
+            nicsPerGpu: number
+            leafCount: number
+            switchPorts: number
+            groups: { A: number; B: number }
+            noSpine: boolean
+          }
+        }
+        validation?: {
+          valid: boolean
+          issues: Array<{ rule_id: string; severity: string; message: string; recommendation: string }>
+        }
+        rationale?: { summary: string; points: string[] }
+      }>
+    }
+    // V3.2.0-T9-3: 批量优化（收敛比/成本/散热建议生成 + 应用，轨道 B）
+    optimize: {
+      suggest: (params: { projectName: string }) => Promise<{
+        success: boolean
+        error?: string
+        suggestions?: Array<{
+          category: 'convergence' | 'cost' | 'thermal'
+          categoryLabel: string
+          title: string
+          description: string
+          patch: Record<string, Record<string, unknown>>
+          impact: string
+        }>
+        total?: number
+        counts?: { convergence: number; cost: number; thermal: number }
+      }>
+      apply: (params: {
+        projectName: string
+        suggestions: Array<{ category?: string; title?: string; patch: Record<string, Record<string, unknown>> }>
+      }) => Promise<{
+        success: boolean
+        error?: string
+        applied?: Array<{ category: string; title: string; patch: Record<string, Record<string, unknown>> }>
+        skipped?: string[]
+        issues?: string[]
+      }>
+    }
+    // V3.2.0-T9-4: 智能修复（校验错误 → 修复 patch → 复核 → 一键应用）
+    repair: {
+      plan: (params: { projectName: string }) => Promise<{
+        success: boolean
+        error?: string
+        fixes?: Array<{
+          rule_id: string
+          severity: string
+          message: string
+          recommendation: string
+          patch: Record<string, Record<string, unknown>>
+        }>
+        fixable?: number
+        totalErrors?: number
+        valid?: boolean
+        issues?: Array<{ rule_id: string; severity: string; message: string; recommendation: string }>
+      }>
+      apply: (params: {
+        projectName: string
+        fixes: Array<{ rule_id?: string; message?: string; patch: Record<string, Record<string, unknown>> }>
+      }) => Promise<{
+        success: boolean
+        error?: string
+        applied?: Array<{ rule_id: string; message: string; patch: Record<string, Record<string, unknown>> }>
+        skipped?: string[]
+        issues?: string[]
+        validation?: {
+          valid: boolean
+          remainingErrors: number
+          issues: Array<{ rule_id: string; severity: string; message: string; recommendation: string }>
+        }
       }>
     }
     // V3.0.4-T3-1: 机房矩阵

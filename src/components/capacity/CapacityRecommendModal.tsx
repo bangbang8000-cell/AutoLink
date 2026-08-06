@@ -19,6 +19,9 @@ export interface CapacityPreset {
   context_length: number
   precision: string
   num_experts: number
+  // V3.2.0-T9-5: 来源标注（内置/国产 + 芯片厂商）
+  source?: string
+  vendor?: string
 }
 
 export interface CapacityRecommendation {
@@ -49,6 +52,30 @@ export interface CapacityRecommendation {
     convergence_ratio: number
     tier_count: number
     estimated_comm_overhead: number
+  }
+  /** V3.2.0-T9-1: FP8 分块精度通信量（与解析法误差对照） */
+  exact?: {
+    total_gib: number
+    comm_ratio: number
+    grad_bpp: number
+    memory_gib: number
+    pipeline_peak_gib: number
+    analytic_error_pct: number
+  }
+  /** V3.2.0-T9-1: Pipeline 分段显存建模 */
+  pipeline?: {
+    pp_size: number
+    stages: number
+    params_per_stage_b: number
+    peak_per_stage_gib: number
+    activation_gib: number
+  }
+  /** V3.2.0-T9-1: TCO 成本（硬件/电力/空间分项） */
+  cost?: {
+    total_usd: number
+    hardware: { switches: number; nic: number; modules: number; subtotal_usd: number }
+    power: { kwh_per_year: number; subtotal_usd: number }
+    space: { racks: number; subtotal_usd: number }
   }
   notes?: Array<{ level: string; message: string }>
 }
@@ -172,7 +199,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
             >
               {presets.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}（{p.model_type === 'moe' ? 'MoE' : 'Dense'} · {p.precision} · {Math.round(p.num_params / 1e9)}B）
+                  {p.name}（{p.source === '国产' ? '国产 · ' : ''}{p.model_type === 'moe' ? 'MoE' : 'Dense'} · {p.precision} · {Math.round(p.num_params / 1e9)}B）
                 </option>
               ))}
             </select>
@@ -259,6 +286,44 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
             <Sparkles size={12} className="text-amber-500" />
             预估通信开销占比 {Math.round(rec.estimated_comm_overhead * 100)}% · 每步通信量约 {result?.comm?.total_gib ?? '-'} GiB
           </div>
+          {/* V3.2.0-T9-1: FP8 精确通信 + Pipeline 显存 + TCO 成本 */}
+          {(result.exact || result.pipeline || result.cost) && (
+            <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-1.5">
+              {result.exact && (
+                <div className="flex items-center justify-between text-2xs">
+                  <span className="text-gray-500 dark:text-gray-400">FP8 精确通信量</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-100">
+                    {result.exact.total_gib} GiB/步
+                    <span className="text-gray-400 ml-1">与解析法误差 {result.exact.analytic_error_pct}%</span>
+                  </span>
+                </div>
+              )}
+              {result.pipeline && result.pipeline.stages > 1 && (
+                <div className="flex items-center justify-between text-2xs">
+                  <span className="text-gray-500 dark:text-gray-400">Pipeline 分段显存</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-100">
+                    {result.pipeline.stages} 段 · 峰值 {result.pipeline.peak_per_stage_gib} GiB/stage
+                  </span>
+                </div>
+              )}
+              {result.cost && (
+                <div className="flex items-center justify-between text-2xs">
+                  <span className="text-gray-500 dark:text-gray-400">估算 TCO（硬件 + 电力 + 空间）</span>
+                  <span className="font-bold text-gray-800 dark:text-gray-100">
+                    ${(result.cost.total_usd / 1e6).toFixed(1)}M
+                  </span>
+                </div>
+              )}
+              {result.cost && (
+                <div className="text-2xs text-gray-400 flex items-center gap-2">
+                  <span>硬件 ${(result.cost.hardware.subtotal_usd / 1e6).toFixed(1)}M</span>
+                  <span>电力 ${(result.cost.power.subtotal_usd / 1e6).toFixed(1)}M</span>
+                  <span>空间 ${(result.cost.space.subtotal_usd / 1e6).toFixed(1)}M</span>
+                  <span>· {result.cost.space.racks} 柜</span>
+                </div>
+              )}
+            </div>
+          )}
           {/* notes */}
           {result?.notes && result.notes.length > 0 && (
             <div className="space-y-1">

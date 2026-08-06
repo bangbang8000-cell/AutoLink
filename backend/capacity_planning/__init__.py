@@ -1,23 +1,32 @@
-"""AutoLink 容量规划内核（V3.1.3-T7-4 基础版）
+"""AutoLink 容量规划内核（V3.1.3-T7-4 基础版 / V3.2.0-T9-1 精确版）
 
 基于训练负载特征（模型类型/参数量/上下文/精度/并行策略 + 目标 GPU 规模）
 反推 Scale-Up / Scale-Out 网络参数推荐：
   模型档案解析（presets.py）→ 通信量估算（comm_calculator.py）→
   拓扑推荐（topology_recommender.py）+ 经验规则修正（rules.py）。
 
+V3.2.0-T9-1：FP8 分块精度通信 + Pipeline 显存建模 + TCO 成本估算 + 自定义档案。
 设计依据：docs/v2.7/ai_capacity_planning_research.md（公式/规则/误差 ±15-20%，
 推荐结果属预估值，标注供用户确认）。
 """
 from .model_parser import ModelProfile, parse_model_config
-from .presets import MODEL_PRESETS, get_presets
-from .comm_calculator import CommRequirement, calculate_comm
+from .presets import (
+    MODEL_PRESETS, get_presets, register_preset, load_user_presets,
+)
+from .comm_calculator import (
+    CommRequirement, ExactComm, calculate_comm, calculate_comm_exact,
+    estimate_pipeline_memory,
+)
 from .topology_recommender import TopologyRecommendation, recommend_topology
 from .rules import apply_rules
+from .cost_estimator import estimate_tco
 
 __all__ = [
     'ModelProfile', 'parse_model_config', 'MODEL_PRESETS', 'get_presets',
-    'CommRequirement', 'calculate_comm', 'TopologyRecommendation',
-    'recommend_topology', 'apply_rules', 'recommend',
+    'register_preset', 'load_user_presets',
+    'CommRequirement', 'ExactComm', 'calculate_comm', 'calculate_comm_exact',
+    'estimate_pipeline_memory', 'TopologyRecommendation',
+    'recommend_topology', 'apply_rules', 'estimate_tco', 'recommend',
 ]
 
 
@@ -28,8 +37,9 @@ def recommend(params: dict) -> dict:
           budget（economy|standard|premium，默认 standard）/
           可选模型覆盖: model_type/num_params/hidden_size/num_layers/num_experts/
                       context_length/precision/vocab_size/
-          可选并行策略: tp/dp/pp（默认 8/1/1）
-    返回: {success, model, comm, recommendation, notes}
+          可选并行策略: tp/dp/pp（默认 8/1/1）/
+          可选成本参数: cost_params（单价覆盖，见 cost_estimator.DEFAULT_UNIT_PRICES）
+    返回: {success, model, comm, recommendation, notes, exact, pipeline, cost}
     """
     model_id = params.get('model') or ''
     num_gpus = int(params.get('num_gpus') or 0)
@@ -37,6 +47,9 @@ def recommend(params: dict) -> dict:
         return {'success': False, 'error': '缺少模型参数（model 必填）'}
     if num_gpus <= 0:
         return {'success': False, 'error': 'GPU 数量必须为正数'}
+
+    # V3.2.0-T9-1: 启动时加载用户自定义档案（幂等，无文件跳过）
+    load_user_presets()
 
     try:
         model = parse_model_config({
@@ -64,6 +77,11 @@ def recommend(params: dict) -> dict:
     rec = recommend_topology(model, comm, num_gpus, budget)
     notes = apply_rules(model, comm, num_gpus, budget, rec)
 
+    # V3.2.0-T9-1: FP8 分块精度通信 + Pipeline 显存 + TCO 成本
+    exact = calculate_comm_exact(model, parallel, num_gpus)
+    pipeline = estimate_pipeline_memory(model, parallel, num_gpus)
+    cost = estimate_tco(model, comm, rec, num_gpus, params.get('cost_params'))
+
     return {
         'success': True,
         # V3.1.3-T7-5: 预估值标注——解析法结果（误差 ±15-20%），非实测
@@ -78,4 +96,8 @@ def recommend(params: dict) -> dict:
         'comm': comm.to_dict(),
         'recommendation': rec.to_dict(),
         'notes': notes,
+        # V3.2.0-T9-1: 精确计算对照 / Pipeline / TCO
+        'exact': exact.to_dict(),
+        'pipeline': pipeline,
+        'cost': cost,
     }
