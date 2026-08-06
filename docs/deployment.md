@@ -1,4 +1,4 @@
-# AutoLink v3.2.1 部署指南
+# AutoLink v3.2.2 部署指南
 
 ## 环境准备
 
@@ -71,19 +71,19 @@ npm run dev
 ### Windows (NSIS 安装包)
 ```bash
 npm run dist:win
-# 输出: release/AutoLink-Setup-3.2.1-win.exe
+# 输出: release/AutoLink-Setup-3.2.2-win.exe
 ```
 
 ### macOS (DMG)
 ```bash
 npm run dist:mac
-# 输出: release/AutoLink-3.2.1-mac-x64.dmg / AutoLink-3.2.1-mac-arm64.dmg
+# 输出: release/AutoLink-3.2.2-mac-x64.dmg / AutoLink-3.2.2-mac-arm64.dmg
 ```
 
 ### Linux (AppImage + DEB)
 ```bash
 npm run dist:linux
-# 输出: release/AutoLink-3.2.1-linux.AppImage / .deb
+# 输出: release/AutoLink-3.2.2-linux.AppImage / .deb
 ```
 
 ## 生产部署
@@ -224,12 +224,12 @@ V2.6.2+ 拓扑与机柜数据按项目持久化：
 ```bash
 # 1. 更新 package.json version（含 VERSION 文件）
 # 2. 提交代码（含 [skip ci] 避免触发 Actions 编译）
-git commit -m "chore: v3.2.1 版本号更新 [skip ci]"
+git commit -m "chore: v3.2.2 版本号更新 [skip ci]"
 # 3. 合并到 main 后打 tag 并推送（tag 推送即触发 build.yml 三平台编译 + 自动创建 Release）
-git checkout main && git merge --no-ff feat/3.2.1-brand-e2e
+git checkout main && git merge --no-ff feat/3.2.2-security
 git push origin main
-git tag v3.2.1
-git push origin v3.2.1
+git tag v3.2.2
+git push origin v3.2.2
 ```
 
 GitHub Actions 自动构建三平台安装包并发布到 Releases 页面：

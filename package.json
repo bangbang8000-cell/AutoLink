@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -56,6 +56,7 @@
     "remark-gfm": "^4.0.1",
     "three": "^0.185.1",
     "xlsx": "^0.18.5",
+    "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

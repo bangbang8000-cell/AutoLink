@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## [3.2.2] - 2026-08-06
+
+### 安全与性能加固
+
+v3.2.2 落地纵深安全与质量门禁：Electron 沙箱 + CSP、IPC 运行时校验与日志脱敏、崩溃可回收、关键路径性能基准与业务链路 E2E 全部纳入 CI，并预留 Windows 代码签名通道。
+
+#### 纵深安全（T11-1）
+- 主窗口开启 **sandbox**（preload 仅用 contextBridge/ipcRenderer/process.versions，沙箱兼容验证通过）；渲染层保持 contextIsolation + 零 Node
+- **CSP 注入**：`session.webRequest` 按环境注入（dev 兼容 React Refresh inline preamble 与 Vite HMR，prod 收紧为纯 self）；index.html / splash.html 加 meta 基线（交集仍为严格策略）
+- **IPC zod 运行时校验**：13 个动态载荷通道接入门禁（project:createWithConfig、ai:call/chat、room:optimize、config:apply-preset/import、optimize:apply、repair:apply、capacity:recommend、export:saveFile、shell:openExternal、device-library:save/import），仅校验不剥离扩展字段
+- **日志脱敏**：新建 `electron/utils/redact.ts`（apiKey/token/password/sk- 自动遮蔽），主进程错误日志、Python 子进程 stderr 尾部与崩溃信息统一脱敏
+- **CI 安全断言**：渲染层 grep 检查 0 直接网络 / 0 Node 访问
+
+#### 崩溃可回收（T11-2）
+- `crashReporter` 本地崩溃转储（不上传）+ 未捕获异常/未处理拒绝脱敏留痕（userData/logs/errors.log）+ 渲染进程崩溃自动 reload 恢复
+
+#### 性能基准与门禁（T11-3）
+- 新建 `scripts/bench_perf.py`：2048 GPU 设计（实测 ≈1.1s，达标 ≤30s）+ 225 柜落位（实测 ≈0.11s，达标 ≤5s）全达标，无需优化，已入 CI 门禁
+
+#### 业务链路 E2E（T11-4）
+- 新建 `e2e/business.spec.ts`：新建项目（5 步向导）→ 生成拓扑 → 一键渲染导出 → 机房落位（IPC 直调全链路）自动化；CI e2e job 补 Python 引擎依赖
+
+#### 自动更新与签名（T11-5）
+- 双通道自动更新保持（electron-updater 主路径 + GitHub 直下 fallback）；build.yml 预留 Windows 代码签名（secrets CSC_LINK / CSC_KEY_PASSWORD 可选启用，未配置时保持未签名——SmartScreen 提示为已知限制，latest.yml 哈希保证下载完整性）
+
+#### 版本与回归
+- 版本号 3.2.1 → 3.2.2（package.json / package-lock.json / VERSION / README / 部署指南 / 用户指南）
+- 回归：前端 467 用例全绿（28 文件）、后端 991 用例全绿、typecheck / lint（0 error）、模板 19/19、golden 一致、性能基准达标、业务链路 E2E 通过
+
+---
+
 ## [3.2.1] - 2026-08-06
 
 ### 品牌主题色 + Electron E2E 门禁 + AI 入口修复

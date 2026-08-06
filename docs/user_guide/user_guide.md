@@ -1,6 +1,6 @@
 # AIDC AutoLink 用户指南
 
-> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v3.2.1
+> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v3.2.2
 
 欢迎使用 AIDC AutoLink！本指南带您全面了解产品核心功能与使用流程：从 Scale-Up 双栈拓扑、Scale-Out 网络设计、设备选型、机柜规划，到校验、报告与交付，全流程覆盖。
 
@@ -598,10 +598,18 @@ A: 菜单「帮助 → 关于 AIDC AutoLink」，显示完整软件栈（Electro
 
 ---
 
+## 11. 安全与性能（V3.2.2）
+
+- **纵深安全**：渲染层零网络、零 Node（一切经安全 IPC 桥接）；主窗口沙箱化 + CSP 注入；关键 IPC 通道运行时参数校验；错误日志自动脱敏（API Key / Token 等凭据不落日志）
+- **崩溃可回收**：异常崩溃本地转储留痕（`userData/logs/errors.log`），渲染进程崩溃自动恢复
+- **性能达标**：2048 GPU 单次设计 ≤30s、225 柜机房落位 ≤5s（CI 性能门禁守护）
+
+---
+
 ## 技术支持
 
 - **GitHub 仓库**：https://github.com/bangbang8000-cell/AutoLink
-- **版本**：AIDC AutoLink v3.2.1+
+- **版本**：AIDC AutoLink v3.2.2+
 - **Wiki**：https://github.com/bangbang8000-cell/AutoLink/wiki
 - **许可证**：MIT License
 
