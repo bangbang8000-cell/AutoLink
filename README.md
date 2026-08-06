@@ -6,7 +6,7 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.2.2-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.2.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -190,6 +190,11 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **性能门禁**：新增关键路径基准（2048 GPU 设计 ≤30s、225 柜落位 ≤5s）入 CI
 - **业务链路 E2E**：建项目 → 生成拓扑 → 一键渲染 → 机房落位全链路自动化入 CI
 
+### 23. 质量闭环（v3.2.3）
+
+- **全量回归**：前端 467 + 后端 991 用例、E2E 3 条、性能基准、模板/golden 全绿
+- **本地能力矩阵**：用户指南新增章节，核心能力全部离线可用（仅 AIHUB 与自动更新需网络）
+
 ---
 
 ## 📦 快速开始
@@ -198,9 +203,9 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.2.2-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.2.2-mac-x64.dmg` / `AutoLink-3.2.2-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.2.2-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.2.3-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.2.3-mac-x64.dmg` / `AutoLink-3.2.3-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.2.3-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 
