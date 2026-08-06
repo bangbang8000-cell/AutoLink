@@ -553,6 +553,8 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
           y: saved?.[node.id]?.y ?? pos?.y ?? 260,
         },
         data: data as unknown as Record<string, unknown>,
+        // V3.2.1-T10-2: 网络过滤/折叠切换时节点平滑移动与淡入过渡
+        style: { transition: 'transform 300ms ease, opacity 300ms ease' },
         zIndex: 10,
       }
     })

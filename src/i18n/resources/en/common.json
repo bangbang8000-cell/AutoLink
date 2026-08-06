@@ -475,6 +475,7 @@
       "appearance": {
         "title": "Appearance",
         "themeMode": "Theme Mode",
+        "accentColor": "Brand Accent",
         "light": "Light",
         "dark": "Dark",
         "system": "System",

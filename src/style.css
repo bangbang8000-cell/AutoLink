@@ -25,6 +25,63 @@
   --edge-default: 72 79 88;
 }
 
+/* v3.2.1-T10-1: primary 品牌色阶 token（RGB 通道值）——默认 sky 蓝
+ * 亮/暗共用同一品牌色阶；html[data-accent] 可整体切换主题色 */
+:root {
+  --primary-50: 239 246 255;
+  --primary-100: 219 234 254;
+  --primary-200: 191 219 254;
+  --primary-300: 147 197 253;
+  --primary-400: 96 165 250;
+  --primary-500: 59 130 246;
+  --primary-600: 37 99 235;
+  --primary-700: 29 78 216;
+  --primary-800: 30 64 175;
+  --primary-900: 30 58 138;
+}
+
+/* 主题色：翡翠（emerald） */
+html[data-accent='emerald'] {
+  --primary-50: 236 253 245;
+  --primary-100: 209 250 229;
+  --primary-200: 167 243 208;
+  --primary-300: 110 231 183;
+  --primary-400: 52 211 153;
+  --primary-500: 16 185 129;
+  --primary-600: 5 150 105;
+  --primary-700: 4 120 87;
+  --primary-800: 6 95 70;
+  --primary-900: 6 78 59;
+}
+
+/* 主题色：紫罗兰（violet） */
+html[data-accent='violet'] {
+  --primary-50: 245 243 255;
+  --primary-100: 237 233 254;
+  --primary-200: 221 214 254;
+  --primary-300: 196 181 253;
+  --primary-400: 167 139 250;
+  --primary-500: 139 92 246;
+  --primary-600: 124 58 237;
+  --primary-700: 109 40 217;
+  --primary-800: 91 33 182;
+  --primary-900: 76 29 149;
+}
+
+/* 主题色：玫瑰（rose） */
+html[data-accent='rose'] {
+  --primary-50: 255 241 242;
+  --primary-100: 255 228 230;
+  --primary-200: 254 205 211;
+  --primary-300: 253 164 175;
+  --primary-400: 251 113 133;
+  --primary-500: 244 63 94;
+  --primary-600: 225 29 72;
+  --primary-700: 190 18 60;
+  --primary-800: 159 18 57;
+  --primary-900: 136 19 55;
+}
+
 /* ---- Base ---- */
 body {
   margin: 0;

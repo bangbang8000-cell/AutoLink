@@ -12,6 +12,9 @@ export type ActivityType =
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
+/** V3.2.1-T10-1: 品牌主题色（驱动 --primary-* token，默认 sky） */
+export type AccentColor = 'sky' | 'emerald' | 'violet' | 'rose'
+
 /** 项目浏览器分组模式:smart=智能分组(按文件用途),raw=真实分组(按文件系统目录) */
 export type ExplorerGroupMode = 'smart' | 'raw'
 
@@ -35,6 +38,8 @@ interface UIState {
   panelVisible: boolean
   theme: ThemeMode
   isDark: boolean
+  /** V3.2.1-T10-1: 品牌主题色 */
+  accent: AccentColor
   language: string
   explorerProjectListHeight: number
   explorerGroupMode: ExplorerGroupMode
@@ -51,6 +56,7 @@ interface UIState {
   togglePanel: () => void
   setTheme: (mode: ThemeMode) => void
   toggleTheme: () => void
+  setAccent: (accent: AccentColor) => void
   syncSystemTheme: () => void
   setLanguage: (lang: string) => void
   setExplorerProjectListHeight: (height: number) => void
@@ -73,6 +79,7 @@ export const useUIStore = create<UIState>()(
       panelVisible: false,
       theme: 'system',
       isDark: false,
+      accent: 'sky',
       language: 'zh-CN',
       explorerProjectListHeight: 300,
       explorerGroupMode: 'smart',
@@ -112,6 +119,8 @@ export const useUIStore = create<UIState>()(
         }
       },
 
+      setAccent: (accent) => set({ accent }),
+
       setLanguage: (lang) => set({ language: lang }),
 
       setExplorerProjectListHeight: (height) => set({ explorerProjectListHeight: height }),
@@ -143,6 +152,7 @@ export const useUIStore = create<UIState>()(
       partialize: (state) => ({
         activeActivity: state.activeActivity,
         theme: state.theme,
+        accent: state.accent,
         language: state.language,
         panelVisible: state.panelVisible,
         explorerProjectListHeight: state.explorerProjectListHeight,

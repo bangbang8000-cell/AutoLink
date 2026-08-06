@@ -462,6 +462,7 @@
       "appearance": {
         "title": "外観設定",
         "themeMode": "テーマモード",
+        "accentColor": "ブランドテーマカラー",
         "light": "ライト",
         "dark": "ダーク",
         "system": "システム",

@@ -27,11 +27,13 @@ import { matchShortcut } from '@/utils/shortcuts'
 import i18n from '@/i18n'
 
 /** Map activity types to workspace tab config */
-const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary'; titleKey: string; closable: boolean }> = {
+const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary' | 'chat'; titleKey: string; closable: boolean }> = {
   workbench: { type: 'workbench', titleKey: 'common:tabs.workbench', closable: false },
   design: { type: 'design', titleKey: 'common:tabs.design', closable: true },
   visualization: { type: 'visualization', titleKey: 'common:tabs.visualization', closable: true },
   device_library: { type: 'deviceLibrary', titleKey: 'common:tabs.deviceLibrary', closable: true },
+  // V3.2.1: ai 入口 → AI 对话 Tab（此前点击仅高亮侧栏，无实际内容）
+  ai: { type: 'chat', titleKey: 'common:menu.ai', closable: true },
 }
 
 export default function App() {
@@ -61,6 +63,8 @@ export default function App() {
   const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
   // v2.7.3-T1: Ctrl+S 保存配置
   const saveConfig = useDesignStore((s) => s.saveConfig)
+  // V3.2.1-T10-1: 品牌主题色
+  const accent = useUIStore((s) => s.accent)
 
   // Apply dark mode to HTML element
   useEffect(() => {
@@ -68,6 +72,11 @@ export default function App() {
     if (isDark) root.classList.add('dark')
     else root.classList.remove('dark')
   }, [isDark])
+
+  // V3.2.1-T10-1: 应用品牌主题色(驱动 --primary-* token)
+  useEffect(() => {
+    document.documentElement.dataset.accent = accent
+  }, [accent])
 
   // v2.7.3-T11: 应用外观设置(fontSize/animations) — 启动时从 localStorage 读取并应用
   // 避免哑设置项:设置面板的控件必须有实际效果

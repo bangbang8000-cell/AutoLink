@@ -1,6 +1,6 @@
 # AIDC AutoLink 用户指南
 
-> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v3.2.0
+> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v3.2.1
 
 欢迎使用 AIDC AutoLink！本指南带您全面了解产品核心功能与使用流程：从 Scale-Up 双栈拓扑、Scale-Out 网络设计、设备选型、机柜规划，到校验、报告与交付，全流程覆盖。
 
@@ -413,6 +413,7 @@ AIDC AutoLink 采用经典 IDE 风格布局：
 ### 10.1 外观
 
 主题模式（浅色/深色/跟随系统）、字体大小、紧凑模式、动画开关。
+**品牌主题色**（V3.2.1）：一键切换 4 色主题（天空蓝 / 翡翠 / 紫罗兰 / 玫瑰，默认天空蓝），亮/暗色与拓扑画布、图表即时生效并重启保留。
 
 ### 10.2 语言
 
@@ -600,7 +601,7 @@ A: 菜单「帮助 → 关于 AIDC AutoLink」，显示完整软件栈（Electro
 ## 技术支持
 
 - **GitHub 仓库**：https://github.com/bangbang8000-cell/AutoLink
-- **版本**：AIDC AutoLink v3.2.0+
+- **版本**：AIDC AutoLink v3.2.1+
 - **Wiki**：https://github.com/bangbang8000-cell/AutoLink/wiki
 - **许可证**：MIT License
 

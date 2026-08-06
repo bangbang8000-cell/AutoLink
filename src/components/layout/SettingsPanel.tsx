@@ -7,7 +7,7 @@ import {
   FolderTree, Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { useUIStore, type ThemeMode, type AIConfig } from '@/stores/ui.store'
+import { useUIStore, type ThemeMode, type AccentColor, type AIConfig } from '@/stores/ui.store'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -140,6 +140,9 @@ function AppearanceSettings() {
   const { t } = useTranslation()
   const theme = useUIStore((s) => s.theme)
   const setTheme = useUIStore((s) => s.setTheme)
+  // V3.2.1-T10-1: 品牌主题色
+  const accent = useUIStore((s) => s.accent)
+  const setAccent = useUIStore((s) => s.setAccent)
   const [fontSize, setFontSize] = useLocalStorage('autolink-font-size', 14)
   const [animations, setAnimations] = useLocalStorage('autolink-animations', true)
 
@@ -172,9 +175,31 @@ function AppearanceSettings() {
         ))}
       </div>
 
+      {/* V3.2.1-T10-1: 品牌主题色 */}
+      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">{t('common:explorer.settings.appearance.accentColor')}</label>
+      <div className="flex gap-1.5 mb-3">
+        {([
+          { key: 'sky' as AccentColor, hex: '#3B82F6' },
+          { key: 'emerald' as AccentColor, hex: '#10B981' },
+          { key: 'violet' as AccentColor, hex: '#8B5CF6' },
+          { key: 'rose' as AccentColor, hex: '#F43F5E' },
+        ]).map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setAccent(item.key)}
+            aria-label={item.key}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all border-2
+              ${accent === item.key ? 'border-gray-700 dark:border-gray-200 scale-110' : 'border-transparent hover:scale-105'}`}
+            style={{ backgroundColor: item.hex }}
+          >
+            {accent === item.key && <Check size={13} className="text-white drop-shadow" strokeWidth={3} />}
+          </button>
+        ))}
+      </div>
+
       <SettingsRow label={t('common:explorer.settings.appearance.fontSize')}>
         <select value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
+          className={INPUT_CLASS}>
           {[12, 13, 14, 16, 18].map((n) => <option key={n} value={n}>{n}px</option>)}
         </select>
       </SettingsRow>
@@ -229,7 +254,7 @@ function ProjectDefaultsSettings() {
     <SettingsSection title={t('common:explorer.settings.projectDefaults.title')}>
       <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultRackType')}>
         <select value={defaultRack} onChange={(e) => setDefaultRack(Number(e.target.value))}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
+          className={INPUT_CLASS}>
           <option value={42}>42U</option>
           <option value={49}>49U</option>
         </select>
@@ -237,11 +262,11 @@ function ProjectDefaultsSettings() {
       <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultPowerLimit')}>
         <input type="number" value={defaultPowerLimit}
           onChange={(e) => setDefaultPowerLimit(Number(e.target.value))}
-          className="w-20 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
+          className={clsx('w-20', INPUT_CLASS)} />
       </SettingsRow>
       <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultPortSpeed')}>
         <select value={defaultPortSpeed} onChange={(e) => setDefaultPortSpeed(e.target.value)}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
+          className={INPUT_CLASS}>
           {['100G', '200G', '400G', '800G'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </SettingsRow>
@@ -260,7 +285,7 @@ function OutputSettings() {
     <SettingsSection title={t('common:explorer.settings.output.title')}>
       <SettingsRow label={t('common:explorer.settings.output.defaultFormat')}>
         <select value={defaultFormat} onChange={(e) => setDefaultFormat(e.target.value)}
-          className="text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
+          className={INPUT_CLASS}>
           <option value="xlsx">{t('common:explorer.settings.output.formatExcel')}</option>
           <option value="csv">{t('common:explorer.settings.output.formatCsv')}</option>
           <option value="png">{t('common:explorer.settings.output.formatPng')}</option>
@@ -282,7 +307,7 @@ function OutputSettings() {
       <SettingsRow label={t('common:explorer.settings.output.autoSaveInterval')}>
         <input type="number" value={autoSaveInterval} min={1} max={60}
           onChange={(e) => setAutoSaveInterval(Number(e.target.value))}
-          className="w-16 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
+          className={clsx('w-16', INPUT_CLASS)} />
       </SettingsRow>
       <GroupReset group="output" />
     </SettingsSection>
@@ -371,7 +396,7 @@ function NetworkSettings() {
         <div className="flex items-center gap-1">
           <input placeholder={t('common:explorer.settings.network.host')} value={proxyHost}
             onChange={(e) => setProxyHost(e.target.value)}
-            className="w-20 text-xs px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app" />
+            className={clsx('w-20', INPUT_CLASS)} />
           <span className="text-gray-400">:</span>
           <input placeholder={t('common:explorer.settings.network.port')} value={proxyPort}
             onChange={(e) => setProxyPort(e.target.value)}

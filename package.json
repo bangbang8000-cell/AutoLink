@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -32,7 +32,8 @@
     "test:coverage": "vitest run --coverage",
     "test:backend": "python -m pytest tests/backend/ -v",
     "test:backend:coverage": "python -m pytest tests/backend/ -v --cov=backend --cov-report=html",
-    "test:all": "npm run test && npm run test:backend"
+    "test:all": "npm run test && npm run test:backend",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
@@ -58,6 +59,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/dom": "^10.4.1",

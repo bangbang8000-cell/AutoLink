@@ -63,6 +63,13 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     return map
   }, [cabinets])
 
+  // V3.2.1-T10-3: 机柜功率表（落位热力条用）
+  const cabinetPowerMap = useMemo(() => {
+    const map = new Map<number, number>()
+    for (const c of cabinets) map.set(c.id, c.power_limit)
+    return map
+  }, [cabinets])
+
   // T3-3: 机柜 → 已上架位置映射，面板按已/未上架分组
   const cabinetPosMap = useMemo(() => {
     const map = new Map<number, string>()
@@ -178,7 +185,7 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
             >
               <div className="flex justify-between items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{cab.name}</span>
-                <span className="text-[10px] text-blue-600 dark:text-blue-400 shrink-0">{cabinetPosMap.get(cab.id)}</span>
+                <span className="text-[10px] text-primary-600 dark:text-primary-400 shrink-0">{cabinetPosMap.get(cab.id)}</span>
               </div>
               <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                 <span>{CABINET_TYPE_LABELS[cab.type] || cab.type}</span>
@@ -306,6 +313,22 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
                   >
                     {mainLabel}
                   </text>
+                  {/* V3.2.1-T10-3: 落位功率热力条（以 20kW 为基准归一，绿→黄→红） */}
+                  {cell.cabinetId != null && (() => {
+                    const pw = cabinetPowerMap.get(cell.cabinetId) || 0
+                    const pct = Math.min(100, Math.round((pw / 20000) * 100))
+                    return (
+                      <rect
+                        x={2}
+                        y={CELL_H - 5}
+                        width={CELL_W - 4}
+                        height={3}
+                        rx={1.5}
+                        fill={getPowerColor(pct).stroke}
+                        opacity={0.9}
+                      />
+                    )
+                  })()}
                 </g>
               )
             }),

@@ -462,6 +462,7 @@
       "appearance": {
         "title": "외관 설정",
         "themeMode": "테마 모드",
+        "accentColor": "브랜드 테마 색상",
         "light": "라이트",
         "dark": "다크",
         "system": "시스템",

@@ -463,6 +463,7 @@
       "appearance": {
         "title": "外觀設定",
         "themeMode": "主題模式",
+        "accentColor": "品牌主題色",
         "light": "淺色",
         "dark": "深色",
         "system": "跟隨系統",

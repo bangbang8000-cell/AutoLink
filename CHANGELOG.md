@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## [3.2.1] - 2026-08-06
+
+### 品牌主题色 + Electron E2E 门禁 + AI 入口修复
+
+v3.2.1 落地品牌化与质量门禁增强：可切换的品牌主题色（4 色）、Electron 级 E2E 冒烟测试纳入 CI，并修复活动栏 AI 入口点击导致整界面白屏的渲染崩溃。
+
+#### 品牌主题色（T10-1）
+- 设置 → 外观新增**主题色切换**：天空蓝 / 翡翠 / 紫罗兰 / 玫瑰 4 色（默认 sky）
+- `--primary-*` 设计 token 改由 CSS 变量驱动（`html[data-accent]` 整体切换），亮/暗色与全端组件（含拓扑画布、图表）即时生效，重启持久化
+
+#### Electron E2E（T11-4）
+- 新增 Playwright + Electron 应用级 E2E：启动冒烟（窗口/渲染根/活动栏）＋ 外观主题色切换联动验证（T10-1）
+- CI 新增 `e2e` job（xvfb-run + playwright install-deps），三平台兼容，纳入发布门禁
+
+#### AI 入口修复
+- 修复点击活动栏「AI 对话」图标导致**整界面白屏**：`ACTIVITY_COLORS` 缺失 `ai` 语义色，渲染高亮时 `colors.icon` 抛 TypeError，未包裹 ErrorBoundary 使整棵 React 树卸载
+- 补齐入口行为：点击 AI 图标现会打开 AI 对话标签页（此前仅高亮侧栏无实际内容）
+- 品牌视觉：Logo 品牌渐变更新（sky→blue→violet 三色）
+
+#### 版本与回归
+- 版本号 3.2.0 → 3.2.1（package.json / package-lock.json / VERSION / README / 部署指南 / 用户指南）
+- 回归：前端 467 用例全绿（28 文件），后端 991 用例全绿，typecheck / lint（0 error）通过；GitHub Releases/Tags 精简至每大版本首个发布（v2.7.0~v3.2.0 共 6 个）
+
+---
+
 ## [3.2.0] - 2026-08-06
 
 ### 智能化增强（容量规划 v2 + ATOP 拓扑优化 + 批量优化/智能修复闭环 + 国产档案库）

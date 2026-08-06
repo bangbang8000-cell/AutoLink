@@ -1245,7 +1245,8 @@ def export_pdf_report(designer, filename):
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle('ChTitle', parent=styles['Title'],
-                                 fontName=font_name, fontSize=20, spaceAfter=12)
+                                 fontName=font_name, fontSize=22, spaceAfter=12,
+                                 textColor=colors.HexColor('#1d4ed8'))
     h2_style = ParagraphStyle('ChH2', parent=styles['Heading2'],
                               fontName=font_name, fontSize=14, spaceBefore=10, spaceAfter=6,
                               textColor=colors.HexColor('#1e40af'))

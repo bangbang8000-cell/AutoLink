@@ -477,6 +477,7 @@
         "light": "浅色",
         "dark": "深色",
         "system": "跟随系统",
+        "accentColor": "品牌主题色",
         "fontSize": "字体大小",
         "compactMode": "紧凑模式",
         "animations": "动画效果"

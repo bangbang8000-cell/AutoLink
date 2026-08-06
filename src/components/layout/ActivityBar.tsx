@@ -30,6 +30,8 @@ const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
   workbench: { icon: 'text-success-500 dark:text-success-400', bar: 'bg-success-500' },
   visualization: { icon: 'text-info-500 dark:text-info-400', bar: 'bg-info-500' },
   device_library: { icon: 'text-purple-500 dark:text-purple-400', bar: 'bg-purple-500' },
+  // V3.2.1: 修复 ai 入口缺失语义色导致点击后渲染崩溃白屏
+  ai: { icon: 'text-fuchsia-500 dark:text-fuchsia-400', bar: 'bg-fuchsia-500' },
   settings: { icon: 'text-gray-500 dark:text-gray-400', bar: 'bg-gray-500' },
 }
 

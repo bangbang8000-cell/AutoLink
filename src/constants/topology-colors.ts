@@ -53,10 +53,41 @@ export const DUAL_PLANE_COLORS = {
 /**
  * 根据节点 group / 名称识别所属平面，返回平面专属色；非双平面节点返回 null
  * 后端命名约定：group "参数A_Leaf组" / "参数B_Leaf组"，podid "plane-A" / "plane-B"
+ * V3.2.1-T10-2: 扩展匹配 ZCube 分组（zcube A/B 组复用平面 A/B 色，一眼可辨 cube 两半）
  */
 export function getDualPlaneColor(group?: string, name?: string): string | null {
   const haystack = `${group ?? ''} ${name ?? ''}`
-  if (/参数A|参数A_|plane-A/i.test(haystack)) return DUAL_PLANE_COLORS.A
-  if (/参数B|参数B_|plane-B/i.test(haystack)) return DUAL_PLANE_COLORS.B
+  if (/参数A|参数A_|plane-A|CubeA组|Cube_A组|cube-a|zcube-a/i.test(haystack)) return DUAL_PLANE_COLORS.A
+  if (/参数B|参数B_|plane-B|CubeB组|Cube_B组|cube-b|zcube-b/i.test(haystack)) return DUAL_PLANE_COLORS.B
   return null
+}
+
+/* ================================================================
+ *  V3.2.1-T10-2: 异构 GPU 集群 / 分组节点着色
+ *  多 GPU 池（GPU服务器组{pool_id} / pod-gpu-{pool_id} / GPU池）按池序号
+ *  循环取色板色，异构集群一眼可辨各池边界；非池节点返回 null。
+ * ================================================================ */
+
+/** 异构池 / 分组 8 色循环色板（与主色体系协调的高区分度色） */
+export const GROUP_VARIANT_COLORS = [
+  '#0EA5E9', // sky
+  '#10B981', // emerald
+  '#F59E0B', // amber
+  '#8B5CF6', // violet
+  '#F43F5E', // rose
+  '#14B8A6', // teal
+  '#EC4899', // pink
+  '#6366F1', // indigo
+] as const
+
+/** 按池序号取色（池序号从 1 开始；序号越界循环） */
+export function getPoolColor(group?: string, name?: string): string | null {
+  const haystack = `${group ?? ''} ${name ?? ''}`
+  // GPU服务器组{pid} / pod-gpu-{pid} / GPU池{pid} / pool_{pid} / cluster-{pid}
+  const m = haystack.match(/(?:服务器组|GPU池|pool[-_]|cluster[-_]|gpu_pool[-_])?(\d+)/)
+  if (!m) return null
+  // 仅当确实含池/集群标识才着色，避免误匹配普通序号
+  if (!/GPU服务器组|GPU池|pod-gpu|pool[-_]|cluster[-_]|gpu_pool[-_]|服务器组/.test(haystack)) return null
+  const idx = parseInt(m[1], 10)
+  return GROUP_VARIANT_COLORS[(idx - 1) % GROUP_VARIANT_COLORS.length]
 }

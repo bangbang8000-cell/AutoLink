@@ -29,6 +29,10 @@ __pycache__/
 # Pytest
 .pytest_cache/
 
+# Playwright (V3.2.1-T11-4 E2E 产物)
+test-results/
+playwright-report/
+
 # Output
 output/
 

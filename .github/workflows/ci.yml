@@ -32,3 +32,17 @@ jobs:
       - run: python scripts/gen_golden.py --check
       # V3.0.0-T0-8: 后端全量 pytest
       - run: python -m pytest tests/backend -q
+  # V3.2.1-T11-4: Electron E2E（构建产物启动冒烟 + 主题色切换）
+  e2e:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: npm ci
+      # E2E 以 dev 模式启动（playwright webServer 拉起 vite :5173）
+      # Electron 系统依赖（libgtk/gconf 等）；electron 二进制随 npm ci 安装
+      - run: sudo npx playwright install-deps
+      - run: xvfb-run --auto-servernum npx playwright test

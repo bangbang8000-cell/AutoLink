@@ -301,7 +301,7 @@ export function Topology3DTab() {
   const edgeCount = topology.edges.length
 
   return (
-    <div className="relative w-full h-full bg-gradient-to-b from-blue-50 to-white dark:from-app-50 dark:to-app-elevated">
+    <div className="relative w-full h-full bg-gradient-to-b from-primary-50 to-white dark:from-app-50 dark:to-app-elevated">
       {/* 顶部信息栏 */}
       <div className="absolute top-2 left-2 z-10 flex items-center gap-3 px-3 py-1.5 bg-white/80 dark:bg-app-elevated/80 backdrop-blur rounded-md shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">

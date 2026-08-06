@@ -12,6 +12,8 @@ import {
   TOPOLOGY_NODE_DEFAULT_COLOR,
   // V3.0.1-T1-7: 双平面平面配色
   getDualPlaneColor,
+  // V3.2.1-T10-2: 异构 GPU 池分组着色
+  getPoolColor,
 } from '@/constants/topology-colors'
 
 /* ---------- 节点颜色 / 标签常量 ---------- */
@@ -20,6 +22,16 @@ import {
 export const NODE_COLORS: Record<string, string> = Object.fromEntries(
   Object.entries(TOPOLOGY_NODE_STYLES).map(([type, style]) => [type, style.color]),
 )
+
+/** V3.2.1-T10-2: 节点颜色统一解析（双平面 > 异构池 > 节点类型 > 默认） */
+function resolveNodeColor(group: string | undefined, label: string, nodeType: string): string {
+  return (
+    getDualPlaneColor(group, label) ??
+    getPoolColor(group, label) ??
+    NODE_COLORS[nodeType] ??
+    TOPOLOGY_NODE_DEFAULT_COLOR
+  )
+}
 
 export const NODE_LABELS: Record<string, string> = {
   server: '服务器',
@@ -172,8 +184,8 @@ function ServerNodeComponent({ data, selected }: NodeProps) {
 
 function SwitchNodeComponent({ data, selected }: NodeProps) {
   const d = data as TopologyNodeData
-  // V3.0.1-T1-7: 双平面平面配色优先于节点类型色
-  const color = getDualPlaneColor(d.group, d.label) ?? NODE_COLORS[d.nodeType] ?? TOPOLOGY_NODE_DEFAULT_COLOR
+  // V3.2.1-T10-2: 双平面 > 异构池 > 节点类型统一解析
+  const color = resolveNodeColor(d.group, d.label, d.nodeType)
   return (
     <div
       className="relative flex items-center gap-1.5 px-2 py-1 rounded border-2 bg-white dark:bg-app-elevated shadow-sm transition-shadow"
