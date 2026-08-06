@@ -6,13 +6,13 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.1.2-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
 [![Templates](https://img.shields.io/badge/templates-19-teal)](#)
 [![Devices](https://img.shields.io/badge/devices-120-purple)](#)
-[![CI](https://img.shields.io/badge/tests-1050%20passed-brightgreen)](#)
+[![CI](https://img.shields.io/badge/tests-1458%20passed-brightgreen)](#)
 
 </div>
 
@@ -149,6 +149,35 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **场景预设**：IB 全闪 H100 / RoCE 通用 / L20 推理 / UEC 数据中心一键套用
 - **导入导出**：统一包裹格式（format + version）导出/导入，设置搜索与分组重置
 
+### 16. AI 对话与 AIHUB（v3.1.x）
+
+- **对话式管理**：设备/模板/项目对话查询，自然语言需求 → 项目配置预览 → 确认落盘，示例文件解析（Excel/JSON/CSV/文本）
+- **共享选型规则**：LLM 与向导共用同一份默认映射（`device_defaults`），对话推荐与手动选型双端一致
+- **多 Provider**：9 大厂商（deepseek / openai / claude / gemini / qwen / glm / grok / ollama / custom）+ 本地 Mock，工具权限分级（AUTO/NOTIFY/CONFIRM）
+
+### 17. 容量规划（v3.1.3 / v3.2.0）
+
+- **17 模型档案**（含 5 个国产场景：昇腾 910B/910C、寒武纪、海光、昆仑芯，带来源标注）→ 通信量估算（AllReduce/All-to-All/P2P）→ 拓扑推荐（Scale-Up/Scale-Out/收敛比/层数）+ TCO 成本
+- **v2 精确版**：FP8 分块精度通信（与解析法误差对照 <15%）、Pipeline 分段显存建模、TCO 全口径（硬件/电力/空间）、自定义档案追加
+- 前端推荐向导：模型/GPU/预算 → 推荐结果 → 一键应用（速率/协议/规模映射）
+
+### 18. ATOP 自动拓扑优化（v3.2.0）
+
+- 模型通信特征（MoE→All-to-All / 稠密→AllReduce / Pipeline→P2P）→ ZCube 2D/3D cube 拓扑推荐
+- GPU A/B 组均衡分组着色（zcube_group/plane_id）、V020 结构校验、推荐理由生成
+- 端到端：deepseek-v3 1024 卡 → 11×11×9 3D cube、1056 节点 8704 链路可渲染，一键应用到画布
+
+### 19. 批量优化与智能修复（v3.2.0）
+
+- **批量优化**：收敛比/成本/散热建议批量生成（确定性规则引擎），全选/逐条批量应用落盘
+- **智能修复**：校验错误（rule_id 级：V002 机柜功率 / V007 Rail / V010 收敛比 / V016 网卡容量 / V018 Scale-Up 域 / V019 供电 / V020 ZCube）→ 修复 patch 预览 → 一键应用 → **复核闭环**（剩余错误数下降）
+
+### 20. 机房智能落位（v3.1.4）
+
+- **约束满足 + 多目标优化**：占位跳过、类型域匹配、单柜功率上限、保留手动放置，四维评分（功率均衡/散热分区/网络就近/布线最短）
+- **矩阵落位可视化**：方案预览（评分 + issues）→ 确认应用 → 拖拽手动调整
+- **对话驱动闭环**：AIHUB 中直接描述需求（"225 柜按 120 GPU + 60 网络 + 45 存储落位"）→ 自动创建矩阵 → 生成方案 → 前端确认应用
+
 ---
 
 ## 📦 快速开始
@@ -190,9 +219,9 @@ npm run dist:linux  # Linux (AppImage + DEB)
 ### 运行测试
 
 ```bash
-npm test              # 前端测试（Vitest 362 cases）
-npm run test:backend  # 后端测试（pytest 688 cases）
-npm run test:all      # 全量测试（1050 cases）
+npm test              # 前端测试（Vitest 467 cases）
+npm run test:backend  # 后端测试（pytest 991 cases）
+npm run test:all      # 全量测试（1458 cases）
 npm run typecheck     # TypeScript 类型检查（含 preload）
 npm run lint          # ESLint 代码检查（0 error）
 python scripts/validate_templates.py  # 19 模板验证
@@ -229,7 +258,7 @@ python scripts/gen_golden.py --check  # golden 基线比对
 - **前端**：React 18 + TypeScript + Zustand + Tailwind CSS + @xyflow/react + ECharts + Vite
 - **桌面**：Electron + contextBridge（安全隔离）+ electron-updater（双通道更新）
 - **后端**：Python（pandas + openpyxl + reportlab），JSON-RPC 子进程桥接，PyInstaller 免 Python 打包
-- **测试**：Vitest（362）+ pytest（688）
+- **测试**：Vitest（467）+ pytest（991）
 - **i18n**：react-i18next（5 种语言）
 - **CI/CD**：GitHub Actions 三平台矩阵构建（win / mac / linux）+ 模板/golden 门禁
 
@@ -241,7 +270,7 @@ python scripts/gen_golden.py --check  # golden 基线比对
 AutoLink/
 ├── backend/                # Python 计算引擎
 │   ├── facade.py           #   CLI 入口（JSON-RPC + 设计流程编排）
-│   ├── engine.py           #   action 分发（design/validate/export/estimate）
+│   ├── engine.py           #   action 分发（design/validate/export/estimate/capacity/atop/optimize/repair/room）
 │   ├── designer.py         #   网络设计协调层（四网 + 三合一融合网）
 │   ├── dual_plane_topology.py # 双平面拓扑
 │   ├── zcube_topology.py   #   ZCube 扁平二部图拓扑
@@ -249,10 +278,16 @@ AutoLink/
 │   ├── network_plugin.py   #   插件化接线（HuaweiSuperNode 等）
 │   ├── rail_topology.py    #   Rail-Optimized 拓扑算法
 │   ├── rack_allocation.py  #   多约束机柜分配
+│   ├── room_optimizer.py   #   机房智能落位（约束满足 + 多目标优化）
 │   ├── validation.py       #   22 条校验规则引擎（V001-V022）
 │   ├── optical_selector.py #   光模块智能选型（含 1 分 2 分裂线缆）
 │   ├── exporter.py         #   Excel/PDF 导出
-│   └── device_library.py   #   设备库加载器（120 款）
+│   ├── device_library.py   #   设备库加载器（120 款）
+│   ├── optimization.py     #   批量优化（收敛比/成本/散热建议 + 应用）
+│   ├── fixit.py            #   智能修复（校验错误 → 修复 patch → 复核闭环）
+│   ├── atop/               #   ATOP 自动拓扑优化（特征解析 + ZCube 推荐）
+│   ├── capacity_planning/  #   容量规划内核（档案/通信量/TCO/自定义档案）
+│   └── autolink_hub/       #   AIHUB（Provider / 工具注册 / 技能 / 对话 Agent）
 ├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
 ├── template/               # 设备库（120 款）+ 19 套场景模板

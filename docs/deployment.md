@@ -1,4 +1,4 @@
-# AutoLink V3.0.2 部署指南
+# AutoLink v3.2.0 部署指南
 
 ## 环境准备
 
@@ -71,19 +71,19 @@ npm run dev
 ### Windows (NSIS 安装包)
 ```bash
 npm run dist:win
-# 输出: release/AutoLink-Setup-3.0.2-win.exe
+# 输出: release/AutoLink-Setup-3.2.0-win.exe
 ```
 
 ### macOS (DMG)
 ```bash
 npm run dist:mac
-# 输出: release/AutoLink-3.0.2-mac-x64.dmg / AutoLink-3.0.2-mac-arm64.dmg
+# 输出: release/AutoLink-3.2.0-mac-x64.dmg / AutoLink-3.2.0-mac-arm64.dmg
 ```
 
 ### Linux (AppImage + DEB)
 ```bash
 npm run dist:linux
-# 输出: release/AutoLink-3.0.2-linux.AppImage / .deb
+# 输出: release/AutoLink-3.2.0-linux.AppImage / .deb
 ```
 
 ## 生产部署
@@ -111,13 +111,18 @@ AutoLink 通过子进程调用 Python 引擎（`backend/facade.py` CLI 入口）
 - 引擎在 `backend/` 目录下（打包后位于 `resourcesPath/backend`；V3.0.0+ 优先使用 PyInstaller 产物 `resourcesPath/backend-dist`，免 Python 运行）
 - 开发模式默认使用系统 `python` 命令，Windows 支持 `py` launcher 回退
 - 依赖见 `backend/requirements.txt`（pandas / openpyxl / reportlab），CI/打包额外使用 `backend/requirements-dev.txt`（pytest / PyInstaller）
-- 支持 6 种 action：
+- 支持 20+ 种 action（engine 注册表自动发现）：
   - `design`：生成拓扑（含 PUE/收敛比估算、三合一融合网、1 分 2 扇出）
   - `validate`：拓扑校验（22 条规则 V001-V022）
   - `export`：导出 Excel/PDF（连接表/布线表/BOM/设备清单/PDF 报告）
   - `estimate`：参数化 PUE/收敛比重新估算
   - `report`：生成完整报告数据
   - `pdfReport`：生成 PDF 报告
+  - `capacity:recommend` / `capacity:list-presets`：容量规划（FP8 精确通信 / Pipeline 显存 / TCO 成本 / 17 档案含国产场景）
+  - `atop:recommend`：ATOP 自动拓扑优化（模型通信特征 → ZCube 拓扑，V020 校验）
+  - `optimize:suggest` / `optimize:apply`：批量优化（收敛比/成本/散热建议 + 应用）
+  - `repair:plan` / `repair:apply`：智能修复（校验错误 → 修复 patch → 复核闭环）
+  - `room:*`：机房智能落位（optimize / set-type / place）与矩阵管理
 
 ## 打包资源说明
 
@@ -210,8 +215,8 @@ V2.6.2+ 拓扑与机柜数据按项目持久化：
 - TypeScript 类型检查
 - ESLint 代码检查
 - Vite 前端构建 + Electron 主进程/preload 编译
-- 前端 vitest 测试（362 cases）
-- 后端 pytest 测试（688 cases）
+- 前端 vitest 测试（467 cases）
+- 后端 pytest 测试（991 cases）
 - 模板验证（`validate_templates.py`，19 模板）
 - golden 基线比对（`gen_golden.py --check`）
 
@@ -219,12 +224,12 @@ V2.6.2+ 拓扑与机柜数据按项目持久化：
 ```bash
 # 1. 更新 package.json version（含 VERSION 文件）
 # 2. 提交代码（含 [skip ci] 避免触发 Actions 编译）
-git commit -m "chore: v3.0.2 版本号更新 [skip ci]"
+git commit -m "chore: v3.2.0 版本号更新 [skip ci]"
 # 3. 合并到 main 后打 tag 并推送（tag 推送即触发 build.yml 三平台编译 + 自动创建 Release）
-git checkout main && git merge --no-ff feat/3.0.0-refactor
+git checkout main && git merge --no-ff feat/3.2.0-ai-enhancement
 git push origin main
-git tag v3.0.2
-git push origin v3.0.2
+git tag v3.2.0
+git push origin v3.2.0
 ```
 
 GitHub Actions 自动构建三平台安装包并发布到 Releases 页面：

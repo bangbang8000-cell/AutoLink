@@ -22,7 +22,7 @@ python -m cli --help           # 列出全部域
 
 打包后（PyInstaller 收集 backend 模块）可通过内置模块或独立入口调用；独立 `autolink-cli` 可执行文件不在本版本范围（后续 3.1.x 可选）。
 
-## 3. 域速查表（9 域 14 action）
+## 3. 域速查表（18 域 37 action，注册表自动发现）
 
 | 域 | 子命令 | action | 说明 |
 |----|--------|--------|------|
@@ -35,10 +35,33 @@ python -m cli --help           # 列出全部域
 | `export` | `run`（可省略） | `export` | 导出交付物（连接表/设备清单/布线指南/BOM/报告） |
 | `room` | `create` | `room:create` | 创建机房矩阵 |
 | `room` | `validate` | `room:validate` | 校验机房布局 |
+| `room` | `optimize` | `room:optimize` | 机房布局自动优化 |
+| `room` | `place` | `room:place` | 设备落位放置 |
 | `config` | `list-schema` | `config:list-schema` | 列出统一配置 schema 与场景预设 |
 | `config` | `apply-preset` | `config:apply-preset` | 应用场景预设（ib-allflash 等） |
 | `config` | `export` | `config:export` | 导出配置包裹（appSettings + projectConfig） |
 | `config` | `import` | `config:import` | 导入配置包裹 |
+| `ai` | `chat` | `ai:chat` | AI 对话（AIHUB） |
+| `ai` | `providers` | `ai:providers` | 列出 AI Provider |
+| `ai` | `config` | `ai:config` | 读写 AI 配置（含 Provider 密钥） |
+| `ai` | `test` | `ai:test` | 测试 Provider 连接 |
+| `ai` | `models` | `ai:models` | 列出 Provider 模型 |
+| `ai` | `clear` | `ai:clear` | 清空 AI 会话 |
+| `device` | `list` | `device:list` | 设备库列表 |
+| `device` | `defaults` | `device:defaults` | 设备默认值 |
+| `template` | `list` | `template:list` | 模板列表 |
+| `template` | `view` | `template:view` | 模板详情 |
+| `project` | `list` | `project:list` | 项目列表 |
+| `project` | `info` | `project:info` | 项目信息 |
+| `project` | `generate` | `project:generate` | 一键生成项目 |
+| `file` | `parse` | `file:parse` | 示例文件解析（Excel/JSON/CSV/文本） |
+| `capacity` | `list-presets` | `capacity:list-presets` | 容量规划档案清单（17 档案含国产场景） |
+| `capacity` | `recommend` | `capacity:recommend` | 容量规划推荐（Scale-Up/Out + TCO） |
+| `atop` | `recommend` | `atop:recommend` | ATOP 拓扑推荐（ZCube 2D/3D） |
+| `optimize` | `suggest` | `optimize:suggest` | 批量优化建议 |
+| `optimize` | `apply` | `optimize:apply` | 应用优化建议 |
+| `repair` | `plan` | `repair:plan` | 校验错误修复方案 |
+| `repair` | `apply` | `repair:apply` | 应用修复（复核闭环） |
 | `cli` | `info` | `cli:info` | CLI 版本 + 全部 action 清单 |
 
 > 单子命令域（estimate / report / validate / export）可省略子命令：`autolink-cli validate --config x.json` 等价于 `autolink-cli validate run --config x.json`。
@@ -158,6 +181,27 @@ python -m cli cli info
 
 输出 CLI 版本与注册表全部 action 清单（GUI 内部「关于/诊断」复用同一数据）。
 
+### 4.14 v3.1.x+ 新增域示例（AI / 容量规划 / ATOP / 优化 / 修复）
+
+```bash
+# AI 对话（AIHUB）
+python -m cli ai chat --provider openai --model gpt-4o-mini --message "为 1024 张 H800 设计网络"
+python -m cli ai providers                                   # 列出 9 大厂商 Provider
+
+# 容量规划（17 档案，含国产场景）
+python -m cli capacity list-presets
+python -m cli capacity recommend --preset h800-llama2-70b --gpu-count 1024
+
+# ATOP 拓扑推荐（ZCube 2D/3D）
+python -m cli atop recommend --preset h800-llama2-70b --gpu-count 2048
+
+# 批量优化与智能修复（复核闭环）
+python -m cli optimize suggest --config project_config.json
+python -m cli optimize apply  --config project_config.json --items '["opt-1"]'
+python -m cli repair plan --config project_config.json
+python -m cli repair apply --config project_config.json --fixes '["fix-1"]'
+```
+
 ## 5. 输出格式
 
 | 格式 | 行为 |
@@ -203,7 +247,7 @@ CLI (autolink-cli) ── argparse ──► cli.execute(action, params)  ──
 - **路径优先级**：`AUTOLINK_AUDIT_PATH`（测试注入）＞ `$AUTOLINK_USER_DATA/audit/cli-audit.jsonl`（Electron spawn 注入）＞ `~/.autolink/audit/cli-audit.jsonl`。
 - **脱敏**：参数键名含 `password` / `secret` / `token` / `apiKey` 等敏感词时，值替换为 `***`。
 - **失败留痕**：执行失败也写入（`ok: false` + `error`），审计写入失败不阻塞主流程。
-- v3.1.1 AIHUB 留轨迹（R5.7）将直接复用此审计。
+- v3.1.1+ AIHUB `ai:*` action 已复用此审计（Provider/模型参数脱敏后留痕）。
 
 ## 9. 退出码
 
