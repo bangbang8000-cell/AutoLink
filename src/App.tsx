@@ -195,6 +195,7 @@ export default function App() {
         case 'toggleSidebar': toggleSidebar(); break
         case 'togglePanel': togglePanel(); break
         case 'view-project': setActiveActivity('project'); break
+        case 'view-search': handleActivityClick('search'); break
         case 'view-design': handleActivityClick('design'); break
         case 'view-workbench': handleActivityClick('workbench'); break
         case 'view-visualization': handleActivityClick('visualization'); break

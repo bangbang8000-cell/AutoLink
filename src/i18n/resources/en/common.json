@@ -139,6 +139,27 @@
       "user": "User"
     }
   },
+  "globalSearch": {
+    "placeholder": "Search projects, devices, templates, or cloud…",
+    "scopeAll": "All",
+    "scopeProject": "Projects",
+    "scopeDevice": "Devices",
+    "scopeTemplate": "Templates",
+    "scopeCloud": "Cloud",
+    "startHint": "Search local project files, device library, templates, or cloud resources",
+    "noResults": "No matching results",
+    "loginHint": "Sign in to search cloud resources",
+    "login": "Sign in",
+    "groupLocalProject": "Local Projects",
+    "groupLocalDevice": "Device Library",
+    "groupLocalTemplate": "Templates",
+    "groupCloudProject": "Cloud Projects",
+    "groupCloudTemplate": "Cloud Templates",
+    "groupCloudFile": "Cloud Files",
+    "groupCloudContent": "Cloud Content",
+    "kindFilename": "filename",
+    "kindContent": "content"
+  },
   "menu": {
     "projectExplorer": "Project Explorer",
     "workbench": "Workbench",
@@ -149,6 +170,7 @@
     "outputResults": "Output",
     "deviceLibrary": "Device Library",
     "settings": "Settings",
+    "search": "Search",
     "ai": "AI Assistant",
     "cloud": "Cloud Center",
     "hideSidebar": "Hide Sidebar",
@@ -220,6 +242,7 @@
       "projectView": "Project Explorer",
       "workbenchView": "Workbench",
       "deviceLibraryView": "Device Library",
+      "searchView": "Global Search",
       "aiView": "AI Assistant",
       "cloudView": "Cloud Center",
       "closeTab": "Close Tab",

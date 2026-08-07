@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud,
+  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -13,13 +13,15 @@ interface ActivityItem {
 }
 
 const activities: ActivityItem[] = [
+  // V3.3.1: 全局搜索（本地 + 云端二合一）置顶
+  { id: 'search', icon: <Search size={20} />, labelKey: 'menu.search', shortcut: 'Ctrl+Shift+F' },
+  // V3.1.1-T5-5: AI 对话入口
+  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
   { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
   { id: 'design', icon: <Wrench size={20} />, labelKey: 'menu.design', shortcut: 'Ctrl+Shift+D' },
   { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
   { id: 'visualization', icon: <Network size={20} />, labelKey: 'menu.visualization', shortcut: 'Ctrl+Shift+V' },
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
-  // V3.1.1-T5-5: AI 对话入口
-  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
   // V3.3.0-T13: 云中心（登录 + 云端项目/模板）
   { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
@@ -27,6 +29,8 @@ const activities: ActivityItem[] = [
 
 // v2.6.8: ActivityBar 入口语义色
 const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
+  // V3.3.1: 全局搜索
+  search: { icon: 'text-teal-500 dark:text-teal-400', bar: 'bg-teal-500' },
   project: { icon: 'text-primary-500 dark:text-primary-400', bar: 'bg-primary-500' },
   design: { icon: 'text-warning-500 dark:text-warning-400', bar: 'bg-warning-500' },
   workbench: { icon: 'text-success-500 dark:text-success-400', bar: 'bg-success-500' },

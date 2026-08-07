@@ -17,6 +17,7 @@ export type ShortcutAction =
   | 'view-workbench'
   | 'view-visualization'
   | 'view-deviceLibrary'
+  | 'view-search'
   | 'view-ai'
   | 'view-cloud'
   | 'closeTab'
@@ -58,6 +59,8 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
   {
     categoryKey: 'workspace',
     items: [
+      // V3.3.1: 全局搜索
+      { keys: 'Ctrl+Shift+F', action: 'view-search', descKey: 'searchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'f' },
       { keys: 'Ctrl+Shift+E', action: 'view-project', descKey: 'projectView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'e' },
       { keys: 'Ctrl+Shift+D', action: 'view-design', descKey: 'designView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'd' },
       { keys: 'Ctrl+Shift+W', action: 'view-workbench', descKey: 'workbenchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'w' },

@@ -522,6 +522,14 @@ interface Window {
       installRemoteProject: (data: { name: string; zipData: string; owner: string; overwrite?: boolean }) => Promise<void>
       installRemoteTemplate: (data: { name: string; zipData: string; owner: string }) => Promise<void>
     }
+    // V3.3.1: 本地搜索（项目文件 / 设备库 / 模板）
+    search: {
+      local: (params: {
+        query: string
+        scope?: 'project' | 'device' | 'template' | 'all'
+        maxResults?: number
+      }) => Promise<import('@/api/search').LocalSearchHit[]>
+    }
     onLogOutput: (callback: (data: { message: string; level?: string }) => void) => () => void
     versions: {
       node: string

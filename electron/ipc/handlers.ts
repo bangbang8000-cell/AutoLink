@@ -35,6 +35,7 @@ function resolveCategoryDir(cat: { id: string; directory?: string }): string {
 import { updateService } from '../services/update.service.js'
 import { redactSensitive } from '../utils/redact.js'
 import { registerCloudIpcHandlers } from './cloud.handlers.js'
+import { registerSearchIpcHandlers } from './search.handlers.js'
 import {
   actionSchema,
   aiChatSchema,
@@ -235,6 +236,8 @@ export function sendLog(mainWindow: BrowserWindow | null, message: string, level
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== 云端平台（V3.3.0: 登录 + 云中心） =====
   registerCloudIpcHandlers()
+  // ===== 本地搜索（V3.3.1: 项目文件 / 设备库 / 模板） =====
+  registerSearchIpcHandlers()
   // ===== Project Management =====
   // U1: project:list 扩展返回 status/fileCount/updatedAt/description
   ipcMain.handle('project:list', wrapHandler(async () => {

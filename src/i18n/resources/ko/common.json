@@ -135,6 +135,27 @@
       "user": "사용자"
     }
   },
+  "globalSearch": {
+    "placeholder": "프로젝트, 장치, 템플릿 또는 클라우드 검색…",
+    "scopeAll": "전체",
+    "scopeProject": "프로젝트",
+    "scopeDevice": "장치",
+    "scopeTemplate": "템플릿",
+    "scopeCloud": "클라우드",
+    "startHint": "로컬 프로젝트 파일, 장치 라이브러리, 템플릿 또는 클라우드 리소스 검색",
+    "noResults": "일치하는 결과 없음",
+    "loginHint": "로그인하면 클라우드 리소스를 검색할 수 있습니다",
+    "login": "로그인",
+    "groupLocalProject": "로컬 프로젝트",
+    "groupLocalDevice": "장치 라이브러리",
+    "groupLocalTemplate": "템플릿",
+    "groupCloudProject": "클라우드 프로젝트",
+    "groupCloudTemplate": "클라우드 템플릿",
+    "groupCloudFile": "클라우드 파일",
+    "groupCloudContent": "클라우드 콘텐츠",
+    "kindFilename": "파일명",
+    "kindContent": "내용"
+  },
   "menu": {
     "projectExplorer": "프로젝트",
     "workbench": "워크벤치",
@@ -145,6 +166,7 @@
     "deviceLibrary": "장치 라이브러리",
     "outputResults": "출력 결과",
     "settings": "설정",
+    "search": "검색",
     "ai": "AI 어시스턴트",
     "cloud": "클라우드 센터",
     "hideSidebar": "사이드바 숨기기",
@@ -216,6 +238,7 @@
       "projectView": "프로젝트 탐색기",
       "workbenchView": "작업대",
       "deviceLibraryView": "장치 라이브러리",
+      "searchView": "전역 검색",
       "aiView": "AI 어시스턴트",
       "cloudView": "클라우드 센터",
       "closeTab": "탭 닫기",

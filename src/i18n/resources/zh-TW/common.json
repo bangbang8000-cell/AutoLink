@@ -135,6 +135,27 @@
       "user": "使用者範本"
     }
   },
+  "globalSearch": {
+    "placeholder": "搜尋專案、設備、模板或雲端…",
+    "scopeAll": "全部",
+    "scopeProject": "專案",
+    "scopeDevice": "設備",
+    "scopeTemplate": "模板",
+    "scopeCloud": "雲端",
+    "startHint": "輸入關鍵字搜尋本地專案檔案、設備庫、模板或雲端資源",
+    "noResults": "未找到符合結果",
+    "loginHint": "登入後可搜尋雲端資源",
+    "login": "前往登入",
+    "groupLocalProject": "本地專案",
+    "groupLocalDevice": "設備庫",
+    "groupLocalTemplate": "模板",
+    "groupCloudProject": "雲端專案",
+    "groupCloudTemplate": "雲端模板",
+    "groupCloudFile": "雲端檔案",
+    "groupCloudContent": "雲端內容",
+    "kindFilename": "檔名",
+    "kindContent": "內容"
+  },
   "menu": {
     "projectExplorer": "專案瀏覽器",
     "workbench": "工作台",
@@ -145,6 +166,7 @@
     "deviceLibrary": "設備庫",
     "outputResults": "輸出結果",
     "settings": "設定",
+    "search": "搜尋",
     "ai": "AI 助手",
     "cloud": "雲端中心",
     "hideSidebar": "隱藏側邊欄",
@@ -216,6 +238,7 @@
       "projectView": "專案瀏覽器",
       "workbenchView": "工作台",
       "deviceLibraryView": "裝置庫",
+      "searchView": "全域搜尋",
       "aiView": "AI 助手",
       "cloudView": "雲端中心",
       "closeTab": "關閉標籤頁",

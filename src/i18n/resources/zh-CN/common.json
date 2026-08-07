@@ -139,6 +139,27 @@
       "user": "用户模板"
     }
   },
+  "globalSearch": {
+    "placeholder": "搜索项目、设备、模板或云端…",
+    "scopeAll": "全部",
+    "scopeProject": "项目",
+    "scopeDevice": "设备",
+    "scopeTemplate": "模板",
+    "scopeCloud": "云端",
+    "startHint": "输入关键字搜索本地项目文件、设备库、模板或云端资源",
+    "noResults": "未找到匹配结果",
+    "loginHint": "登录后可搜索云端资源",
+    "login": "去登录",
+    "groupLocalProject": "本地项目",
+    "groupLocalDevice": "设备库",
+    "groupLocalTemplate": "模板",
+    "groupCloudProject": "云端项目",
+    "groupCloudTemplate": "云端模板",
+    "groupCloudFile": "云端文件",
+    "groupCloudContent": "云端内容",
+    "kindFilename": "文件名",
+    "kindContent": "内容"
+  },
   "menu": {
     "projectExplorer": "项目浏览器",
     "workbench": "工作台",
@@ -149,6 +170,7 @@
     "outputResults": "输出结果",
     "deviceLibrary": "设备库",
     "settings": "设置",
+    "search": "搜索",
     "ai": "AI 助手",
     "cloud": "云中心",
     "hideSidebar": "隐藏侧边栏",
@@ -220,6 +242,7 @@
       "projectView": "项目浏览器",
       "workbenchView": "工作台",
       "deviceLibraryView": "设备库",
+      "searchView": "全局搜索",
       "aiView": "AI 助手",
       "cloudView": "云中心",
       "closeTab": "关闭标签页",

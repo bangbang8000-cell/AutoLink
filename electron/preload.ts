@@ -288,6 +288,11 @@ const electronAPI = {
     installRemoteTemplate: (data: { name: string; zipData: string; owner: string }) =>
       ipcRenderer.invoke('cloud:installRemoteTemplate', data),
   },
+  // V3.3.1: 本地搜索（项目文件 / 设备库 / 模板）
+  search: {
+    local: (params: { query: string; scope?: 'project' | 'device' | 'template' | 'all'; maxResults?: number }) =>
+      ipcRenderer.invoke('search:local', params),
+  },
   onLogOutput: (callback: (data: { message: string; level?: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { message: string; level?: string }) => callback(data)
     ipcRenderer.on('log:output', handler)

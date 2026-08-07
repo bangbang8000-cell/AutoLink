@@ -23,11 +23,14 @@ import { NODE_TYPE_LABELS } from '@/constants/labels'
 import { ProjectExplorer } from '@/components/layout/ProjectListPanel'
 import { SettingsExplorer, NumberInputMini, SelectMini } from '@/components/layout/SettingsPanel'
 import { CloudPanel } from '@/components/cloud/CloudPanel'
+import { SearchPanel } from '@/components/search/SearchPanel'
 
 export function FileExplorer() {
   const activeActivity = useUIStore((s) => s.activeActivity)
 
   switch (activeActivity) {
+    // V3.3.1: 全局搜索（本地 + 云端二合一）
+    case 'search':        return <SearchPanel />
     case 'project':        return <ProjectExplorer />
     case 'design':         return <DesignExplorer />
     case 'workbench':      return <WorkbenchExplorer />

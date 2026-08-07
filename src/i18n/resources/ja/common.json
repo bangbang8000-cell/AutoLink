@@ -135,6 +135,27 @@
       "user": "ユーザー"
     }
   },
+  "globalSearch": {
+    "placeholder": "プロジェクト・デバイス・テンプレート・クラウドを検索…",
+    "scopeAll": "すべて",
+    "scopeProject": "プロジェクト",
+    "scopeDevice": "デバイス",
+    "scopeTemplate": "テンプレート",
+    "scopeCloud": "クラウド",
+    "startHint": "キーワードでローカルプロジェクト・デバイスライブラリ・テンプレート・クラウドを検索",
+    "noResults": "一致する結果がありません",
+    "loginHint": "ログインするとクラウドを検索できます",
+    "login": "ログイン",
+    "groupLocalProject": "ローカルプロジェクト",
+    "groupLocalDevice": "デバイスライブラリ",
+    "groupLocalTemplate": "テンプレート",
+    "groupCloudProject": "クラウドプロジェクト",
+    "groupCloudTemplate": "クラウドテンプレート",
+    "groupCloudFile": "クラウドファイル",
+    "groupCloudContent": "クラウドコンテンツ",
+    "kindFilename": "ファイル名",
+    "kindContent": "内容"
+  },
   "menu": {
     "projectExplorer": "プロジェクト",
     "workbench": "ワークベンチ",
@@ -145,6 +166,7 @@
     "deviceLibrary": "デバイスライブラリ",
     "outputResults": "出力結果",
     "settings": "設定",
+    "search": "検索",
     "ai": "AI アシスタント",
     "cloud": "クラウドセンター",
     "hideSidebar": "サイドバーを隠す",
@@ -216,6 +238,7 @@
       "projectView": "プロジェクトエクスプローラー",
       "workbenchView": "ワークベンチ",
       "deviceLibraryView": "デバイスライブラリ",
+      "searchView": "グローバル検索",
       "aiView": "AI アシスタント",
       "cloudView": "クラウドセンター",
       "closeTab": "タブを閉じる",
