@@ -149,6 +149,8 @@
     "outputResults": "输出结果",
     "deviceLibrary": "设备库",
     "settings": "设置",
+    "ai": "AI 助手",
+    "cloud": "云中心",
     "hideSidebar": "隐藏侧边栏",
     "showSidebar": "显示侧边栏",
     "newProject": "新建项目",
@@ -218,6 +220,8 @@
       "projectView": "项目浏览器",
       "workbenchView": "工作台",
       "deviceLibraryView": "设备库",
+      "aiView": "AI 助手",
+      "cloudView": "云中心",
       "closeTab": "关闭标签页",
       "reopenTab": "恢复标签页",
       "shortcutsRef": "快捷键参考"
@@ -469,6 +473,7 @@
         "about": "关于",
         "configPresets": "配置模板",
         "ai": "AI 设置",
+        "cloud": "云中心",
         "diagnostics": "诊断"
       },
       "appearance": {
@@ -584,6 +589,21 @@
         "refresh": "刷新",
         "auditTitle": "命令审计日志",
         "empty": "暂无审计记录（执行任意操作后将记录于此）"
+      },
+      "cloud": {
+        "title": "云平台",
+        "serverUrl": "服务器地址",
+        "serverUrlHint": "例如：http://81.71.11.33",
+        "saveUrl": "保存",
+        "testConnection": "测试连接",
+        "connectionSuccess": "连接成功",
+        "connectionFailed": "连接失败",
+        "loginStatus": "登录状态",
+        "loginRequired": "未登录",
+        "accountInfo": "已登录账号",
+        "login": "登录",
+        "logout": "退出登录",
+        "loggedOut": "已退出登录"
       },
       "about": {
         "title": "关于 AutoLink",

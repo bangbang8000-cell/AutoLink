@@ -145,6 +145,8 @@
     "deviceLibrary": "デバイスライブラリ",
     "outputResults": "出力結果",
     "settings": "設定",
+    "ai": "AI アシスタント",
+    "cloud": "クラウドセンター",
     "hideSidebar": "サイドバーを隠す",
     "showSidebar": "サイドバーを表示",
     "newProject": "新規プロジェクト",
@@ -214,6 +216,8 @@
       "projectView": "プロジェクトエクスプローラー",
       "workbenchView": "ワークベンチ",
       "deviceLibraryView": "デバイスライブラリ",
+      "aiView": "AI アシスタント",
+      "cloudView": "クラウドセンター",
       "closeTab": "タブを閉じる",
       "reopenTab": "閉じたタブを復元",
       "shortcutsRef": "ショートカットキー"
@@ -457,6 +461,7 @@
         "about": "について",
         "configPresets": "設定テンプレート",
         "ai": "AI 設定",
+        "cloud": "クラウドセンター",
         "diagnostics": "診断"
       },
       "appearance": {
@@ -572,6 +577,21 @@
         "refresh": "更新",
         "auditTitle": "コマンド監査ログ",
         "empty": "監査記録はまだありません（操作を実行するとここに記録されます）"
+      },
+      "cloud": {
+        "title": "クラウドプラットフォーム",
+        "serverUrl": "サーバーアドレス",
+        "serverUrlHint": "例: http://81.71.11.33",
+        "saveUrl": "保存",
+        "testConnection": "接続テスト",
+        "connectionSuccess": "接続成功",
+        "connectionFailed": "接続失敗",
+        "loginStatus": "ログイン状態",
+        "loginRequired": "未ログイン",
+        "accountInfo": "ログイン中のアカウント",
+        "login": "ログイン",
+        "logout": "ログアウト",
+        "loggedOut": "ログアウトしました"
       },
       "about": {
         "title": "AutoLinkについて",

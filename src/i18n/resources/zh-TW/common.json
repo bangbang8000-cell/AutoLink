@@ -146,6 +146,7 @@
     "outputResults": "輸出結果",
     "settings": "設定",
     "ai": "AI 助手",
+    "cloud": "雲端中心",
     "hideSidebar": "隱藏側邊欄",
     "showSidebar": "顯示側邊欄",
     "newProject": "新建專案",
@@ -215,6 +216,8 @@
       "projectView": "專案瀏覽器",
       "workbenchView": "工作台",
       "deviceLibraryView": "裝置庫",
+      "aiView": "AI 助手",
+      "cloudView": "雲端中心",
       "closeTab": "關閉標籤頁",
       "reopenTab": "恢復標籤頁",
       "shortcutsRef": "快捷鍵參考"
@@ -458,6 +461,7 @@
         "about": "關於",
         "configPresets": "配置模板",
         "ai": "AI 設定",
+        "cloud": "雲端中心",
         "diagnostics": "診斷"
       },
       "appearance": {
@@ -573,6 +577,21 @@
         "refresh": "重新整理",
         "auditTitle": "命令審計日誌",
         "empty": "暫無審計記錄（執行任意操作後將記錄於此）"
+      },
+      "cloud": {
+        "title": "雲端平台",
+        "serverUrl": "伺服器位址",
+        "serverUrlHint": "例如：http://81.71.11.33",
+        "saveUrl": "儲存",
+        "testConnection": "測試連線",
+        "connectionSuccess": "連線成功",
+        "connectionFailed": "連線失敗",
+        "loginStatus": "登入狀態",
+        "loginRequired": "未登入",
+        "accountInfo": "已登入帳號",
+        "login": "登入",
+        "logout": "登出",
+        "loggedOut": "已登出"
       },
       "about": {
         "title": "關於 AutoLink",

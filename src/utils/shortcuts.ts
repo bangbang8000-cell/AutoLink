@@ -18,6 +18,7 @@ export type ShortcutAction =
   | 'view-visualization'
   | 'view-deviceLibrary'
   | 'view-ai'
+  | 'view-cloud'
   | 'closeTab'
   | 'reopenTab'
   | 'showShortcuts'
@@ -63,6 +64,8 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
       { keys: 'Ctrl+Shift+V', action: 'view-visualization', descKey: 'visualizationView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'v' },
       { keys: 'Ctrl+Shift+L', action: 'view-deviceLibrary', descKey: 'deviceLibraryView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'l' },
       { keys: 'Ctrl+Shift+A', action: 'view-ai', descKey: 'aiView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'a' },
+      // V3.3.0-T13: 云中心
+      { keys: 'Ctrl+Shift+C', action: 'view-cloud', descKey: 'cloudView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'c' },
     ],
   },
   {

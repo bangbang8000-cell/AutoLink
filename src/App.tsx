@@ -4,6 +4,7 @@ import clsx from 'clsx'
 import { useProjectStore } from '@/stores/project.store'
 import { ProjectProvider } from '@/stores/ProjectContext'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
+import { useCloudStore } from '@/stores/cloud.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
 import { Header } from '@/components/layout/Header'
@@ -123,6 +124,9 @@ export default function App() {
     // Templates are hardcoded, always available
     fetchTemplates()
 
+    // V3.3.0-T13: 初始化云平台（同步服务器地址 + 恢复登录态 + 健康探测）
+    useCloudStore.getState().init().catch(() => {})
+
     // Retry fetchProjects: Electron preload may need a tick to expose window.electron
     let retries = 0
     const maxRetries = 5
@@ -196,6 +200,7 @@ export default function App() {
         case 'view-visualization': handleActivityClick('visualization'); break
         case 'view-deviceLibrary': handleActivityClick('device_library'); break
         case 'view-ai': handleActivityClick('ai'); break
+        case 'view-cloud': handleActivityClick('cloud'); break
         case 'closeTab': if (activeTabId) closeTab(activeTabId); break
         case 'reopenTab': reopenLastClosed(); break
         case 'showShortcuts': setShowShortcutsDialog(true); break

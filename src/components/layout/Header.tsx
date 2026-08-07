@@ -1,10 +1,13 @@
 import { useUIStore } from '@/stores/ui.store'
+import { useCloudStore } from '@/stores/cloud.store'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Monitor, Moon, Sun, Globe, X, Minus, Square, Maximize2 } from 'lucide-react'
 import type { ThemeMode } from '@/stores/ui.store'
 import { UpdatePopover } from '@/components/layout/UpdatePopover'
 import { MenuBar } from '@/components/layout/MenuBar'
+import { CloudStatusIndicator } from '@/components/cloud/CloudStatusIndicator'
+import { UserProfileView } from '@/components/cloud/UserProfileView'
 import clsx from 'clsx'
 
 const languages = [
@@ -23,7 +26,12 @@ export function Header() {
   const setLanguage = useUIStore((s) => s.setLanguage)
   const [themeOpen, setThemeOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
+
+  // V3.3.0-T13: 云登录态（头像按钮）
+  const cloudLoggedIn = useCloudStore((s) => s.loggedIn)
+  const cloudUsername = useCloudStore((s) => s.username)
 
   const isMac = window.electron?.versions?.platform === 'darwin'
 
@@ -113,6 +121,25 @@ export function Header() {
 
         {/* Update */}
         <UpdatePopover />
+
+        {/* V3.3.0-T13: 云连接状态 */}
+        <CloudStatusIndicator />
+
+        {/* V3.3.0-T13: 云账户菜单（已登录时显示头像） */}
+        {cloudLoggedIn && (
+          <div className="relative">
+            <button
+              onClick={() => { setProfileOpen(!profileOpen); setThemeOpen(false); setLangOpen(false) }}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-primary-600 text-white text-xs font-medium hover:opacity-80 transition-opacity"
+              title={cloudUsername || 'Account'}
+            >
+              {(cloudUsername || '?')[0]?.toUpperCase()}
+            </button>
+            {profileOpen && (
+              <UserProfileView onClose={() => setProfileOpen(false)} />
+            )}
+          </div>
+        )}
 
         {/* Window controls */}
         <div className="flex items-center ml-2">

@@ -1,0 +1,150 @@
+{
+  "title": "雲端平台",
+  "login": "登入",
+  "logout": "登出",
+  "retry": "重試",
+  "cancel": "取消",
+  "confirm": "確認",
+  "save": "儲存",
+  "saving": "儲存中...",
+  "loading": "載入中...",
+  "loadFailed": "載入失敗",
+  "noTemplates": "暫無模板",
+  "noProjects": "暫無專案",
+  "loginDialog": {
+    "title": "登入 AutoLink 雲端平台",
+    "loggedIn": "已登入",
+    "selectPlatform": "選擇登入方式",
+    "feishu": "飛書掃碼登入",
+    "qq": "QQ 掃碼登入",
+    "wechat": "微信掃碼登入",
+    "scanHint": "請使用{{platform}}掃描二維碼",
+    "waiting": "等待掃碼中...",
+    "expired": "二維碼已過期",
+    "regenerate": "重新生成",
+    "cancel": "取消",
+    "unavailable": "暫未開放"
+  },
+  "status": {
+    "connected": "已連線",
+    "disconnected": "未連線",
+    "connecting": "連線中...",
+    "error": "連線失敗",
+    "notConfigured": "未設定伺服器",
+    "notLoggedIn": "未登入",
+    "loggedIn": "已登入"
+  },
+  "syncStatus": {
+    "synced": "已同步",
+    "localOnly": "僅本機",
+    "remoteOnly": "僅雲端",
+    "localAhead": "本機有修改",
+    "remoteAhead": "雲端有更新",
+    "conflict": "衝突"
+  },
+  "sync": {
+    "push": "推送到雲端",
+    "pull": "拉取到本機",
+    "pushTitle": "推送專案",
+    "pullTitle": "拉取專案",
+    "pushFrom": "從本機專案",
+    "pushSuccess": "專案 \"{{name}}\" 已推送到雲端",
+    "overwrite": "覆蓋本機專案",
+    "overwriteHint": "以雲端版本完全覆蓋本機同名專案",
+    "rename": "另存為新專案",
+    "conflict": "本機已存在同名專案",
+    "deleteConfirm": "確定要刪除雲端專案 \"{{name}}\" 嗎？此操作不可撤銷。"
+  },
+  "profile": {
+    "fullName": "顯示名稱",
+    "bio": "簡介",
+    "edit": "編輯資料",
+    "openPlatform": "開啟平台",
+    "logout": "登出",
+    "bindings": "綁定帳號",
+    "showGiteaCreds": "Gitea 登入資訊",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "showPassword": "顯示密碼",
+    "hidePassword": "隱藏密碼",
+    "copyPassword": "複製密碼",
+    "clipboardHint": "點擊「開啟平台」登入。密碼將在30秒後自動清除剪貼簿。"
+  },
+  "settings": {
+    "title": "雲端設定",
+    "serverUrl": "伺服器位址",
+    "serverUrlHint": "例如：http://81.71.11.33",
+    "testConnection": "測試連線",
+    "connectionSuccess": "連線成功",
+    "connectionFailed": "連線失敗",
+    "loginStatus": "登入狀態",
+    "loginRequired": "未登入",
+    "accountInfo": "帳號資訊"
+  },
+  "dashboard": {
+    "welcome": "歡迎, {name}",
+    "myTemplates": "我的模板",
+    "myProjects": "我的專案",
+    "recentTemplates": "最近模板",
+    "recentProjects": "最近專案",
+    "browseMarket": "瀏覽模板市場",
+    "manageProjects": "管理我的專案",
+    "notLoggedIn": "請先登入雲端平台",
+    "goSettings": "前往設定",
+    "loadFailed": "載入失敗",
+    "server": "伺服器",
+    "install": "安裝到本機",
+    "pull": "拉取到本機"
+  },
+  "panel": {
+    "tabDashboard": "儀表板",
+    "tabProjects": "遠端專案",
+    "tabTemplates": "模板市場",
+    "tabSearch": "搜尋",
+    "title": "雲端中心"
+  },
+  "search": {
+    "placeholder": "搜尋專案名稱或描述...",
+    "noResults": "未找到相符的結果",
+    "noResultsTemplates": "未找到相符的模板",
+    "typeProject": "專案名",
+    "typeTemplate": "模板名",
+    "typeFilename": "檔案名",
+    "typeContent": "檔案內容",
+    "typePlaceholder": "搜尋{{type}}...",
+    "loginHint": "登入後可搜尋雲端專案、模板和檔案",
+    "startHint": "輸入關鍵字開始搜尋",
+    "resultCount": "共 {count} 筆結果"
+  },
+  "projects": {
+    "name": "專案名稱",
+    "description": "專案描述",
+    "visibility": "可見性",
+    "my": "我的專案",
+    "public": "公開專案",
+    "private": "私有",
+    "delete": "刪除雲端專案",
+    "emptyMine": "暫無雲端專案，請先將本機專案推送到雲端",
+    "emptyPublic": "暫無公開專案",
+    "existsLocally": "本機已存在同名專案 \"{{name}}\"，請選擇處理方式"
+  },
+  "templates": {
+    "installed": "模板 \"{{name}}\" 已安裝到本機"
+  },
+  "categories": {
+    "all": "全部",
+    "switch": "交換機",
+    "router": "路由器",
+    "firewall": "防火牆",
+    "wireless": "無線",
+    "other": "其他"
+  },
+  "pagination": {
+    "info": "第 {{page}} / {{total}} 頁"
+  },
+  "sort": {
+    "latest": "最近更新",
+    "downloads": "下載最多",
+    "name": "名稱"
+  }
+}

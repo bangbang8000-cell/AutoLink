@@ -150,6 +150,7 @@
     "deviceLibrary": "Device Library",
     "settings": "Settings",
     "ai": "AI Assistant",
+    "cloud": "Cloud Center",
     "hideSidebar": "Hide Sidebar",
     "showSidebar": "Show Sidebar",
     "newProject": "New Project",
@@ -219,6 +220,8 @@
       "projectView": "Project Explorer",
       "workbenchView": "Workbench",
       "deviceLibraryView": "Device Library",
+      "aiView": "AI Assistant",
+      "cloudView": "Cloud Center",
       "closeTab": "Close Tab",
       "reopenTab": "Reopen Closed Tab",
       "shortcutsRef": "Keyboard Shortcuts"
@@ -470,6 +473,7 @@
         "about": "About",
         "configPresets": "Config Templates",
         "ai": "AI Settings",
+        "cloud": "Cloud Center",
         "diagnostics": "Diagnostics"
       },
       "appearance": {
@@ -585,6 +589,21 @@
         "refresh": "Refresh",
         "auditTitle": "Command Audit Log",
         "empty": "No audit records yet (any executed action will appear here)"
+      },
+      "cloud": {
+        "title": "Cloud Platform",
+        "serverUrl": "Server URL",
+        "serverUrlHint": "e.g. http://81.71.11.33",
+        "saveUrl": "Save",
+        "testConnection": "Test Connection",
+        "connectionSuccess": "Connection successful",
+        "connectionFailed": "Connection failed",
+        "loginStatus": "Sign-in Status",
+        "loginRequired": "Not signed in",
+        "accountInfo": "Signed-in account",
+        "login": "Sign In",
+        "logout": "Sign Out",
+        "loggedOut": "Signed out"
       },
       "about": {
         "title": "About AutoLink",

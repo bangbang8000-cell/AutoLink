@@ -243,6 +243,51 @@ const electronAPI = {
     saveFile: (projectName: string, fileName: string, base64Data: string) =>
       ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
   },
+  // V3.3.0-T13: 云端平台（登录 + 云中心）。渲染层零网络（CSP connect-src 'self'），
+  // 所有 HTTP 由主进程 cloudService 发起，此处仅透传 IPC。
+  cloud: {
+    setBaseUrl: (url: string) => ipcRenderer.invoke('cloud:setBaseUrl', url),
+    getBaseUrl: () => ipcRenderer.invoke('cloud:getBaseUrl'),
+    getLoginState: () => ipcRenderer.invoke('cloud:getLoginState'),
+    health: () => ipcRenderer.invoke('cloud:health'),
+    authQrcode: (platform: string) => ipcRenderer.invoke('cloud:authQrcode', { platform }),
+    authPoll: (sessionId: string) => ipcRenderer.invoke('cloud:authPoll', { sessionId }),
+    authHealth: () => ipcRenderer.invoke('cloud:authHealth'),
+    logout: () => ipcRenderer.invoke('cloud:logout'),
+    clientDashboard: () => ipcRenderer.invoke('cloud:clientDashboard'),
+    clientVersion: () => ipcRenderer.invoke('cloud:clientVersion'),
+    clientNotifications: () => ipcRenderer.invoke('cloud:clientNotifications'),
+    publicStats: () => ipcRenderer.invoke('cloud:publicStats'),
+    projectList: () => ipcRenderer.invoke('cloud:projectList'),
+    projectSearch: (q: string) => ipcRenderer.invoke('cloud:projectSearch', q),
+    projectSearchPublic: (params: { q?: string; page?: number; limit?: number }) =>
+      ipcRenderer.invoke('cloud:projectSearchPublic', params),
+    projectCreate: (data: { name: string; description?: string; private: boolean; template_owner?: string; template_repo?: string; files?: { path: string; content: string }[] }) =>
+      ipcRenderer.invoke('cloud:projectCreate', data),
+    projectDelete: (owner: string, repo: string) => ipcRenderer.invoke('cloud:projectDelete', { owner, repo }),
+    projectSyncCheck: (projects: { name: string; local_sha?: string }[]) =>
+      ipcRenderer.invoke('cloud:projectSyncCheck', { projects }),
+    projectDownload: (owner: string, repo: string) => ipcRenderer.invoke('cloud:projectDownload', { owner, repo }),
+    templateList: (params?: { q?: string; category?: string; page?: number; limit?: number; sort?: string }) =>
+      ipcRenderer.invoke('cloud:templateList', params ?? {}),
+    templateDetail: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateDetail', { owner, repo }),
+    templateDownload: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateDownload', { owner, repo }),
+    templateMine: () => ipcRenderer.invoke('cloud:templateMine'),
+    templatePublish: (data: { name: string; description: string; category: string; public: boolean; files: { path: string; content: string }[] }) =>
+      ipcRenderer.invoke('cloud:templatePublish', data),
+    userProfile: () => ipcRenderer.invoke('cloud:userProfile'),
+    updateUserProfile: (data: { full_name?: string; bio?: string }) =>
+      ipcRenderer.invoke('cloud:updateUserProfile', data),
+    giteaCredentials: () => ipcRenderer.invoke('cloud:giteaCredentials'),
+    searchFiles: (q: string, limit?: number) => ipcRenderer.invoke('cloud:searchFiles', { q, limit }),
+    searchContent: (q: string, limit?: number) => ipcRenderer.invoke('cloud:searchContent', { q, limit }),
+    collectProjectFiles: (name: string) => ipcRenderer.invoke('cloud:collectProjectFiles', name),
+    computeProjectSha: (name: string) => ipcRenderer.invoke('cloud:computeProjectSha', name),
+    installRemoteProject: (data: { name: string; zipData: string; owner: string; overwrite?: boolean }) =>
+      ipcRenderer.invoke('cloud:installRemoteProject', data),
+    installRemoteTemplate: (data: { name: string; zipData: string; owner: string }) =>
+      ipcRenderer.invoke('cloud:installRemoteTemplate', data),
+  },
   onLogOutput: (callback: (data: { message: string; level?: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { message: string; level?: string }) => callback(data)
     ipcRenderer.on('log:output', handler)

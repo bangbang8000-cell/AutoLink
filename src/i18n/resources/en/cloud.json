@@ -1,0 +1,150 @@
+{
+  "title": "Cloud Platform",
+  "login": "Sign In",
+  "logout": "Sign Out",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "save": "Save",
+  "saving": "Saving...",
+  "loading": "Loading...",
+  "loadFailed": "Failed to load",
+  "noTemplates": "No templates",
+  "noProjects": "No projects",
+  "loginDialog": {
+    "title": "Sign in to AutoLink Cloud",
+    "loggedIn": "Signed in",
+    "selectPlatform": "Choose a sign-in method",
+    "feishu": "Sign in with Feishu",
+    "qq": "Sign in with QQ",
+    "wechat": "Sign in with WeChat",
+    "scanHint": "Scan the QR code with {{platform}}",
+    "waiting": "Waiting for scan...",
+    "expired": "QR code expired",
+    "regenerate": "Regenerate",
+    "cancel": "Cancel",
+    "unavailable": "Not available yet"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "connecting": "Connecting...",
+    "error": "Connection failed",
+    "notConfigured": "Server not configured",
+    "notLoggedIn": "Not signed in",
+    "loggedIn": "Signed in"
+  },
+  "syncStatus": {
+    "synced": "Synced",
+    "localOnly": "Local only",
+    "remoteOnly": "Remote only",
+    "localAhead": "Local changes",
+    "remoteAhead": "Remote updates",
+    "conflict": "Conflict"
+  },
+  "sync": {
+    "push": "Push to cloud",
+    "pull": "Pull to local",
+    "pushTitle": "Push Project",
+    "pullTitle": "Pull Project",
+    "pushFrom": "From local project",
+    "pushSuccess": "Project \"{{name}}\" pushed to cloud",
+    "overwrite": "Overwrite local project",
+    "overwriteHint": "Completely replace the local project with the cloud version",
+    "rename": "Save as new project",
+    "conflict": "A project with the same name exists locally",
+    "deleteConfirm": "Delete cloud project \"{{name}}\"? This cannot be undone."
+  },
+  "profile": {
+    "fullName": "Display Name",
+    "bio": "Bio",
+    "edit": "Edit Profile",
+    "openPlatform": "Open Platform",
+    "logout": "Sign Out",
+    "bindings": "Linked Accounts",
+    "showGiteaCreds": "Gitea Login Info",
+    "username": "Username",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "copyPassword": "Copy password",
+    "clipboardHint": "Click \"Open Platform\" to sign in. Password auto-clears from clipboard after 30s."
+  },
+  "settings": {
+    "title": "Cloud Platform Settings",
+    "serverUrl": "Server URL",
+    "serverUrlHint": "e.g. http://81.71.11.33",
+    "testConnection": "Test Connection",
+    "connectionSuccess": "Connection successful",
+    "connectionFailed": "Connection failed",
+    "loginStatus": "Sign-in Status",
+    "loginRequired": "Not signed in",
+    "accountInfo": "Account Info"
+  },
+  "dashboard": {
+    "welcome": "Welcome, {name}",
+    "myTemplates": "My Templates",
+    "myProjects": "My Projects",
+    "recentTemplates": "Recent Templates",
+    "recentProjects": "Recent Projects",
+    "browseMarket": "Browse Template Market",
+    "manageProjects": "Manage My Projects",
+    "notLoggedIn": "Please sign in to the cloud platform",
+    "goSettings": "Go to Settings",
+    "loadFailed": "Failed to load",
+    "server": "Server",
+    "install": "Install locally",
+    "pull": "Pull to local"
+  },
+  "panel": {
+    "tabDashboard": "Dashboard",
+    "tabProjects": "Remote Projects",
+    "tabTemplates": "Template Market",
+    "tabSearch": "Search",
+    "title": "Cloud Center"
+  },
+  "search": {
+    "placeholder": "Search project name or description...",
+    "noResults": "No matching results",
+    "noResultsTemplates": "No matching templates",
+    "typeProject": "Project name",
+    "typeTemplate": "Template name",
+    "typeFilename": "File name",
+    "typeContent": "File content",
+    "typePlaceholder": "Search {{type}}...",
+    "loginHint": "Sign in to search cloud projects, templates and files",
+    "startHint": "Type a keyword to start searching",
+    "resultCount": "{count} results"
+  },
+  "projects": {
+    "name": "Project Name",
+    "description": "Description",
+    "visibility": "Visibility",
+    "my": "My Projects",
+    "public": "Public Projects",
+    "private": "Private",
+    "delete": "Delete cloud project",
+    "emptyMine": "No cloud projects yet. Push a local project to the cloud to get started.",
+    "emptyPublic": "No public projects",
+    "existsLocally": "A project named \"{{name}}\" already exists locally. Choose how to proceed."
+  },
+  "templates": {
+    "installed": "Template \"{{name}}\" installed locally"
+  },
+  "categories": {
+    "all": "All",
+    "switch": "Switch",
+    "router": "Router",
+    "firewall": "Firewall",
+    "wireless": "Wireless",
+    "other": "Other"
+  },
+  "pagination": {
+    "info": "Page {{page}} / {{total}}"
+  },
+  "sort": {
+    "latest": "Recently updated",
+    "downloads": "Most downloads",
+    "name": "Name"
+  }
+}

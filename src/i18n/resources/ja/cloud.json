@@ -1,0 +1,150 @@
+{
+  "title": "クラウドプラットフォーム",
+  "login": "ログイン",
+  "logout": "ログアウト",
+  "retry": "再試行",
+  "cancel": "キャンセル",
+  "confirm": "確認",
+  "save": "保存",
+  "saving": "保存中...",
+  "loading": "読み込み中...",
+  "loadFailed": "読み込み失敗",
+  "noTemplates": "テンプレートがありません",
+  "noProjects": "プロジェクトがありません",
+  "loginDialog": {
+    "title": "AutoLink クラウドにログイン",
+    "loggedIn": "ログイン済み",
+    "selectPlatform": "ログイン方法を選択",
+    "feishu": "Feishu でログイン",
+    "qq": "QQ でログイン",
+    "wechat": "WeChat でログイン",
+    "scanHint": "{{platform}}でQRコードをスキャン",
+    "waiting": "スキャン待機中...",
+    "expired": "QRコードの有効期限が切れました",
+    "regenerate": "再生成",
+    "cancel": "キャンセル",
+    "unavailable": "未対応"
+  },
+  "status": {
+    "connected": "接続済み",
+    "disconnected": "未接続",
+    "connecting": "接続中...",
+    "error": "接続に失敗しました",
+    "notConfigured": "サーバー未設定",
+    "notLoggedIn": "未ログイン",
+    "loggedIn": "ログイン済み"
+  },
+  "syncStatus": {
+    "synced": "同期済み",
+    "localOnly": "ローカルのみ",
+    "remoteOnly": "クラウドのみ",
+    "localAhead": "ローカルに変更あり",
+    "remoteAhead": "クラウドに更新あり",
+    "conflict": "競合"
+  },
+  "sync": {
+    "push": "クラウドにプッシュ",
+    "pull": "ローカルにプル",
+    "pushTitle": "プロジェクトをプッシュ",
+    "pullTitle": "プロジェクトをプル",
+    "pushFrom": "ローカルプロジェクトから",
+    "pushSuccess": "プロジェクト \"{{name}}\" をクラウドにプッシュしました",
+    "overwrite": "ローカルを上書き",
+    "overwriteHint": "ローカルの同名プロジェクトをクラウド版で完全に置き換えます",
+    "rename": "新規プロジェクトとして保存",
+    "conflict": "同名のプロジェクトがローカルに存在します",
+    "deleteConfirm": "クラウドプロジェクト \"{{name}}\" を削除しますか？この操作は取り消せません。"
+  },
+  "profile": {
+    "fullName": "表示名",
+    "bio": "自己紹介",
+    "edit": "プロフィール編集",
+    "openPlatform": "プラットフォームを開く",
+    "logout": "ログアウト",
+    "bindings": "連携アカウント",
+    "showGiteaCreds": "Gitea ログイン情報",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す",
+    "copyPassword": "パスワードをコピー",
+    "clipboardHint": "「プラットフォームを開く」をクリックしてログイン。パスワードは30秒後にクリップボードから自動消去されます。"
+  },
+  "settings": {
+    "title": "クラウド設定",
+    "serverUrl": "サーバーアドレス",
+    "serverUrlHint": "例: http://81.71.11.33",
+    "testConnection": "接続テスト",
+    "connectionSuccess": "接続成功",
+    "connectionFailed": "接続失敗",
+    "loginStatus": "ログイン状態",
+    "loginRequired": "未ログイン",
+    "accountInfo": "アカウント情報"
+  },
+  "dashboard": {
+    "welcome": "ようこそ, {name}",
+    "myTemplates": "マイテンプレート",
+    "myProjects": "マイプロジェクト",
+    "recentTemplates": "最近のテンプレート",
+    "recentProjects": "最近のプロジェクト",
+    "browseMarket": "テンプレート市場を見る",
+    "manageProjects": "プロジェクトを管理",
+    "notLoggedIn": "クラウドプラットフォームにログインしてください",
+    "goSettings": "設定へ",
+    "loadFailed": "読み込み失敗",
+    "server": "サーバー",
+    "install": "ローカルにインストール",
+    "pull": "ローカルにプル"
+  },
+  "panel": {
+    "tabDashboard": "ダッシュボード",
+    "tabProjects": "リモートプロジェクト",
+    "tabTemplates": "テンプレート市場",
+    "tabSearch": "検索",
+    "title": "クラウドセンター"
+  },
+  "search": {
+    "placeholder": "プロジェクト名または説明を検索...",
+    "noResults": "該当する結果がありません",
+    "noResultsTemplates": "該当するテンプレートがありません",
+    "typeProject": "プロジェクト名",
+    "typeTemplate": "テンプレート名",
+    "typeFilename": "ファイル名",
+    "typeContent": "ファイル内容",
+    "typePlaceholder": "{{type}}を検索...",
+    "loginHint": "ログインするとクラウドのプロジェクト・テンプレート・ファイルを検索できます",
+    "startHint": "キーワードを入力して検索",
+    "resultCount": "全 {count} 件"
+  },
+  "projects": {
+    "name": "プロジェクト名",
+    "description": "説明",
+    "visibility": "公開設定",
+    "my": "マイプロジェクト",
+    "public": "公開プロジェクト",
+    "private": "プライベート",
+    "delete": "クラウドプロジェクトを削除",
+    "emptyMine": "クラウドプロジェクトはまだありません。ローカルプロジェクトをプッシュしてください",
+    "emptyPublic": "公開プロジェクトはありません",
+    "existsLocally": "同名のプロジェクト \"{{name}}\" がローカルに存在します。処理方法を選択してください"
+  },
+  "templates": {
+    "installed": "テンプレート \"{{name}}\" をローカルにインストールしました"
+  },
+  "categories": {
+    "all": "すべて",
+    "switch": "スイッチ",
+    "router": "ルーター",
+    "firewall": "ファイアウォール",
+    "wireless": "ワイヤレス",
+    "other": "その他"
+  },
+  "pagination": {
+    "info": "{{page}} / {{total}} ページ"
+  },
+  "sort": {
+    "latest": "最近の更新",
+    "downloads": "ダウンロード数",
+    "name": "名前"
+  }
+}

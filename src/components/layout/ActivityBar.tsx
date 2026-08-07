@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles,
+  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -20,6 +20,8 @@ const activities: ActivityItem[] = [
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
   // V3.1.1-T5-5: AI 对话入口
   { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
+  // V3.3.0-T13: 云中心（登录 + 云端项目/模板）
+  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
 
@@ -32,6 +34,8 @@ const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
   device_library: { icon: 'text-purple-500 dark:text-purple-400', bar: 'bg-purple-500' },
   // V3.2.1: 修复 ai 入口缺失语义色导致点击后渲染崩溃白屏
   ai: { icon: 'text-fuchsia-500 dark:text-fuchsia-400', bar: 'bg-fuchsia-500' },
+  // V3.3.0-T13: 云中心
+  cloud: { icon: 'text-cyan-500 dark:text-cyan-400', bar: 'bg-cyan-500' },
   settings: { icon: 'text-gray-500 dark:text-gray-400', bar: 'bg-gray-500' },
 }
 

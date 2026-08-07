@@ -456,6 +456,72 @@ interface Window {
     export: {
       saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>
     }
+    // V3.3.0-T13: 云端平台（登录 + 云中心）。渲染层零网络，HTTP 由主进程 cloudService 发起。
+    cloud: {
+      setBaseUrl: (url: string) => Promise<void>
+      getBaseUrl: () => Promise<string>
+      getLoginState: () => Promise<{ baseUrl: string; hasToken: boolean }>
+      health: () => Promise<{ status: string; service: string }>
+      authQrcode: (platform: string) => Promise<{ session_id: string; auth_url: string; expires_in: number }>
+      authPoll: (sessionId: string) => Promise<{ status: 'pending' | 'confirmed' | 'expired'; user: { id: number; username: string } | null }>
+      authHealth: () => Promise<{ feishu: { configured: boolean }; qq: { configured: boolean }; wechat: { configured: boolean } }>
+      logout: () => Promise<void>
+      clientDashboard: () => Promise<{
+        template_count: number
+        project_count: number
+        recent_templates: import('@/api/cloud').RemoteTemplate[]
+        recent_projects: import('@/api/cloud').RemoteProject[]
+      }>
+      clientVersion: () => Promise<import('@/api/cloud').VersionInfo>
+      clientNotifications: () => Promise<{ announcements: import('@/api/cloud').Announcement[] }>
+      publicStats: () => Promise<{ total_users: number; total_templates: number; total_projects: number }>
+      projectList: () => Promise<{ projects: import('@/api/cloud').RemoteProject[] }>
+      projectSearch: (q: string) => Promise<{ projects: import('@/api/cloud').RemoteProject[] }>
+      projectSearchPublic: (params?: { q?: string; page?: number; limit?: number }) => Promise<{
+        projects: import('@/api/cloud').RemoteProject[]
+        total: number
+        page: number
+        limit: number
+      }>
+      projectCreate: (data: {
+        name: string
+        description?: string
+        private: boolean
+        template_owner?: string
+        template_repo?: string
+        files?: { path: string; content: string }[]
+      }) => Promise<import('@/api/cloud').RemoteProject>
+      projectDelete: (owner: string, repo: string) => Promise<void>
+      projectSyncCheck: (projects: { name: string; local_sha?: string }[]) => Promise<{
+        results: Record<string, import('@/api/cloud').SyncStatusResponse>
+      }>
+      projectDownload: (owner: string, repo: string) => Promise<string>
+      templateList: (params?: { q?: string; category?: string; page?: number; limit?: number; sort?: string }) => Promise<{
+        templates: import('@/api/cloud').RemoteTemplate[]
+        total: number
+        page: number
+        limit: number
+      }>
+      templateDetail: (owner: string, repo: string) => Promise<import('@/api/cloud').RemoteTemplate>
+      templateDownload: (owner: string, repo: string) => Promise<string>
+      templateMine: () => Promise<{ templates: import('@/api/cloud').RemoteTemplate[] }>
+      templatePublish: (data: {
+        name: string
+        description: string
+        category: string
+        public: boolean
+        files: { path: string; content: string }[]
+      }) => Promise<{ owner: string; repo: string }>
+      userProfile: () => Promise<import('@/api/cloud').UserProfile>
+      updateUserProfile: (data: { full_name?: string; bio?: string }) => Promise<import('@/api/cloud').UserProfile>
+      giteaCredentials: () => Promise<{ username: string; password: string; gitea_url: string }>
+      searchFiles: (q: string, limit?: number) => Promise<{ results: import('@/api/cloud').FileSearchResult[]; total: number }>
+      searchContent: (q: string, limit?: number) => Promise<{ results: import('@/api/cloud').ContentSearchResult[]; total: number }>
+      collectProjectFiles: (name: string) => Promise<{ path: string; content: string }[]>
+      computeProjectSha: (name: string) => Promise<string | null>
+      installRemoteProject: (data: { name: string; zipData: string; owner: string; overwrite?: boolean }) => Promise<void>
+      installRemoteTemplate: (data: { name: string; zipData: string; owner: string }) => Promise<void>
+    }
     onLogOutput: (callback: (data: { message: string; level?: string }) => void) => () => void
     versions: {
       node: string

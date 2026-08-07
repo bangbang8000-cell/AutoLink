@@ -1,0 +1,150 @@
+{
+  "title": "云平台",
+  "login": "登录",
+  "logout": "退出登录",
+  "retry": "重试",
+  "cancel": "取消",
+  "confirm": "确认",
+  "save": "保存",
+  "saving": "保存中...",
+  "loading": "加载中...",
+  "loadFailed": "加载失败",
+  "noTemplates": "暂无模板",
+  "noProjects": "暂无项目",
+  "loginDialog": {
+    "title": "登录 AutoLink 云平台",
+    "loggedIn": "已登录",
+    "selectPlatform": "选择登录方式",
+    "feishu": "飞书扫码登录",
+    "qq": "QQ 扫码登录",
+    "wechat": "微信扫码登录",
+    "scanHint": "请使用{{platform}}扫描二维码",
+    "waiting": "等待扫码中...",
+    "expired": "二维码已过期",
+    "regenerate": "重新生成",
+    "cancel": "取消",
+    "unavailable": "暂未开放"
+  },
+  "status": {
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "connecting": "连接中...",
+    "error": "连接失败",
+    "notConfigured": "未配置服务器",
+    "notLoggedIn": "未登录",
+    "loggedIn": "已登录"
+  },
+  "syncStatus": {
+    "synced": "已同步",
+    "localOnly": "仅本地",
+    "remoteOnly": "仅云端",
+    "localAhead": "本地有修改",
+    "remoteAhead": "云端有更新",
+    "conflict": "冲突"
+  },
+  "sync": {
+    "push": "推送到云端",
+    "pull": "拉取到本地",
+    "pushTitle": "推送项目",
+    "pullTitle": "拉取项目",
+    "pushFrom": "从本地项目",
+    "pushSuccess": "项目 \"{{name}}\" 已推送到云端",
+    "overwrite": "覆盖本地项目",
+    "overwriteHint": "将云端版本完全覆盖本地同名项目",
+    "rename": "另存为新项目",
+    "conflict": "本地已存在同名项目",
+    "deleteConfirm": "确定要删除云端项目 \"{{name}}\" 吗？此操作不可撤销。"
+  },
+  "profile": {
+    "fullName": "显示名称",
+    "bio": "简介",
+    "edit": "编辑资料",
+    "openPlatform": "打开平台",
+    "logout": "退出登录",
+    "bindings": "绑定账号",
+    "showGiteaCreds": "Gitea 登录信息",
+    "username": "用户名",
+    "password": "密码",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
+    "copyPassword": "复制密码",
+    "clipboardHint": "点击「打开平台」登录。密码将在30秒后自动清除剪贴板。"
+  },
+  "settings": {
+    "title": "云平台设置",
+    "serverUrl": "服务器地址",
+    "serverUrlHint": "例如：http://81.71.11.33",
+    "testConnection": "测试连接",
+    "connectionSuccess": "连接成功",
+    "connectionFailed": "连接失败",
+    "loginStatus": "登录状态",
+    "loginRequired": "未登录",
+    "accountInfo": "账号信息"
+  },
+  "dashboard": {
+    "welcome": "欢迎, {name}",
+    "myTemplates": "我的模板",
+    "myProjects": "我的项目",
+    "recentTemplates": "最近模板",
+    "recentProjects": "最近项目",
+    "browseMarket": "浏览模板市场",
+    "manageProjects": "管理我的项目",
+    "notLoggedIn": "请先登录云平台",
+    "goSettings": "前往设置",
+    "loadFailed": "加载失败",
+    "server": "服务器",
+    "install": "安装到本地",
+    "pull": "拉取到本地"
+  },
+  "panel": {
+    "tabDashboard": "仪表盘",
+    "tabProjects": "远程项目",
+    "tabTemplates": "模板市场",
+    "tabSearch": "搜索",
+    "title": "云中心"
+  },
+  "search": {
+    "placeholder": "搜索项目名称或描述...",
+    "noResults": "未找到匹配的结果",
+    "noResultsTemplates": "未找到匹配的模板",
+    "typeProject": "项目名",
+    "typeTemplate": "模板名",
+    "typeFilename": "文件名",
+    "typeContent": "文件内容",
+    "typePlaceholder": "搜索{{type}}...",
+    "loginHint": "登录后可搜索云端项目、模板和文件",
+    "startHint": "输入关键词开始搜索",
+    "resultCount": "共 {count} 条结果"
+  },
+  "projects": {
+    "name": "项目名称",
+    "description": "项目描述",
+    "visibility": "可见性",
+    "my": "我的项目",
+    "public": "公开项目",
+    "private": "私有",
+    "delete": "删除云端项目",
+    "emptyMine": "暂无云端项目，请先将本地项目推送到云端",
+    "emptyPublic": "暂无公开项目",
+    "existsLocally": "本地已存在同名项目 \"{{name}}\"，请选择处理方式"
+  },
+  "templates": {
+    "installed": "模板 \"{{name}}\" 已安装到本地"
+  },
+  "categories": {
+    "all": "全部",
+    "switch": "交换机",
+    "router": "路由器",
+    "firewall": "防火墙",
+    "wireless": "无线",
+    "other": "其他"
+  },
+  "pagination": {
+    "info": "第 {{page}} / {{total}} 页"
+  },
+  "sort": {
+    "latest": "最近更新",
+    "downloads": "下载最多",
+    "name": "名称"
+  }
+}

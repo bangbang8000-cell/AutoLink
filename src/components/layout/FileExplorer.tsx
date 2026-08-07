@@ -22,6 +22,7 @@ import { INPUT_CLASS } from '@/components/ui/SettingsRow'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 import { ProjectExplorer } from '@/components/layout/ProjectListPanel'
 import { SettingsExplorer, NumberInputMini, SelectMini } from '@/components/layout/SettingsPanel'
+import { CloudPanel } from '@/components/cloud/CloudPanel'
 
 export function FileExplorer() {
   const activeActivity = useUIStore((s) => s.activeActivity)
@@ -32,6 +33,8 @@ export function FileExplorer() {
     case 'workbench':      return <WorkbenchExplorer />
     case 'visualization':  return <VisualizationExplorer />
     case 'device_library': return <DeviceLibExplorer />
+    // V3.3.0-T13: 云中心
+    case 'cloud':          return <CloudPanel />
     case 'settings':       return <SettingsExplorer />
     default:           return <ProjectExplorer />
   }

@@ -8,6 +8,7 @@ export type ActivityType =
   | 'visualization'
   | 'device_library'
   | 'ai'
+  | 'cloud'
   | 'settings'
 
 export type ThemeMode = 'light' | 'dark' | 'system'

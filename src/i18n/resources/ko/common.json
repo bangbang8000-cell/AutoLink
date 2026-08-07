@@ -145,6 +145,8 @@
     "deviceLibrary": "장치 라이브러리",
     "outputResults": "출력 결과",
     "settings": "설정",
+    "ai": "AI 어시스턴트",
+    "cloud": "클라우드 센터",
     "hideSidebar": "사이드바 숨기기",
     "showSidebar": "사이드바 보기",
     "newProject": "새 프로젝트",
@@ -214,6 +216,8 @@
       "projectView": "프로젝트 탐색기",
       "workbenchView": "작업대",
       "deviceLibraryView": "장치 라이브러리",
+      "aiView": "AI 어시스턴트",
+      "cloudView": "클라우드 센터",
       "closeTab": "탭 닫기",
       "reopenTab": "닫힌 탭 복원",
       "shortcutsRef": "단축키"
@@ -457,6 +461,7 @@
         "about": "정보",
         "configPresets": "설정 템플릿",
         "ai": "AI 설정",
+        "cloud": "클라우드 센터",
         "diagnostics": "진단"
       },
       "appearance": {
@@ -572,6 +577,21 @@
         "refresh": "새로고침",
         "auditTitle": "명령 감사 로그",
         "empty": "아직 감사 기록이 없습니다(작업 실행 시 여기에 기록됩니다)"
+      },
+      "cloud": {
+        "title": "클라우드 플랫폼",
+        "serverUrl": "서버 주소",
+        "serverUrlHint": "예: http://81.71.11.33",
+        "saveUrl": "저장",
+        "testConnection": "연결 테스트",
+        "connectionSuccess": "연결 성공",
+        "connectionFailed": "연결 실패",
+        "loginStatus": "로그인 상태",
+        "loginRequired": "로그인 안 됨",
+        "accountInfo": "로그인된 계정",
+        "login": "로그인",
+        "logout": "로그아웃",
+        "loggedOut": "로그아웃되었습니다"
       },
       "about": {
         "title": "AutoLink 정보",

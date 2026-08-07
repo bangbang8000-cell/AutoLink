@@ -4,15 +4,17 @@ import {
   Sun, Moon, Monitor, Globe, Keyboard, Info, Palette, FileOutput,
   Cpu, Wifi, Database, Shield, Download, Layers, Search,
   Upload, RotateCcw, ExternalLink, Check,
-  FolderTree, Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText,
+  FolderTree, Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText, Cloud,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useUIStore, type ThemeMode, type AccentColor, type AIConfig } from '@/stores/ui.store'
+import { useCloudStore } from '@/stores/cloud.store'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useToastStore } from '@/stores/toast.store'
 import { AboutDialog } from '@/components/layout/AboutDialog'
+import { LoginDialog } from '@/components/cloud/LoginDialog'
 import { Toggle } from '@/components/ui/Toggle'
 import { SettingsSection, SettingsRow, INPUT_CLASS } from '@/components/ui/SettingsRow'
 
@@ -35,6 +37,8 @@ const SETTINGS_CATEGORIES = [
   { key: 'configPresets', label: 'configPresets', icon: Layers },
   // V3.1.1-T5-7: 诊断（CLI 能力 + 命令审计）
   { key: 'diagnostics', label: 'diagnostics', icon: ScrollText },
+  // V3.3.0-T13: 云平台（服务器地址 + 登录）
+  { key: 'cloud', label: 'cloud', icon: Cloud },
   { key: 'about', label: 'about', icon: Info },
 ] as const
 
@@ -53,6 +57,7 @@ const GROUP_LOCALSTORAGE_KEYS: Record<string, string[]> = {
   data: [],
   configPresets: [],
   ai: [],
+  cloud: [],
   about: [],
 }
 
@@ -124,6 +129,7 @@ export function SettingsExplorer() {
             {activeCat === 'data' && <DataSettings />}
             {activeCat === 'configPresets' && <ConfigPresetsSettings />}
             {activeCat === 'diagnostics' && <DiagnosticsSettings />}
+            {activeCat === 'cloud' && <CloudSettings />}
             {activeCat === 'about' && <AboutSettings onOpenAbout={() => setAboutOpen(true)} />}
           </div>
         </div>
@@ -754,6 +760,109 @@ function ConfigPresetsSettings() {
           <Upload size={13} />{t('common:explorer.settings.configPresets.import')}
         </button>
       </div>
+    </SettingsSection>
+  )
+}
+
+// V3.3.0-T13: 云平台设置（服务器地址 + 测试连接 + 登录/登出）
+function CloudSettings() {
+  const { t } = useTranslation()
+  const baseUrl = useCloudStore((s) => s.baseUrl)
+  const setBaseUrl = useCloudStore((s) => s.setBaseUrl)
+  const loggedIn = useCloudStore((s) => s.loggedIn)
+  const username = useCloudStore((s) => s.username)
+  const checking = useCloudStore((s) => s.checkingConnection)
+  const checkConnection = useCloudStore((s) => s.checkConnection)
+  const logout = useCloudStore((s) => s.logout)
+  const addToast = useToastStore((s) => s.addToast)
+
+  const [url, setUrl] = useState(baseUrl)
+  const [showLogin, setShowLogin] = useState(false)
+
+  useEffect(() => setUrl(baseUrl), [baseUrl])
+
+  const handleSave = async () => {
+    const normalized = (url || '').trim().replace(/\/+$/, '')
+    setBaseUrl(normalized)
+    try {
+      await window.electron?.cloud?.health?.()
+      addToast('success', t('common:explorer.settings.cloud.connectionSuccess'))
+    } catch {
+      addToast('error', t('common:explorer.settings.cloud.connectionFailed'))
+    }
+  }
+
+  const handleTest = async () => {
+    if (url.trim()) setBaseUrl((url || '').trim().replace(/\/+$/, ''))
+    await checkConnection()
+    const ok = useCloudStore.getState().connected
+    addToast(
+      ok ? 'success' : 'error',
+      ok ? t('common:explorer.settings.cloud.connectionSuccess') : t('common:explorer.settings.cloud.connectionFailed'),
+    )
+  }
+
+  return (
+    <SettingsSection title={t('common:explorer.settings.cloud.title')}>
+      {/* 服务器地址 */}
+      <SettingsRow label={t('common:explorer.settings.cloud.serverUrl')}>
+        <div className="flex items-center gap-1 flex-1">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={t('common:explorer.settings.cloud.serverUrlHint')}
+            className={INPUT_CLASS + ' flex-1'}
+          />
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-2xs rounded bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          >
+            <Check size={12} />{t('common:explorer.settings.cloud.saveUrl')}
+          </button>
+        </div>
+      </SettingsRow>
+
+      <SettingsRow label={t('common:explorer.settings.cloud.testConnection')}>
+        <button
+          onClick={handleTest}
+          disabled={checking || !url.trim()}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover disabled:opacity-40"
+        >
+          <RefreshCw size={12} className={checking ? 'animate-spin' : ''} />
+          {checking ? t('common:loading') : t('common:explorer.settings.cloud.testConnection')}
+        </button>
+      </SettingsRow>
+
+      <div className="pt-3 mt-2 border-t border-gray-200 dark:border-edge-subtle">
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          {t('common:explorer.settings.cloud.loginStatus')}:{' '}
+          {loggedIn ? (
+            <span className="text-success-500">{username || t('common:explorer.settings.cloud.accountInfo')}</span>
+          ) : (
+            <span className="text-gray-400">{t('common:explorer.settings.cloud.loginRequired')}</span>
+          )}
+        </div>
+        {loggedIn ? (
+          <button
+            onClick={() => { logout(); addToast('info', t('common:explorer.settings.cloud.loggedOut')) }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded border border-error-200 dark:border-error-800 text-error-500 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/10"
+          >
+            <RotateCcw size={13} />{t('common:explorer.settings.cloud.logout')}
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowLogin(true)}
+            disabled={!baseUrl}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 transition-colors"
+          >
+            <Cloud size={13} />{t('common:explorer.settings.cloud.login')}
+          </button>
+        )}
+      </div>
+
+      {showLogin && (
+        <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
+      )}
     </SettingsSection>
   )
 }
