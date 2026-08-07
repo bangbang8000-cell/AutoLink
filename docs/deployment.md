@@ -60,7 +60,7 @@ npm install
 # 启动开发环境 (Vite HMR + Electron)
 npm run dev:all
 
-# 仅前端 (浏览器访问 http://localhost:5173)
+# 仅前端 (浏览器访问 http://localhost:5174)
 npm run dev
 ```
 

@@ -32,7 +32,7 @@ class AutoLinkApp {
   /**
    * V3.2.2-R11.1: CSP 注入
    *  - dev 需放宽：React Refresh preamble 是 inline script（script-src 加 'unsafe-inline'），
-   *    Vite HMR 需 ws://localhost:5173；prod 收紧为纯 self（与 meta 宽松版交集后仍为严格）
+   *    Vite HMR 需 ws://localhost:5174；prod 收紧为纯 self（与 meta 宽松版交集后仍为严格）
    *  - 与 index.html / splash.html 的 meta CSP 配合（双保险）
    */
   private registerCsp(): void {
@@ -50,7 +50,7 @@ class AutoLinkApp {
       "base-uri 'self'",
     ]
     const connectSrc = isDev
-      ? ["connect-src 'self' http://localhost:5173 ws://localhost:5173"]
+      ? ["connect-src 'self' http://localhost:5174 ws://localhost:5174"]
       : ["connect-src 'self'", "frame-ancestors 'none'"]
     const csp = [...base, ...connectSrc].join('; ')
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -83,7 +83,7 @@ class AutoLinkApp {
     })
 
     if (isDev) {
-      this.splashWindow.loadURL('http://localhost:5173/splash.html')
+      this.splashWindow.loadURL('http://localhost:5174/splash.html')
     } else {
       this.splashWindow.loadFile(path.join(__dirname, '../dist/splash.html'))
     }
@@ -118,7 +118,7 @@ class AutoLinkApp {
     })
 
     if (isDev) {
-      this.mainWindow.loadURL('http://localhost:5173')
+      this.mainWindow.loadURL('http://localhost:5174')
     } else {
       this.mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
     }
