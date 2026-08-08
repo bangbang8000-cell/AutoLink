@@ -75,6 +75,23 @@ const shareCreateSchema = z.object({
   expireDays: z.number().int().min(1).max(365).optional(),
 })
 
+// V3.3.2-T15-3: 模板收藏 / 权限载荷
+const templateRepoSchema = z.object({
+  owner: z.string().min(1).max(120),
+  repo: projectNameSchema,
+})
+const permissionGrantSchema = z.object({
+  owner: z.string().min(1).max(120),
+  repo: projectNameSchema,
+  username: z.string().min(1).max(120),
+  role: z.enum(['editor', 'reader']),
+})
+const permissionTargetSchema = z.object({
+  owner: z.string().min(1).max(120),
+  repo: projectNameSchema,
+  username: z.string().min(1).max(120),
+})
+
 /** 通用包装：解析 + 调用 + 错误透传 */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handler<T>(fn: (args: any) => Promise<T> | T) {
@@ -185,6 +202,34 @@ export function registerCloudIpcHandlers(): void {
   ipcMain.handle('cloud:templatePublish', handler(async (payload: unknown) => {
     const data = assertParsed(templatePublishSchema, payload, 'templatePublish')
     return cloudService.templatePublish(data)
+  }))
+
+  // V3.3.2-T15-3: 模板收藏 + 权限
+  ipcMain.handle('cloud:templateFavoriteAdd', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(templateRepoSchema, payload, 'templateFavoriteAdd')
+    return cloudService.templateFavoriteAdd(owner, repo)
+  }))
+
+  ipcMain.handle('cloud:templateFavoriteRemove', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(templateRepoSchema, payload, 'templateFavoriteRemove')
+    return cloudService.templateFavoriteRemove(owner, repo)
+  }))
+
+  ipcMain.handle('cloud:templateFavorites', handler(async () => cloudService.templateFavorites()))
+
+  ipcMain.handle('cloud:templatePermissions', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(templateRepoSchema, payload, 'templatePermissions')
+    return cloudService.templatePermissions(owner, repo)
+  }))
+
+  ipcMain.handle('cloud:templateGrantPermission', handler(async (payload: unknown) => {
+    const data = assertParsed(permissionGrantSchema, payload, 'templateGrantPermission')
+    return cloudService.templateGrantPermission(data.owner, data.repo, data.username, data.role)
+  }))
+
+  ipcMain.handle('cloud:templateRevokePermission', handler(async (payload: unknown) => {
+    const { owner, repo, username } = assertParsed(permissionTargetSchema, payload, 'templateRevokePermission')
+    return cloudService.templateRevokePermission(owner, repo, username)
   }))
 
   // ===== User =====

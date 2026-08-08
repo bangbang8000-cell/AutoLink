@@ -512,6 +512,16 @@ interface Window {
         public: boolean
         files: { path: string; content: string }[]
       }) => Promise<{ owner: string; repo: string }>
+      // V3.3.2-T15-3: 模板收藏 + 权限（所有者/可编辑/只读）
+      templateFavoriteAdd: (owner: string, repo: string) => Promise<{ favorited: boolean }>
+      templateFavoriteRemove: (owner: string, repo: string) => Promise<{ favorited: boolean }>
+      templateFavorites: () => Promise<{ templates: import('@/api/cloud').RemoteTemplate[] }>
+      templatePermissions: (owner: string, repo: string) => Promise<{
+        my_role: string | null
+        shared: { username: string; role: string; created_at?: string }[]
+      }>
+      templateGrantPermission: (owner: string, repo: string, username: string, role: string) => Promise<{ username: string; role: string }>
+      templateRevokePermission: (owner: string, repo: string, username: string) => Promise<{ username: string; role: null }>
       userProfile: () => Promise<import('@/api/cloud').UserProfile>
       updateUserProfile: (data: { full_name?: string; bio?: string }) => Promise<import('@/api/cloud').UserProfile>
       giteaCredentials: () => Promise<{ username: string; password: string; gitea_url: string }>

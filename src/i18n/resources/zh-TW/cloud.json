@@ -133,11 +133,33 @@
   },
   "categories": {
     "all": "全部",
-    "switch": "交換機",
-    "router": "路由器",
-    "firewall": "防火牆",
-    "wireless": "無線",
+    "general": "通用",
+    "gpu": "GPU 運算",
+    "storage": "儲存",
+    "network": "網路",
     "other": "其他"
+  },
+  "permissions": {
+    "title": "權限管理 - {{name}}",
+    "myRole": "我的角色",
+    "role_owner": "擁有者",
+    "role_editor": "可編輯",
+    "role_reader": "唯讀",
+    "sharedList": "共享成員",
+    "empty": "暫無共享成員",
+    "grantTitle": "新增成員",
+    "usernamePlaceholder": "輸入使用者名稱",
+    "grant": "授權",
+    "revoke": "撤銷",
+    "manage": "管理權限",
+    "favorite": "收藏",
+    "unfavorite": "取消收藏",
+    "favorited": "已收藏範本 \"{{name}}\"",
+    "unfavorited": "已取消收藏 \"{{name}}\"",
+    "favoritesOnly": "我的收藏",
+    "noFavorites": "暫無收藏的範本",
+    "granted": "已授予 {{username}} {{role}} 權限",
+    "revoked": "已撤銷 {{username}} 的權限"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 頁"

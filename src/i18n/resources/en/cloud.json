@@ -133,11 +133,33 @@
   },
   "categories": {
     "all": "All",
-    "switch": "Switch",
-    "router": "Router",
-    "firewall": "Firewall",
-    "wireless": "Wireless",
+    "general": "General",
+    "gpu": "GPU Compute",
+    "storage": "Storage",
+    "network": "Network",
     "other": "Other"
+  },
+  "permissions": {
+    "title": "Permissions - {{name}}",
+    "myRole": "My role",
+    "role_owner": "Owner",
+    "role_editor": "Editor",
+    "role_reader": "Read-only",
+    "sharedList": "Shared members",
+    "empty": "No shared members yet",
+    "grantTitle": "Add member",
+    "usernamePlaceholder": "Enter username",
+    "grant": "Grant",
+    "revoke": "Revoke",
+    "manage": "Manage permissions",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "favorited": "Template \"{{name}}\" favorited",
+    "unfavorited": "Template \"{{name}}\" unfavorited",
+    "favoritesOnly": "Favorites",
+    "noFavorites": "No favorited templates",
+    "granted": "Granted {{username}} {{role}} access",
+    "revoked": "Revoked {{username}}'s access"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}}"

@@ -275,6 +275,15 @@ const electronAPI = {
     templateMine: () => ipcRenderer.invoke('cloud:templateMine'),
     templatePublish: (data: { name: string; description: string; category: string; public: boolean; files: { path: string; content: string }[] }) =>
       ipcRenderer.invoke('cloud:templatePublish', data),
+    // V3.3.2-T15-3: 模板收藏 + 权限
+    templateFavoriteAdd: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateFavoriteAdd', { owner, repo }),
+    templateFavoriteRemove: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateFavoriteRemove', { owner, repo }),
+    templateFavorites: () => ipcRenderer.invoke('cloud:templateFavorites'),
+    templatePermissions: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templatePermissions', { owner, repo }),
+    templateGrantPermission: (owner: string, repo: string, username: string, role: string) =>
+      ipcRenderer.invoke('cloud:templateGrantPermission', { owner, repo, username, role }),
+    templateRevokePermission: (owner: string, repo: string, username: string) =>
+      ipcRenderer.invoke('cloud:templateRevokePermission', { owner, repo, username }),
     userProfile: () => ipcRenderer.invoke('cloud:userProfile'),
     updateUserProfile: (data: { full_name?: string; bio?: string }) =>
       ipcRenderer.invoke('cloud:updateUserProfile', data),

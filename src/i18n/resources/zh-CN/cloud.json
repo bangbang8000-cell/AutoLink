@@ -133,11 +133,33 @@
   },
   "categories": {
     "all": "全部",
-    "switch": "交换机",
-    "router": "路由器",
-    "firewall": "防火墙",
-    "wireless": "无线",
+    "general": "通用",
+    "gpu": "GPU 计算",
+    "storage": "存储",
+    "network": "网络",
     "other": "其他"
+  },
+  "permissions": {
+    "title": "权限管理 - {{name}}",
+    "myRole": "我的角色",
+    "role_owner": "所有者",
+    "role_editor": "可编辑",
+    "role_reader": "只读",
+    "sharedList": "共享成员",
+    "empty": "暂无共享成员",
+    "grantTitle": "添加成员",
+    "usernamePlaceholder": "输入用户名",
+    "grant": "授权",
+    "revoke": "撤销",
+    "manage": "管理权限",
+    "favorite": "收藏",
+    "unfavorite": "取消收藏",
+    "favorited": "已收藏模板 \"{{name}}\"",
+    "unfavorited": "已取消收藏 \"{{name}}\"",
+    "favoritesOnly": "我的收藏",
+    "noFavorites": "暂无收藏的模板",
+    "granted": "已授予 {{username}} {{role}} 权限",
+    "revoked": "已撤销 {{username}} 的权限"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页"

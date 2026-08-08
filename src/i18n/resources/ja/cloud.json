@@ -133,11 +133,33 @@
   },
   "categories": {
     "all": "すべて",
-    "switch": "スイッチ",
-    "router": "ルーター",
-    "firewall": "ファイアウォール",
-    "wireless": "ワイヤレス",
+    "general": "汎用",
+    "gpu": "GPU コンピューティング",
+    "storage": "ストレージ",
+    "network": "ネットワーク",
     "other": "その他"
+  },
+  "permissions": {
+    "title": "権限管理 - {{name}}",
+    "myRole": "自分のロール",
+    "role_owner": "所有者",
+    "role_editor": "編集可能",
+    "role_reader": "読み取り専用",
+    "sharedList": "共有メンバー",
+    "empty": "共有メンバーはいません",
+    "grantTitle": "メンバーを追加",
+    "usernamePlaceholder": "ユーザー名を入力",
+    "grant": "付与",
+    "revoke": "取り消し",
+    "manage": "権限を管理",
+    "favorite": "お気に入り",
+    "unfavorite": "お気に入り解除",
+    "favorited": "テンプレート \"{{name}}\" をお気に入りに追加しました",
+    "unfavorited": "テンプレート \"{{name}}\" のお気に入りを解除しました",
+    "favoritesOnly": "お気に入り",
+    "noFavorites": "お気に入りのテンプレートはありません",
+    "granted": "{{username}} に {{role}} 権限を付与しました",
+    "revoked": "{{username}} の権限を取り消しました"
   },
   "pagination": {
     "info": "{{page}} / {{total}} ページ"

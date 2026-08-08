@@ -77,6 +77,10 @@ interface CloudState {
   fetchRemoteTemplates: (query?: string, category?: string, page?: number, sort?: string) => Promise<void>
   downloadTemplate: (owner: string, repo: string) => Promise<void>
   publishTemplate: (data: { name: string; description: string; category: string; public: boolean; files: { path: string; content: string }[] }) => Promise<{ owner: string; repo: string }>
+  // V3.3.2-T15-3: 模板收藏 + 权限
+  toggleTemplateFavorite: (owner: string, repo: string, current: boolean) => Promise<void>
+  grantTemplatePermission: (owner: string, repo: string, username: string, role: string) => Promise<void>
+  revokeTemplatePermission: (owner: string, repo: string, username: string) => Promise<void>
   fetchRemoteProjects: () => Promise<void>
   searchPublicProjects: (q: string, page?: number) => Promise<void>
   pushProject: (name: string, description: string, isPrivate: boolean) => Promise<RemoteProject>
@@ -248,6 +252,30 @@ export const useCloudStore = create<CloudState>()(
 
       publishTemplate: async (data) => {
         return templates.publish(data)
+      },
+
+      // V3.3.2-T15-3: 模板收藏 + 权限
+      toggleTemplateFavorite: async (owner: string, repo: string, current: boolean) => {
+        if (current) {
+          await templates.removeFavorite(owner, repo)
+        } else {
+          await templates.addFavorite(owner, repo)
+        }
+        // 同步当前列表中的收藏态
+        const { remoteTemplates } = get()
+        set({
+          remoteTemplates: remoteTemplates.map((tp) =>
+            tp.owner === owner && tp.name === repo ? { ...tp, is_favorite: !current } : tp,
+          ),
+        })
+      },
+
+      grantTemplatePermission: async (owner, repo, username, role) => {
+        await templates.grantPermission(owner, repo, username, role)
+      },
+
+      revokeTemplatePermission: async (owner, repo, username) => {
+        await templates.revokePermission(owner, repo, username)
       },
 
       // --- Project Sync ---

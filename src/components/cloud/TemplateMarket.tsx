@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Package, Download, Loader2, Clock, Tag, User, ChevronLeft, ChevronRight,
+  Star, ShieldCheck,
 } from 'lucide-react'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useToastStore } from '@/stores/toast.store'
+import { TemplatePermissionDialog } from '@/components/cloud/TemplatePermissionDialog'
 import type { RemoteTemplate } from '@/api/cloud'
 
 interface TemplateMarketProps {
@@ -21,6 +23,8 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState<SortKey>('updated')
   const [installing, setInstalling] = useState<string | null>(null)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [permDialog, setPermDialog] = useState<{ owner: string; name: string } | null>(null)
 
   const addToast = useToastStore((s) => s.addToast)
 
@@ -32,6 +36,7 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
     loggedIn,
     fetchRemoteTemplates,
     downloadTemplate,
+    toggleTemplateFavorite,
   } = useCloudStore()
 
   // Reset page when search or category changes
@@ -62,20 +67,49 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
     [downloadTemplate, addToast, t],
   )
 
+  // V3.3.2-T15-3: 收藏切换
+  const handleToggleFavorite = useCallback(
+    async (template: RemoteTemplate) => {
+      try {
+        await toggleTemplateFavorite(template.owner, template.name, !!template.is_favorite)
+        addToast(
+          'success',
+          template.is_favorite
+            ? t('permissions.unfavorited', { name: template.name })
+            : t('permissions.favorited', { name: template.name }),
+        )
+      } catch (err) {
+        addToast('error', (err as Error).message)
+      }
+    },
+    [toggleTemplateFavorite, addToast, t],
+  )
+
+  // V3.3.2-T15-3: AutoLink 品类体系（兼容历史 MC 品类）
   const categories = [
     { value: '', label: t('categories.all') },
-    { value: 'switch', label: t('categories.switch') },
-    { value: 'router', label: t('categories.router') },
-    { value: 'firewall', label: t('categories.firewall') },
-    { value: 'wireless', label: t('categories.wireless') },
+    { value: 'general', label: t('categories.general') },
+    { value: 'gpu', label: t('categories.gpu') },
+    { value: 'storage', label: t('categories.storage') },
+    { value: 'network', label: t('categories.network') },
     { value: 'other', label: t('categories.other') },
   ]
+
+  const categoryLabel = useCallback((value?: string) => {
+    const match = categories.find((c) => c.value === value)
+    return match?.label ?? value ?? t('categories.other')
+  }, [categories, t])
 
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: 'updated', label: t('sort.latest') },
     { key: 'downloads', label: t('sort.downloads') },
     { key: 'name', label: t('sort.name') },
   ]
+
+  // 收藏过滤
+  const visibleTemplates = favoritesOnly
+    ? remoteTemplates.filter((tp) => tp.is_favorite)
+    : remoteTemplates
 
   return (
     <div className="flex flex-col h-full">
@@ -98,6 +132,19 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
         </div>
         {/* Sort */}
         <div className="flex items-center gap-0.5 shrink-0">
+          {/* V3.3.2-T15-3: 我的收藏过滤 */}
+          <button
+            onClick={() => { setFavoritesOnly((v) => !v); setPage(1) }}
+            className={`px-1.5 py-1 rounded text-[10px] transition-colors flex items-center gap-1 ${
+              favoritesOnly
+                ? 'bg-warning-100 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 font-medium'
+                : 'text-gray-400 hover:text-warning-500'
+            }`}
+            title={t('permissions.favoritesOnly')}
+          >
+            <Star size={12} fill={favoritesOnly ? 'currentColor' : 'none'} />
+            {t('permissions.favoritesOnly')}
+          </button>
           {sortOptions.map((opt) => (
             <button
               key={opt.key}
@@ -132,16 +179,18 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
           <div className="p-4 text-center text-sm text-error-500">{remoteError}</div>
         )}
 
-        {loggedIn && !remoteLoading && !remoteError && remoteTemplates.length === 0 && (
+        {loggedIn && !remoteLoading && !remoteError && visibleTemplates.length === 0 && (
           <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
-            {searchQuery ? t('search.noResultsTemplates') : t('noTemplates')}
+            {favoritesOnly
+              ? t('permissions.noFavorites')
+              : (searchQuery ? t('search.noResultsTemplates') : t('noTemplates'))}
           </div>
         )}
 
         {loggedIn &&
           !remoteLoading &&
           !remoteError &&
-          remoteTemplates.map((template) => (
+          visibleTemplates.map((template) => (
             <div
               key={template.id ?? `${template.owner}/${template.name}`}
               className="px-3 py-3 border-b border-gray-100 dark:border-edge-subtle/50 hover:bg-gray-50 dark:hover:bg-app-hover transition-colors"
@@ -154,8 +203,21 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
                       {template.name}
                     </span>
                     <span className="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 shrink-0">
-                      {template.category || t('categories.other')}
+                      {categoryLabel(template.category)}
                     </span>
+                    {/* V3.3.2-T15-3: 我的角色徽标 */}
+                    {template.my_role && template.my_role !== 'reader' && (
+                      <span
+                        className={`text-[10px] px-1 py-0.5 rounded shrink-0 flex items-center gap-0.5 ${
+                          template.my_role === 'owner'
+                            ? 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400'
+                            : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
+                        }`}
+                      >
+                        <ShieldCheck size={10} />
+                        {t(`permissions.role_${template.my_role}`)}
+                      </span>
+                    )}
                   </div>
                   {template.description && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
@@ -185,18 +247,42 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleInstall(template)}
-                  disabled={installing === (template.full_name || `${template.owner}/${template.name}`)}
-                  className="ml-3 px-3 py-1.5 text-xs rounded-md bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1"
-                >
-                  {installing === (template.full_name || `${template.owner}/${template.name}`) ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    <Download size={12} />
+                <div className="ml-3 flex items-center gap-1 shrink-0">
+                  {/* V3.3.2-T15-3: 收藏星标 */}
+                  <button
+                    onClick={() => handleToggleFavorite(template)}
+                    className={`p-1.5 rounded transition-colors ${
+                      template.is_favorite
+                        ? 'text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/20'
+                        : 'text-gray-400 hover:text-warning-500 hover:bg-gray-100 dark:hover:bg-app-hover'
+                    }`}
+                    title={template.is_favorite ? t('permissions.unfavorite') : t('permissions.favorite')}
+                  >
+                    <Star size={13} fill={template.is_favorite ? 'currentColor' : 'none'} />
+                  </button>
+                  {/* V3.3.2-T15-3: 权限管理（owner 可见） */}
+                  {template.my_role === 'owner' && (
+                    <button
+                      onClick={() => setPermDialog({ owner: template.owner, name: template.name })}
+                      className="p-1.5 rounded text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
+                      title={t('permissions.manage')}
+                    >
+                      <ShieldCheck size={13} />
+                    </button>
                   )}
-                  {t('dashboard.install')}
-                </button>
+                  <button
+                    onClick={() => handleInstall(template)}
+                    disabled={installing === (template.full_name || `${template.owner}/${template.name}`)}
+                    className="px-3 py-1.5 text-xs rounded-md bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50 transition-colors flex items-center gap-1"
+                  >
+                    {installing === (template.full_name || `${template.owner}/${template.name}`) ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Download size={12} />
+                    )}
+                    {t('dashboard.install')}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -250,6 +336,15 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* V3.3.2-T15-3: 权限管理弹窗 */}
+      {permDialog && (
+        <TemplatePermissionDialog
+          owner={permDialog.owner}
+          name={permDialog.name}
+          onClose={() => setPermDialog(null)}
+        />
       )}
     </div>
   )

@@ -42,6 +42,16 @@ export interface RemoteTemplate {
   topics?: string[]
   downloads?: number
   files?: { path: string; size: number }[]
+  // V3.3.2-T15-3: 收藏态 / 我的角色（所有者/可编辑/只读）
+  is_favorite?: boolean
+  my_role?: string | null
+}
+
+// V3.3.2-T15-3: 模板权限
+export interface TemplatePermission {
+  username: string
+  role: string
+  created_at?: string
 }
 
 export interface RemoteProject {
@@ -173,6 +183,15 @@ export const templates = {
   mine: () => cloud()!.templateMine(),
   publish: (data: { name: string; description: string; category: string; public: boolean; files: { path: string; content: string }[] }) =>
     cloud()!.templatePublish(data),
+  // V3.3.2-T15-3: 收藏 + 权限
+  addFavorite: (owner: string, repo: string) => cloud()!.templateFavoriteAdd(owner, repo),
+  removeFavorite: (owner: string, repo: string) => cloud()!.templateFavoriteRemove(owner, repo),
+  favorites: () => cloud()!.templateFavorites(),
+  permissions: (owner: string, repo: string) => cloud()!.templatePermissions(owner, repo),
+  grantPermission: (owner: string, repo: string, username: string, role: string) =>
+    cloud()!.templateGrantPermission(owner, repo, username, role),
+  revokePermission: (owner: string, repo: string, username: string) =>
+    cloud()!.templateRevokePermission(owner, repo, username),
 }
 
 export const user = {

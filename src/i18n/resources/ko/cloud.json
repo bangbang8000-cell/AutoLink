@@ -133,11 +133,33 @@
   },
   "categories": {
     "all": "전체",
-    "switch": "스위치",
-    "router": "라우터",
-    "firewall": "방화벽",
-    "wireless": "무선",
+    "general": "일반",
+    "gpu": "GPU 컴퓨팅",
+    "storage": "스토리지",
+    "network": "네트워크",
     "other": "기타"
+  },
+  "permissions": {
+    "title": "권한 관리 - {{name}}",
+    "myRole": "내 역할",
+    "role_owner": "소유자",
+    "role_editor": "편집 가능",
+    "role_reader": "읽기 전용",
+    "sharedList": "공유 멤버",
+    "empty": "공유 멤버가 없습니다",
+    "grantTitle": "멤버 추가",
+    "usernamePlaceholder": "사용자 이름 입력",
+    "grant": "부여",
+    "revoke": "취소",
+    "manage": "권한 관리",
+    "favorite": "즐겨찾기",
+    "unfavorite": "즐겨찾기 해제",
+    "favorited": "템플릿 \"{{name}}\" 즐겨찾기 추가됨",
+    "unfavorited": "템플릿 \"{{name}}\" 즐겨찾기 해제됨",
+    "favoritesOnly": "즐겨찾기",
+    "noFavorites": "즐겨찾기한 템플릿이 없습니다",
+    "granted": "{{username}}에게 {{role}} 권한을 부여했습니다",
+    "revoked": "{{username}}의 권한을 취소했습니다"
   },
   "pagination": {
     "info": "{{page}} / {{total}} 페이지"

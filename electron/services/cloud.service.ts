@@ -403,6 +403,34 @@ class CloudService {
     return this.request('POST', '/templates', data)
   }
 
+  // V3.3.2-T15-3: 模板收藏 + 权限（所有者/可编辑/只读）
+  async templateFavoriteAdd(owner: string, repo: string): Promise<{ favorited: boolean }> {
+    return this.request('POST', '/templates/favorites', { owner, repo })
+  }
+
+  async templateFavoriteRemove(owner: string, repo: string): Promise<{ favorited: boolean }> {
+    return this.request('DELETE', `/templates/favorites/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`)
+  }
+
+  async templateFavorites(): Promise<{ templates: RemoteTemplate[] }> {
+    return this.request('GET', '/templates/favorites')
+  }
+
+  async templatePermissions(owner: string, repo: string): Promise<{
+    my_role: string | null
+    shared: { username: string; role: string; created_at?: string }[]
+  }> {
+    return this.request('GET', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/permissions`)
+  }
+
+  async templateGrantPermission(owner: string, repo: string, username: string, role: string): Promise<{ username: string; role: string }> {
+    return this.request('PUT', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/permissions`, { username, role })
+  }
+
+  async templateRevokePermission(owner: string, repo: string, username: string): Promise<{ username: string; role: null }> {
+    return this.request('DELETE', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/permissions/${encodeURIComponent(username)}`)
+  }
+
   // ===== User =====
 
   async userProfile(): Promise<UserProfile> {
