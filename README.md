@@ -6,7 +6,7 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.2.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.3.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -195,6 +195,23 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **全量回归**：前端 467 + 后端 991 用例、E2E 3 条、性能基准、模板/golden 全绿
 - **本地能力矩阵**：用户指南新增章节，核心能力全部离线可用（仅 AIHUB 与自动更新需网络）
 
+### 24. 用户登录与账号体系（v3.3.0）
+
+- **扫码登录**：飞书 / QQ / 微信三通道扫码登录，JWT 会话 + 主进程 safeStorage 保管凭据（渲染层零接触）
+- **账号体系**：用户资料 / 社交绑定 / Gitea 凭据（登录云平台）/ 云平台健康检测
+
+### 25. 云中心（v3.3.1）
+
+- **云中心**：仪表盘 / 云端项目与模板 / 项目同步（六态 SHA 比对）/ 全局搜索（本地 + 云端二合一）
+- **共享 Gitea + 并行 API 实例**：与 MagicCommander 共用 Gitea，topic 前缀（`autolink-*`）产品隔离，`/autolink-api/` 独立网关
+- **侧栏云端分组**：登录后项目侧栏展示云端项目，一键跳转云中心
+
+### 26. 分享与模板市场（v3.3.2）
+
+- **分享链接**：项目右键「创建分享链接」→ 只读方案快照上传 → 免登录静态预览页（token 化 / 过期 / XSS 防护 / 2MB 限流）
+- **ZIP 加密**：加密导出 / 加密导入（ZipCrypto 强校验，密码二次确认）
+- **模板市场增强**：AutoLink 品类体系（GPU/存储/网络/通用）+ 收藏星标与「我的收藏」过滤 + 权限管理（所有者 / 可编辑 / 只读，共享成员授权与撤销）
+
 ---
 
 ## 📦 快速开始
@@ -203,9 +220,9 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.2.3-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.2.3-mac-x64.dmg` / `AutoLink-3.2.3-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.2.3-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.3.3-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.3.3-mac-x64.dmg` / `AutoLink-3.3.3-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.3.3-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 
