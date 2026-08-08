@@ -7,9 +7,9 @@ interface Window {
       delete: (ids: string[]) => Promise<void>
       duplicate: (sourceName: string, targetName: string) => Promise<void>
       rename: (oldName: string, newName: string) => Promise<void>
-      exportZip: (projectName: string) => Promise<{ canceled: boolean; zipPath: string }>
-      importZip: (options?: { projectName?: string; zipPath?: string }) => Promise<{ canceled: boolean; projectName: string }>
-      batchExportZip: (projectNames: string[]) => Promise<{
+      exportZip: (projectName: string, options?: { password?: string }) => Promise<{ canceled: boolean; zipPath: string }>
+      importZip: (options?: { projectName?: string; zipPath?: string; password?: string }) => Promise<{ canceled: boolean; projectName: string }>
+      batchExportZip: (projectNames: string[], options?: { password?: string }) => Promise<{
         canceled: boolean
         result: {
           successes: { name: string; zipPath: string }[]
@@ -74,8 +74,8 @@ interface Window {
         configContent?: string
         projectConfig?: string
       }) => Promise<void>
-      exportZip: (templateName: string) => Promise<{ canceled: boolean; zipPath: string }>
-      importZip: (options?: { templateName?: string; zipPath?: string }) => Promise<{ canceled: boolean; templateName: string }>
+      exportZip: (templateName: string, options?: { password?: string }) => Promise<{ canceled: boolean; zipPath: string }>
+      importZip: (options?: { templateName?: string; zipPath?: string; password?: string }) => Promise<{ canceled: boolean; templateName: string }>
     }
     design: {
       generate: (projectName: string, configINI?: string) => Promise<unknown>
@@ -521,6 +521,25 @@ interface Window {
       computeProjectSha: (name: string) => Promise<string | null>
       installRemoteProject: (data: { name: string; zipData: string; owner: string; overwrite?: boolean }) => Promise<void>
       installRemoteTemplate: (data: { name: string; zipData: string; owner: string }) => Promise<void>
+      // V3.3.2-T15-1: 分享链接（只读快照 → 免登录预览页）
+      shareCreate: (data: { projectName: string; description?: string; expireDays?: number }) => Promise<{
+        token: string
+        project_name: string
+        url: string
+        expires_at: string
+        fullUrl: string
+      }>
+      shareList: () => Promise<{
+        shares: {
+          token: string
+          project_name: string
+          description: string
+          expires_at: string
+          created_at: string
+          url: string
+        }[]
+      }>
+      shareDelete: (token: string) => Promise<{ deleted: boolean }>
     }
     // V3.3.1: 本地搜索（项目文件 / 设备库 / 模板）
     search: {

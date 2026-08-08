@@ -5,7 +5,11 @@
  * 通道名统一 `cloud:*`，载荷边界在 preload 层收窄，错误经 wrapHandler 脱敏。
  */
 import { ipcMain } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { cloudService, type LoginPlatform } from '../services/cloud.service.js'
+import { pythonService } from '../services/python.service.js'
+import { getWorkspacePath } from '../config.js'
 import { assertParsed, projectNameSchema } from './schemas.js'
 import { z } from 'zod'
 
@@ -62,6 +66,13 @@ const installRemoteSchema = z.object({
   zipData: z.string().min(1),
   owner: z.string().min(1).max(120),
   overwrite: z.boolean().optional(),
+})
+
+// V3.3.2-T15-1: 分享链接载荷
+const shareCreateSchema = z.object({
+  projectName: projectNameSchema,
+  description: z.string().max(2000).optional(),
+  expireDays: z.number().int().min(1).max(365).optional(),
 })
 
 /** 通用包装：解析 + 调用 + 错误透传 */
@@ -212,5 +223,46 @@ export function registerCloudIpcHandlers(): void {
   ipcMain.handle('cloud:installRemoteTemplate', handler(async (payload: unknown) => {
     const data = assertParsed(installRemoteSchema, payload, 'installRemoteTemplate')
     await cloudService.installRemoteTemplate(data)
+  }))
+
+  // ===== Shares（V3.3.2-T15-1: 分享链接） =====
+
+  /**
+   * 创建分享链接：
+   * 1. 调用 Python 引擎生成只读方案快照（share:snapshot，不落盘）
+   * 2. 上传到平台 POST /shares
+   * 3. 返回完整预览 URL（baseUrl + /share/<token>）
+   */
+  ipcMain.handle('cloud:shareCreate', handler(async (payload: unknown) => {
+    const { projectName, description, expireDays } = assertParsed(shareCreateSchema, payload, 'shareCreate')
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const configFile = path.join(projectDir, 'project_config.json')
+    if (!fs.existsSync(configFile)) {
+      throw new Error(`项目缺少 project_config.json: ${projectName}`)
+    }
+    // 1. 生成只读快照
+    const res = await pythonService.call('share:snapshot', { configFile })
+    const snapshot = (res as { snapshot?: unknown })?.snapshot
+    if (!snapshot) {
+      throw new Error('生成方案快照失败' + (typeof res === 'object' && res && 'error' in res ? `: ${(res as { error: string }).error}` : ''))
+    }
+    // 2. 上传创建分享
+    const created = await cloudService.shareCreate({
+      project_name: projectName,
+      description: description ?? '',
+      snapshot,
+      expire_days: expireDays,
+    })
+    // 3. 完整 URL（预览页为根路径 /share/<token>）
+    return {
+      ...created,
+      fullUrl: `${cloudService.getBaseUrl()}${created.url}`,
+    }
+  }))
+
+  ipcMain.handle('cloud:shareList', handler(async () => cloudService.shareList()))
+
+  ipcMain.handle('cloud:shareDelete', handler(async (token: unknown) => {
+    await cloudService.shareDelete(String(token).trim())
   }))
 }

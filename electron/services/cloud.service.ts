@@ -433,6 +433,20 @@ class CloudService {
     return this.request('GET', `/search/content?${params.toString()}`)
   }
 
+  // ===== Shares（V3.3.2-T15-1: 分享链接） =====
+
+  async shareCreate(data: { project_name: string; description?: string; snapshot: unknown; expire_days?: number }): Promise<{ token: string; project_name: string; url: string; expires_at: string }> {
+    return this.request('POST', '/shares', data)
+  }
+
+  async shareList(): Promise<{ shares: { token: string; project_name: string; description: string; expires_at: string; created_at: string; url: string }[] }> {
+    return this.request('GET', '/shares')
+  }
+
+  async shareDelete(token: string): Promise<{ deleted: boolean }> {
+    return this.request('DELETE', `/shares/${encodeURIComponent(token)}`)
+  }
+
   // ===== 二进制下载（zip） =====
 
   private async downloadBuffer(apiPath: string): Promise<Buffer> {

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Folder, FolderOpen, Search, Star, Plus, Upload, Package, Loader2 } from 'lucide-react'
+import { Folder, FolderOpen, Search, Star, Plus, Upload, Package, Loader2, Cloud } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
+import { useCloudStore } from '@/stores/cloud.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useToastStore } from '@/stores/toast.store'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDeleteDialog, type DeleteTarget } from '@/components/layout/ConfirmDeleteDialog'
 import { RenameProjectModal } from '@/components/layout/RenameProjectModal'
+import { PasswordPromptModal } from '@/components/layout/PasswordPromptModal'
 import { TreeNode } from '@/components/layout/TreeNode'
 import type { ContextMenuItem } from '@/components/ui/ContextMenu'
 import type { FileTreeNode, GroupKey, OutputBatch, OutputBatchFile } from '@/types/file-tree'
@@ -26,10 +28,19 @@ export function ProjectExplorer() {
   const openTab = useWorkspaceStore((s) => s.openTab)
   const addToast = useToastStore((s) => s.addToast)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
+  const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const explorerGroupMode = useUIStore((s) => s.explorerGroupMode)
+  // V3.3.1-T14-7: 侧栏云端分组（登录后展示云端项目）
+  const loggedIn = useCloudStore((s) => s.loggedIn)
+  const remoteProjects = useCloudStore((s) => s.remoteProjects)
+  const fetchRemoteProjects = useCloudStore((s) => s.fetchRemoteProjects)
+  // V3.3.2-T15-1: 分享链接
+  const createShare = useCloudStore((s) => s.createShare)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [renameModal, setRenameModal] = useState<{ type: 'rename' | 'duplicate' | 'convertToTemplate'; projectName: string } | null>(null)
+  // V3.3.2-T15-2: 加密导出/加密导入密码框
+  const [passwordModal, setPasswordModal] = useState<{ mode: 'export' | 'import'; projectName?: string } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [batchExporting, setBatchExporting] = useState(false)
@@ -101,6 +112,13 @@ export function ProjectExplorer() {
     // 只在挂载时执行一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // V3.3.1-T14-7: 登录后自动拉取云端项目列表
+  useEffect(() => {
+    if (loggedIn) {
+      fetchRemoteProjects().catch(() => {})
+    }
+  }, [loggedIn, fetchRemoteProjects])
 
   // T9: 删除文件/批次后刷新项目结构 + 批次缓存
   const refreshProjectStructure = useCallback(async (projectName: string) => {
@@ -206,6 +224,22 @@ export function ProjectExplorer() {
     }
   }, [exporting, exportProject, addToast, t])
 
+  // V3.3.2-T15-2: 加密导出（密码二次确认）
+  const handleEncryptedExport = useCallback(async (projectName: string, password: string) => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const result = await exportProject(projectName, { password })
+      if (!result.canceled && result.zipPath) {
+        addToast('success', t('common:explorer.toast.projectExportedEncrypted', { name: projectName, path: result.zipPath }))
+      }
+    } catch (err) {
+      addToast('error', t('common:explorer.toast.exportFailed', { error: err instanceof Error ? err.message : String(err) }))
+    } finally {
+      setExporting(false)
+    }
+  }, [exporting, exportProject, addToast, t])
+
   const handleImport = useCallback(async () => {
     if (importing) return
     setImporting(true)
@@ -215,11 +249,49 @@ export function ProjectExplorer() {
         addToast('success', t('common:explorer.toast.projectImported', { name: result.projectName }))
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // T15-2: 加密 ZIP 需要密码
+      if (msg.includes('加密')) {
+        setPasswordModal({ mode: 'import' })
+      } else {
+        addToast('error', t('common:explorer.toast.importFailed', { error: msg }))
+      }
+    } finally {
+      setImporting(false)
+    }
+  }, [importing, importProject, addToast, t])
+
+  // V3.3.2-T15-2: 带密码重试导入（重新选文件）
+  const handleImportWithPassword = useCallback(async (password: string) => {
+    if (importing) return
+    setImporting(true)
+    try {
+      const result = await importProject({ password })
+      if (!result.canceled && result.projectName) {
+        addToast('success', t('common:explorer.toast.projectImported', { name: result.projectName }))
+      }
+    } catch (err) {
       addToast('error', t('common:explorer.toast.importFailed', { error: err instanceof Error ? err.message : String(err) }))
     } finally {
       setImporting(false)
     }
   }, [importing, importProject, addToast, t])
+
+  // V3.3.2-T15-1: 分享链接（登录校验 → 生成只读快照上传 → 复制预览 URL）
+  const handleShareLink = useCallback(async (projectName: string) => {
+    if (!loggedIn) {
+      addToast('warning', t('common:explorer.toast.shareNotLoggedIn'))
+      setActiveActivity('cloud')
+      return
+    }
+    try {
+      const res = await createShare(projectName)
+      await navigator.clipboard.writeText(res.fullUrl)
+      addToast('success', t('common:explorer.toast.shareCreated', { name: projectName, url: res.fullUrl }))
+    } catch (err) {
+      addToast('error', t('common:explorer.toast.shareFailed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+  }, [loggedIn, createShare, addToast, setActiveActivity, t])
 
   // 搜索过滤 + 收藏置顶排序
   const favoriteSet = new Set(favoriteProjects)
@@ -507,6 +579,8 @@ export function ProjectExplorer() {
                     { label: t('common:explorer.contextMenu.duplicateProject'), action: () => handleDuplicate(p.name) },
                     { label: t('common:explorer.contextMenu.rename'), action: () => handleRename(p.name) },
                     { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExport(p.name) },
+                    { label: t('common:explorer.contextMenu.exportZipEncrypted'), action: () => setPasswordModal({ mode: 'export', projectName: p.name }) },
+                    { label: t('common:explorer.contextMenu.shareLink'), action: () => handleShareLink(p.name) },
                     { label: t('common:explorer.contextMenu.convertToTemplate'), action: () => handleConvertToTemplate(p.name) },
                     { label: isFavorite ? t('common:explorer.contextMenu.unfavorite') : t('common:explorer.contextMenu.favorite'), action: () => toggleFavorite(p.name) },
                     { label: t('common:explorer.contextMenu.deleteProject'), danger: true, action: () => handleDeleteProject(p) },
@@ -535,6 +609,28 @@ export function ProjectExplorer() {
           })
           )}
         </Section>
+
+        {/* V3.3.1-T14-7: 云端项目分组（登录后显示） */}
+        {loggedIn && (
+          <Section title={t('common:explorer.cloudProjects')} icon={<Cloud size={14} />} sectionKey="cloud-projects">
+            {remoteProjects.length === 0 ? (
+              <div className="px-3 py-2 text-2xs text-gray-400 dark:text-gray-500">
+                {t('common:explorer.noCloudProjects')}
+              </div>
+            ) : (
+              remoteProjects.map((p) => (
+                <TreeNode
+                  key={`${p.owner}/${p.name}`}
+                  label={p.name}
+                  depth={0}
+                  leading={<Cloud size={12} className="text-cyan-400" />}
+                  trailing={<span className="text-2xs text-gray-400 dark:text-gray-500">{p.owner}</span>}
+                  onClick={() => setActiveActivity('cloud')}
+                />
+              ))
+            )}
+          </Section>
+        )}
 
         {/* Output Section */}
         <OutputSection projects={projects} openTab={openTab} />
@@ -578,6 +674,23 @@ export function ProjectExplorer() {
           }
           onConfirm={handleRenameConfirm}
           onClose={() => setRenameModal(null)}
+        />
+      )}
+
+      {/* V3.3.2-T15-2: 加密导出 / 加密导入密码框 */}
+      {passwordModal && (
+        <PasswordPromptModal
+          title={passwordModal.mode === 'export' ? t('common:passwordPrompt.exportTitle') : t('common:passwordPrompt.importTitle')}
+          label={passwordModal.mode === 'export' ? t('common:passwordPrompt.exportLabel') : t('common:passwordPrompt.importLabel')}
+          requireConfirm={passwordModal.mode === 'export'}
+          onConfirm={async (password) => {
+            if (passwordModal.mode === 'export' && passwordModal.projectName) {
+              await handleEncryptedExport(passwordModal.projectName, password)
+            } else {
+              await handleImportWithPassword(password)
+            }
+          }}
+          onClose={() => setPasswordModal(null)}
         />
       )}
     </div>

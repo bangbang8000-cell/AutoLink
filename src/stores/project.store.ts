@@ -70,9 +70,9 @@ interface ProjectState {
   deleteProjects: (names: string[]) => Promise<void>
   duplicateProject: (sourceName: string, targetName: string) => Promise<void>
   renameProject: (oldName: string, newName: string) => Promise<void>
-  exportProject: (projectName: string) => Promise<{ canceled: boolean; zipPath: string }>
-  importProject: (options?: { projectName?: string; zipPath?: string }) => Promise<{ canceled: boolean; projectName: string }>
-  batchExportProjects: (projectNames: string[]) => Promise<{ canceled: boolean; result: { successes: { name: string }[]; failures: { name: string; error: string }[] } | null; targetDir: string }>
+  exportProject: (projectName: string, options?: { password?: string }) => Promise<{ canceled: boolean; zipPath: string }>
+  importProject: (options?: { projectName?: string; zipPath?: string; password?: string }) => Promise<{ canceled: boolean; projectName: string }>
+  batchExportProjects: (projectNames: string[], options?: { password?: string }) => Promise<{ canceled: boolean; result: { successes: { name: string }[]; failures: { name: string; error: string }[] } | null; targetDir: string }>
   selectProject: (project: ProjectInfo | null) => void
   toggleFavorite: (name: string) => void
   trackRecent: (name: string) => void
@@ -220,9 +220,9 @@ export const useProjectStore = create<ProjectState>()(
         useExplorerStore.getState().cleanupProject(oldName)
       },
 
-      exportProject: async (projectName) => {
+      exportProject: async (projectName, options) => {
         ensureIPC()
-        const result = await window.electron.project.exportZip(projectName)
+        const result = await window.electron.project.exportZip(projectName, options)
         if (!result.canceled) {
           // 导出成功不刷新列表，项目未变化
           return result
@@ -245,9 +245,9 @@ export const useProjectStore = create<ProjectState>()(
         return result
       },
 
-      batchExportProjects: async (projectNames) => {
+      batchExportProjects: async (projectNames, options) => {
         ensureIPC()
-        const raw = await window.electron.project.batchExportZip(projectNames)
+        const raw = await window.electron.project.batchExportZip(projectNames, options)
         if (raw.canceled) {
           return { canceled: true, result: null, targetDir: '' }
         }

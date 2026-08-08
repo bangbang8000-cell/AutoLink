@@ -62,8 +62,11 @@ const mockElectron = {
   },
 }
 
-Object.defineProperty(window, 'electron', {
-  value: mockElectron,
-  writable: true,
-  configurable: true,
-})
+// 非 jsdom 环境（如 node 环境的 zip-crypto 测试）没有 window
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'electron', {
+    value: mockElectron,
+    writable: true,
+    configurable: true,
+  })
+}

@@ -15,6 +15,8 @@ interface ActivityItem {
 const activities: ActivityItem[] = [
   // V3.3.1: 全局搜索（本地 + 云端二合一）置顶
   { id: 'search', icon: <Search size={20} />, labelKey: 'menu.search', shortcut: 'Ctrl+Shift+F' },
+  // V3.3.1: 云中心（登录 + 云端项目/模板）紧随搜索
+  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
   // V3.1.1-T5-5: AI 对话入口
   { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
   { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
@@ -22,8 +24,6 @@ const activities: ActivityItem[] = [
   { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
   { id: 'visualization', icon: <Network size={20} />, labelKey: 'menu.visualization', shortcut: 'Ctrl+Shift+V' },
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
-  // V3.3.0-T13: 云中心（登录 + 云端项目/模板）
-  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
 

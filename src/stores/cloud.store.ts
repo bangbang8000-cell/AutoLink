@@ -14,6 +14,7 @@ import {
   templates,
   user,
   sync,
+  share as cloudShare,
   config as cloudConfig,
   type RemoteProject,
   type RemoteTemplate,
@@ -21,6 +22,7 @@ import {
   type LoginPlatform,
   type UserProfile,
   type DashboardData,
+  type ShareItem,
 } from '@/api/cloud'
 
 interface CloudState {
@@ -54,6 +56,9 @@ interface CloudState {
   publicProjectsTotal: number
   // Sync status
   syncStatuses: Record<string, SyncStatusResponse>
+  // V3.3.2-T15-1: 分享链接
+  myShares: ShareItem[]
+  shareLoading: boolean
   // Connection health
   connected: boolean
   checkingConnection: boolean
@@ -78,6 +83,16 @@ interface CloudState {
   pullProject: (owner: string, repo: string, projectName: string, overwrite?: boolean) => Promise<void>
   checkSyncStatus: (projectList: { name: string; localSha?: string }[]) => Promise<void>
   deleteRemoteProject: (owner: string, repo: string) => Promise<void>
+  // V3.3.2-T15-1: 分享链接
+  createShare: (projectName: string, description?: string, expireDays?: number) => Promise<{
+    token: string
+    project_name: string
+    url: string
+    expires_at: string
+    fullUrl: string
+  }>
+  fetchMyShares: () => Promise<void>
+  deleteShare: (token: string) => Promise<void>
 }
 
 export const useCloudStore = create<CloudState>()(
@@ -104,6 +119,8 @@ export const useCloudStore = create<CloudState>()(
       publicProjectsLoading: false,
       publicProjectsTotal: 0,
       syncStatuses: {},
+      myShares: [],
+      shareLoading: false,
       connected: false,
       checkingConnection: false,
 
@@ -292,6 +309,28 @@ export const useCloudStore = create<CloudState>()(
         await projects.delete(owner, repo)
         const { remoteProjects } = get()
         set({ remoteProjects: remoteProjects.filter((p) => p.owner !== owner || p.name !== repo) })
+      },
+
+      // V3.3.2-T15-1: 分享链接
+      createShare: async (projectName, description, expireDays) => {
+        return cloudShare.create({ projectName, description, expireDays })
+      },
+
+      fetchMyShares: async () => {
+        set({ shareLoading: true })
+        try {
+          const res = await cloudShare.list()
+          set({ myShares: res.shares, shareLoading: false })
+        } catch (err) {
+          set({ shareLoading: false })
+          throw err
+        }
+      },
+
+      deleteShare: async (token: string) => {
+        await cloudShare.delete(token)
+        const { myShares } = get()
+        set({ myShares: myShares.filter((s) => s.token !== token) })
       },
     }),
     {

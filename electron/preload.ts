@@ -12,12 +12,12 @@ const electronAPI = {
       ipcRenderer.invoke('project:duplicate', sourceName, targetName),
     rename: (oldName: string, newName: string) =>
       ipcRenderer.invoke('project:rename', oldName, newName),
-    exportZip: (projectName: string) =>
-      ipcRenderer.invoke('project:exportZip', projectName),
-    importZip: (options?: { projectName?: string; zipPath?: string }) =>
+    exportZip: (projectName: string, options?: { password?: string }) =>
+      ipcRenderer.invoke('project:exportZip', projectName, options),
+    importZip: (options?: { projectName?: string; zipPath?: string; password?: string }) =>
       ipcRenderer.invoke('project:importZip', options),
-    batchExportZip: (projectNames: string[]) =>
-      ipcRenderer.invoke('project:batchExportZip', projectNames),
+    batchExportZip: (projectNames: string[], options?: { password?: string }) =>
+      ipcRenderer.invoke('project:batchExportZip', projectNames, options),
     getStructure: (name: string) => ipcRenderer.invoke('project:getStructure', name),
     getConfigFile: (name: string) => ipcRenderer.invoke('project:getConfigFile', name),
     saveConfigFile: (name: string, content: string) =>
@@ -57,9 +57,9 @@ const electronAPI = {
       ipcRenderer.invoke('template:delete', templateName),
     update: (templateName: string, updates: unknown) =>
       ipcRenderer.invoke('template:update', templateName, updates),
-    exportZip: (templateName: string) =>
-      ipcRenderer.invoke('template:exportZip', templateName),
-    importZip: (options?: { templateName?: string; zipPath?: string }) =>
+    exportZip: (templateName: string, options?: { password?: string }) =>
+      ipcRenderer.invoke('template:exportZip', templateName, options),
+    importZip: (options?: { templateName?: string; zipPath?: string; password?: string }) =>
       ipcRenderer.invoke('template:importZip', options),
   },
   design: {
@@ -287,6 +287,11 @@ const electronAPI = {
       ipcRenderer.invoke('cloud:installRemoteProject', data),
     installRemoteTemplate: (data: { name: string; zipData: string; owner: string }) =>
       ipcRenderer.invoke('cloud:installRemoteTemplate', data),
+    // V3.3.2-T15-1: 分享链接（只读快照 → 免登录预览页）
+    shareCreate: (data: { projectName: string; description?: string; expireDays?: number }) =>
+      ipcRenderer.invoke('cloud:shareCreate', data),
+    shareList: () => ipcRenderer.invoke('cloud:shareList'),
+    shareDelete: (token: string) => ipcRenderer.invoke('cloud:shareDelete', token),
   },
   // V3.3.1: 本地搜索（项目文件 / 设备库 / 模板）
   search: {

@@ -125,6 +125,16 @@ export interface ContentSearchResult {
   snippet: string
 }
 
+// V3.3.2-T15-1: 分享链接（只读快照 → 免登录预览页）
+export interface ShareItem {
+  token: string
+  project_name: string
+  description: string
+  expires_at: string
+  created_at: string
+  url: string
+}
+
 // ===== 领域 API =====
 
 const cloud = () => window.electron?.cloud
@@ -189,4 +199,11 @@ export const config = {
   setBaseUrl: (url: string) => cloud()!.setBaseUrl(url),
   getBaseUrl: () => cloud()!.getBaseUrl(),
   getLoginState: () => cloud()!.getLoginState(),
+}
+
+// V3.3.2-T15-1: 分享链接
+export const share = {
+  create: (data: { projectName: string; description?: string; expireDays?: number }) => cloud()!.shareCreate(data),
+  list: () => cloud()!.shareList(),
+  delete: (token: string) => cloud()!.shareDelete(token),
 }

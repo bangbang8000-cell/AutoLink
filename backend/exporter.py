@@ -1081,6 +1081,78 @@ def generate_report_data(designer, estimation=None):
     }
 
 
+def generate_snapshot(designer, estimation=None):
+    """V3.3.2-T15-1: 生成只读方案快照（供云端分享预览页使用）
+
+    基于 generate_report_data 的结构，输出可 JSON 序列化的只读快照：
+    项目概览 / 网络架构 / 功耗 / 校验结果 / 成本 / 机柜 / 设备清单 / 收敛比。
+    不含拓扑细节与配置原文，只读展示安全。
+    """
+    import json
+
+    data = generate_report_data(designer, estimation)
+
+    # 设备清单 DataFrame → records（确保可 JSON 序列化）
+    devices = []
+    try:
+        df = data.get('devices')
+        if df is not None and hasattr(df, 'to_dict'):
+            devices = df.to_dict(orient='records')
+    except Exception:
+        devices = []
+
+    # 校验结果：字符串数组 + valid
+    validation = data.get('validation', {})
+    if isinstance(validation, dict):
+        errors = validation.get('errors', [])
+        valid = bool(validation.get('valid', len(errors) == 0))
+    elif isinstance(validation, list):
+        errors = list(validation)
+        valid = len(errors) == 0
+    else:
+        errors, valid = [], True
+
+    def _safe(v):
+        """递归转 JSON 安全类型（int64/float32/NaN 处理）"""
+        import math
+        if v is None or isinstance(v, (str, bool, int)):
+            return v
+        if isinstance(v, float):
+            return v if math.isfinite(v) else None
+        if isinstance(v, (list, tuple)):
+            return [_safe(x) for x in v]
+        if isinstance(v, dict):
+            return {str(k): _safe(x) for k, x in v.items()}
+        try:
+            return v.item()
+        except Exception:
+            try:
+                return str(v)
+            except Exception:
+                return None
+
+    pc = getattr(designer, '_project_config', None) or {}
+    project_name = pc.get('meta', {}).get('name', '') or 'AutoLink 项目'
+
+    snapshot = {
+        'schema_version': 1,
+        'project_name': project_name,
+        'generated_at': data.get('generated_at', ''),
+        'mode': getattr(designer, 'downlink_mode', ''),
+        'overview': _safe(data.get('overview', {})),
+        'architecture': _safe(data.get('architecture', {})),
+        'power': _safe(data.get('power', {})),
+        'validation': {'valid': valid, 'errors': [_safe(e) for e in errors]},
+        'cost': _safe(data.get('cost', {})),
+        'racks': _safe(data.get('racks', [])),
+        'devices': _safe(devices),
+        'convergence': _safe(data.get('convergence', {})),
+    }
+    # 移除成本中的光模块明细键（预览页仅展示汇总字段）
+    snapshot['cost'].pop('光模块明细', None)
+    return snapshot
+
+
 def export_compliance_report(designer, filename):
     """V2.7.5-T8: 导出信创合规报告
 

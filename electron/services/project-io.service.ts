@@ -3,6 +3,7 @@ import * as path from 'path'
 import { ZipArchive } from 'archiver'
 import AdmZip from 'adm-zip'
 import { getWorkspacePath, getTemplatePath, getUserTemplatePath } from '../config.js'
+import { encryptZipFile } from '../utils/zip-crypto.js'
 
 // 允许的顶层文件白名单（防止打包系统文件或敏感数据）
 const ALLOWED_TOP_LEVEL = new Set([
@@ -111,8 +112,9 @@ function archiveDirectory(sourceDir: string, zipPath: string, allowOutputDir: bo
 class ProjectIOService {
   /**
    * 导出单个项目为 ZIP
+   * @param password 提供时使用 ZipCrypto 加密导出（T15-2 分享 ZIP 加密）
    */
-  async exportProjectZip(projectName: string, zipPath: string): Promise<ExportResult> {
+  async exportProjectZip(projectName: string, zipPath: string, password?: string): Promise<ExportResult> {
     const wsp = getWorkspacePath()
     const projectDir = path.join(wsp, projectName)
     if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
@@ -125,13 +127,18 @@ class ProjectIOService {
     }
 
     // 项目场景：顶层只允许 output 子目录
-    return archiveDirectory(projectDir, zipPath, true)
+    const result = await archiveDirectory(projectDir, zipPath, true)
+    if (password) {
+      encryptZipFile(zipPath, password)
+    }
+    return result
   }
 
   /**
    * 批量导出多个项目为 ZIP
+   * @param password 提供时对所有 ZIP 加密（T15-2）
    */
-  async batchExportProjects(projectNames: string[], targetDir: string): Promise<BatchExportResult> {
+  async batchExportProjects(projectNames: string[], targetDir: string, password?: string): Promise<BatchExportResult> {
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true })
     }
@@ -142,7 +149,7 @@ class ProjectIOService {
     for (const name of projectNames) {
       const zipPath = path.join(targetDir, `${name}.zip`)
       try {
-        await this.exportProjectZip(name, zipPath)
+        await this.exportProjectZip(name, zipPath, password)
         successes.push({ name, zipPath })
       } catch (err) {
         failures.push({
@@ -165,13 +172,15 @@ class ProjectIOService {
     baseName: string | undefined,
     kind: string,
     syncMeta: (destDir: string, finalName: string) => void,
+    password?: string,
   ): string {
     if (!fs.existsSync(zipPath)) {
       throw new Error(`ZIP 文件不存在: ${zipPath}`)
     }
 
     const zip = new AdmZip(zipPath)
-    const entries = zip.getEntries()
+    // T15-2: 加密 ZIP 需提供密码
+    const entries = zip.getEntries(password)
 
     if (entries.length === 0) {
       throw new Error('ZIP 文件为空')
@@ -238,9 +247,10 @@ class ProjectIOService {
 
   /**
    * 从 ZIP 导入项目
+   * @param password 加密 ZIP 的解密密码（T15-2）
    * @returns 最终使用的项目名
    */
-  async importProjectZip(zipPath: string, projectName?: string): Promise<string> {
+  async importProjectZip(zipPath: string, projectName?: string, password?: string): Promise<string> {
     return this.extractZipCommon(zipPath, getWorkspacePath(), projectName, '项目', (destDir, finalName) => {
       // 确保 output 目录存在
       const outputDir = path.join(destDir, 'output')
@@ -261,13 +271,14 @@ class ProjectIOService {
           // 忽略元数据损坏，不阻断导入
         }
       }
-    })
+    }, password)
   }
 
   /**
    * 导出模板为 ZIP
+   * @param password 提供时使用 ZipCrypto 加密导出（T15-2）
    */
-  async exportTemplateZip(templateName: string, zipPath: string): Promise<ExportResult> {
+  async exportTemplateZip(templateName: string, zipPath: string, password?: string): Promise<ExportResult> {
     // 优先查用户模板目录，再查内置模板目录
     const userTplDir = path.join(getUserTemplatePath(), templateName)
     const builtinTplDir = path.join(getTemplatePath(), templateName)
@@ -284,14 +295,19 @@ class ProjectIOService {
     }
 
     // 模板场景：不允许 output 子目录（模板没有该目录）
-    return archiveDirectory(tplDir, zipPath, false)
+    const result = await archiveDirectory(tplDir, zipPath, false)
+    if (password) {
+      encryptZipFile(zipPath, password)
+    }
+    return result
   }
 
   /**
    * 从 ZIP 导入模板
+   * @param password 加密 ZIP 的解密密码（T15-2）
    * @returns 最终使用的模板名（目录名）
    */
-  async importTemplateZip(zipPath: string, templateName?: string): Promise<string> {
+  async importTemplateZip(zipPath: string, templateName?: string, password?: string): Promise<string> {
     // 导入模板写入用户模板目录（可读写），内置模板目录只读
     const tplPath = getUserTemplatePath()
     if (!fs.existsSync(tplPath)) {
@@ -315,7 +331,7 @@ class ProjectIOService {
         meta.createdAt = new Date().toISOString()
       }
       fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
-    })
+    }, password)
   }
 }
 

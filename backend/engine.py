@@ -31,6 +31,7 @@ from topology import calc_max_2tier
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
     export_cabling_guide, export_bom, generate_report_data, export_pdf_report,
+    generate_snapshot,
 )
 from estimation import (
     estimate_pue, calc_convergence_ratio, estimate_cabinet_power_density,
@@ -1505,6 +1506,23 @@ def handle_export(params):
         "results": results,
         "outputDir": output_dir,
     }
+
+
+@register_action('share:snapshot')
+def handle_share_snapshot(params):
+    """V3.3.2-T15-1: 生成只读方案快照（供云端分享预览页使用，不落盘）
+
+    参数: configFile (项目 project_config.json 路径)
+    返回: 只读快照 dict（schema_version / project_name / overview / ...）
+    """
+    config_file, error = _get_config_file(params)
+    if error:
+        return {"error": error}
+
+    designer = NetworkDesignerV2(config_file)
+    estimation = _estimate_design(designer, params.get('estimateParams', {}))
+    snapshot = generate_snapshot(designer, estimation)
+    return {"snapshot": snapshot}
 
 
 # ================================================================

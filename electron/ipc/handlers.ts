@@ -454,8 +454,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     fs.renameSync(oldDir, newDir)
   }))
 
-  // V2.4.1: 项目导出为 ZIP - 显示保存对话框
-  ipcMain.handle('project:exportZip', wrapHandler(async (_event, projectName: string) => {
+  // V2.4.1: 项目导出为 ZIP - 显示保存对话框；T15-2 支持 password 加密
+  ipcMain.handle('project:exportZip', wrapHandler(async (_event, projectName: string, options?: { password?: string }) => {
     sanitizeName(projectName)
     const result = await dialog.showSaveDialog(mainWindow, {
       title: `导出项目 "${projectName}"`,
@@ -465,12 +465,12 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (result.canceled || !result.filePath) {
       return { canceled: true, zipPath: '' }
     }
-    await projectIOService.exportProjectZip(projectName, result.filePath)
+    await projectIOService.exportProjectZip(projectName, result.filePath, options?.password)
     return { canceled: false, zipPath: result.filePath }
   }))
 
-  // V2.4.1: 项目导入 ZIP - 显示打开对话框
-  ipcMain.handle('project:importZip', wrapHandler(async (_event, options?: { projectName?: string; zipPath?: string }) => {
+  // V2.4.1: 项目导入 ZIP - 显示打开对话框；T15-2 支持 password 解密
+  ipcMain.handle('project:importZip', wrapHandler(async (_event, options?: { projectName?: string; zipPath?: string; password?: string }) => {
     let zipPath = options?.zipPath
     if (!zipPath) {
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -483,12 +483,12 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       }
       zipPath = result.filePaths[0]
     }
-    const finalName = await projectIOService.importProjectZip(zipPath, options?.projectName)
+    const finalName = await projectIOService.importProjectZip(zipPath, options?.projectName, options?.password)
     return { canceled: false, projectName: finalName }
   }))
 
-  // V2.4.1: 批量项目导出
-  ipcMain.handle('project:batchExportZip', wrapHandler(async (_event, projectNames: string[]) => {
+  // V2.4.1: 批量项目导出；T15-2 支持 password 加密
+  ipcMain.handle('project:batchExportZip', wrapHandler(async (_event, projectNames: string[], options?: { password?: string }) => {
     for (const name of projectNames) {
       sanitizeName(name)
     }
@@ -499,7 +499,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (result.canceled || result.filePaths.length === 0) {
       return { canceled: true, result: null }
     }
-    const batchResult = await projectIOService.batchExportProjects(projectNames, result.filePaths[0])
+    const batchResult = await projectIOService.batchExportProjects(projectNames, result.filePaths[0], options?.password)
     return { canceled: false, result: batchResult, targetDir: result.filePaths[0] }
   }))
 
@@ -1593,7 +1593,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   // V2.4.1: 模板导出为 ZIP - 显示保存对话框
-  ipcMain.handle('template:exportZip', wrapHandler(async (_event, templateName: string) => {
+  // T15-2: 支持 password 加密
+  ipcMain.handle('template:exportZip', wrapHandler(async (_event, templateName: string, options?: { password?: string }) => {
     sanitizeName(templateName)
     const result = await dialog.showSaveDialog(mainWindow, {
       title: `导出模板 "${templateName}"`,
@@ -1603,14 +1604,15 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (result.canceled || !result.filePath) {
       return { canceled: true, zipPath: '' }
     }
-    await projectIOService.exportTemplateZip(templateName, result.filePath)
+    await projectIOService.exportTemplateZip(templateName, result.filePath, options?.password)
     return { canceled: false, zipPath: result.filePath }
   }))
 
   // V2.4.1: 模板导入 ZIP - 显示打开对话框
   // V2.9.8-T1: 导入强校验 — 无 project_config.json 时自动调用 Python 迁移补全；
   //            含 JSON 时 validate_config 校验；任一失败则回滚删除并明确抛错
-  ipcMain.handle('template:importZip', wrapHandler(async (_event, options?: { templateName?: string; zipPath?: string }) => {
+  // T15-2: 支持 password 解密
+  ipcMain.handle('template:importZip', wrapHandler(async (_event, options?: { templateName?: string; zipPath?: string; password?: string }) => {
     let zipPath = options?.zipPath
     if (!zipPath) {
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -1623,7 +1625,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       }
       zipPath = result.filePaths[0]
     }
-    const finalName = await projectIOService.importTemplateZip(zipPath, options?.templateName)
+    const finalName = await projectIOService.importTemplateZip(zipPath, options?.templateName, options?.password)
     const destDir = path.join(getUserTemplatePath(), finalName)
     const jsonPath = path.join(destDir, 'project_config.json')
     const iniPath = path.join(destDir, 'network_config.ini')
