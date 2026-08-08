@@ -73,7 +73,7 @@
   "settings": {
     "title": "云平台设置",
     "serverUrl": "服务器地址",
-    "serverUrlHint": "例如：http://81.71.11.33",
+    "serverUrlHint": "例如：http://81.71.11.33/autolink-api（生产网关前缀；本地直连 http://localhost:18721）",
     "testConnection": "测试连接",
     "connectionSuccess": "连接成功",
     "connectionFailed": "连接失败",

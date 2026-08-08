@@ -632,7 +632,7 @@
       "cloud": {
         "title": "Cloud Platform",
         "serverUrl": "Server URL",
-        "serverUrlHint": "e.g. http://81.71.11.33",
+        "serverUrlHint": "e.g. http://81.71.11.33/autolink-api (prod gateway prefix; local direct http://localhost:18721)",
         "saveUrl": "Save",
         "testConnection": "Test Connection",
         "connectionSuccess": "Connection successful",

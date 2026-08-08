@@ -239,7 +239,8 @@ class CloudService {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
       try {
-        return await net.fetch(`${this.baseUrl}${apiPath}`, {
+        // API 统一挂 /api/v1 前缀（服务端 main.py include_router prefix），客户端请求需拼上
+        return await net.fetch(`${this.baseUrl}${API_PREFIX}${apiPath}`, {
           method,
           headers,
           body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -486,7 +487,7 @@ class CloudService {
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
     let res: Response
     try {
-      res = await net.fetch(`${this.baseUrl}${apiPath}`, { method: 'GET', headers, signal: controller.signal })
+      res = await net.fetch(`${this.baseUrl}${API_PREFIX}${apiPath}`, { method: 'GET', headers, signal: controller.signal })
     } finally {
       clearTimeout(timer)
     }
@@ -498,7 +499,7 @@ class CloudService {
         const c2 = new AbortController()
         const t2 = setTimeout(() => c2.abort(), REQUEST_TIMEOUT_MS)
         try {
-          res = await net.fetch(`${this.baseUrl}${apiPath}`, { method: 'GET', headers: headers2, signal: c2.signal })
+          res = await net.fetch(`${this.baseUrl}${API_PREFIX}${apiPath}`, { method: 'GET', headers: headers2, signal: c2.signal })
         } finally {
           clearTimeout(t2)
         }

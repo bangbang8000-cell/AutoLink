@@ -73,7 +73,7 @@
   "settings": {
     "title": "雲端設定",
     "serverUrl": "伺服器位址",
-    "serverUrlHint": "例如：http://81.71.11.33",
+    "serverUrlHint": "例如：http://81.71.11.33/autolink-api（生產閘道前綴；本機直連 http://localhost:18721）",
     "testConnection": "測試連線",
     "connectionSuccess": "連線成功",
     "connectionFailed": "連線失敗",

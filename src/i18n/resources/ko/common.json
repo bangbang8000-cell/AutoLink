@@ -620,7 +620,7 @@
       "cloud": {
         "title": "클라우드 플랫폼",
         "serverUrl": "서버 주소",
-        "serverUrlHint": "예: http://81.71.11.33",
+        "serverUrlHint": "예: http://81.71.11.33/autolink-api（프로덕션 게이트웨이 접두사; 로컬 직접 http://localhost:18721）",
         "saveUrl": "저장",
         "testConnection": "연결 테스트",
         "connectionSuccess": "연결 성공",

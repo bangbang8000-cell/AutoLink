@@ -73,7 +73,7 @@
   "settings": {
     "title": "クラウド設定",
     "serverUrl": "サーバーアドレス",
-    "serverUrlHint": "例: http://81.71.11.33",
+    "serverUrlHint": "例: http://81.71.11.33/autolink-api（本番ゲートウェイ接頭辞; ローカル直接 http://localhost:18721）",
     "testConnection": "接続テスト",
     "connectionSuccess": "接続成功",
     "connectionFailed": "接続失敗",
