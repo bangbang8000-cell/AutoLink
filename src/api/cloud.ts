@@ -179,6 +179,9 @@ export const projects = {
   download: (owner: string, repo: string) => cloud()!.projectDownload(owner, repo),
   // V4-1: 项目 Fork
   fork: (owner: string, repo: string) => cloud()!.projectFork(owner, repo),
+  // V4-4: 大文件分片上传
+  uploadFileChunked: (owner: string, repo: string, path: string, content: string) =>
+    cloud()!.uploadFileChunked(owner, repo, path, content),
 }
 
 export const templates = {

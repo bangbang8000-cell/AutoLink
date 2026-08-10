@@ -37,6 +37,14 @@ const projectFilesSchema = z.object({
 
 const projectRefSchema = z.object({ owner: z.string().min(1).max(120), repo: projectNameSchema })
 
+// V4-4: 大文件分片上传载荷（content 为 UTF-8 原始文本，分片由主进程完成）
+const uploadChunkedSchema = z.object({
+  owner: z.string().min(1).max(120),
+  repo: projectNameSchema,
+  path: z.string().max(500),
+  content: z.string().max(100 * 1024 * 1024),
+})
+
 const syncCheckSchema = z.object({
   projects: z.array(z.object({ name: projectNameSchema, local_sha: z.string().max(64).optional() })).max(500),
 })
@@ -185,6 +193,12 @@ export function registerCloudIpcHandlers(): void {
   ipcMain.handle('cloud:projectFork', handler(async (payload: unknown) => {
     const { owner, repo } = assertParsed(projectRefSchema, payload, 'projectFork')
     return cloudService.projectFork(owner, repo)
+  }))
+
+  // V4-4: 大文件分片上传
+  ipcMain.handle('cloud:uploadFileChunked', handler(async (payload: unknown) => {
+    const { owner, repo, path, content } = assertParsed(uploadChunkedSchema, payload, 'uploadFileChunked')
+    await cloudService.uploadFileChunked(owner, repo, path, content)
   }))
 
   // ===== Templates =====

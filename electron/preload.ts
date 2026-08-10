@@ -270,6 +270,9 @@ const electronAPI = {
     projectDownload: (owner: string, repo: string) => ipcRenderer.invoke('cloud:projectDownload', { owner, repo }),
     // V4-1: 项目 Fork
     projectFork: (owner: string, repo: string) => ipcRenderer.invoke('cloud:projectFork', { owner, repo }),
+    // V4-4: 大文件分片上传
+    uploadFileChunked: (owner: string, repo: string, path: string, content: string) =>
+      ipcRenderer.invoke('cloud:uploadFileChunked', { owner, repo, path, content }),
     templateList: (params?: { q?: string; category?: string; page?: number; limit?: number; sort?: string }) =>
       ipcRenderer.invoke('cloud:templateList', params ?? {}),
     templateDetail: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateDetail', { owner, repo }),

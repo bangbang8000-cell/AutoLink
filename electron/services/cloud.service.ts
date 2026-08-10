@@ -375,6 +375,60 @@ class CloudService {
     return this.request('POST', `/projects/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/fork`)
   }
 
+  /** V4-4: 大文件分片上传（单文件超过阈值时走分片，支持断点续传）
+   *
+   * 流程：init → 逐片 PUT chunk（base64）→ progress 断点续传 → complete。
+   * 单片默认 4MB，由服务端 CHUNK_SIZE 决定。
+   */
+  async uploadFileChunked(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    opts: { chunkSize?: number; onProgress?: (received: number, total: number) => void } = {},
+  ): Promise<void> {
+    const data = Buffer.from(content, 'utf8')
+    const chunkSize = opts.chunkSize ?? 4 * 1024 * 1024
+    const totalChunks = Math.max(1, Math.ceil(data.length / chunkSize))
+
+    // 小于单片阈值 → 走普通 create_file 语义即可（分片仅用于大文件）
+    if (totalChunks === 1) {
+      // 仍走分片 complete 端点以保证幂等（update or create）
+      await this.request('POST', `/projects/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/files`, {
+        files: [{ path, content: content, action: 'update' }],
+      })
+      return
+    }
+
+    const init = await this.request<{ upload_id: string; chunk_size: number; total_chunks: number }>(
+      'POST',
+      '/uploads/init',
+      { owner, repo, path, size: data.length, total_chunks: totalChunks },
+    )
+    const uploadId = init.upload_id
+
+    // 断点续传：查询已接收分片，跳过已传的
+    let received = 0
+    try {
+      const prog = await this.request<{ received: number; total_chunks: number }>(
+        'GET',
+        `/uploads/${uploadId}/progress`,
+      )
+      received = prog.received ?? 0
+    } catch { /* 首次上传无进度 */ }
+
+    for (let i = received; i < totalChunks; i++) {
+      const start = i * chunkSize
+      const end = Math.min(start + chunkSize, data.length)
+      const slice = data.subarray(start, end).toString('base64')
+      await this.request('PUT', `/uploads/${uploadId}/chunk/${i}`, { content: slice })
+      opts.onProgress?.(i + 1, totalChunks)
+    }
+
+    await this.request('POST', `/uploads/${uploadId}/complete`)
+    opts.onProgress?.(totalChunks, totalChunks)
+  }
+
   // ===== Templates =====
 
   async templateList(q?: string, category?: string, page?: number, limit?: number, sort?: string): Promise<{ templates: RemoteTemplate[]; total: number; page: number; limit: number }> {

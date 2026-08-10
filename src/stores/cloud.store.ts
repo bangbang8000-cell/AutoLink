@@ -309,8 +309,29 @@ export const useCloudStore = create<CloudState>()(
       },
 
       pushProject: async (name: string, description: string, isPrivate: boolean) => {
-        const files = await sync.collectProjectFiles(name)
-        const result = await projects.create({ name, description, private: isPrivate, files })
+        const allFiles = await sync.collectProjectFiles(name)
+        // V4-4: 大文件（>3MB）走分片上传，其余走批量 create
+        const CHUNK_THRESHOLD = 3 * 1024 * 1024
+        const smallFiles = allFiles.filter((f) => f.content.length <= CHUNK_THRESHOLD)
+        const largeFiles = allFiles.filter((f) => f.content.length > CHUNK_THRESHOLD)
+
+        // 先创建项目并上传小文件
+        let result = await projects.create({
+          name,
+          description,
+          private: isPrivate,
+          files: smallFiles,
+        })
+
+        // 大文件逐个分片上传
+        if (largeFiles.length > 0 && largeFiles[0].content.length > 0) {
+          // projectCreate 返回的 owner 可能是用户名；远端 repo 名 = 上传 name
+          const owner = result.owner || get().username || ''
+          for (const f of largeFiles) {
+            await projects.uploadFileChunked(owner, result.name, f.path, f.content)
+          }
+        }
+
         return result
       },
 

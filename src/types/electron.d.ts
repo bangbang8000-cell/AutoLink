@@ -498,6 +498,8 @@ interface Window {
       projectDownload: (owner: string, repo: string) => Promise<string>
       // V4-1: 项目 Fork
       projectFork: (owner: string, repo: string) => Promise<{ status: string; name: string; owner: string; html_url: string }>
+      // V4-4: 大文件分片上传
+      uploadFileChunked: (owner: string, repo: string, path: string, content: string) => Promise<void>
       templateList: (params?: { q?: string; category?: string; page?: number; limit?: number; sort?: string }) => Promise<{
         templates: import('@/api/cloud').RemoteTemplate[]
         total: number
