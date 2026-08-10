@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## [3.4.0] - 2026-08-10
+
+### 云端协作与官网品牌化（v3.4）
+
+v3.4 在 3.3 云端底座之上补齐协作运营能力（服务端 S3 平台增强）与官网品牌化，客户端随服务端就绪分批联动（V4-1~V4-4）。
+
+#### 服务端 S3 平台增强
+- **S3-1 项目 Fork**：`POST /projects/{o}/{r}/fork`，公开项目可 Fork 到任意用户空间，fork 后自动打 `autolink-project` topic（私有项目拒绝、owner 自身 409）
+- **S3-2 模板市场统计**：模板下载 / 安装计数统一落 analytics.db，`/templates/{o}/{r}/stats` 返回 `downloads` + `usages`；下载端点自动记录 `template_download` 事件
+- **S3-3 通知与公告**：新增 `announcements` 表 + `/client/notifications` 读取 + `/admin/notifications` 增改删（admin token 鉴权）
+- **S3-4 公开统计 topic 化**：`/public/stats` 按 `autolink-template` / 项目仓库分页统计并排除 `magiccommander-*` 仓库
+- **S3-5 大文件分片上传**：`/uploads/init|chunk|progress|complete` 四端点，单文件突破 5MB 限制（≤100MB），支持断点续传（progress 跳过已传分片）
+
+#### 客户端 V4 联动
+- **V4-1 项目 Fork**：云中心公开项目新增「Fork 到我的空间」按钮（七层贯通，Fork 后刷新我的项目列表）
+- **V4-2 模板统计展示**：模板市场列表展示下载数 + 安装计数（批量拉取 `/stats`）
+- **V4-3 公告横幅**：云中心顶部拉取 `/client/notifications` 展示公告（可关闭、支持链接跳转）
+- **V4-4 大文件分片上传**：项目推送时 >3MB 文件自动走分片上传 + 断点续传，其余走批量
+
+#### 官网品牌化（S3-6）
+- Astro 官网全量去 MagicCommander 品牌 → AutoLink，域名 `al.evergreenzhou.com`
+- 根域 `evergreenzhou.com` 提供 AutoLink / MagicCommander 双入口导引页
+- changelog 重写为 AutoLink 版本史；`versions.json` 指向 AutoLink releases（3.4.0）
+- nginx 多域名配置 + 部署脚本含官网构建
+
+#### 回归
+- 平台端 112 用例全绿（新增 fork / stats / 公告 / 分片 / 公开统计测试 24 个）
+- 客户端 vitest 全绿 + typecheck 通过
+
+---
+
 ## [3.3.3] - 2026-08-08
 
 ### 3.X 收官发布

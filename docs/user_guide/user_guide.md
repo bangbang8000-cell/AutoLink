@@ -1,6 +1,6 @@
 # AIDC AutoLink 用户指南
 
-> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v3.3.3
+> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v3.4.0
 
 欢迎使用 AIDC AutoLink！本指南带您全面了解产品核心功能与使用流程：从 Scale-Up 双栈拓扑、Scale-Out 网络设计、设备选型、机柜规划，到校验、报告与交付，全流程覆盖。
 
@@ -668,7 +668,7 @@ AutoLink 3.X 系列按"本地确定性引擎 + 可选云端"架构演进。下�
 ## 技术支持
 
 - **GitHub 仓库**：https://github.com/bangbang8000-cell/AutoLink
-- **版本**：AIDC AutoLink v3.3.3+
+- **版本**：AIDC AutoLink v3.4.0+
 - **Wiki**：https://github.com/bangbang8000-cell/AutoLink/wiki
 - **许可证**：MIT License
 
