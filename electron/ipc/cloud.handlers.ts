@@ -181,6 +181,12 @@ export function registerCloudIpcHandlers(): void {
     return cloudService.projectDownload(owner, repo)
   }))
 
+  // V4-1: 项目 Fork
+  ipcMain.handle('cloud:projectFork', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(projectRefSchema, payload, 'projectFork')
+    return cloudService.projectFork(owner, repo)
+  }))
+
   // ===== Templates =====
   ipcMain.handle('cloud:templateList', handler(async (payload: unknown) => {
     const p = assertParsed(templateListSchema, payload ?? {}, 'templateList')
@@ -190,6 +196,12 @@ export function registerCloudIpcHandlers(): void {
   ipcMain.handle('cloud:templateDetail', handler(async (payload: unknown) => {
     const { owner, repo } = assertParsed(projectRefSchema, payload, 'templateDetail')
     return cloudService.templateDetail(owner, repo)
+  }))
+
+  // V4-2: 模板统计
+  ipcMain.handle('cloud:templateStats', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(projectRefSchema, payload, 'templateStats')
+    return cloudService.templateStats(owner, repo)
   }))
 
   ipcMain.handle('cloud:templateDownload', handler(async (payload: unknown) => {

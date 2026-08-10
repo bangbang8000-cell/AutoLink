@@ -124,12 +124,16 @@
     "public": "公開專案",
     "private": "私有",
     "delete": "刪除雲端專案",
+    "fork": "Fork 到我的空間",
+    "forkConfirm": "確定要 Fork 專案 \"{{name}}\" 到你的空間嗎？",
+    "forkSuccess": "已 Fork 到你的空間",
     "emptyMine": "暫無雲端專案，請先將本機專案推送到雲端",
     "emptyPublic": "暫無公開專案",
     "existsLocally": "本機已存在同名專案 \"{{name}}\"，請選擇處理方式"
   },
   "templates": {
-    "installed": "模板 \"{{name}}\" 已安裝到本機"
+    "installed": "模板 \"{{name}}\" 已安裝到本機",
+    "installs": "已安裝 {{count}} 次"
   },
   "categories": {
     "all": "全部",

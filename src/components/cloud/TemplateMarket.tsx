@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useToastStore } from '@/stores/toast.store'
+import { templates as templatesApi } from '@/api/cloud'
 import { TemplatePermissionDialog } from '@/components/cloud/TemplatePermissionDialog'
 import type { RemoteTemplate } from '@/api/cloud'
 
@@ -25,6 +26,8 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
   const [installing, setInstalling] = useState<string | null>(null)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [permDialog, setPermDialog] = useState<{ owner: string; name: string } | null>(null)
+  // V4-2: 模板统计（下载/安装计数）缓存
+  const [statsMap, setStatsMap] = useState<Record<string, { downloads: number; usages: number }>>({})
 
   const addToast = useToastStore((s) => s.addToast)
 
@@ -110,6 +113,20 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
   const visibleTemplates = favoritesOnly
     ? remoteTemplates.filter((tp) => tp.is_favorite)
     : remoteTemplates
+
+  // V4-2: 批量拉取当前可见模板的下载/安装计数
+  useEffect(() => {
+    if (!visibleTemplates.length) return
+    let cancelled = false
+    visibleTemplates.forEach(async (tp) => {
+      const key = `${tp.owner}/${tp.name}`
+      try {
+        const s = await templatesApi.stats(tp.owner, tp.name)
+        if (!cancelled) setStatsMap((prev) => ({ ...prev, [key]: s }))
+      } catch { /* 统计失败静默，保留列表已有 downloads */ }
+    })
+    return () => { cancelled = true }
+  }, [visibleTemplates])
 
   return (
     <div className="flex flex-col h-full">
@@ -239,6 +256,15 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
                         {template.downloads}
                       </span>
                     )}
+                    {(() => {
+                      const s = statsMap[`${template.owner}/${template.name}`]
+                      return (s && s.usages > 0) ? (
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                          <Package size={10} />
+                          {t('templates.installs', { count: s.usages })}
+                        </span>
+                      ) : null
+                    })()}
                     {template.topics && template.topics.length > 0 && (
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
                         <Tag size={10} />

@@ -496,6 +496,8 @@ interface Window {
         results: Record<string, import('@/api/cloud').SyncStatusResponse>
       }>
       projectDownload: (owner: string, repo: string) => Promise<string>
+      // V4-1: 项目 Fork
+      projectFork: (owner: string, repo: string) => Promise<{ status: string; name: string; owner: string; html_url: string }>
       templateList: (params?: { q?: string; category?: string; page?: number; limit?: number; sort?: string }) => Promise<{
         templates: import('@/api/cloud').RemoteTemplate[]
         total: number
@@ -503,6 +505,8 @@ interface Window {
         limit: number
       }>
       templateDetail: (owner: string, repo: string) => Promise<import('@/api/cloud').RemoteTemplate>
+      // V4-2: 模板统计
+      templateStats: (owner: string, repo: string) => Promise<{ downloads: number; usages: number }>
       templateDownload: (owner: string, repo: string) => Promise<string>
       templateMine: () => Promise<{ templates: import('@/api/cloud').RemoteTemplate[] }>
       templatePublish: (data: {

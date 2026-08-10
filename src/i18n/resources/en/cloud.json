@@ -124,12 +124,16 @@
     "public": "Public Projects",
     "private": "Private",
     "delete": "Delete cloud project",
+    "fork": "Fork to my space",
+    "forkConfirm": "Fork project \"{{name}}\" to your space?",
+    "forkSuccess": "Forked to your space",
     "emptyMine": "No cloud projects yet. Push a local project to the cloud to get started.",
     "emptyPublic": "No public projects",
     "existsLocally": "A project named \"{{name}}\" already exists locally. Choose how to proceed."
   },
   "templates": {
-    "installed": "Template \"{{name}}\" installed locally"
+    "installed": "Template \"{{name}}\" installed locally",
+    "installs": "Installed {{count}} times"
   },
   "categories": {
     "all": "All",

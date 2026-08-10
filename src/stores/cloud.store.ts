@@ -87,6 +87,8 @@ interface CloudState {
   pullProject: (owner: string, repo: string, projectName: string, overwrite?: boolean) => Promise<void>
   checkSyncStatus: (projectList: { name: string; localSha?: string }[]) => Promise<void>
   deleteRemoteProject: (owner: string, repo: string) => Promise<void>
+  // V4-1: 项目 Fork（公开项目 → 我的空间）
+  forkProject: (owner: string, repo: string) => Promise<{ owner: string; repo: string }>
   // V3.3.2-T15-1: 分享链接
   createShare: (projectName: string, description?: string, expireDays?: number) => Promise<{
     token: string
@@ -337,6 +339,14 @@ export const useCloudStore = create<CloudState>()(
         await projects.delete(owner, repo)
         const { remoteProjects } = get()
         set({ remoteProjects: remoteProjects.filter((p) => p.owner !== owner || p.name !== repo) })
+      },
+
+      // V4-1: 项目 Fork（公开项目 → 我的空间）
+      forkProject: async (owner: string, repo: string) => {
+        await projects.fork(owner, repo)
+        // fork 后刷新"我的项目"列表
+        await get().fetchRemoteProjects()
+        return { owner: get().username ?? '', repo }
       },
 
       // V3.3.2-T15-1: 分享链接

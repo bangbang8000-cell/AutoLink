@@ -268,9 +268,13 @@ const electronAPI = {
     projectSyncCheck: (projects: { name: string; local_sha?: string }[]) =>
       ipcRenderer.invoke('cloud:projectSyncCheck', { projects }),
     projectDownload: (owner: string, repo: string) => ipcRenderer.invoke('cloud:projectDownload', { owner, repo }),
+    // V4-1: 项目 Fork
+    projectFork: (owner: string, repo: string) => ipcRenderer.invoke('cloud:projectFork', { owner, repo }),
     templateList: (params?: { q?: string; category?: string; page?: number; limit?: number; sort?: string }) =>
       ipcRenderer.invoke('cloud:templateList', params ?? {}),
     templateDetail: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateDetail', { owner, repo }),
+    // V4-2: 模板统计
+    templateStats: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateStats', { owner, repo }),
     templateDownload: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateDownload', { owner, repo }),
     templateMine: () => ipcRenderer.invoke('cloud:templateMine'),
     templatePublish: (data: { name: string; description: string; category: string; public: boolean; files: { path: string; content: string }[] }) =>

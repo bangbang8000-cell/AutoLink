@@ -124,12 +124,16 @@
     "public": "公开项目",
     "private": "私有",
     "delete": "删除云端项目",
+    "fork": "Fork 到我的空间",
+    "forkConfirm": "确定要 Fork 项目 \"{{name}}\" 到你的空间吗？",
+    "forkSuccess": "已 Fork 到你的空间",
     "emptyMine": "暂无云端项目，请先将本地项目推送到云端",
     "emptyPublic": "暂无公开项目",
     "existsLocally": "本地已存在同名项目 \"{{name}}\"，请选择处理方式"
   },
   "templates": {
-    "installed": "模板 \"{{name}}\" 已安装到本地"
+    "installed": "模板 \"{{name}}\" 已安装到本地",
+    "installs": "已安装 {{count}} 次"
   },
   "categories": {
     "all": "全部",

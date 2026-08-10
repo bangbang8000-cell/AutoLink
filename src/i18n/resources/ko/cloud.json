@@ -124,12 +124,16 @@
     "public": "공개 프로젝트",
     "private": "비공개",
     "delete": "클라우드 프로젝트 삭제",
+    "fork": "내 공간으로 포크",
+    "forkConfirm": "프로젝트 \"{{name}}\"을(를) 내 공간으로 포크하시겠습니까?",
+    "forkSuccess": "내 공간으로 포크되었습니다",
     "emptyMine": "클라우드 프로젝트가 없습니다. 로컬 프로젝트를 먼저 푸시하세요",
     "emptyPublic": "공개 프로젝트가 없습니다",
     "existsLocally": "\"{{name}}\" 프로젝트가 로컬에 이미 존재합니다. 처리 방법을 선택하세요"
   },
   "templates": {
-    "installed": "\"{{name}}\" 템플릿이 로컬에 설치되었습니다"
+    "installed": "\"{{name}}\" 템플릿이 로컬에 설치되었습니다",
+    "installs": "{{count}}회 설치됨"
   },
   "categories": {
     "all": "전체",

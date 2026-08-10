@@ -41,6 +41,8 @@ export interface RemoteTemplate {
   created_at?: string
   topics?: string[]
   downloads?: number
+  // V4-2: 安装计数（列表展示）
+  usages?: number
   files?: { path: string; size: number }[]
   // V3.3.2-T15-3: 收藏态 / 我的角色（所有者/可编辑/只读）
   is_favorite?: boolean
@@ -173,6 +175,8 @@ export const projects = {
   delete: (owner: string, repo: string) => cloud()!.projectDelete(owner, repo),
   syncCheck: (checks: { name: string; local_sha?: string }[]) => cloud()!.projectSyncCheck(checks),
   download: (owner: string, repo: string) => cloud()!.projectDownload(owner, repo),
+  // V4-1: 项目 Fork
+  fork: (owner: string, repo: string) => cloud()!.projectFork(owner, repo),
 }
 
 export const templates = {
@@ -180,6 +184,8 @@ export const templates = {
     cloud()!.templateList({ q, category, page, limit, sort }),
   detail: (owner: string, repo: string) => cloud()!.templateDetail(owner, repo),
   download: (owner: string, repo: string) => cloud()!.templateDownload(owner, repo),
+  // V4-2: 模板统计
+  stats: (owner: string, repo: string) => cloud()!.templateStats(owner, repo),
   mine: () => cloud()!.templateMine(),
   publish: (data: { name: string; description: string; category: string; public: boolean; files: { path: string; content: string }[] }) =>
     cloud()!.templatePublish(data),

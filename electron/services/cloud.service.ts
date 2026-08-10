@@ -370,6 +370,11 @@ class CloudService {
     return buffer.toString('base64')
   }
 
+  /** V4-1: Fork 公开项目到当前用户空间 */
+  async projectFork(owner: string, repo: string): Promise<{ status: string; name: string; owner: string; html_url: string }> {
+    return this.request('POST', `/projects/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/fork`)
+  }
+
   // ===== Templates =====
 
   async templateList(q?: string, category?: string, page?: number, limit?: number, sort?: string): Promise<{ templates: RemoteTemplate[]; total: number; page: number; limit: number }> {
@@ -385,6 +390,11 @@ class CloudService {
 
   async templateDetail(owner: string, repo: string): Promise<RemoteTemplate> {
     return this.request('GET', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`)
+  }
+
+  /** V4-2: 模板市场统计（下载/安装计数） */
+  async templateStats(owner: string, repo: string): Promise<{ downloads: number; usages: number }> {
+    return this.request('GET', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/stats`)
   }
 
   async templateDownload(owner: string, repo: string): Promise<string> {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RefreshCw, Download, Trash2, Loader2, Cloud, Globe, Upload } from 'lucide-react'
+import { RefreshCw, Download, Trash2, Loader2, Cloud, Globe, Upload, GitFork } from 'lucide-react'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -35,6 +35,7 @@ export function RemoteProjectView({ onPullSuccess, searchQuery }: RemoteProjectV
     fetchRemoteProjects,
     searchPublicProjects,
     deleteRemoteProject,
+    forkProject,
     checkSyncStatus,
   } = useCloudStore()
 
@@ -101,6 +102,19 @@ export function RemoteProjectView({ onPullSuccess, searchQuery }: RemoteProjectV
       }
     },
     [deleteRemoteProject, t, addToast],
+  )
+
+  const handleFork = useCallback(
+    async (project: RemoteProject) => {
+      if (!confirm(t('projects.forkConfirm', { name: project.name }))) return
+      try {
+        await forkProject(project.owner, project.name)
+        addToast('success', t('projects.forkSuccess'))
+      } catch (err) {
+        addToast('error', (err as Error).message)
+      }
+    },
+    [forkProject, t, addToast],
   )
 
   const displayProjects = activeTab === 'mine' ? filteredMyProjects : publicProjects
@@ -241,6 +255,15 @@ export function RemoteProjectView({ onPullSuccess, searchQuery }: RemoteProjectV
                   >
                     <Download size={14} />
                   </button>
+                  {activeTab === 'public' && (
+                    <button
+                      onClick={() => handleFork(project)}
+                      className="p-1.5 rounded hover:bg-primary-50 dark:hover:bg-primary-900/30 text-primary-500 transition-colors"
+                      title={t('projects.fork')}
+                    >
+                      <GitFork size={14} />
+                    </button>
+                  )}
                   {activeTab === 'mine' && (
                     <button
                       onClick={() => handleDelete(project)}
