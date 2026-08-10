@@ -94,6 +94,32 @@ export const roomOptimizeSchema = z
 /** 配置导入 / 预设应用：必须为对象 */
 export const configPayloadSchema = z.record(z.string(), z.unknown())
 
+/** 机房矩阵创建 / 校验载荷（rows 行名数组、cols 列数数组） */
+export const roomCreateSchema = z.object({
+  rows: z.array(z.string().min(1).max(32)).min(1).max(1000),
+  cols: z.array(z.number().int().min(1).max(1000)).min(1).max(1000),
+  name: z.string().min(1).max(64).optional(),
+})
+export const roomValidateSchema = z.record(z.string(), z.unknown())
+
+/** ATOP 拓扑推荐载荷（numGpus 必填有界，traffic 计数有界） */
+export const atopRecommendSchema = z
+  .object({
+    numGpus: z.number().int().min(1).max(100000),
+    model: z.string().max(200).optional(),
+    modelType: z.string().max(64).optional(),
+    numExperts: z.number().int().min(1).max(10000).optional(),
+    precision: z.string().max(32).optional(),
+    tp: z.number().int().min(1).max(1024).optional(),
+    dp: z.number().int().min(1).max(1024).optional(),
+    pp: z.number().int().min(1).max(1024).optional(),
+    communicationPattern: z.string().max(64).optional(),
+    commRatio: z.number().min(0).max(1).optional(),
+    traffic: z.record(z.string().max(32), z.number().min(0).max(1)).optional(),
+    switchPorts: z.number().int().min(1).max(10000).optional(),
+  })
+  .refine((p) => p.numGpus !== undefined, '缺少参数：numGpus')
+
 /** 导出保存文件：fileName 必须是单层文件名（防路径穿越） */
 export const exportSaveFileSchema = z.object({
   projectName: projectNameSchema,
@@ -102,7 +128,7 @@ export const exportSaveFileSchema = z.object({
     .min(1, '文件名不能为空')
     .max(120, '文件名过长')
     .regex(/^[^/\\]+$/, '文件名不能包含路径分隔符'),
-  base64Data: z.string().min(1).max(500_000_000, '数据过大'),
+  base64Data: z.string().min(1).max(50_000_000, '数据过大'),
 })
 
 /** shell:openExternal 仅允许 https */

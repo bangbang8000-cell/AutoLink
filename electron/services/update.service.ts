@@ -171,7 +171,17 @@ function downloadInstallerFile(
         response.on('end', () => {
           if (fileStream) {
             fileStream.end(() => {
-              if (!settled) { settled = true; resolve() }
+              if (!settled) {
+                // V3.4.1-M7: 完整性校验——Content-Length 存在且已收字节不一致视为截断失败
+                if (totalBytes > 0 && receivedBytes !== totalBytes) {
+                  settled = true
+                  try { fs.unlinkSync(localPath) } catch { /* ignore */ }
+                  reject(new Error(`Download incomplete: ${receivedBytes}/${totalBytes} bytes`))
+                  return
+                }
+                settled = true
+                resolve()
+              }
             })
           } else if (!settled) {
             settled = true
@@ -196,12 +206,24 @@ class UpdateService {
   private mainWindow: BrowserWindow | null = null
   /** 上次检查更新是否走了 fallback 通道(fallback 通道需要用直接下载) */
   private lastCheckUsedFallback = false
+  /** V3.4.1-L4: 进行中的检查去重（启动自动检查 + app:check-update 并发时只跑一次） */
+  private checkInFlight: Promise<CheckResult> | null = null
 
   setWindow(win: BrowserWindow): void {
     this.mainWindow = win
   }
 
   async checkForUpdates(): Promise<CheckResult> {
+    if (this.checkInFlight) return this.checkInFlight
+    this.checkInFlight = this.doCheckForUpdates()
+    try {
+      return await this.checkInFlight
+    } finally {
+      this.checkInFlight = null
+    }
+  }
+
+  private async doCheckForUpdates(): Promise<CheckResult> {
     const updater = await getAutoUpdater()
 
     // 主路径:使用 electron-updater
@@ -377,7 +399,8 @@ class UpdateService {
     }
     const { downloadUrl, fileName } = cachedFallbackInfo
     const downloadsPath = app.getPath('downloads')
-    const localPath = path.join(downloadsPath, fileName)
+    // V3.4.1-L3: fileName 来自 yml path 字段，必须 basename 防本地路径拼接越界
+    const localPath = path.join(downloadsPath, path.basename(fileName))
 
     console.log(`[UpdateService] Direct downloading ${fileName} to ${localPath}`)
     this.mainWindow?.webContents.send('update:downloadProgress', { percent: 0 })
@@ -401,12 +424,17 @@ class UpdateService {
     // 直接下载场景:打开下载的安装包并退出应用
     if (cachedFallbackInfo) {
       const downloadsPath = app.getPath('downloads')
-      const localPath = path.join(downloadsPath, cachedFallbackInfo.fileName)
+      const localPath = path.join(downloadsPath, path.basename(cachedFallbackInfo.fileName))
       console.log('[UpdateService] Opening installer and quitting:', localPath)
       import('electron').then(({ shell }) => {
-        shell.openPath(localPath)
-        // 稍延迟退出,确保 shell.openPath 执行完成
-        setTimeout(() => app.quit(), 500)
+        // V3.4.1-M7: 确认安装包真实存在后再打开，避免打开残缺/缺失文件
+        if (fs.existsSync(localPath)) {
+          shell.openPath(localPath)
+          // 稍延迟退出,确保 shell.openPath 执行完成
+          setTimeout(() => app.quit(), 500)
+        } else {
+          console.error('[UpdateService] Installer file missing, not quitting:', localPath)
+        }
       })
       return
     }

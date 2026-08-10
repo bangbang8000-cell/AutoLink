@@ -6,6 +6,7 @@
  * 用户确认后经 optimize:apply（NOTIFY）落盘 project_config.json。
  */
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Sparkles, Loader2, CheckCircle2, ListChecks, ArrowRight } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -32,6 +33,7 @@ const CATEGORY_COLOR: Record<string, string> = {
 }
 
 export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const [loading, setLoading] = useState(false)
@@ -59,7 +61,7 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
 
   const handleSuggest = async () => {
     if (!selectedProjectName) {
-      addToast('error', '请先选择一个项目', 4000)
+      addToast('error', t('batchOptimize.selectFirst'), 4000)
       return
     }
     setLoading(true)
@@ -67,15 +69,15 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
     try {
       const res = (await window.electron.optimize.suggest({ projectName: selectedProjectName }))
       if (!res.success) {
-        addToast('error', res.error || '建议生成失败', 5000)
+        addToast('error', res.error || t('batchOptimize.failed'), 5000)
         setSuggestions([])
         return
       }
       setSuggestions(res.suggestions ?? [])
       setChecked(new Set((res.suggestions ?? []).map((_, i) => i)))
-      addToast('success', `生成 ${res.total ?? 0} 条优化建议`, 4000)
+      addToast('success', t('batchOptimize.generated', { count: res.total ?? 0 }), 4000)
     } catch (err) {
-      addToast('error', `建议生成失败：${(err as Error).message}`, 5000)
+      addToast('error', `${t('batchOptimize.failed')}：${(err as Error).message}`, 5000)
     } finally {
       setLoading(false)
     }
@@ -103,14 +105,14 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
         suggestions: selected.map((s) => ({ category: s.category, title: s.title, patch: s.patch })),
       }))
       if (!res.success) {
-        addToast('error', res.error || '应用失败', 5000)
+        addToast('error', res.error || t('batchOptimize.applyFailed'), 5000)
         return
       }
       setAppliedCount(res.applied?.length ?? 0)
-      addToast('success', `已应用 ${res.applied?.length ?? 0} 条建议，配置已写入 ${selectedProjectName}`, 5000)
+      addToast('success', t('batchOptimize.appliedTo', { count: res.applied?.length ?? 0, name: selectedProjectName }), 5000)
       onClose()
     } catch (err) {
-      addToast('error', `应用失败：${(err as Error).message}`, 5000)
+      addToast('error', `${t('batchOptimize.applyFailed')}：${(err as Error).message}`, 5000)
     } finally {
       setApplying(false)
     }
@@ -126,7 +128,7 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
             <Sparkles size={15} className="text-primary-500" />
-            批量优化建议
+            {t('batchOptimize.title')}
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500">
             <X size={15} />
@@ -138,7 +140,7 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
           {/* project + suggest */}
           <div className="flex items-center gap-3">
             <span className="text-gray-500 dark:text-gray-400 truncate">
-              项目：<span className="font-medium text-gray-700 dark:text-gray-200">{selectedProjectName || '未选择'}</span>
+              {t('batchOptimize.project')}<span className="font-medium text-gray-700 dark:text-gray-200">{selectedProjectName || t('batchOptimize.notSelected')}</span>
             </span>
             <button
               onClick={handleSuggest}
@@ -146,20 +148,20 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
             >
               {loading ? <Loader2 size={13} className="animate-spin" /> : <ListChecks size={13} />}
-              {loading ? '分析中…' : '生成建议'}
+              {loading ? t('batchOptimize.analyzing') : t('batchOptimize.suggest')}
             </button>
           </div>
 
           {/* summary */}
           {suggestions.length > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 rounded bg-gray-50 dark:bg-app-hover/40 text-gray-500 dark:text-gray-400">
-              <span>共 {suggestions.length} 条建议</span>
+              <span>{t('batchOptimize.total', { count: suggestions.length })}</span>
               {grouped.map((g) => (
                 <span key={g.category} className={`px-1.5 py-0.5 rounded text-[11px] ${CATEGORY_COLOR[g.category]}`}>
                   {g.categoryLabel} {g.items.length}
                 </span>
               ))}
-              {appliedCount > 0 && <span className="ml-auto text-success-600 dark:text-success-400">已应用 {appliedCount} 条</span>}
+              {appliedCount > 0 && <span className="ml-auto text-success-600 dark:text-success-400">{t('batchOptimize.applied', { count: appliedCount })}</span>}
             </div>
           )}
 
@@ -167,7 +169,7 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
           {grouped.length === 0 && !loading ? (
             <div className="py-10 text-center text-gray-400 dark:text-gray-500 space-y-1">
               <Sparkles size={22} className="mx-auto" />
-              <p>点击「生成建议」分析当前项目的收敛比 / 成本 / 散热</p>
+              <p>{t('batchOptimize.empty')}</p>
             </div>
           ) : (
             grouped.map((group) => (
@@ -209,16 +211,16 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
               onClick={() => toggleAll(!(checked.size === suggestions.length))}
               className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
             >
-              {checked.size === suggestions.length ? '全不选' : '全选'}
+              {checked.size === suggestions.length ? t('batchOptimize.selectNone') : t('batchOptimize.selectAll')}
             </button>
-            <span className="text-gray-400 dark:text-gray-500">已选 {selected.length} 条</span>
+            <span className="text-gray-400 dark:text-gray-500">{t('batchOptimize.selected', { count: selected.length })}</span>
             <button
               onClick={handleApply}
               disabled={applying || selected.length === 0}
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
             >
               {applying ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-              {applying ? '应用中…' : `应用选中 (${selected.length})`}
+              {applying ? t('batchOptimize.applying') : t('batchOptimize.applySelected', { count: selected.length })}
             </button>
           </div>
         )}

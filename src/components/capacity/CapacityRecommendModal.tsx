@@ -6,6 +6,7 @@
  * （映射到 DesignConfig：param_speed / param_protocol / num_servers）。
  */
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Gauge, Loader2, Sparkles, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useToastStore } from '@/stores/toast.store'
@@ -106,6 +107,7 @@ interface Props {
 }
 
 export function CapacityRecommendModal({ open, onClose, onApply, initialNumServers }: Props) {
+  const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const [presets, setPresets] = useState<CapacityPreset[]>([])
   const [model, setModel] = useState('')
@@ -123,7 +125,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
         setPresets(res.presets)
         if (!model && res.presets.length > 0) setModel(res.presets[0].id)
       } catch (err: unknown) {
-        addToast('error', err instanceof Error ? err.message : '加载模型档案失败', 4000)
+        addToast('error', err instanceof Error ? err.message : t('capacity.loadFailed'), 4000)
       }
     }
     load()
@@ -132,7 +134,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
 
   const handleRecommend = async () => {
     if (!model) {
-      addToast('warning', '请选择模型', 3000)
+      addToast('warning', t('capacity.selectModel'), 3000)
       return
     }
     setLoading(true)
@@ -140,11 +142,11 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
     try {
       const res = await window.electron.capacity.recommend({ model, numGpus, budget })
       if (!res.success) {
-        addToast('error', res.error || '推荐计算失败', 4000)
+        addToast('error', res.error || t('capacity.recommendFailed'), 4000)
       }
       setResult(res)
     } catch (err: unknown) {
-      addToast('error', err instanceof Error ? err.message : '推荐计算失败', 4000)
+      addToast('error', err instanceof Error ? err.message : t('capacity.recommendFailed'), 4000)
     } finally {
       setLoading(false)
     }
@@ -160,7 +162,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
       num_servers: Math.max(1, Math.ceil(numGpus / 8)),
     }
     onApply(patch)
-    addToast('success', `已应用容量推荐：${rec.scale_out_speed} ${rec.scale_out_protocol}，收敛比 ${rec.convergence_ratio}`, 4000)
+    addToast('success', t('capacity.applied', { speed: rec.scale_out_speed, protocol: rec.scale_out_protocol, ratio: rec.convergence_ratio }), 4000)
     onClose()
   }
 
@@ -171,7 +173,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
     <Modal
       open={open}
       onClose={onClose}
-      title="容量规划推荐"
+      title={t('capacity.title')}
       width={560}
       footer={
         rec && (
@@ -181,7 +183,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
               className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded bg-primary-500 text-white hover:bg-primary-600 transition-colors"
             >
               <CheckCircle2 size={13} />
-              一键应用
+              {t('capacity.apply')}
             </button>
           </div>
         )
@@ -191,7 +193,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-2xs text-gray-500 dark:text-gray-400">训练模型</span>
+            <span className="text-2xs text-gray-500 dark:text-gray-400">{t('capacity.model')}</span>
             <select
               value={model}
               onChange={(e) => setModel(e.target.value)}
@@ -199,13 +201,13 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
             >
               {presets.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}（{p.source === '国产' ? '国产 · ' : ''}{p.model_type === 'moe' ? 'MoE' : 'Dense'} · {p.precision} · {Math.round(p.num_params / 1e9)}B）
+                  {p.name}（{p.source === '国产' ? `${t('capacity.domestic')} · ` : ''}{p.model_type === 'moe' ? 'MoE' : 'Dense'} · {p.precision} · {t('capacity.params', { count: Math.round(p.num_params / 1e9) })}）
                 </option>
               ))}
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-2xs text-gray-500 dark:text-gray-400">目标 GPU 数量</span>
+            <span className="text-2xs text-gray-500 dark:text-gray-400">{t('capacity.numGpus')}</span>
             <input
               type="number"
               min={1}
@@ -217,7 +219,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
           </label>
         </div>
         <label className="flex flex-col gap-1">
-          <span className="text-2xs text-gray-500 dark:text-gray-400">预算档位</span>
+          <span className="text-2xs text-gray-500 dark:text-gray-400">{t('capacity.budget')}</span>
           <select
             value={budget}
             onChange={(e) => setBudget(e.target.value)}
@@ -234,7 +236,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
           className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium rounded bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? <Loader2 size={13} className="animate-spin" /> : <Gauge size={13} />}
-          {loading ? '计算中...' : '计算容量推荐'}
+          {loading ? t('capacity.computing') : t('capacity.compute')}
         </button>
       </div>
 
@@ -251,8 +253,9 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
         <div className="mt-4 space-y-3">
           {modelInfo && (
             <div className="text-2xs text-gray-500 dark:text-gray-400">
-              {modelInfo.name} · {modelInfo.num_params_b}B 参数 · {modelInfo.model_type === 'moe' ? 'MoE' : 'Dense'}
-              {' · '}{Math.round((modelInfo.context_length / 1024))}K 上下文 · {modelInfo.precision.toUpperCase()}
+              {modelInfo.name} · {t('capacity.params', { count: modelInfo.num_params_b })}
+              {' · '}{modelInfo.model_type === 'moe' ? 'MoE' : 'Dense'}
+              {' · '}{t('capacity.context', { count: Math.round((modelInfo.context_length / 1024)) })} · {modelInfo.precision.toUpperCase()}
             </div>
           )}
           {/* V3.1.3-T7-5: 预估值标注 */}
@@ -260,7 +263,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
             <div className="flex items-center gap-1.5 text-2xs px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
               <Sparkles size={11} className="shrink-0" />
               <span>
-                {result.estimation?.label || '预估值'} · {result.estimation?.method || '解析法'} · 误差 {result.estimation?.accuracy || '±15-20%'}
+                {result.estimation?.label || t('capacity.estimated')} · {result.estimation?.method || t('capacity.analytical')} · {t('capacity.errorVs', { pct: result.estimation?.accuracy || '±15-20%' })}
               </span>
             </div>
           )}
@@ -268,10 +271,10 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
             <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5">
               <div className="text-2xs text-gray-400 dark:text-gray-500 mb-1.5">Scale-Up</div>
               <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                {rec.scale_up_protocol === 'none' ? '不启用' : PROTOCOL_LABELS[rec.scale_up_protocol] || rec.scale_up_protocol}
+                {rec.scale_up_protocol === 'none' ? t('capacity.disabled') : PROTOCOL_LABELS[rec.scale_up_protocol] || rec.scale_up_protocol}
               </div>
               {rec.scale_up_domain > 0 && (
-                <div className="text-2xs text-gray-400 dark:text-gray-500 mt-0.5">域大小 {rec.scale_up_domain}</div>
+                <div className="text-2xs text-gray-400 dark:text-gray-500 mt-0.5">{t('capacity.domainSize', { count: rec.scale_up_domain })}</div>
               )}
             </div>
             <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5">
@@ -279,36 +282,36 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
               <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
                 {rec.scale_out_speed} {PROTOCOL_LABELS[rec.scale_out_protocol] || rec.scale_out_protocol}
               </div>
-              <div className="text-2xs text-gray-400 dark:text-gray-500 mt-0.5">收敛比 ≤ {rec.convergence_ratio} · {rec.tier_count} 层</div>
+              <div className="text-2xs text-gray-400 dark:text-gray-500 mt-0.5">{t('capacity.tiers', { ratio: rec.convergence_ratio, count: rec.tier_count })}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 text-2xs text-gray-500 dark:text-gray-400">
             <Sparkles size={12} className="text-amber-500" />
-            预估通信开销占比 {Math.round(rec.estimated_comm_overhead * 100)}% · 每步通信量约 {result?.comm?.total_gib ?? '-'} GiB
+            {t('capacity.estComm', { pct: Math.round(rec.estimated_comm_overhead * 100), gib: result?.comm?.total_gib ?? '-' })}
           </div>
           {/* V3.2.0-T9-1: FP8 精确通信 + Pipeline 显存 + TCO 成本 */}
           {(result.exact || result.pipeline || result.cost) && (
             <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-1.5">
               {result.exact && (
                 <div className="flex items-center justify-between text-2xs">
-                  <span className="text-gray-500 dark:text-gray-400">FP8 精确通信量</span>
+                  <span className="text-gray-500 dark:text-gray-400">{t('capacity.fp8Exact')}</span>
                   <span className="font-medium text-gray-800 dark:text-gray-100">
-                    {result.exact.total_gib} GiB/步
-                    <span className="text-gray-400 ml-1">与解析法误差 {result.exact.analytic_error_pct}%</span>
+                    {t('capacity.perStep', { gib: result.exact.total_gib })}
+                    <span className="text-gray-400 ml-1">{t('capacity.errorVs', { pct: result.exact.analytic_error_pct })}</span>
                   </span>
                 </div>
               )}
               {result.pipeline && result.pipeline.stages > 1 && (
                 <div className="flex items-center justify-between text-2xs">
-                  <span className="text-gray-500 dark:text-gray-400">Pipeline 分段显存</span>
+                  <span className="text-gray-500 dark:text-gray-400">{t('capacity.pipelineMem')}</span>
                   <span className="font-medium text-gray-800 dark:text-gray-100">
-                    {result.pipeline.stages} 段 · 峰值 {result.pipeline.peak_per_stage_gib} GiB/stage
+                    {t('capacity.segments', { count: result.pipeline.stages, peak: result.pipeline.peak_per_stage_gib })}
                   </span>
                 </div>
               )}
               {result.cost && (
                 <div className="flex items-center justify-between text-2xs">
-                  <span className="text-gray-500 dark:text-gray-400">估算 TCO（硬件 + 电力 + 空间）</span>
+                  <span className="text-gray-500 dark:text-gray-400">{t('capacity.tco')}</span>
                   <span className="font-bold text-gray-800 dark:text-gray-100">
                     ${(result.cost.total_usd / 1e6).toFixed(1)}M
                   </span>
@@ -316,10 +319,10 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
               )}
               {result.cost && (
                 <div className="text-2xs text-gray-400 flex items-center gap-2">
-                  <span>硬件 ${(result.cost.hardware.subtotal_usd / 1e6).toFixed(1)}M</span>
-                  <span>电力 ${(result.cost.power.subtotal_usd / 1e6).toFixed(1)}M</span>
-                  <span>空间 ${(result.cost.space.subtotal_usd / 1e6).toFixed(1)}M</span>
-                  <span>· {result.cost.space.racks} 柜</span>
+                  <span>{t('capacity.hardware', { amount: (result.cost.hardware.subtotal_usd / 1e6).toFixed(1) })}</span>
+                  <span>{t('capacity.power', { amount: (result.cost.power.subtotal_usd / 1e6).toFixed(1) })}</span>
+                  <span>{t('capacity.space', { amount: (result.cost.space.subtotal_usd / 1e6).toFixed(1) })}</span>
+                  <span>· {t('capacity.racks', { count: result.cost.space.racks })}</span>
                 </div>
               )}
             </div>

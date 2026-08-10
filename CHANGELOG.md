@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## [3.4.1] - 2026-08-10
+
+### 安全加固与性能优化
+
+v3.4.1 对客户端与云平台做整体安全加固与性能优化：平台端修复管理口令默认值与部署数据安全风险；Electron 修复路径穿越与凭据外带隐患；前端补齐高频面板 i18n；后端消除重复拓扑重建与两处 O(n²) 热点。
+
+#### 平台端安全加固
+- **管理口令强制**：移除 `ADMIN_TOKEN` 默认值（`mc-admin-2026`），未配置时管理 API fail-closed（503）；`provision-env.sh` / `.env.example` 自动生成随机口令
+- **部署数据安全**：`remote-setup.sh` 移除删库命令；`deploy-ubuntu-tce.sh` rsync 排除 `*.db`/`.uploads`/`__pycache__` + 同步前远端 DB 快照
+- **OAuth 安全**：回调校验 state（防登录 CSRF/回放）；`scan_sessions` 不再落明文 JWT（轮询即时签发）
+- **其他**：修复 `analytics.py` 管理统计 `TOPIC_TEMPLATE` NameError（此前静默返回全 0）+ 管理统计 TTL 缓存；CORS 通配符收紧为域名白名单；`/public/stats` 加限流+缓存；templates 共享缓存按用户收藏态串读竞态修复；systemd 加 `--proxy-headers`；deploy.yml 移除 MC 部署残留；OAuth 回调地址统一 18721
+
+#### Electron 安全加固
+- **路径穿越修复**：`project:create` 模板参数与 `getFile/getFileBinary/deleteOutputFile/export:saveFile` 改走项目级路径限界，阻断跨项目读/删
+- **凭据外带防护**：变更服务器地址自动清空 token；打包环境强制 https；token 明文回退仅限开发环境
+- **生命周期健壮性**：pythonService `stop()` 清算队列 Promise、空闲 kill 竞态消除、队列/缓冲设上限
+- **IPC 门禁补全**：room/config/atop/share 动态载荷接入 zod 校验；导出上限 500MB→50MB；更新下载完整性校验 + 检查去重；本地搜索 TTL 缓存
+
+#### 前端 i18n
+- 高频面板全部接入 i18n：机柜视图 / 智能修复 / 机房智能落位 / 批量优化 / 容量规划推荐 + ui 通用组件（Modal / Dropdown）
+- 新增 5 命名空间 ~95 key，en / ja / ko / zh-TW 同步补齐（i18n 完整性测试强制 5 语言 key 集合一致）
+
+#### 后端性能
+- **O(n²)→O(N)**：机柜分配网段二级索引、V009 存储冗余单遍倒排统计
+- （说明：designer 实例备忘录缓存与 `handle_design` 校验管线抽取经回归验证存在共享可变状态风险，已回滚为 v3.4.0 原逻辑——`design` 执行路径与 v3.4.0 完全一致）
+
+#### 回归
+- 平台端 112 用例全绿；客户端 vitest 473 全绿 + typecheck/lint 0 error；后端 991 用例全绿；golden 19/19 模板一致；性能门禁达标（2048 GPU 设计 0.38s、225 柜落位 0.07s）
+
+---
+
 ## [3.4.0] - 2026-08-10
 
 ### 云端协作与官网品牌化（v3.4）

@@ -1,6 +1,7 @@
 /**
  * V3.1.4-T8-2: 机房智能落位向导测试（模式切换/计算方案/评分展示/应用方案）
  */
+import '@/i18n'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { RoomOptimizeModal } from '@/components/datacenter/RoomOptimizeModal'

@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRackStore, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
@@ -9,13 +10,6 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid } from 'lucide-react'
 
 type ViewMode = 'basic' | 'power-heat' | 'multi-compare' | 'isometric'
-
-const VIEW_MODES: { id: ViewMode; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
-  { id: 'basic', label: '基础', icon: LayoutGrid },
-  { id: 'power-heat', label: '功率热力', icon: Flame },
-  { id: 'multi-compare', label: '多柜对比', icon: Columns },
-  { id: 'isometric', label: '3D 等距', icon: Box },
-]
 
 interface Props {
   cabinetId?: number | null
@@ -42,6 +36,14 @@ const getTypeLabel = (type: string) => {
 }
 
 export function RackTab({ cabinetId }: Props) {
+  const { t } = useTranslation()
+  // 视图模式（i18n：label 在组件内用 t() 解析，避免模块级常量残留中文）
+  const VIEW_MODES: { id: ViewMode; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+    { id: 'basic', label: t('rackTab.viewBasic'), icon: LayoutGrid },
+    { id: 'power-heat', label: t('rackTab.viewPowerHeat'), icon: Flame },
+    { id: 'multi-compare', label: t('rackTab.viewMultiCompare'), icon: Columns },
+    { id: 'isometric', label: t('rackTab.viewIsometric'), icon: Box },
+  ]
   const cabinets = useRackStore((s) => s.cabinets)
   const unplacedDevices = useRackStore((s) => s.unplacedDevices)
   const placeDevice = useRackStore((s) => s.placeDevice)
@@ -154,8 +156,8 @@ export function RackTab({ cabinetId }: Props) {
       <div className="h-full">
         <EmptyState
           icon={LayoutGrid}
-          title="暂无机柜数据"
-          description="请先生成拓扑或导入机柜布局，再查看机柜视图"
+          title={t('rackTab.noCabinetData')}
+          description={t('rackTab.noCabinetDataDesc')}
         />
       </div>
     )
@@ -172,7 +174,7 @@ export function RackTab({ cabinetId }: Props) {
               onClick={() => setCabinetDropdownOpen(!cabinetDropdownOpen)}
               className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-app-surface border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600"
             >
-              机柜 {cabinet.name}
+              {t('rackTab.cabinet')} {cabinet.name}
               <ChevronDown size={12} />
             </button>
             {cabinetDropdownOpen && (
@@ -187,7 +189,7 @@ export function RackTab({ cabinetId }: Props) {
                         c.id === cabinet.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
                       }`}
                     >
-                      {c.name} ({c.devices.length}台 · {c.totalU}U)
+                      {c.name} ({c.devices.length} · {c.totalU}U)
                     </button>
                   ))}
                 </div>
@@ -195,7 +197,7 @@ export function RackTab({ cabinetId }: Props) {
             )}
           </div>
           <span className="text-2xs text-gray-400 dark:text-gray-500">
-            {cabinet.totalU}U · {cabinet.devices.length}台设备
+            {cabinet.totalU}U · {t('rackTab.devices', { count: cabinet.devices.length })}
           </span>
         </div>
 
@@ -258,7 +260,7 @@ export function RackTab({ cabinetId }: Props) {
             <div className={`border-r border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 flex flex-col transition-all ${showUnplaced ? 'w-[220px] shrink-0' : 'w-0 overflow-hidden'}`}>
               <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
                 <span className="text-2xs font-semibold text-gray-600 dark:text-gray-300">
-                  待分配 ({unplacedDevices.length})
+                  {t('rackTab.pending', { count: unplacedDevices.length })}
                 </span>
                 <button
                   onClick={() => setShowUnplaced(false)}
@@ -269,7 +271,7 @@ export function RackTab({ cabinetId }: Props) {
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-2">
                 {unplacedDevices.length === 0 ? (
-                  <div className="text-2xs text-gray-400 text-center py-4">所有设备已分配</div>
+                  <div className="text-2xs text-gray-400 text-center py-4">{t('rackTab.allAssigned')}</div>
                 ) : (
                   Object.entries(unplacedByType).map(([typeLabel, devices]) => (
                     <div key={typeLabel}>
@@ -300,7 +302,7 @@ export function RackTab({ cabinetId }: Props) {
               <button
                 onClick={() => setShowUnplaced(true)}
                 className="shrink-0 px-1 bg-gray-100 dark:bg-app-surface border-r border-gray-200 dark:border-edge-subtle hover:bg-gray-200 dark:hover:bg-app-hover text-gray-400"
-                title="显示待分配设备"
+                title={t('rackTab.showPending')}
               >
                 <ArrowRight size={14} />
               </button>
@@ -315,7 +317,7 @@ export function RackTab({ cabinetId }: Props) {
             {selectedUnplaced && (
               <div className="mb-2 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-2xs rounded flex items-center gap-2">
                 <Plus size={13} />
-                <span>点击下方U位放置设备: <strong>{unplacedDevices.find(d => d.id === selectedUnplaced)?.name}</strong></span>
+                <span>{t('rackTab.placeDevice', { name: unplacedDevices.find(d => d.id === selectedUnplaced)?.name ?? '' })}</span>
                 <button onClick={() => setSelectedUnplaced(null)} className="ml-auto p-0.5 rounded hover:bg-primary-200 dark:hover:bg-primary-800">
                   <X size={12} />
                 </button>
@@ -342,7 +344,7 @@ export function RackTab({ cabinetId }: Props) {
                             : 'text-gray-400 dark:text-gray-500'
                       }`}
                       disabled={isConflictArea}
-                      title={isConflictArea ? '空间或功率不足' : selectedUnplaced ? `放置设备到 U${uNum}` : undefined}
+                      title={isConflictArea ? t('rackTab.shortage') : selectedUnplaced ? t('rackTab.placeToU', { u: uNum }) : undefined}
                     >
                       {uNum}
                     </button>
@@ -402,7 +404,7 @@ export function RackTab({ cabinetId }: Props) {
                           <button
                             onClick={(e) => { e.stopPropagation(); handleRemoveDevice(device.id) }}
                             className="shrink-0 p-0.5 rounded hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="移除设备"
+                            title={t('rackTab.removeDevice')}
                           >
                             <X size={11} />
                           </button>

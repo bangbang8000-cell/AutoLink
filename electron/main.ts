@@ -26,7 +26,25 @@ class AutoLinkApp {
     this.createSplashWindow()
     Menu.setApplicationMenu(null)
     setupIpcHandlers(this.mainWindow!)
+    this.registerWindowIpc()
     this.registerAppEvents()
+  }
+
+  /**
+   * 窗口控制 IPC 一次性注册（不能在 createMainWindow 里重复注册：
+   * macOS 关窗不退出，activate 重建窗口会第二次 ipcMain.handle 同一通道导致崩溃）
+   */
+  private registerWindowIpc(): void {
+    ipcMain.handle('window:minimize', () => this.mainWindow?.minimize())
+    ipcMain.handle('window:maximize', () => {
+      if (this.mainWindow?.isMaximized()) {
+        this.mainWindow.unmaximize()
+      } else {
+        this.mainWindow?.maximize()
+      }
+    })
+    ipcMain.handle('window:close', () => this.mainWindow?.close())
+    ipcMain.handle('window:isMaximized', () => this.mainWindow?.isMaximized() ?? false)
   }
 
   /**
@@ -124,7 +142,10 @@ class AutoLinkApp {
     }
 
     this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      shell.openExternal(url)
+      // V3.2.2 加固：仅放行 https 外部链接（与 httpsUrlSchema 收紧口径一致）
+      if (url.startsWith('https://')) {
+        shell.openExternal(url)
+      }
       return { action: 'deny' }
     })
 
@@ -152,18 +173,8 @@ class AutoLinkApp {
       this.mainWindow = null
     })
 
-    // Window control IPC
-    ipcMain.handle('window:minimize', () => this.mainWindow?.minimize())
-    ipcMain.handle('window:maximize', () => {
-      if (this.mainWindow?.isMaximized()) {
-        this.mainWindow.unmaximize()
-      } else {
-        this.mainWindow?.maximize()
-      }
-    })
-    ipcMain.handle('window:close', () => this.mainWindow?.close())
-    ipcMain.handle('window:isMaximized', () => this.mainWindow?.isMaximized() ?? false)
-
+    // 窗口重建时重新绑定更新服务与崩溃监控（防止指向已销毁窗口）
+    updateService.setWindow(this.mainWindow)
     this.mainWindow.on('maximize', () => {
       this.mainWindow?.webContents.send('window:maximizeChange', true)
     })

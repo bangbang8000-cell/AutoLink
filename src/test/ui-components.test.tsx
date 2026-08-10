@@ -1,3 +1,4 @@
+import '@/i18n'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { Tooltip, Dropdown, Tabs } from '@/components/ui'

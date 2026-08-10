@@ -9,6 +9,28 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { getWorkspacePath, getTemplatePath, getUserTemplatePath } from '../config.js'
 
+// V3.4.1-M3: 本地搜索是同步全量扫描，加短 TTL 结果缓存（连续击键/重复查询不重复扫盘）
+const SEARCH_CACHE_TTL = 3000
+const SEARCH_CACHE_MAX = 20
+const searchCache = new Map<string, { ts: number; result: LocalSearchHit[] }>()
+
+function cachedSearch(query: string, scope: string, compute: () => LocalSearchHit[]): LocalSearchHit[] {
+  const key = `${scope}:${query}`
+  const now = Date.now()
+  const hit = searchCache.get(key)
+  if (hit && now - hit.ts < SEARCH_CACHE_TTL) {
+    return hit.result
+  }
+  const result = compute()
+  searchCache.set(key, { ts: now, result })
+  // 简单 LRU 清理
+  if (searchCache.size > SEARCH_CACHE_MAX) {
+    const oldest = [...searchCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0]
+    if (oldest) searchCache.delete(oldest[0])
+  }
+  return result
+}
+
 export type LocalSearchScope = 'project' | 'device' | 'template' | 'all'
 
 export interface LocalSearchParams {
@@ -207,23 +229,28 @@ function searchTemplates(qLower: string, limit: number): LocalSearchHit[] {
 
 export function registerSearchIpcHandlers(): void {
   ipcMain.handle('search:local', (_event, params: LocalSearchParams) => {
-    const query = typeof params?.query === 'string' ? params.query.trim().slice(0, 200) : ''
-    const scope: LocalSearchScope = params?.scope === 'device' || params?.scope === 'template' || params?.scope === 'project'
-      ? params.scope
-      : 'all'
-    const maxResults = Math.max(1, Math.min(params?.maxResults ?? MAX_RESULTS_DEFAULT, MAX_RESULTS_LIMIT))
-    if (!query) return []
+    try {
+      const query = typeof params?.query === 'string' ? params.query.trim().slice(0, 200) : ''
+      const scope: LocalSearchScope = params?.scope === 'device' || params?.scope === 'template' || params?.scope === 'project'
+        ? params.scope
+        : 'all'
+      const maxResults = Math.max(1, Math.min(params?.maxResults ?? MAX_RESULTS_DEFAULT, MAX_RESULTS_LIMIT))
+      if (!query) return []
 
-    const qLower = query.toLowerCase()
-    if (scope === 'project') return searchProjects(qLower, maxResults)
-    if (scope === 'device') return searchDevices(qLower, maxResults)
-    if (scope === 'template') return searchTemplates(qLower, maxResults)
+      const qLower = query.toLowerCase()
+      if (scope === 'project') return cachedSearch(qLower, 'project', () => searchProjects(qLower, maxResults))
+      if (scope === 'device') return cachedSearch(qLower, 'device', () => searchDevices(qLower, maxResults))
+      if (scope === 'template') return cachedSearch(qLower, 'template', () => searchTemplates(qLower, maxResults))
 
-    // all：项目 → 设备 → 模板，组内按顺序输出
-    return [
-      ...searchProjects(qLower, maxResults),
-      ...searchDevices(qLower, maxResults),
-      ...searchTemplates(qLower, maxResults),
-    ].slice(0, maxResults)
+      // all：项目 → 设备 → 模板，组内按顺序输出
+      return cachedSearch(qLower, 'all', () => [
+        ...searchProjects(qLower, maxResults),
+        ...searchDevices(qLower, maxResults),
+        ...searchTemplates(qLower, maxResults),
+      ].slice(0, maxResults))
+    } catch (err) {
+      console.error('[search:local]', err)
+      return []
+    }
   })
 }

@@ -6,6 +6,7 @@
  * 权限：repair:plan AUTO（只读计算）/ repair:apply NOTIFY（写操作 + 复核）。
  */
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Wrench, Loader2, ShieldCheck, ShieldAlert, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -42,6 +43,7 @@ const RULE_ICON: Record<string, string> = {
 }
 
 export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const [loading, setLoading] = useState(false)
@@ -61,7 +63,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
 
   const handlePlan = async () => {
     if (!selectedProjectName) {
-      addToast('error', '请先选择一个项目', 4000)
+      addToast('error', t('repair.selectFirst'), 4000)
       return
     }
     setLoading(true)
@@ -69,7 +71,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
     try {
       const res = (await window.electron.repair.plan({ projectName: selectedProjectName }))
       if (!res.success) {
-        addToast('error', res.error || '修复方案生成失败', 5000)
+        addToast('error', res.error || t('repair.planFailed'), 5000)
         setFixes([])
         setUnfixable([])
         return
@@ -79,12 +81,12 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
       setTotalErrors(res.totalErrors ?? 0)
       setChecked(new Set((res.fixes ?? []).map((_, i) => i)))
       if ((res.fixes ?? []).length === 0 && (res.issues ?? []).length === 0) {
-        addToast('success', '配置校验通过，无错误项', 4000)
+        addToast('success', t('repair.noErrors'), 4000)
       } else {
-        addToast('info', `发现 ${res.totalErrors ?? 0} 个错误，可自动修复 ${res.fixes?.length ?? 0} 项`, 4000)
+        addToast('info', t('repair.foundErrors', { count: res.totalErrors ?? 0, fixable: res.fixes?.length ?? 0 }), 4000)
       }
     } catch (err) {
-      addToast('error', `修复方案生成失败：${(err as Error).message}`, 5000)
+      addToast('error', `${t('repair.planFailed')}：${(err as Error).message}`, 5000)
     } finally {
       setLoading(false)
     }
@@ -112,22 +114,22 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
         fixes: selected.map((f) => ({ rule_id: f.rule_id, message: f.message, patch: f.patch })),
       }))
       if (!res.success) {
-        addToast('error', res.error || '修复应用失败', 5000)
+        addToast('error', res.error || t('repair.applyFailed'), 5000)
         return
       }
       if (res.validation) {
         setReview(res.validation)
         const remain = res.validation.remainingErrors
         if (res.validation.valid) {
-          addToast('success', `修复完成：${res.applied?.length ?? 0} 项已应用，复核通过`, 5000)
+          addToast('success', t('repair.done', { count: res.applied?.length ?? 0 }), 5000)
         } else {
-          addToast('info', `已应用 ${res.applied?.length ?? 0} 项，复核剩余 ${remain} 个错误`, 5000)
+          addToast('info', t('repair.remaining', { count: res.applied?.length ?? 0, remain }), 5000)
         }
       } else {
-        addToast('success', `已应用 ${res.applied?.length ?? 0} 项修复`, 5000)
+        addToast('success', t('repair.applied', { count: res.applied?.length ?? 0 }), 5000)
       }
     } catch (err) {
-      addToast('error', `修复应用失败：${(err as Error).message}`, 5000)
+      addToast('error', `${t('repair.applyFailed')}：${(err as Error).message}`, 5000)
     } finally {
       setApplying(false)
     }
@@ -153,7 +155,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
             <Wrench size={15} className="text-primary-500" />
-            智能修复
+            {t('repair.title')}
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-app-hover text-gray-500">
             <X size={15} />
@@ -165,7 +167,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
           {/* project + plan */}
           <div className="flex items-center gap-3">
             <span className="text-gray-500 dark:text-gray-400 truncate">
-              项目：<span className="font-medium text-gray-700 dark:text-gray-200">{selectedProjectName || '未选择'}</span>
+              {t('repair.project')}<span className="font-medium text-gray-700 dark:text-gray-200">{selectedProjectName || t('repair.notSelected')}</span>
             </span>
             <button
               onClick={handlePlan}
@@ -173,22 +175,22 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
             >
               {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldAlert size={13} />}
-              {loading ? '校验中…' : '生成修复方案'}
+              {loading ? t('repair.validating') : t('repair.plan')}
             </button>
           </div>
 
           {/* summary */}
           {totalErrors > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 rounded bg-gray-50 dark:bg-app-hover/40 text-gray-500 dark:text-gray-400">
-              <span>校验错误 {totalErrors} 项</span>
+              <span>{t('repair.errors', { count: totalErrors })}</span>
               <span className={`px-1.5 py-0.5 rounded text-[11px] ${fixes.length > 0
                 ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                 : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'}`}>
-                可自动修复 {fixes.length} 项
+                {t('repair.fixable', { count: fixes.length })}
               </span>
               {unfixable.length > 0 && (
                 <span className="px-1.5 py-0.5 rounded text-[11px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
-                  需人工处理 {unfixable.length} 项
+                  {t('repair.manual', { count: unfixable.length })}
                 </span>
               )}
             </div>
@@ -205,7 +207,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
                 {review.valid
                   ? <CheckCircle2 size={14} className="text-success-600 dark:text-success-400" />
                   : <ShieldAlert size={14} className="text-amber-600 dark:text-amber-400" />}
-                复核结果：{review.valid ? '通过' : `剩余 ${review.remainingErrors} 个错误`}
+                {t('repair.review')}{review.valid ? t('repair.reviewPass') : t('repair.reviewRemain', { count: review.remainingErrors })}
               </div>
               {review.issues.length > 0 && (
                 <ul className="mt-2 space-y-1 pl-1">
@@ -224,7 +226,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
           {fixes.length === 0 && !loading && review === null ? (
             <div className="py-10 text-center text-gray-400 dark:text-gray-500 space-y-1">
               <ShieldCheck size={22} className="mx-auto" />
-              <p>点击「生成修复方案」校验当前项目，自动给出可一键应用的修复项</p>
+              <p>{t('repair.empty')}</p>
             </div>
           ) : (
             fixes.map((fx, i) => (
@@ -260,7 +262,7 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
           {unfixable.length > 0 && (
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
-                ⚠ 需人工处理
+                ⚠ {t('repair.manual', { count: unfixable.length })}
               </div>
               {unfixable.map((u, idx) => (
                 <div key={idx} className="flex items-start gap-2 p-2 rounded border border-red-200 dark:border-red-900 bg-red-50/40 dark:bg-red-900/10 text-gray-500 dark:text-gray-400">
@@ -279,16 +281,16 @@ export function RepairPanel({ open, onClose }: { open: boolean; onClose: () => v
               onClick={() => toggleAll(!(checked.size === fixes.length))}
               className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
             >
-              {checked.size === fixes.length ? '全不选' : '全选'}
+              {checked.size === fixes.length ? t('repair.selectNone') : t('repair.selectAll')}
             </button>
-            <span className="text-gray-400 dark:text-gray-500">已选 {selected.length} 项</span>
+            <span className="text-gray-400 dark:text-gray-500">{t('repair.selected', { count: selected.length })}</span>
             <button
               onClick={handleApply}
               disabled={applying || selected.length === 0}
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
             >
               {applying ? <Loader2 size={13} className="animate-spin" /> : <Wrench size={13} />}
-              {applying ? '修复中…' : `一键修复 (${selected.length})`}
+              {applying ? t('repair.fixing') : t('repair.oneClick', { count: selected.length })}
             </button>
           </div>
         )}

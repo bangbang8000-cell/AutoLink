@@ -71,7 +71,8 @@ describe('RepairPanel', () => {
     expect(screen.getByText(/V010/)).toBeTruthy()
     expect(screen.getByText(/V002/)).toBeTruthy()
     expect(screen.getByText(/校验错误 3 项/)).toBeTruthy()
-    expect(screen.getByText(/需人工处理 1 项/)).toBeTruthy()
+    // 「需人工处理」在摘要徽标与区块标题各出现一次（含计数）
+    expect(screen.getAllByText(/需人工处理 1 项/).length).toBeGreaterThan(0)
     expect(screen.getByText('一键修复 (2)')).toBeTruthy()
   })
 

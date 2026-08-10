@@ -4,20 +4,25 @@
  * 将 cloudService 的全部能力暴露给渲染层（window.electron.cloud.*）。
  * 通道名统一 `cloud:*`，载荷边界在 preload 层收窄，错误经 wrapHandler 脱敏。
  */
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { cloudService, type LoginPlatform } from '../services/cloud.service.js'
 import { pythonService } from '../services/python.service.js'
 import { getWorkspacePath } from '../config.js'
+import { redactSensitive } from '../utils/redact.js'
 import { assertParsed, projectNameSchema } from './schemas.js'
 import { z } from 'zod'
 
 // ===== 载荷校验 schema =====
 
 const baseUrlSchema = z.string().trim().min(1).max(500).refine(
-  (v) => v.startsWith('http://') || v.startsWith('https://'),
-  '服务器地址必须以 http:// 或 https:// 开头',
+  (v) => {
+    // 打包环境强制 https（防本地/中间人窃取凭据）；开发环境允许 http（本地服务调试）
+    if (app.isPackaged) return v.startsWith('https://')
+    return v.startsWith('http://') || v.startsWith('https://')
+  },
+  '服务器地址必须以 https:// 开头',
 )
 
 const platformSchema = z.enum(['feishu', 'qq', 'wechat'])
@@ -71,9 +76,17 @@ const templatePublishSchema = z.object({
 
 const installRemoteSchema = z.object({
   name: projectNameSchema,
-  zipData: z.string().min(1),
+  zipData: z.string().min(1).max(50_000_000, '安装包过大'),
   owner: z.string().min(1).max(120),
   overwrite: z.boolean().optional(),
+})
+
+// V3.3.2-T15-1: 分享删除 / 公开项目搜索载荷
+const shareTokenSchema = z.string().trim().min(1).max(128)
+const projectSearchPublicSchema = z.object({
+  q: z.string().max(200).optional(),
+  page: z.number().int().min(1).max(10000).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
 })
 
 // V3.3.2-T15-1: 分享链接载荷
@@ -100,11 +113,17 @@ const permissionTargetSchema = z.object({
   username: z.string().min(1).max(120),
 })
 
-/** 通用包装：解析 + 调用 + 错误透传 */
+/** 通用包装：解析 + 调用 + 错误脱敏（与 handlers.ts wrapHandler 一致） */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handler<T>(fn: (args: any) => Promise<T> | T) {
   return async (_event: Electron.IpcMainInvokeEvent, payload: unknown): Promise<T> => {
-    return await fn(payload)
+    try {
+      return await fn(payload)
+    } catch (err) {
+      // 云端错误同样脱敏落日志（apiKey/token 等），与主 handlers 的加固策略保持一致
+      console.error('[IPC Error]', redactSensitive(err instanceof Error ? err.message : String(err)))
+      throw err
+    }
   }
 }
 
@@ -165,8 +184,8 @@ export function registerCloudIpcHandlers(): void {
     cloudService.projectSearch(typeof q === 'string' ? q : '')))
 
   ipcMain.handle('cloud:projectSearchPublic', handler(async (payload: unknown) => {
-    const p = (payload ?? {}) as { q?: string; page?: number; limit?: number }
-    return cloudService.projectSearchPublic(typeof p.q === 'string' ? p.q : '', p.page ?? 1, p.limit ?? 20)
+    const p = assertParsed(projectSearchPublicSchema, payload ?? {}, 'projectSearchPublic')
+    return cloudService.projectSearchPublic(p.q ?? '', p.page ?? 1, p.limit ?? 20)
   }))
 
   ipcMain.handle('cloud:projectCreate', handler(async (payload: unknown) => {
@@ -334,6 +353,6 @@ export function registerCloudIpcHandlers(): void {
   ipcMain.handle('cloud:shareList', handler(async () => cloudService.shareList()))
 
   ipcMain.handle('cloud:shareDelete', handler(async (token: unknown) => {
-    await cloudService.shareDelete(String(token).trim())
+    await cloudService.shareDelete(assertParsed(shareTokenSchema, token, 'shareDelete'))
   }))
 }

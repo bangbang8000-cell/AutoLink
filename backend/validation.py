@@ -791,24 +791,21 @@ def _rule_storage_redundancy(ctx: ValidationContext) -> List[ValidationIssue]:
     """
     issues = []
     # V3.0.2-T2-5: 三合一融合网（combined）同样纳入存储冗余路径检查
-    storage_conns = [c for c in ctx.connections
-                     if c.get("network_type", "") in ("storage", "combined")
-                     or c.get("networkType", "") in ("storage", "combined")]
-    storage_servers = set()
-    for c in storage_conns:
-        # 服务器侧端点(source 优先,fallback 到 a_end_name)
-        src = c.get("source", "") or c.get("a_end_name", "")
-        if src.startswith("Server") or src.startswith("GPU服务器") or src.startswith("存储服务器") or src.startswith("通算服务器"):
-            storage_servers.add(src)
-    for server in storage_servers:
-        server_conns = [c for c in storage_conns
-                        if (c.get("source", "") or c.get("a_end_name", "")) == server]
-        if len(server_conns) < 2:
+    # V3.4.1-H-P2: 单遍构建 服务器→连接数 倒排索引，替代 每服务器全量二次扫描
+    # （2048 存储服务器 × 全量连接列表推导是 22 条规则里唯一的二次方热点，现降为 O(N)）
+    server_conn_count: dict = {}
+    for c in ctx.connections:
+        if c.get("network_type", "") in ("storage", "combined") or c.get("networkType", "") in ("storage", "combined"):
+            src = c.get("source", "") or c.get("a_end_name", "")
+            if src.startswith("Server") or src.startswith("GPU服务器") or src.startswith("存储服务器") or src.startswith("通算服务器"):
+                server_conn_count[src] = server_conn_count.get(src, 0) + 1
+    for server, count in server_conn_count.items():
+        if count < 2:
             issues.append(ValidationIssue(
                 rule_id="V009",
                 severity=Severity.WARNING,
                 category="网络规则",
-                message=f"服务器 {server} 存储网连接数不足({len(server_conns)})，无冗余路径",
+                message=f"服务器 {server} 存储网连接数不足({count})，无冗余路径",
                 affected_items=[server],
                 recommendation="存储网应至少双链路上联以保证冗余",
             ))

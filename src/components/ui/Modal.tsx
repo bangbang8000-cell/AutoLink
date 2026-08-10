@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -43,6 +44,7 @@ export function Modal({
   footer,
   bodyClassName = 'p-6',
 }: ModalProps) {
+  const { t } = useTranslation()
   const modalRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
 
@@ -103,7 +105,7 @@ export function Modal({
               <button
                 onClick={onClose}
                 className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400 ml-auto"
-                aria-label="Close"
+                aria-label={t('close')}
               >
                 <X size={16} />
               </button>

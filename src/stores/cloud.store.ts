@@ -316,7 +316,7 @@ export const useCloudStore = create<CloudState>()(
         const largeFiles = allFiles.filter((f) => f.content.length > CHUNK_THRESHOLD)
 
         // 先创建项目并上传小文件
-        let result = await projects.create({
+        const result = await projects.create({
           name,
           description,
           private: isPrivate,

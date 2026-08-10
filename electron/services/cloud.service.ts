@@ -175,7 +175,8 @@ class CloudService {
     try {
       if (fs.existsSync(this.tokenEncFile) && safeStorage.isEncryptionAvailable()) {
         this.token = safeStorage.decryptString(fs.readFileSync(this.tokenEncFile))
-      } else if (fs.existsSync(this.tokenJsonFile)) {
+      } else if (fs.existsSync(this.tokenJsonFile) && !app.isPackaged) {
+        // 明文回退仅限开发环境（未打包）；生产无 safeStorage 时不读明文 token
         const data = JSON.parse(fs.readFileSync(this.tokenJsonFile, 'utf-8'))
         if (typeof data.token === 'string') this.token = data.token
       }
@@ -183,7 +184,12 @@ class CloudService {
   }
 
   setBaseUrl(url: string): void {
-    this.baseUrl = (url || '').trim().replace(/\/+$/, '')
+    const trimmed = (url || '').trim().replace(/\/+$/, '')
+    if (trimmed && trimmed !== this.baseUrl) {
+      // 服务器地址变更：立即清空已存 token，防止旧凭据被静默转发到新地址（外带防护）
+      this.clearToken()
+    }
+    this.baseUrl = trimmed
     try {
       fs.writeFileSync(this.configFile, JSON.stringify({ baseUrl: this.baseUrl }, null, 2), 'utf-8')
     } catch { /* 忽略写入失败 */ }
@@ -199,7 +205,8 @@ class CloudService {
       if (safeStorage.isEncryptionAvailable()) {
         fs.writeFileSync(this.tokenEncFile, safeStorage.encryptString(token))
         if (fs.existsSync(this.tokenJsonFile)) fs.unlinkSync(this.tokenJsonFile)
-      } else {
+      } else if (!app.isPackaged) {
+        // 明文回退仅限开发环境（未打包）；生产无 safeStorage 时拒绝明文落盘
         fs.writeFileSync(this.tokenJsonFile, JSON.stringify({ token }), 'utf-8')
       }
     } catch { /* 忽略存储失败 */ }

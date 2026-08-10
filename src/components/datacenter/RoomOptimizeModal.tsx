@@ -7,25 +7,12 @@
  * 流程：计算方案（backend room:optimize）→ 评分/未放置展示 → 应用方案（applyOptimize）
  */
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Loader2, Sparkles, AlertTriangle, CheckCircle2, Wand2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useToastStore } from '@/stores/toast.store'
 import { useRoomStore, type RoomOptimizeResult } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
-
-const SCORE_LABELS: Array<{ key: string; label: string }> = [
-  { key: 'power_balance', label: '功率均衡' },
-  { key: 'thermal_zones', label: '散热分区' },
-  { key: 'network_locality', label: '网络就近' },
-  { key: 'shortest_cable', label: '布线最短' },
-]
-
-const COUNT_TYPES: Array<{ key: string; label: string }> = [
-  { key: 'gpu', label: 'GPU 柜' },
-  { key: 'network', label: '网络柜' },
-  { key: 'storage', label: '存储柜' },
-  { key: 'compute', label: '通算柜' },
-]
 
 interface Props {
   open: boolean
@@ -33,6 +20,20 @@ interface Props {
 }
 
 export function RoomOptimizeModal({ open, onClose }: Props) {
+  const { t } = useTranslation()
+  // i18n：评分/柜型标签在组件内用 t() 解析
+  const SCORE_LABELS: Array<{ key: string; label: string }> = [
+    { key: 'power_balance', label: t('roomOptimize.scorePower') },
+    { key: 'thermal_zones', label: t('roomOptimize.scoreThermal') },
+    { key: 'network_locality', label: t('roomOptimize.scoreNetwork') },
+    { key: 'shortest_cable', label: t('roomOptimize.scoreCable') },
+  ]
+  const COUNT_TYPES: Array<{ key: string; label: string }> = [
+    { key: 'gpu', label: t('roomOptimize.typeGpu') },
+    { key: 'network', label: t('roomOptimize.typeNetwork') },
+    { key: 'storage', label: t('roomOptimize.typeStorage') },
+    { key: 'compute', label: t('roomOptimize.typeCompute') },
+  ]
   const addToast = useToastStore((s) => s.addToast)
   const [mode, setMode] = useState<'cabinets' | 'counts'>('cabinets')
   const [resetExisting, setResetExisting] = useState(false)
@@ -65,10 +66,10 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
     if (!result) return
     const r = useRoomStore.getState().applyOptimize(result)
     if (r.ok) {
-      addToast('success', `已应用落位方案（${result.stats.placed}/${result.stats.total_items} 柜）`, 4000)
+      addToast('success', t('roomOptimize.applied', { placed: result.stats.placed, total: result.stats.total_items }), 4000)
       onClose()
     } else {
-      addToast('error', `应用落位方案失败: ${r.errors.join('; ')}`, 5000)
+      addToast('error', t('roomOptimize.applyFailed', { error: r.errors.join('; ') }), 5000)
     }
   }
 
@@ -78,7 +79,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title="机房智能落位"
+      title={t('roomOptimize.title')}
       width={560}
       footer={
         result && (
@@ -88,7 +89,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
               className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded bg-primary-500 text-white hover:bg-primary-600 transition-colors"
             >
               <CheckCircle2 size={13} />
-              应用方案
+              {t('roomOptimize.apply')}
             </button>
           </div>
         )
@@ -105,7 +106,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
                 : 'bg-white dark:bg-app text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
-            按机柜落位
+            {t('roomOptimize.modeCabinets')}
           </button>
           <button
             onClick={() => { setMode('counts'); setResult(null) }}
@@ -115,7 +116,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
                 : 'bg-white dark:bg-app text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
-            按数量落位
+            {t('roomOptimize.modeCounts')}
           </button>
         </div>
 
@@ -123,8 +124,8 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
           <div className="space-y-2.5">
             <div className="text-2xs text-gray-500 dark:text-gray-400">
               {resetExisting
-                ? '全部机柜重新落位（忽略当前已上架位置）'
-                : `将 ${unmountedCount} 个未上架机柜自动填入空格，已上架机柜保持不动`}
+                ? t('roomOptimize.resetAll')
+                : t('roomOptimize.autoFill', { count: unmountedCount })}
             </div>
             <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
               <input
@@ -133,7 +134,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
                 onChange={(e) => { setResetExisting(e.target.checked); setResult(null) }}
                 className="accent-primary-500"
               />
-              清空已上架重排
+              {t('roomOptimize.clearExisting')}
             </label>
           </div>
         ) : (
@@ -162,7 +163,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
           className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium rounded bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
-          {loading ? '计算中...' : '计算落位方案'}
+          {loading ? t('roomOptimize.computing') : t('roomOptimize.compute')}
         </button>
 
         {/* 结果：统计 + 评分 + issues */}
@@ -170,12 +171,12 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
           <div className="space-y-3 pt-1">
             <div className="flex items-center gap-3 text-xs">
               <span className="text-gray-500 dark:text-gray-400">
-                已落位 <b className="text-green-600 dark:text-green-400">{result.stats.placed}</b>/
+                {t('roomOptimize.placed')} <b className="text-green-600 dark:text-green-400">{result.stats.placed}</b>/
                 {result.stats.total_items}
               </span>
               {result.stats.unplaced > 0 && (
                 <span className="text-amber-600 dark:text-amber-400">
-                  未放置 {result.stats.unplaced}
+                  {t('roomOptimize.unplaced')} {result.stats.unplaced}
                 </span>
               )}
               {result.stats.elapsed_ms != null && (
@@ -192,7 +193,7 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
                 </div>
               ))}
               <div className="flex items-center justify-between border border-primary-200 dark:border-primary-900/50 rounded-lg px-2.5 py-1.5 text-2xs bg-primary-50 dark:bg-primary-900/10">
-                <span className="text-primary-600 dark:text-primary-400">综合评分</span>
+                <span className="text-primary-600 dark:text-primary-400">{t('roomOptimize.overall')}</span>
                 <span className="font-bold text-primary-700 dark:text-primary-300">
                   {((result.scores.total ?? 0) * 100).toFixed(0)}%
                 </span>
@@ -207,13 +208,13 @@ export function RoomOptimizeModal({ open, onClose }: Props) {
                   </div>
                 ))}
                 {result.issues.length > 8 && (
-                  <div className="text-2xs text-gray-400 pl-4">… 共 {result.issues.length} 条</div>
+                  <div className="text-2xs text-gray-400 pl-4">{t('roomOptimize.more', { count: result.issues.length })}</div>
                 )}
               </div>
             )}
             <div className="flex items-center gap-1.5 text-2xs text-gray-400">
               <Sparkles size={11} className="shrink-0" />
-              应用后可通过拖拽继续手动调整，保存前按「保存」持久化
+              {t('roomOptimize.manualHint')}
             </div>
           </div>
         )}

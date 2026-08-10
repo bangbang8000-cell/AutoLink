@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { ChevronDown, Check } from 'lucide-react'
 
@@ -31,11 +32,13 @@ export function Dropdown({
   value,
   defaultValue,
   onChange,
-  placeholder = '请选择',
+  placeholder,
   disabled,
   className,
   menuClassName = 'w-48',
 }: DropdownProps) {
+  const { t } = useTranslation()
+  const resolvedPlaceholder = placeholder ?? t('selectPlaceholder')
   const id = useId()
   const [internalValue, setInternalValue] = useState(defaultValue ?? '')
   const isControlled = value !== undefined
@@ -150,7 +153,7 @@ export function Dropdown({
         <span className="flex items-center gap-1.5 truncate">
           {selectedItem?.icon}
           <span className={clsx('truncate', !selectedItem && 'text-gray-400 dark:text-gray-500')}>
-            {selectedItem ? selectedItem.label : placeholder}
+            {selectedItem ? selectedItem.label : resolvedPlaceholder}
           </span>
         </span>
         <ChevronDown size={14} className={clsx('shrink-0 text-gray-400 transition-transform', open && 'rotate-180')} />

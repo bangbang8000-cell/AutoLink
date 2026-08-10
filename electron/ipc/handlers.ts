@@ -36,10 +36,14 @@ import { updateService } from '../services/update.service.js'
 import { redactSensitive } from '../utils/redact.js'
 import { registerCloudIpcHandlers } from './cloud.handlers.js'
 import { registerSearchIpcHandlers } from './search.handlers.js'
+
+// V3.4.1-L7: app:getStackVersions 进程级缓存（Python 探测 execSync 阻塞主进程，只跑一次）
+let cachedStackVersions: Record<string, string> | null = null
 import {
   actionSchema,
   aiChatSchema,
   assertParsed,
+  atopRecommendSchema,
   capacityRecommendSchema,
   configPayloadSchema,
   createWithConfigSchema,
@@ -50,7 +54,9 @@ import {
   paramsObjectSchema,
   projectNameSchema,
   repairApplySchema,
+  roomCreateSchema,
   roomOptimizeSchema,
+  roomValidateSchema,
 } from './schemas.js'
 
 /**
@@ -118,6 +124,16 @@ function sanitizeName(name: string): string {
   return name
 }
 
+/**
+ * V3.4.1-H2: 项目级路径限界 —— 校验项目名并把解析结果限界到该项目目录内。
+ * 与 sanitizePath（仅限界到 workspace 整体）不同，`../其他项目/...` 无法逃逸出目标项目，
+ * 阻断跨项目读/删（project:getFile/getFileBinary/deleteOutputFile 等）。
+ */
+function sanitizeProjectPath(name: string, ...segments: string[]): string {
+  sanitizeName(name)
+  return sanitizeUnderBase(path.join(getWorkspacePath(), name), ...segments)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function wrapHandler<T>(handler: (...args: any[]) => Promise<T>) {
   return async (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => {
@@ -125,7 +141,8 @@ function wrapHandler<T>(handler: (...args: any[]) => Promise<T>) {
       return await handler(event, ...args)
     } catch (err) {
       // V3.2.2-R11.1: 错误日志脱敏后再输出，避免 apiKey/token 等凭据泄漏
-      console.error(`[IPC Error] ${event}:`, redactSensitive(err instanceof Error ? err.message : String(err)))
+      // （事件对象不可模板插值，只记录通道名，避免打印 [object Object]）
+      console.error('[IPC Error]', redactSensitive(err instanceof Error ? err.message : String(err)))
       throw err
     }
   }
@@ -311,7 +328,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
     // V2.9.5-T1: 从模板创建项目 — 用户模板优先（user-templates），再查内置模板
     // 复制 project_config.json（若存在）+ network_config.ini；模板不存在时明确抛错
+    // V3.4.1-H1: options.template 必须经 sanitizeName 校验，防路径穿越读取模板目录外文件
     if (options?.template && !options.empty) {
+      sanitizeName(options.template)
       const userTplDir = path.join(getUserTemplatePath(), options.template)
       const builtinTplDir = path.join(getTemplatePath(), options.template)
       const tplDir = fs.existsSync(userTplDir) ? userTplDir
@@ -532,15 +551,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('project:getFile', wrapHandler(async (_event, name: string, filePath: string) => {
-    sanitizeName(name)
-    const fullPath = sanitizePath([name, filePath])
+    const fullPath = sanitizeProjectPath(name, filePath)
     if (!fs.existsSync(fullPath)) return null
     return fs.readFileSync(fullPath, 'utf-8')
   }))
 
   ipcMain.handle('project:getFileBinary', wrapHandler(async (_event, name: string, filePath: string) => {
-    sanitizeName(name)
-    const fullPath = sanitizePath([name, filePath])
+    const fullPath = sanitizeProjectPath(name, filePath)
     if (!fs.existsSync(fullPath)) return null
     const buffer = fs.readFileSync(fullPath)
     return buffer.toString('base64')
@@ -605,21 +622,22 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (relativePath !== baseName || !PROJECT_SAVE_FILE_WHITELIST.has(baseName)) {
       throw new Error(`不允许保存的文件路径: ${relativePath}`)
     }
-    const projectDir = path.join(getWorkspacePath(), name)
-    if (!fs.existsSync(projectDir)) {
-      fs.mkdirSync(projectDir, { recursive: true })
+    const fullPath = sanitizeProjectPath(name, baseName)
+    if (!fs.existsSync(path.dirname(fullPath))) {
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true })
     }
-    const fullPath = sanitizePath([name, baseName])
     fs.writeFileSync(fullPath, content, 'utf-8')
     return fullPath
   }))
 
   // ===== Room（V3.0.4-T3-1: 机房矩阵） =====
   ipcMain.handle('room:create', wrapHandler(async (_event, rows: string[], cols: number[], name?: string) => {
+    assertParsed(roomCreateSchema, { rows, cols, name }, 'room:create')
     return pythonService.call('room:create', { rows, cols, name: name ?? '机房' })
   }))
 
   ipcMain.handle('room:validate', wrapHandler(async (_event, layout: unknown) => {
+    assertParsed(roomValidateSchema, layout ?? {}, 'room:validate')
     return pythonService.call('room:validate', { layout })
   }))
 
@@ -653,6 +671,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   ipcMain.handle('config:export', wrapHandler(async (_event, appSettings: unknown, projectConfig: unknown) => {
+    assertParsed(configPayloadSchema, appSettings ?? {}, 'config:export.appSettings')
+    assertParsed(configPayloadSchema, projectConfig ?? {}, 'config:export.projectConfig')
     return pythonService.call('config:export', { appSettings, projectConfig })
   }))
 
@@ -896,9 +916,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     traffic?: Record<string, number>
     switchPorts?: number
   }) => {
-    if (!params?.numGpus) {
-      throw new Error('缺少参数：numGpus')
-    }
+    // V3.4.1-L1: 载荷 zod 校验（含 numGpus 必填与 traffic 边界），替代原手写缺参检查
+    assertParsed(atopRecommendSchema, params ?? {}, 'atop:recommend')
     return pythonService.call('atop:recommend', {
       num_gpus: params.numGpus,
       model: params.model,
@@ -1019,13 +1038,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('export:saveFile', wrapHandler(async (_event, projectName: string, fileName: string, base64Data: string) => {
     // V3.2.2-R11.1: fileName 单层文件名 + base64 边界校验（防路径穿越/超大载荷）
     assertParsed(exportSaveFileSchema, { projectName, fileName, base64Data }, 'export:saveFile')
-    sanitizeName(projectName)
-    const projectDir = path.join(getWorkspacePath(), projectName)
-    const outputDir = path.join(projectDir, 'output')
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true })
+    const filePath = sanitizeProjectPath(projectName, 'output', fileName)
+    if (!fs.existsSync(path.dirname(filePath))) {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true })
     }
-    const filePath = sanitizePath([projectName, 'output', fileName])
     const buffer = Buffer.from(base64Data, 'base64')
     fs.writeFileSync(filePath, buffer)
     return filePath
@@ -1051,8 +1067,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // 返回产品软件栈关键依赖版本（供关于弹窗动态展示）
   // T2: 修复路径(app.getAppPath) + 合并 devDependencies + Python 检测增强
+  // V3.4.1-L7: execSync 探测 Python 会阻塞主进程，结果做进程级缓存（会话内不变）
   ipcMain.handle('app:getStackVersions', () => {
     try {
+      if (cachedStackVersions !== null) return cachedStackVersions
       const pkgPath = path.join(app.getAppPath(), 'package.json')
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
       // T2: 合并 dependencies 和 devDependencies,确保 typescript/vite 等也能读到
@@ -1067,7 +1085,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         }
       }
       pythonVersion = tryPython('python') || tryPython('python3') || tryPython('py')
-      return {
+      const result = {
         app: pkg.version || 'unknown',
         electron: process.versions.electron,
         chrome: process.versions.chrome,
@@ -1083,6 +1101,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         python: pythonVersion,
         buildNumber: process.env.BUILD_NUMBER || '',
       }
+      cachedStackVersions = result
+      return result
     } catch (err) {
       console.error('[app:getStackVersions] failed:', err)
       return null
@@ -1667,24 +1687,21 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // ===== Output File Deletion =====
   ipcMain.handle('project:deleteOutputFile', wrapHandler(async (_event, projectName: string, filePath: string) => {
-    sanitizeName(projectName)
-    const fullPath = sanitizePath([projectName, 'output', filePath])
+    const fullPath = sanitizeProjectPath(projectName, 'output', filePath)
     if (!fs.existsSync(fullPath)) throw new Error('文件不存在')
     if (fs.statSync(fullPath).isDirectory()) throw new Error('不能删除目录，请使用删除批次功能')
     fs.rmSync(fullPath)
   }))
 
   ipcMain.handle('project:deleteOutputBatch', wrapHandler(async (_event, projectName: string, batchName: string) => {
-    sanitizeName(projectName)
     sanitizeName(batchName)
-    const fullPath = sanitizePath([projectName, 'output', batchName])
+    const fullPath = sanitizeProjectPath(projectName, 'output', batchName)
     if (!fs.existsSync(fullPath)) throw new Error('批次不存在')
     fs.rmSync(fullPath, { recursive: true, force: true })
   }))
 
   ipcMain.handle('project:clearOutput', wrapHandler(async (_event, projectName: string) => {
-    sanitizeName(projectName)
-    const outputDir = sanitizePath([projectName, 'output'])
+    const outputDir = sanitizeProjectPath(projectName, 'output')
     if (!fs.existsSync(outputDir)) return
 
     const entries = fs.readdirSync(outputDir, { withFileTypes: true })

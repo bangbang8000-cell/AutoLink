@@ -128,6 +128,9 @@ class RackAllocator:
         self.cabinets: List[CabinetAllocation] = []
         # v2.9.1-T6: 按机柜类型分桶索引（保持创建顺序），U 位满的柜惰性移除
         self._buckets: dict = {t: [] for t in _CABINET_TYPES}
+        # V3.4.1-H-P1: 网段 → 网络柜二级索引（_assign_network 只扫同网段柜，
+        # 消除 O(交换机数×网络柜数×柜内设备) 的线性扫描；2048 规模下约 330 万次操作降为 O(S)）
+        self._network_index: dict = {}
 
     # ------------------------------------------------------------------
     # 对外接口
@@ -152,6 +155,7 @@ class RackAllocator:
             self._assign(d, CABINET_TYPE_COMPUTE)
         for d in storage_devs:
             self._assign(d, CABINET_TYPE_STORAGE)
+        self._build_network_index()
         for d in network_devs:
             self._assign_network(d)
 
@@ -161,6 +165,7 @@ class RackAllocator:
         """预置已有机柜，用于分阶段分配（保持机柜编号连续）"""
         self.cabinets = list(cabinets)
         self._buckets = {t: [] for t in _CABINET_TYPES}
+        self._network_index = {}
         for c in self.cabinets:
             if c.used_u < self.rack_type:
                 self._buckets[c.type].append(c)
@@ -209,17 +214,26 @@ class RackAllocator:
             cab = self._new_cabinet(cabinet_type)
         self._place(cab, device)
 
+    def _build_network_index(self) -> None:
+        """从活跃网络柜重建 网段 → 柜 二级索引（覆盖 seed 预置的柜）"""
+        self._network_index = {}
+        for c in self._buckets.get(CABINET_TYPE_NETWORK, []):
+            if c.devices:
+                net = c.devices[0].network
+                if net:
+                    self._network_index.setdefault(net, []).append(c)
+
     def _assign_network(self, device: DeviceSlot) -> None:
         """网络设备装箱：严格按网段聚柜（不同网段不混柜，运维隔离常见做法）"""
         if device.network:
-            for c in self._buckets.get(CABINET_TYPE_NETWORK, []):
-                if any(d.network == device.network for d in c.devices):
-                    if self._can_fit(c, device):
-                        self._place(c, device)
-                        return
-                    # 同网段柜放不下 → 继续找其他同网段柜，不混入其他网段
+            # V3.4.1-H-P1: 只扫同网段柜（语义与全量扫描完全一致：同网段优先、满则跳过、不混入其他网段）
+            for c in self._network_index.get(device.network, []):
+                if self._can_fit(c, device):
+                    self._place(c, device)
+                    return
             cab = self._new_cabinet(CABINET_TYPE_NETWORK)
             self._place(cab, device)
+            self._network_index.setdefault(device.network, []).append(cab)
             return
         cab = self._find_fit_cabinet(CABINET_TYPE_NETWORK, device)
         if cab is None:

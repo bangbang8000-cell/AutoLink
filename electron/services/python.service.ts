@@ -30,8 +30,16 @@ interface PendingRequest {
   timer: NodeJS.Timeout
 }
 
+/** 排队请求：保留 reject 引用，stop() 时可清算队列 Promise 避免悬挂 */
+interface QueuedRequest {
+  run: () => void
+  reject: (e: Error) => void
+}
+
 const DEFAULT_TIMEOUT_MS = 60000 // 60秒默认超时
 const MAX_CONCURRENT = 3         // V3.0.0-T0-6: 并发请求上限
+const MAX_QUEUE = 50             // V3.4.1-L6: 排队上限（超出直接拒绝，防渲染层洪水）
+const MAX_BUFFER = 1024 * 1024   // V3.4.1-L6: 单行 stdout 缓冲上限（超限重置该行）
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000   // 空闲 5 分钟关闭进程（下次请求自动重启）
 const MAX_RESTARTS = 5           // 异常退出自动重启上限
 const RESTART_BASE_MS = 1000     // 退避基数（1s,2s,4s... 上限 30s）
@@ -52,7 +60,7 @@ class PythonService {
   private nextRequestId = 1
   private pending = new Map<string, PendingRequest>()
   private activeCount = 0
-  private queue: Array<() => void> = []
+  private queue: Array<QueuedRequest> = []
   private buffer = ''
   private stderrTail = ''
   private idleTimer: NodeJS.Timeout | null = null
@@ -104,7 +112,11 @@ class PythonService {
           reject(err)
         })
       } else {
-        this.queue.push(run)
+        if (this.queue.length >= MAX_QUEUE) {
+          reject(new Error('Python 请求队列已满，请稍后重试'))
+          return
+        }
+        this.queue.push({ run, reject })
       }
     })
   }
@@ -123,6 +135,10 @@ class PythonService {
       p.reject(new Error('Python 服务已停止'))
     }
     this.pending.clear()
+    // V3.4.1-M1: 清算排队请求，避免其外层 Promise 永久悬挂
+    for (const q of this.queue) {
+      q.reject(new Error('Python 服务已停止'))
+    }
     this.queue = []
   }
 
@@ -216,6 +232,10 @@ class PythonService {
 
   private onStdout(data: string): void {
     this.buffer += data
+    if (this.buffer.length > MAX_BUFFER) {
+      // V3.4.1-L6: 单行超长保护——重置缓冲（引擎异常打印大块内容时避免无界内存增长）
+      this.buffer = ''
+    }
     let idx: number
     while ((idx = this.buffer.indexOf('\n')) >= 0) {
       const line = this.buffer.slice(0, idx).trim()
@@ -288,7 +308,7 @@ class PythonService {
       const next = this.queue.shift()
       if (next) {
         this.activeCount++
-        next()
+        next.run()
       }
     }
   }
@@ -299,7 +319,10 @@ class PythonService {
       // 空闲超时：无激活请求且无排队 → 关闭进程释放资源（下次请求自动重启）
       if (this.activeCount === 0 && this.queue.length === 0 && this.proc && !this.stopped) {
         this.idleClosed = true
-        try { this.proc.kill('SIGTERM') } catch { /* ignore */ }
+        // V3.4.1-M2: 立即置空 proc 并设置 idleClosed，消除 kill→close 窗口期新请求误用半死进程的竞态
+        const proc = this.proc
+        this.proc = null
+        try { proc.kill('SIGTERM') } catch { /* ignore */ }
       }
     }, IDLE_TIMEOUT_MS)
   }
