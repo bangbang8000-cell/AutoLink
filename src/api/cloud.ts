@@ -92,6 +92,8 @@ export interface Announcement {
   content: string
   level: 'info' | 'warning' | 'important'
   created_at: string
+  // V4-3: 公告可选链接
+  link?: string
 }
 
 export interface DashboardData {

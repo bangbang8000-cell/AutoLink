@@ -103,6 +103,10 @@
     "tabSearch": "검색",
     "title": "클라우드 센터"
   },
+  "notifications": {
+    "learnMore": "자세히 보기",
+    "dismiss": "닫기"
+  },
   "search": {
     "placeholder": "프로젝트 이름 또는 설명 검색...",
     "noResults": "일치하는 결과가 없습니다",

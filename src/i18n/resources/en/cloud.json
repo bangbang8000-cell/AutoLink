@@ -103,6 +103,10 @@
     "tabSearch": "Search",
     "title": "Cloud Center"
   },
+  "notifications": {
+    "learnMore": "Learn more",
+    "dismiss": "Dismiss"
+  },
   "search": {
     "placeholder": "Search project name or description...",
     "noResults": "No matching results",

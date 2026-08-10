@@ -103,6 +103,10 @@
     "tabSearch": "搜索",
     "title": "云中心"
   },
+  "notifications": {
+    "learnMore": "了解更多",
+    "dismiss": "关闭公告"
+  },
   "search": {
     "placeholder": "搜索项目名称或描述...",
     "noResults": "未找到匹配的结果",

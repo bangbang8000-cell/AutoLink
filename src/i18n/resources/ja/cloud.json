@@ -103,6 +103,10 @@
     "tabSearch": "検索",
     "title": "クラウドセンター"
   },
+  "notifications": {
+    "learnMore": "詳細を見る",
+    "dismiss": "閉じる"
+  },
   "search": {
     "placeholder": "プロジェクト名または説明を検索...",
     "noResults": "該当する結果がありません",

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, Package, Cloud, Search } from 'lucide-react'
+import { LayoutDashboard, Package, Cloud, Search, Megaphone, X } from 'lucide-react'
 import clsx from 'clsx'
 import { DashboardView } from './DashboardView'
 import { RemoteProjectView } from './RemoteProjectView'
@@ -8,7 +8,8 @@ import { TemplateMarket } from './TemplateMarket'
 import { LoginDialog } from './LoginDialog'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useProjectStore } from '@/stores/project.store'
-import { search as searchApi, projects as projectApi, templates as templateApi } from '@/api/cloud'
+import { search as searchApi, projects as projectApi, templates as templateApi, client as clientApi } from '@/api/cloud'
+import type { Announcement } from '@/api/cloud'
 
 type CloudTab = 'search' | 'dashboard' | 'templates' | 'projects'
 type SearchType = 'project' | 'template' | 'filename' | 'content'
@@ -36,6 +37,24 @@ export function CloudPanel() {
   const [searchError, setSearchError] = useState('')
 
   const loggedIn = useCloudStore((s) => s.loggedIn)
+
+  // V4-3: 公告横幅（读 /client/notifications）
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [dismissed, setDismissed] = useState<number[]>([])
+
+  useEffect(() => {
+    if (!loggedIn) return
+    let cancelled = false
+    clientApi
+      .notifications()
+      .then((res) => {
+        if (!cancelled) setAnnouncements(res.announcements || [])
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [loggedIn])
+
+  const visibleAnnouncements = announcements.filter((a) => !dismissed.includes(a.id))
 
   const tabs: { id: CloudTab; icon: React.ReactNode; labelKey: string }[] = [
     { id: 'dashboard', icon: <LayoutDashboard size={14} />, labelKey: 'cloud:panel.tabDashboard' },
@@ -245,6 +264,41 @@ export function CloudPanel() {
           </button>
         )}
       </div>
+
+      {/* V4-3: 公告横幅 */}
+      {loggedIn && visibleAnnouncements.length > 0 && (
+        <div className="shrink-0">
+          {visibleAnnouncements.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-start gap-2 px-3 py-2 text-xs border-b border-amber-200/60 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200"
+            >
+              <Megaphone size={13} className="mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                {a.title && <div className="font-medium">{a.title}</div>}
+                <div className="opacity-90">{a.content}</div>
+                {a.link && (
+                  <a
+                    href={a.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:opacity-80"
+                  >
+                    {t('notifications.learnMore')}
+                  </a>
+                )}
+              </div>
+              <button
+                onClick={() => setDismissed((prev) => [...prev, a.id])}
+                className="p-0.5 rounded hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors shrink-0"
+                title={t('notifications.dismiss')}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex border-b border-gray-200 dark:border-edge-subtle shrink-0">

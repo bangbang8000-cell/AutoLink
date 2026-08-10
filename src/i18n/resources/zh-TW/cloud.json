@@ -103,6 +103,10 @@
     "tabSearch": "搜尋",
     "title": "雲端中心"
   },
+  "notifications": {
+    "learnMore": "了解更多",
+    "dismiss": "關閉公告"
+  },
   "search": {
     "placeholder": "搜尋專案名稱或描述...",
     "noResults": "未找到相符的結果",
