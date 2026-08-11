@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [3.4.2] - 2026-08-11
+
+### 交付修复与版本对齐
+
+v3.4.2 为 3.4.1 的交付修复版：修复 PDF 报告图表中文标签缺字形（豆腐块）、平台更新检查版本对齐、计划文档状态同步与残留清理。
+
+#### PDF 图表中文字体修复
+- `exporter.py` 新增共享中文字体候选 `_PDF_FONT_CANDIDATES` 与 `_configure_matplotlib_cjk()`：功率分布柱状图 / 光模块成本饼图注册 CJK 字体（微软雅黑 → 黑体 → 文泉驿 → DejaVu 兜底），reportlab 正文字体循环复用同一常量，消除两处字体选择漂移
+- 修复前图表中文标题/轴标签缺字形渲染为方块；修复后 Glyph 警告归零（实测 PDF 测试 7 passed / 0 Glyph warning）
+
+#### 平台更新检查对齐
+- `versions.json` 3.4.0 → 3.4.2（客户端更新检查提示与下载目标对齐；client.py 回退默认值 / test_api.py 断言同步）
+
+#### 文档与清理
+- 计划文档状态同步：客户端 `docs/v3.0/v3.0.X_开发计划.md` 标记 3.3/3.4 完成并补 3.4 路线图；平台 PRD / DEVELOPMENT_PLAN_V2 / PHASE8_OPS_PLAN / WEBSITE_OPTIMIZATION_PLAN 状态「待审批」→「已完成」
+- 清理平台 `api/.uploads/` 分片上传残留（14 个 .part，目录已 gitignore）
+
+#### 回归
+- 平台端 112 用例全绿；客户端后端 991 用例全绿（含 exporter 变更）；前端 473 用例全绿（v3.4.1 基线，本轮无前端改动）
+
 ## [3.4.1] - 2026-08-10
 
 ### 安全加固与性能优化

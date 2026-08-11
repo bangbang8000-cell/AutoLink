@@ -1258,6 +1258,39 @@ def export_compliance_report(designer, filename):
     }
 
 
+# 中文字体候选（reportlab 正文与 matplotlib 图表共用；V3.4.2: 修复图表中文缺字形）
+_PDF_FONT_CANDIDATES = [
+    ('C:/Windows/Fonts/msyh.ttc', 'MSYH'),                             # Windows 微软雅黑
+    ('C:/Windows/Fonts/simhei.ttf', 'SimHei'),                          # Windows 黑体
+    ('/usr/share/fonts/truetype/wqy/wqy-microhei.ttc', 'WQY'),          # Linux 文泉驿微米黑
+    ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVu'),      # 兜底（无 CJK 字形）
+]
+
+# 已注册到 matplotlib 的字体路径缓存（engine 为持久进程，避免重复 addfont）
+_MATPLOTLIB_CJK_ADDED = set()
+
+
+def _configure_matplotlib_cjk():
+    """将第一个可用中文字体注册到 matplotlib，修复 PDF 图表中文标签乱码（豆腐块）。"""
+    try:
+        import os as _os
+        for font_path, _label in _PDF_FONT_CANDIDATES:
+            if not _os.path.exists(font_path):
+                continue
+            from matplotlib import font_manager
+            if font_path not in _MATPLOTLIB_CJK_ADDED:
+                font_manager.fontManager.addfont(font_path)
+                _MATPLOTLIB_CJK_ADDED.add(font_path)
+            family = font_manager.FontProperties(fname=font_path).get_name()
+            import matplotlib.pyplot as plt
+            plt.rcParams['font.sans-serif'] = [family]
+            plt.rcParams['axes.unicode_minus'] = False
+            return family
+    except Exception:
+        pass
+    return None
+
+
 def export_pdf_report(designer, filename):
     """V2.4.6: 生成 PDF 设计报告
 
@@ -1278,16 +1311,11 @@ def export_pdf_report(designer, filename):
 
     # 注册中文字体（Windows: 微软雅黑；Linux: 文泉驿；fallback: Helvetica）
     font_name = 'Helvetica'
-    for font_path in [
-        ('C:/Windows/Fonts/msyh.ttc', 'MSYH'),
-        ('C:/Windows/Fonts/simhei.ttf', 'SimHei'),
-        ('/usr/share/fonts/truetype/wqy/wqy-microhei.ttc', 'WQY'),
-        ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVu'),
-    ]:
-        if _os.path.exists(font_path[0]):
+    for font_path, label in _PDF_FONT_CANDIDATES:
+        if _os.path.exists(font_path):
             try:
-                pdfmetrics.registerFont(TTFont(font_path[1], font_path[0]))
-                font_name = font_path[1]
+                pdfmetrics.registerFont(TTFont(label, font_path))
+                font_name = label
                 break
             except Exception:
                 continue
@@ -1576,6 +1604,8 @@ def _generate_power_chart(power_data, font_name='Helvetica'):
     except ImportError:
         return None
 
+    _configure_matplotlib_cjk()
+
     # 提取功率数据（过滤非数值项）
     labels = []
     values = []
@@ -1612,6 +1642,8 @@ def _generate_module_cost_chart(modules_data, font_name='Helvetica'):
         import matplotlib.pyplot as plt
     except ImportError:
         return None
+
+    _configure_matplotlib_cjk()
 
     from optical_selector import estimate_module_cost
 

@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
