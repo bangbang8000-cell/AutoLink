@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [3.4.3] - 2026-08-13
+
+### Logo 全渠道一致性修复
+
+v3.4.3 为品牌一致性修复版：安装包/桌面/任务栏图标与启动动画、关于弹窗统一为增强版（sky→blue→violet 渐变）Logo，并同步 Logo 设计规范文档。
+
+#### 根因
+- v3.2.1 品牌主题升级将 `build/logo.svg` 更新为增强版后，`scripts/generate-icons.mjs` 未重新执行 → `build/icon.ico` / `icon.png` / `public/icons/icon.png` 仍为 v2.5 扁平旧版（时间戳 2026-07-30 < logo.svg 2026-08-06）
+- `public/splash.html` 内嵌 SVG 自 v2.5 未更新（扁平版），版本号残留 `v2.5.0`
+
+#### 修复
+- 重新执行 `scripts/generate-icons.mjs`：从增强版 `build/logo.svg` 重新生成 `build/icon.png`(1024²) / `build/icon.ico`(16~256 多尺寸,文件头合法) / `public/icons/icon.png`(512²)
+- `public/splash.html` 内嵌 SVG 替换为增强版（三色渐变背景 + 玻璃高光 + 内描边 + 腿/横线渐变 + 腿/节点辉光 + 5 高光圆点），版本号 `v2.5.0` → `v3.4.3`
+- `docs/v2.5/logo_specification.md` 同步为增强版规格（几何 / 完整源码 / 渲染陷阱 / 尺寸适配 / 品牌流程 / 版本演进）
+- 校验：exe 内嵌图标像素级检测含紫罗兰渐变（增强版独有）通过；splash 内嵌 SVG 与 `build/logo.svg` 逐 token 一致
+
+#### 回归
+- 本轮仅资源与文档变更（图标 / 启动动画 / 规范文档），无代码逻辑改动
+- 本地全链路打包验证成功：渲染层 `npm run build` + 后端 PyInstaller（`dist/backend-dist/engine.exe`）+ electron-builder Windows NSIS（`AutoLink-Setup-3.4.3-win.exe`）
+- 前端 473 / 后端 991 / typecheck / lint 沿用 v3.4.2 全绿基线
+
 ## [3.4.2] - 2026-08-11
 
 ### 交付修复与版本对齐
