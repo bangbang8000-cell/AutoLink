@@ -35,6 +35,7 @@ import {
 import { useDesignStore, type TopologyNode, type TopologyEdge } from '@/stores/design.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { exportTopologyPng } from '@/utils/exportTopology'
 import { makeTimestampedFilename } from '@/utils/exportSvg'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
@@ -1037,6 +1038,12 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
             className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
             title={t('topology:saveLayoutHint')}>
             <Save size={12} />{t('topology:saveLayout')}
+          </button>
+          {/* H3（D-8）：机柜规划 → 打开 RackTab（拓扑→机柜衔接） */}
+          <button onClick={() => useWorkspaceStore.getState().openTab({ type: 'rack', title: '机柜规划', closable: true })}
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40"
+            title="打开机柜规划视图">
+            <Box size={12} />机柜规划
           </button>
           {/* v2.8.1-T8: 布局保存状态 */}
           {(layoutDirty || savedLayout) && (

@@ -23,9 +23,10 @@ describe('device-defaults 共享选型规则', () => {
     expect(IB_DEFAULTS_FALLBACK).toEqual(IB_DEFAULTS_BY_GPU.h100_and_below)
   })
 
-  it('RoCE 固定 H3C 系列', () => {
-    expect(ROCE_DEFAULTS.param_leaf_switch).toBe('h3c_s9850_64h')
-    expect(ROCE_DEFAULTS.param_spine_switch).toBe('h3c_s9820_64h')
+  it('RoCE 固定 H3C 系列（H1 纠错后指向真实 400G）', () => {
+    expect(ROCE_DEFAULTS.param_leaf_switch).toBe('h3c_s9825_64d')
+    expect(ROCE_DEFAULTS.param_spine_switch).toBe('h3c_s9827')
+    expect(ROCE_DEFAULTS.param_core_switch).toBe('h3c_s9827')
   })
 
   it('存储按协议：IB→Quantum HDR(200G)，RoCE/UEC→华为 CE6881', () => {
@@ -34,9 +35,11 @@ describe('device-defaults 共享选型规则', () => {
     expect(STORAGE_DEFAULTS_BY_PROTOCOL.UEC).toEqual(STORAGE_DEFAULTS_BY_PROTOCOL.RoCE)
   })
 
-  it('业务/带外固定默认', () => {
+  it('业务/带外固定默认（D-1~D-3 定稿型号）', () => {
     expect(BIZ_DEFAULTS.biz_access_switch).toBe('h3c_s6850_56hf')
-    expect(OOB_DEFAULTS.oob_access_switch).toBe('h3c_s5130s_52p_ei')
+    expect(BIZ_DEFAULTS.biz_agg_switch).toBe('h3c_s9850_32h')
+    expect(OOB_DEFAULTS.oob_access_switch).toBe('h3c_s5560x_54c_ei')
+    expect(OOB_DEFAULTS.oob_agg_switch).toBe('h3c_s6805_56hf_g')
   })
 
   it('resolveIBDefaults 按 GPU id 解析世代', () => {
@@ -51,13 +54,14 @@ describe('device-defaults 共享选型规则', () => {
     expect(refs.param_leaf_switch).toEqual({ library_id: 'nvidia_q3400_144_800g_ib' })
     expect(refs.storage_leaf_switch).toEqual({ library_id: 'nvidia_mqm8700_40_200g_ib' })
     expect(refs.biz_access_switch).toEqual({ library_id: 'h3c_s6850_56hf' })
-    expect(refs.oob_agg_switch).toEqual({ library_id: 'h3c_s5120v3_52p_ei' })
+    expect(refs.oob_agg_switch).toEqual({ library_id: 'h3c_s6805_56hf_g' })
     expect(Object.keys(refs)).toHaveLength(9)
   })
 
-  it('getDefaultRefs RoCE 走 H3C', () => {
+  it('getDefaultRefs RoCE 走 H3C（H1 纠错后）', () => {
     const refs = getDefaultRefs('RoCE')
-    expect(refs.param_leaf_switch).toEqual({ library_id: 'h3c_s9850_64h' })
+    expect(refs.param_leaf_switch).toEqual({ library_id: 'h3c_s9825_64d' })
     expect(refs.storage_leaf_switch).toEqual({ library_id: 'huawei_ce6881_48s6cq' })
+    expect(refs.oob_agg_switch).toEqual({ library_id: 'h3c_s6805_56hf_g' })
   })
 })

@@ -38,6 +38,8 @@ export function ProjectExplorer() {
   const createShare = useCloudStore((s) => s.createShare)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  // H3（D-7 并列陈列）：侧栏顶部 项目列表 | 模板中心 切页
+  const [activePane, setActivePane] = useState<'projects' | 'templates'>('projects')
   const [renameModal, setRenameModal] = useState<{ type: 'rename' | 'duplicate' | 'convertToTemplate'; projectName: string } | null>(null)
   // V3.3.2-T15-2: 加密导出/加密导入密码框
   const [passwordModal, setPasswordModal] = useState<{ mode: 'export' | 'import'; projectName?: string } | null>(null)
@@ -535,8 +537,29 @@ export function ProjectExplorer() {
         )}
       </div>
 
+      {/* H3：项目列表 | 模板中心 并列切页（对齐 MC ExplorerPanel） */}
+      <div className="flex items-center border-b border-gray-200 dark:border-edge-subtle shrink-0">
+        {(['projects', 'templates'] as const).map((pane) => (
+          <button
+            key={pane}
+            type="button"
+            onClick={() => setActivePane(pane)}
+            className={`flex-1 py-1.5 text-2xs font-medium border-b-2 transition-colors ${
+              activePane === pane
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {pane === 'projects'
+              ? t('common:explorer.allProjects', '项目列表')
+              : t('common:explorer.templates', '模板中心')}
+          </button>
+        ))}
+      </div>
+
       {/* Content */}
       <div className="flex-1 overflow-auto py-1">
+        {activePane === 'projects' && (<>
         {/* Projects section */}
         <Section title={t('common:explorer.allProjects')} icon={<Folder size={14} />} sectionKey="projects">
           {sortedProjects.length === 0 ? (
@@ -634,9 +657,10 @@ export function ProjectExplorer() {
 
         {/* Output Section */}
         <OutputSection projects={projects} openTab={openTab} />
-
-        {/* Templates */}
-        <TemplateSection templates={templates} openTab={openTab} handleOpenInExplorer={handleOpenInExplorer} />
+        </>)}
+        {activePane === 'templates' && (
+          <TemplateSection templates={templates} openTab={openTab} handleOpenInExplorer={handleOpenInExplorer} />
+        )}
       </div>
 
       {/* Confirm Delete Dialog */}

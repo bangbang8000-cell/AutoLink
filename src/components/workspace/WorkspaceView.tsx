@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect, Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles, Box, Cpu } from 'lucide-react'
+import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, LayoutTemplate, Upload, BookOpen, Sparkles, Cpu } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -11,7 +11,6 @@ import { Modal } from '@/components/ui/Modal'
 const WorkbenchTab = lazy(() => import('./tabs/WorkbenchTab').then(m => ({ default: m.WorkbenchTab })))
 const TopologyTab = lazy(() => import('./tabs/TopologyTab').then(m => ({ default: m.TopologyTab })))
 // V2.7.6-T9: 3D 拓扑可视化 PoC (懒加载, 避免影响首屏性能)
-const Topology3DTab = lazy(() => import('./tabs/Topology3DTab').then(m => ({ default: m.Topology3DTab })))
 const RackTab = lazy(() => import('./tabs/RackTab').then(m => ({ default: m.RackTab })))
 const OutputTab = lazy(() => import('./tabs/OutputTab').then(m => ({ default: m.OutputTab })))
 const ProjectOverviewTab = lazy(() => import('./tabs/ProjectOverviewTab').then(m => ({ default: m.ProjectOverviewTab })))
@@ -19,7 +18,6 @@ const DesignTab = lazy(() => import('./tabs/DesignTab').then(m => ({ default: m.
 const AidcPlannerTab = lazy(() => import('./tabs/AidcPlannerTab').then(m => ({ default: m.AidcPlannerTab })))
 const DeviceLibraryTab = lazy(() => import('./tabs/DeviceLibraryTab').then(m => ({ default: m.DeviceLibraryTab })))
 const FileViewerTab = lazy(() => import('./tabs/FileViewerTab').then(m => ({ default: m.FileViewerTab })))
-const DataCenterTab = lazy(() => import('./tabs/DataCenterTab').then(m => ({ default: m.DataCenterTab })))
 const GuideTab = lazy(() => import('./tabs/GuideTab').then(m => ({ default: m.GuideTab })))
 // V3.1.1-T5-5: AI 对话 Tab（懒加载）
 const ChatTab = lazy(() => import('../chat/ChatPanel').then(m => ({ default: m.ChatPanel })))
@@ -32,12 +30,10 @@ const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?
   rack: Server,
   topology: GitBranch,
   // V2.7.6-T9: 3D 拓扑可视化使用 Box 图标
-  topology3d: Box,
   output: FileOutput,
   deviceLibrary: Library,
   projectOverview: FolderOpen,
   fileViewer: Monitor,
-  datacenter: Building2,
   guide: BookOpen,
   // V3.1.1-T5-5: AI 对话
   chat: Sparkles,
@@ -104,8 +100,6 @@ export function WorkspaceView() {
       case 'visualization': return <TopologyTab />
       case 'rack': return <RackTab cabinetId={activeTab?.state?.cabinetId as number | null | undefined} />
       case 'topology': return <TopologyTab />
-      // V2.7.6-T9: 3D 拓扑可视化 PoC
-      case 'topology3d': return <Topology3DTab />
       case 'output': {
         const state = activeTab?.state
         return <OutputTab fileName={state?.fileName as string | null} fileType={state?.fileType as string} />
@@ -133,7 +127,6 @@ export function WorkspaceView() {
           />
         )
       }
-      case 'datacenter': return <DataCenterTab />
       case 'guide': return <GuideTab />
       // V3.1.1-T5-5: AI 对话
       case 'chat': return <ChatTab />
