@@ -533,6 +533,39 @@ def handle_plan_aidc(params):
         return {'error': f'plan:aidc 失败: {e}'}
 
 
+@register_action('plan:aidc:export')
+def handle_plan_aidc_export(params):
+    """G2（REQ-A3）：AIDC 规划导出到文件（plan:table JSON 或 Excel）。
+
+    params: {site?, gpu_count?, ..., format?: 'json'|'excel', filepath: str}
+    返回: {'ok': True, 'path': ...} 或 {'error': ...}
+    """
+    from aidc_planner import export_plan
+    p = dict(params or {})
+    filepath = p.pop('filepath', None)
+    fmt = str(p.pop('format', 'json')).lower()
+    if not filepath:
+        return {'error': '缺 filepath'}
+    try:
+        path = export_plan(p, filepath, fmt)
+        return {'ok': True, 'path': path}
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'导出失败: {e}'}
+
+
+@register_action('design:from-gpus')
+def handle_design_from_gpus(params):
+    """A1（G2）：GPU 规模 + 宏观参数 → plan:table 端到端（后端 action 开放）。
+
+    与 plan:aidc 等价，提供 design 域标准入口（前端向导桥的后端化）。
+    """
+    from aidc_planner import plan_aidc
+    try:
+        return plan_aidc(dict(params or {}))
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'design:from-gpus 失败: {e}'}
+
+
 @register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""

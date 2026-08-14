@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-08-04",
+  "updated_at": "2026-08-14",
   "categories": [
     {
       "id": "gpu_servers",
@@ -108,7 +108,9 @@
         "ruijie_rg_s6980_64qc",
         "h3c_s12500r_cpo_51_2t",
         "ruijie_s6910_32oc2vs_1_6t",
-        "generic_64p_400g"
+        "generic_64p_400g",
+        "h3c_s9827",
+        "h3c_s9825_64d"
       ]
     },
     {
@@ -121,7 +123,8 @@
         "huawei_ce6885h",
         "nvidia_sn4600c",
         "ruijie_rg_s6510_48vs8cq",
-        "generic_48p_200g"
+        "generic_48p_200g",
+        "h3c_s9825_128b"
       ]
     },
     {
@@ -140,7 +143,8 @@
         "ruijie_rg_s5310_48gt4xs",
         "ruijie_rg_s6120_48xs8cq",
         "ruijie_rg_s6000_8c_400g",
-        "generic_48p_25g"
+        "generic_48p_25g",
+        "h3c_s6805_48p"
       ]
     },
     {
@@ -156,7 +160,8 @@
         "huawei_s5732_h48s6q",
         "ruijie_rg_s2928g",
         "ruijie_rg_s5750c_48gt4xs_h",
-        "generic_48p_1g"
+        "generic_48p_1g",
+        "h3c_s5820v2_24p"
       ]
     },
     {

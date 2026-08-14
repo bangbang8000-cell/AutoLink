@@ -11,7 +11,19 @@ AIDC 规划器（AL 侧，P1.3）。
 说明：本模块自包含（不依赖 MC 端），供 AL 后端 action 与 UI 调用。
 """
 
+import datetime
+import io
 import ipaddress
+import json
+
+
+# ---------------- 桥接标识（plan:table 契约 v1.1，MC-AL/docs/plan_table_契约v1.1） ----------------
+BRIDGE_META = {
+    'source': 'autolink',          # 来源系统：AL 产出
+    'projectType': 'aidc',         # 项目类型：AIDC 桥接
+    'bridgeVersion': '1.0',        # 桥接契约能力版本
+    'schema': 'plan:table/1.1',    # schema 标识
+}
 
 
 # ---------------- 默认值（F10/F14/F16） ----------------
@@ -26,6 +38,16 @@ DEFAULTS = {
     'as_range': [65001, 65500],
     'vlan_ranges': {'compute': [100, 199], 'storage': [200, 299],
                     'biz': [300, 399], 'oob': [400, 499]},
+    'ip_segments': {           # F10：单个 /16 裂解（默认 10.1.0.0/16）
+        'loopback': '10.1.0.0/20',
+        'compute': '10.1.16.0/20',
+        'storage': '10.1.32.0/20',
+        'biz': '10.1.48.0/20',
+        'oob': '10.1.64.0/21',
+        'interconnect': '10.1.72.0/21',
+    },
+    'ospf': {'process': 10, 'area': '0.0.0.0'},
+    'naming_format': '{site}-R{rack:02d}-AIDC-{vendor}-{abbr}-{seq:02d}',
     'device_models': {
         'SPINE': 'H3C S9827', 'LEAF': 'H3C S9827',
         'STO_SPINE': 'H3C S9825-128B', 'STO_LEAF': 'H3C S9825-128B',
@@ -75,15 +97,31 @@ def _adj(ip):
     return str(ipaddress.ip_address(ip) + 1)
 
 
+AS_MIN, AS_MAX = 65001, 65500
+VLAN_MAX = 4094
+
+
 def validate_macro(macro: dict) -> str | None:
-    """宏观参数校验，返回错误信息或 None。"""
+    """宏观参数校验，返回错误信息或 None（契约 v1.1：高级参数也校验）。"""
     if 'pfc_queue' in macro and not (0 <= int(macro['pfc_queue']) <= 7):
         return 'PFC 队列须在 0-7'
     if 'cnp_queue' in macro and not (0 <= int(macro['cnp_queue']) <= 7):
         return 'CNP 队列须在 0-7'
-    gpu = int(macro.get('gpu_count', DEFAULTS['gpu_count']))
+    gpu = int(macro.get('gpu_count', macro.get('gpuCount', DEFAULTS['gpu_count'])))
     if gpu not in _SCALE:
         return f'GPU 规模 {gpu} 不在支持档位（{sorted(_SCALE)}）'
+    if 'convergence' in macro and not (0 < float(macro['convergence']) <= 4):
+        return '收敛比须在 (0,4]'
+    if 'rails' in macro and not (1 <= int(macro['rails']) <= 16):
+        return '多轨数须在 1-16'
+    if 'as_range' in macro:
+        lo, hi = int(macro['as_range'][0]), int(macro['as_range'][1])
+        if not (AS_MIN <= lo <= hi <= AS_MAX):
+            return f'AS 段须在 {AS_MIN}-{AS_MAX} 且 lo<=hi'
+    if 'vlan_ranges' in macro:
+        for plane, (lo, hi) in macro['vlan_ranges'].items():
+            if not (0 <= int(lo) <= int(hi) <= VLAN_MAX):
+                return f'{plane} VLAN 段非法: [{lo},{hi}]'
     return None
 
 
@@ -99,10 +137,12 @@ def plan_aidc(macro: dict) -> dict:
     topo = _SCALE[gpu]
     pfc, cnp = int(m['pfc_queue']), int(m['cnp_queue'])
 
-    lo = AddressPool('10.1.0.0/20')
-    mg = AddressPool('10.1.64.0/21')
-    ic = AddressPool('10.1.72.0/21')
-    cgw = AddressPool('10.1.16.0/20')
+    # 地址段来源：macro.ip_segments（契约 v1.1，F10 裂解）
+    seg = m.get('ip_segments', DEFAULTS['ip_segments'])
+    lo = AddressPool(seg['loopback'])
+    mg = AddressPool(seg['oob'])
+    ic = AddressPool(seg['interconnect'])
+    cgw = AddressPool(seg['compute'])
 
     devices = []
     conns = []
@@ -190,17 +230,84 @@ def plan_aidc(macro: dict) -> dict:
                       'dst': 'OOB_AGG', 'dst_ip': _adj(local_ip), 'rate': '1G',
                       'desc': 'to-OOB-AGG', 'trunk': True})
 
+    # 设备 rack（契约 v1.1：从命名解析）
+    for d in devices:
+        d['rack'] = int(d['name'].split('-R', 1)[1].split('-', 1)[0])
+
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
     return {
-        'meta': {'project': f'aidc_{gpu}', 'site': site, 'version': '1.0'},
+        'meta': {
+            'project': f'aidc_{gpu}', 'site': site,
+            'version': '1.1', 'schema': BRIDGE_META['schema'],
+            'generatedAt': now,
+            'source': BRIDGE_META['source'],
+            'projectType': BRIDGE_META['projectType'],
+            'bridgeVersion': BRIDGE_META['bridgeVersion'],
+        },
         'macro': {
-            'site': site, 'gpu_count': gpu, 'pfc_queue': pfc, 'cnp_queue': cnp,
-            'bgp_max_paths': m['bgp_max_paths'], 'convergence': m['convergence'],
-            'rails': m['rails'], 'as_range': m['as_range'],
-            'vlan_ranges': m['vlan_ranges'], 'device_models': m['device_models'],
+            'site': site, 'gpuCount': gpu,
+            'pfcQueue': pfc, 'cnpQueue': cnp, 'bgpMaxPaths': m['bgp_max_paths'],
+            'convergence': m['convergence'], 'rails': m['rails'],
+            'naming': {'format': m['naming_format'], 'abbr': SCN_ABBR},
+            'ipSegments': seg,
+            'vlanRanges': m['vlan_ranges'], 'asRange': m['as_range'],
+            'ospf': m['ospf'],
+            'deviceModels': m['device_models'],
+        },
+        'topology': {
+            'layers': 2, 'spines': spine_n, 'leaves': leaf_n, 'pods': None,
+            'scale': {'gpuCount': gpu, 'spine': spine_n, 'leaf': leaf_n},
         },
         'deviceList': devices,
         'connections': conns,
         'terminals': terms,
-        'protocols': {'bgp': {'as_range': m['as_range'], 'ecmp': m['bgp_max_paths']}},
+        'protocols': {
+            'ospf': m['ospf'],
+            'bgp': {'asRange': m['as_range'], 'ecmp': m['bgp_max_paths']},
+        },
         'convergence': {'compute': m['convergence'], 'storage': m['convergence'], 'biz': m['convergence']},
     }
+
+
+# ---------------- 导出（REQ-A3，G2） ----------------
+def _write_plan_excel(plan: dict, filepath: str) -> None:
+    """plan:table → Excel（设备/接线/终端/宏观参数/协议 分 sheet）。"""
+    import pandas as pd
+
+    def _scalar(v):
+        if isinstance(v, (str, int, float, bool)) or v is None:
+            return v
+        return json.dumps(v, ensure_ascii=False, default=str)
+
+    sheets = {
+        '设备清单': pd.DataFrame([{**d, 'gateways': json.dumps(d.get('gateways', []), ensure_ascii=False)
+                              if d.get('gateways') else ''} for d in plan['deviceList']]),
+        '接线': pd.DataFrame(plan['connections']),
+        '终端': pd.DataFrame(plan['terminals']),
+        '宏观参数': pd.DataFrame({'字段': list(plan['macro'].keys()),
+                              '值': [_scalar(v) for v in plan['macro'].values()]}),
+        '协议': pd.DataFrame({'字段': list(plan.get('protocols', {}).keys()),
+                            '值': [_scalar(v) for v in plan.get('protocols', {}).values()]}),
+        '收敛比': pd.DataFrame({'平面': list(plan.get('convergence', {}).keys()),
+                             '比值': list(plan.get('convergence', {}).values())}),
+    }
+    with pd.ExcelWriter(filepath, engine='openpyxl') as w:
+        for name, df in sheets.items():
+            df.to_excel(w, sheet_name=name, index=False)
+
+
+def export_plan(macro: dict, filepath: str, fmt: str = 'json') -> str:
+    """G2：plan:table → 文件（json | excel），返回落盘路径。"""
+    plan = plan_aidc(macro)
+    if 'error' in plan:
+        raise ValueError(plan['error'])
+    if fmt == 'excel':
+        if not filepath.lower().endswith('.xlsx'):
+            filepath += '.xlsx'
+        _write_plan_excel(plan, filepath)
+    else:
+        if not filepath.lower().endswith('.json'):
+            filepath += '.json'
+        with io.open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(plan, f, ensure_ascii=False, indent=2)
+    return filepath

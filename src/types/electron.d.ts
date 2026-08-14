@@ -84,8 +84,12 @@ interface Window {
       report: (projectName: string) => Promise<unknown>
     }
     // P1.3: AIDC 规划（宏观参数 → plan:table）
+    // G2: 导出 plan:table（json|excel，保存对话框在主进程）
     aidc: {
       plan: (params?: Record<string, unknown>) => Promise<unknown>
+      exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel') => Promise<{
+        canceled?: boolean; path?: string; ok?: boolean; error?: string
+      }>
     }
     // V3.1.3-T7-4: 容量规划（模型档案 + 推荐）
     capacity: {

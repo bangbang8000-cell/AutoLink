@@ -1066,6 +1066,11 @@ def generate_report_data(designer, estimation=None):
         c['超限'] = c['总功率(W)'] > c['功率上限(W)']
         racks.append(c)
 
+    # A3（G2）：设备清单 DataFrame → records，避免 JSON-RPC 序列化 TypeError
+    _dev_df = generate_device_list(designer)
+    if _dev_df is not None and hasattr(_dev_df, 'to_dict'):
+        _dev_df = _dev_df.to_dict(orient='records')
+
     return {
         'overview': overview,
         'architecture': architecture,
@@ -1075,7 +1080,7 @@ def generate_report_data(designer, estimation=None):
         'cost': cost,
         'racks': racks,
         # V2.9.3-T6: 设备清单(按型号聚合) + 收敛比(优先读 estimation)
-        'devices': generate_device_list(designer),
+        'devices': _dev_df,
         'convergence': (estimation or {}).get('convergence', {}) if estimation else _compute_convergence(designer),
         'generated_at': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
     }

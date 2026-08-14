@@ -65,6 +65,9 @@ const electronAPI = {
   aidc: {
     plan: (params?: Record<string, unknown>) =>
       ipcRenderer.invoke('plan:aidc', params),
+    // G2（REQ-A3）：导出 plan:table（json|excel），保存对话框在主进程弹出
+    exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel') =>
+      ipcRenderer.invoke('plan:aidc:export', params, format),
   },
   design: {
     generate: (projectName: string, configINI?: string) =>

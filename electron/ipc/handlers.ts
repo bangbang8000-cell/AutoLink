@@ -818,6 +818,22 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return pythonService.call('plan:aidc', params ?? {})
   }))
 
+  // G2（REQ-A3）：AIDC 规划导出（plan:table JSON / Excel）——保存对话框 + 后端写盘
+  ipcMain.handle('plan:aidc:export', wrapHandler(async (_event, params: Record<string, unknown>, format: 'json' | 'excel') => {
+    const ext = format === 'excel' ? 'xlsx' : 'json'
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出 AIDC 规划',
+      defaultPath: `aidc_plan.${ext}`,
+      filters: format === 'excel'
+        ? [{ name: 'Excel 规划表', extensions: ['xlsx'] }]
+        : [{ name: 'plan:table JSON', extensions: ['json'] }],
+    })
+    if (result.canceled || !result.filePath) {
+      return { canceled: true, path: '' }
+    }
+    return pythonService.call('plan:aidc:export', { ...(params ?? {}), format, filepath: result.filePath })
+  }))
+
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
