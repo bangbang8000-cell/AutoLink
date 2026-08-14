@@ -518,6 +518,21 @@ def _run_validation(designer):
     }
 
 
+@register_action('plan:aidc')
+def handle_plan_aidc(params):
+    """AIDC 规划（P1.3）：宏观参数 → plan:table（AL→MC 接口契约）。
+
+    params: {site?, gpu_count?, pfc_queue?, cnp_queue?, convergence?, ...}
+    返回: plan:table JSON（或 {'error': ...}）
+    """
+    from aidc_planner import plan_aidc
+    try:
+        macro = dict(params or {})
+        return plan_aidc(macro)
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'plan:aidc 失败: {e}'}
+
+
 @register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""

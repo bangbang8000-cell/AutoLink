@@ -813,6 +813,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     )
   }))
 
+  // P1.3: AIDC 规划（宏观参数 → plan:table，AL→MC 接口契约）
+  ipcMain.handle('plan:aidc', wrapHandler(async (_event, params?: Record<string, unknown>) => {
+    return pythonService.call('plan:aidc', params ?? {})
+  }))
+
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)

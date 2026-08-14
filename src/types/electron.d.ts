@@ -83,6 +83,10 @@ interface Window {
       estimate: (projectName: string, estimateParams?: Record<string, unknown>) => Promise<unknown>
       report: (projectName: string) => Promise<unknown>
     }
+    // P1.3: AIDC 规划（宏观参数 → plan:table）
+    aidc: {
+      plan: (params?: Record<string, unknown>) => Promise<unknown>
+    }
     // V3.1.3-T7-4: 容量规划（模型档案 + 推荐）
     capacity: {
       listPresets: () => Promise<{

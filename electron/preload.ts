@@ -62,6 +62,10 @@ const electronAPI = {
     importZip: (options?: { templateName?: string; zipPath?: string; password?: string }) =>
       ipcRenderer.invoke('template:importZip', options),
   },
+  aidc: {
+    plan: (params?: Record<string, unknown>) =>
+      ipcRenderer.invoke('plan:aidc', params),
+  },
   design: {
     generate: (projectName: string, configINI?: string) =>
       ipcRenderer.invoke('design:generate', projectName, configINI),

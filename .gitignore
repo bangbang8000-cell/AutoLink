@@ -45,3 +45,6 @@ design/
 
 # 敏感本地信息（含服务器凭据，禁止提交）
 *.local.md
+
+# Archived docs (本地保留，不推送)
+docs/_archive/
