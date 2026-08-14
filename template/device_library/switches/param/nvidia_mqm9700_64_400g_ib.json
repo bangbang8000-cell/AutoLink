@@ -12,15 +12,32 @@
   "name_prefix": "IB-Leaf-MQM9700",
   "port_count": 64,
   "port_speed": "400G",
-  "port_type": "QSFP56",
+  "port_type": "QSFP-DD",
   "downlink_prefix": "IB",
   "uplink_prefix": "IB",
-  "breakout": {"physical_speed": "400G", "logical_speed": "200G", "count": 2, "cable": "MPO-1x2"},
-  "tags": ["交换机", "NVIDIA", "Quantum-2", "400G", "IB", "NDR", "InfiniBand", "参数面", "有网管口"],
-  "applicable_networks": ["param"],
+  "breakout": {
+    "physical_speed": "400G",
+    "logical_speed": "200G",
+    "count": 2,
+    "cable": "MPO-1x2"
+  },
+  "tags": [
+    "交换机",
+    "NVIDIA",
+    "Quantum-2",
+    "400G",
+    "IB",
+    "NDR",
+    "InfiniBand",
+    "参数面",
+    "有网管口"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/networking/infiniband/qm9700/",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-08-14"
 }

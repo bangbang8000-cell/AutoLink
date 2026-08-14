@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect, Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles, Box } from 'lucide-react'
+import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, Building2, LayoutTemplate, Upload, BookOpen, Sparkles, Box, Cpu } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -16,6 +16,7 @@ const RackTab = lazy(() => import('./tabs/RackTab').then(m => ({ default: m.Rack
 const OutputTab = lazy(() => import('./tabs/OutputTab').then(m => ({ default: m.OutputTab })))
 const ProjectOverviewTab = lazy(() => import('./tabs/ProjectOverviewTab').then(m => ({ default: m.ProjectOverviewTab })))
 const DesignTab = lazy(() => import('./tabs/DesignTab').then(m => ({ default: m.DesignTab })))
+const AidcPlannerTab = lazy(() => import('./tabs/AidcPlannerTab').then(m => ({ default: m.AidcPlannerTab })))
 const DeviceLibraryTab = lazy(() => import('./tabs/DeviceLibraryTab').then(m => ({ default: m.DeviceLibraryTab })))
 const FileViewerTab = lazy(() => import('./tabs/FileViewerTab').then(m => ({ default: m.FileViewerTab })))
 const DataCenterTab = lazy(() => import('./tabs/DataCenterTab').then(m => ({ default: m.DataCenterTab })))
@@ -26,6 +27,7 @@ const ChatTab = lazy(() => import('../chat/ChatPanel').then(m => ({ default: m.C
 const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
   workbench: LayoutDashboard,
   design: Wrench,
+  aidcPlan: Cpu,
   visualization: Network,
   rack: Server,
   topology: GitBranch,
@@ -98,6 +100,7 @@ export function WorkspaceView() {
     switch (activeTab.type) {
       case 'workbench': return <WorkbenchTab />
       case 'design': return <DesignTab />
+      case 'aidcPlan': return <AidcPlannerTab />
       case 'visualization': return <TopologyTab />
       case 'rack': return <RackTab cabinetId={activeTab?.state?.cabinetId as number | null | undefined} />
       case 'topology': return <TopologyTab />

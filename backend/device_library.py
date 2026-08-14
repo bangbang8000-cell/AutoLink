@@ -9,6 +9,14 @@ import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
+# H1：旧 id → 新 id 迁移别名（设备库纠错重命名后，旧配置兼容解析）
+LEGACY_ALIASES: Dict[str, str] = {
+    'h3c_s9850_64h': 'h3c_s9850_32h',
+    'h3c_s6805_48p': 'h3c_s6805_56hf_g',
+    'h3c_s5820v2_24p': 'h3c_s5820v2_52qf',
+    'ruijie_s6910_32oc2vs_1_6t': 'ruijie_rg_s6910_32oc2vs_1_6t',
+}
+
 
 @dataclass
 class InterfaceModel:
@@ -245,8 +253,9 @@ class DeviceLibrary:
         )
 
     def get(self, device_id: str) -> Optional[LibraryDevice]:
-        """获取指定设备"""
+        """获取指定设备（H1：旧 id 经 LEGACY_ALIASES 迁移解析）"""
         self.load()
+        device_id = LEGACY_ALIASES.get(device_id, device_id)
         return self.devices.get(device_id)
 
     def get_by_category(self, category_id: str) -> List[LibraryDevice]:
@@ -274,7 +283,7 @@ class DeviceLibrary:
         ref 格式: {"library_id": "xxx", "overrides": {...}}
         """
         self.load()
-        library_id = ref.get("library_id", "")
+        library_id = LEGACY_ALIASES.get(ref.get("library_id", ""), ref.get("library_id", ""))
         device = self.devices.get(library_id)
         if not device:
             return None

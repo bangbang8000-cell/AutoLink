@@ -1,0 +1,34 @@
+{
+  "id": "h3c_s6805_56hf_g",
+  "vendor": "H3C",
+  "model": "S6805-56HF-G",
+  "category": "switches_oob",
+  "description": "H3C S6805-56HF-G 48×1/10GE SFP+ + 8×40/100GE QSFP28（OOB 汇聚）",
+  "power_watts": 350,
+  "weight_kg": 12,
+  "u_height": 1,
+  "depth_mm": 450,
+  "cooling": "air",
+  "name_prefix": "OOB-S6805-56HF-G",
+  "port_count": 56,
+  "port_speed": "10G",
+  "port_type": "SFP28",
+  "downlink_prefix": "TwentyFiveGigE",
+  "uplink_prefix": "HundredGigE",
+  "tags": [
+    "交换机",
+    "H3C",
+    "10G",
+    "100G",
+    "带外网络",
+    "汇聚"
+  ],
+  "applicable_networks": [
+    "oob"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-08-14",
+  "updated_at": "2026-08-14"
+}

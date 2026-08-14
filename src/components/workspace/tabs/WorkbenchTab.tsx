@@ -7,7 +7,6 @@ import { WorkbenchReadinessCard } from '@/components/workbench/WorkbenchReadines
 import { WorkbenchOutputCard } from '@/components/workbench/WorkbenchOutputCard'
 import { WorkbenchActionCard } from '@/components/workbench/WorkbenchActionCard'
 import { WorkbenchResultCard } from '@/components/workbench/WorkbenchResultCard'
-import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 
 export function WorkbenchTab() {
   const { t } = useTranslation()
@@ -95,11 +94,6 @@ export function WorkbenchTab() {
         {/* Row 4: Results list (full width) */}
         <div>
           <WorkbenchResultCard />
-        </div>
-
-        {/* Row 5 (P1.3): AIDC 规划面板 */}
-        <div className="mt-4">
-          <AidcPlannerPanel />
         </div>
       </div>
     </div>

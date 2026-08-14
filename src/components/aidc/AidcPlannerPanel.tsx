@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/Input'
 import { SectionCard } from '@/components/ui/SectionCard'
 import { Tabs } from '@/components/ui/Tabs'
 import { Network, Zap, Server, GitBranch, ChevronDown, ChevronRight, Tag } from 'lucide-react'
-import { AidcTopologyPreview } from './AidcTopologyPreview'
+import { PlanTopologyView } from './PlanTopologyView'
 import {
   ROLE_LABEL, macroNum,
   type PlanConnection, type PlanDevice, type PlanSummary, type PlanTerminal,
@@ -376,7 +376,7 @@ export function AidcPlannerPanel() {
                 {active === 'conn' && <ConnectionsView conns={plan.connections} />}
                 {active === 'term' && <TerminalsView terms={plan.terminals} />}
                 {active === 'macro' && <MacroView plan={plan} />}
-                {active === 'topo' && <AidcTopologyPreview plan={plan} />}
+                {active === 'topo' && <PlanTopologyView plan={plan} />}
               </div>
             )}
           </Tabs>

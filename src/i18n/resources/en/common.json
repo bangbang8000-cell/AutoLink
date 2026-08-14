@@ -27,7 +27,8 @@
     "visualization": "Visualization",
     "visualizationWithProject": "Visualization - {{name}}",
     "deviceLibrary": "Device Library",
-    "chat": "AI Assistant"
+    "chat": "AI Assistant",
+    "aidcPlan": "AIDC Plan"
   },
   "confirmDelete": {
     "title": {
@@ -276,7 +277,8 @@
       "upToDate": "Up to date",
       "checkUpdateFailed": "Update check failed",
       "guideLoadFailed": "Failed to load user guide"
-    }
+    },
+    "aidcPlan": "AIDC Plan"
   },
   "theme": {
     "light": "Light",

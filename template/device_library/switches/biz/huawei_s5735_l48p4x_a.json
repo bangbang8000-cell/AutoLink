@@ -3,23 +3,31 @@
   "vendor": "华为",
   "model": "S5735-L48P4X-A",
   "category": "switches_biz",
-  "description": "华为 S5735-L48P4X-A 48端口25G业务网络交换机，适用于业务/带内管理网络",
+  "description": "华为 S5735-L48P4X-A 48×GE RJ45 + 4×10GE SFP+",
   "power_watts": 200,
   "weight_kg": 7,
   "u_height": 1,
   "depth_mm": 460,
   "cooling": "air",
   "name_prefix": "Biz-S5735",
-  "port_count": 48,
-  "port_speed": "25G",
-  "port_type": "SFP28",
+  "port_count": 52,
+  "port_speed": "1G",
+  "port_type": "RJ45",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "华为", "25G", "业务网络"],
-  "applicable_networks": ["biz"],
+  "tags": [
+    "交换机",
+    "华为",
+    "1G",
+    "业务网络",
+    "接入"
+  ],
+  "applicable_networks": [
+    "biz"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-08-14"
 }

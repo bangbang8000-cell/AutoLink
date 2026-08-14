@@ -27,7 +27,8 @@
     "visualization": "可视化",
     "visualizationWithProject": "可视化 - {{name}}",
     "deviceLibrary": "设备库",
-    "chat": "AI 助手"
+    "chat": "AI 助手",
+    "aidcPlan": "AIDC 规划"
   },
   "confirmDelete": {
     "title": {
@@ -276,7 +277,8 @@
       "upToDate": "已是最新版本",
       "checkUpdateFailed": "检查更新失败",
       "guideLoadFailed": "无法加载用户指南"
-    }
+    },
+    "aidcPlan": "AIDC 规划"
   },
   "theme": {
     "light": "亮色",

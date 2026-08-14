@@ -25,9 +25,10 @@ class TestMapping:
         assert IB_DEFAULTS_BY_GPU['gb300']['param_leaf_switch'] == 'nvidia_q3400_144_800g_ib'
 
     def test_roce_h3c(self):
-        assert ROCE_DEFAULTS['param_leaf_switch'] == 'h3c_s9850_64h'
-        assert ROCE_DEFAULTS['param_spine_switch'] == 'h3c_s9820_64h'
-        assert ROCE_DEFAULTS['param_core_switch'] == 'h3c_s9820_8c'
+        # H1：参数面 RoCE 默认改真实 400G（原 S9850-64H/S9820-64H/S9820-8C 为 100G/框式误用）
+        assert ROCE_DEFAULTS['param_leaf_switch'] == 'h3c_s9825_64d'
+        assert ROCE_DEFAULTS['param_spine_switch'] == 'h3c_s9827'
+        assert ROCE_DEFAULTS['param_core_switch'] == 'h3c_s9827'
 
     def test_storage_by_protocol(self):
         assert STORAGE_DEFAULTS_BY_PROTOCOL['IB']['storage_leaf_switch'] == 'nvidia_mqm8700_40_200g_ib'
@@ -35,8 +36,11 @@ class TestMapping:
         assert STORAGE_DEFAULTS_BY_PROTOCOL['UEC'] == STORAGE_DEFAULTS_BY_PROTOCOL['RoCE']
 
     def test_biz_oob_fixed(self):
+        # H1（D-1~D-3）：BIZ_AGG=S9850-32H；OOB_AGG=S6805-56HF-G，OOB_ACC=S5560X-54C-EI
         assert BIZ_DEFAULTS['biz_access_switch'] == 'h3c_s6850_56hf'
-        assert OOB_DEFAULTS['oob_access_switch'] == 'h3c_s5130s_52p_ei'
+        assert BIZ_DEFAULTS['biz_agg_switch'] == 'h3c_s9850_32h'
+        assert OOB_DEFAULTS['oob_access_switch'] == 'h3c_s5560x_54c_ei'
+        assert OOB_DEFAULTS['oob_agg_switch'] == 'h3c_s6805_56hf_g'
 
     def test_fallback_equals_h100(self):
         assert IB_DEFAULTS_FALLBACK == IB_DEFAULTS_BY_GPU['h100_and_below']
@@ -71,7 +75,7 @@ class TestGetDefaults:
 
     def test_roce_refs(self):
         refs = get_device_defaults('roce')  # 大小写不敏感
-        assert refs['param_leaf_switch'] == 'h3c_s9850_64h'
+        assert refs['param_leaf_switch'] == 'h3c_s9825_64d'
         assert refs['storage_leaf_switch'] == 'huawei_ce6881_48s6cq'
 
     def test_unknown_protocol_falls_back_ib(self):

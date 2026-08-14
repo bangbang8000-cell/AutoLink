@@ -9,14 +9,23 @@
   "u_height": 2,
   "depth_mm": 650,
   "cooling": "air",
-  "name_prefix": "S9825-64D",
+  "name_prefix": "Param-S9825-64D",
   "port_count": 64,
   "port_speed": "400G",
   "port_type": "QSFP-DD",
   "downlink_prefix": "FourHundredGigE",
   "uplink_prefix": "FourHundredGigE",
-  "tags": ["交换机", "H3C", "400G", "参数网络", "RoCE", "参考基准"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "H3C",
+    "400G",
+    "参数网络",
+    "RoCE",
+    "参考基准"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",

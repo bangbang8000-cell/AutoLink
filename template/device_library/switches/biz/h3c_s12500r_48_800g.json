@@ -2,18 +2,18 @@
   "id": "h3c_s12500r_48_800g",
   "vendor": "H3C",
   "model": "S12500R-48Y8C",
-  "category": "switches_param",
-  "description": "H3C S12500R-48Y8C 数据中心核心交换机，48x400G+8x800G，国产化高端AI训练参数面核心，支持IRF堆叠",
+  "category": "switches_biz",
+  "description": "H3C S12500R-48Y8C 48×25GE SFP28 + 8×100GE QSFP28（4T，1U）",
   "power_watts": 2000,
   "weight_kg": 35,
   "u_height": 2,
   "depth_mm": 700,
   "cooling": "air",
   "cooling_method": "air",
-  "name_prefix": "Param-S12500R",
+  "name_prefix": "Biz-S12500R",
   "port_count": 56,
-  "port_speed": "800G",
-  "port_type": "QSFP-DD",
+  "port_speed": "25G",
+  "port_type": "SFP28",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
   "rail_compatible": true,
@@ -21,11 +21,20 @@
   "rdma_type": "RoCEv2",
   "price_range": "极高",
   "eol_date": "",
-  "tags": ["交换机", "H3C", "S12500R", "800G", "400G", "RoCEv2", "参数面", "国产化", "核心", "Rail-Optimized", "IRF"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "H3C",
+    "25G",
+    "100G",
+    "业务网络",
+    "接入"
+  ],
+  "applicable_networks": [
+    "biz"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-08-14"
 }

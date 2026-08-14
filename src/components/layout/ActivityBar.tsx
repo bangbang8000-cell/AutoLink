@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search,
+  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Cpu,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -12,18 +12,20 @@ interface ActivityItem {
   shortcut: string
 }
 
-const activities: ActivityItem[] = [
-  // V3.3.1: 全局搜索（本地 + 云端二合一）置顶
-  { id: 'search', icon: <Search size={20} />, labelKey: 'menu.search', shortcut: 'Ctrl+Shift+F' },
-  // V3.3.1: 云中心（登录 + 云端项目/模板）紧随搜索
-  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
-  // V3.1.1-T5-5: AI 对话入口
-  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
+// H3（D-7）：业务区 6（项目/设计/AIDC规划/工作台/可视化/设备库）
+const businessActivities: ActivityItem[] = [
   { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
   { id: 'design', icon: <Wrench size={20} />, labelKey: 'menu.design', shortcut: 'Ctrl+Shift+D' },
+  { id: 'aidc_plan', icon: <Cpu size={20} />, labelKey: 'menu.aidcPlan', shortcut: 'Ctrl+Shift+P' },
   { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
   { id: 'visualization', icon: <Network size={20} />, labelKey: 'menu.visualization', shortcut: 'Ctrl+Shift+V' },
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
+]
+
+// H3（D-7）：工具区 3（AI/云/设置）
+const toolActivities: ActivityItem[] = [
+  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
+  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
 
@@ -33,6 +35,7 @@ const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
   search: { icon: 'text-teal-500 dark:text-teal-400', bar: 'bg-teal-500' },
   project: { icon: 'text-primary-500 dark:text-primary-400', bar: 'bg-primary-500' },
   design: { icon: 'text-warning-500 dark:text-warning-400', bar: 'bg-warning-500' },
+  aidc_plan: { icon: 'text-emerald-500 dark:text-emerald-400', bar: 'bg-emerald-500' },
   workbench: { icon: 'text-success-500 dark:text-success-400', bar: 'bg-success-500' },
   visualization: { icon: 'text-info-500 dark:text-info-400', bar: 'bg-info-500' },
   device_library: { icon: 'text-purple-500 dark:text-purple-400', bar: 'bg-purple-500' },
@@ -59,31 +62,36 @@ export function ActivityBar({ onActivityClick }: Props) {
     }
   }
 
+  const renderItem = (item: ActivityItem) => {
+    const active = activeActivity === item.id
+    const colors = ACTIVITY_COLORS[item.id]
+    return (
+      <button
+        key={item.id}
+        onClick={() => handleClick(item)}
+        title={`${t(`common:${item.labelKey}`)} (${item.shortcut})`}
+        className={clsx(
+          'w-12 h-12 flex items-center justify-center relative transition-colors',
+          active
+            ? `${colors.icon} bg-gray-200 dark:bg-app-hover`
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-app-hover',
+        )}
+      >
+        {active && (
+          <div className={clsx('absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r', colors.bar)} />
+        )}
+        {item.icon}
+      </button>
+    )
+  }
+
   return (
     <div className="w-12 flex flex-col items-center py-2 gap-0.5 shrink-0 bg-gray-100 dark:bg-app border-e border-gray-200 dark:border-edge-subtle">
       <div className="flex-1 flex flex-col items-center gap-0.5 w-full">
-        {activities.map((item) => {
-          const active = activeActivity === item.id
-          const colors = ACTIVITY_COLORS[item.id]
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleClick(item)}
-              title={`${t(`common:${item.labelKey}`)} (${item.shortcut})`}
-              className={clsx(
-                'w-12 h-12 flex items-center justify-center relative transition-colors',
-                active
-                  ? `${colors.icon} bg-gray-200 dark:bg-app-hover`
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-app-hover',
-              )}
-            >
-              {active && (
-                <div className={clsx('absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r', colors.bar)} />
-              )}
-              {item.icon}
-            </button>
-          )
-        })}
+        {businessActivities.map(renderItem)}
+        {/* H3（D-7）：业务区/工具区分隔条 */}
+        <div className="w-8 h-px my-1.5 bg-gray-300 dark:bg-edge-subtle" />
+        {toolActivities.map(renderItem)}
       </div>
       <button
         onClick={toggleSidebar}

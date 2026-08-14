@@ -1,5 +1,9 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AI 資料中心網路規劃與可視化工具", "description": "面向 AI 智算中心的網路規劃與視覺化工具,支援 GPU Scale-Up 雙棧（NVLink/UALink/UB）與 Scale-Out（IB/RoCE/UEC）一體化設計,提供拓撲自動生成、設備選型、機櫃規劃、智慧校驗與交付報告全流程能力。內建 AI 對話（AIHUB）與 9 大廠商 Provider,提供容量規劃（17 檔案含國產場景）、ATOP 拓撲推薦、批次最佳化與智慧修復、機房智慧落位等智慧化能力。" },
+  "app": {
+    "title": "AutoLink",
+    "subtitle": "AI 資料中心網路規劃與可視化工具",
+    "description": "面向 AI 智算中心的網路規劃與視覺化工具,支援 GPU Scale-Up 雙棧（NVLink/UALink/UB）與 Scale-Out（IB/RoCE/UEC）一體化設計,提供拓撲自動生成、設備選型、機櫃規劃、智慧校驗與交付報告全流程能力。內建 AI 對話（AIHUB）與 9 大廠商 Provider,提供容量規劃（17 檔案含國產場景）、ATOP 拓撲推薦、批次最佳化與智慧修復、機房智慧落位等智慧化能力。"
+  },
   "search": "搜尋",
   "cancel": "取消",
   "confirm": "確認",
@@ -23,7 +27,8 @@
     "visualization": "視覺化",
     "visualizationWithProject": "視覺化 - {{name}}",
     "deviceLibrary": "設備庫",
-    "chat": "AI 助手"
+    "chat": "AI 助手",
+    "aidcPlan": "AIDC 規劃"
   },
   "confirmDelete": {
     "title": {
@@ -272,11 +277,20 @@
       "upToDate": "已是最新版本",
       "checkUpdateFailed": "檢查更新失敗",
       "guideLoadFailed": "無法載入使用者指南"
-    }
+    },
+    "aidcPlan": "AIDC 規劃"
   },
-  "theme": { "light": "亮色", "dark": "暗色", "system": "跟隨系統" },
+  "theme": {
+    "light": "亮色",
+    "dark": "暗色",
+    "system": "跟隨系統"
+  },
   "language": {
-    "zh-CN": "简体中文", "en": "English", "ja": "日本語", "ko": "한국어", "zh-TW": "繁體中文"
+    "zh-CN": "简体中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "zh-TW": "繁體中文"
   },
   "status": {
     "ready": "就緒",

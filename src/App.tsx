@@ -28,11 +28,13 @@ import { matchShortcut } from '@/utils/shortcuts'
 import i18n from '@/i18n'
 
 /** Map activity types to workspace tab config */
-const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'deviceLibrary' | 'chat'; titleKey: string; closable: boolean }> = {
+const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'aidcPlan' | 'deviceLibrary' | 'chat'; titleKey: string; closable: boolean }> = {
   workbench: { type: 'workbench', titleKey: 'common:tabs.workbench', closable: false },
   design: { type: 'design', titleKey: 'common:tabs.design', closable: true },
   visualization: { type: 'visualization', titleKey: 'common:tabs.visualization', closable: true },
   device_library: { type: 'deviceLibrary', titleKey: 'common:tabs.deviceLibrary', closable: true },
+  // H3（D-7）：AIDC 规划独立入口
+  aidc_plan: { type: 'aidcPlan', titleKey: 'common:tabs.aidcPlan', closable: true },
   // V3.2.1: ai 入口 → AI 对话 Tab（此前点击仅高亮侧栏，无实际内容）
   ai: { type: 'chat', titleKey: 'common:menu.ai', closable: true },
 }
@@ -163,9 +165,7 @@ export default function App() {
     setActiveActivity(activity)
     const config = WORKSPACE_TAB_CONFIG[activity]
     if (config) {
-      // design / device_library: don't auto-open — user clicks sidebar to open specific tabs
-      if (activity === 'design' || activity === 'device_library') return
-      // Resolve dynamic title
+      // H3（D-7）：design/device_library/aidc_plan 点击即开 Tab（不再两级跳转）
       let title = t(config.titleKey)
       if (activity === 'visualization' && selectedProjectName) {
         title = t('common:tabs.visualizationWithProject', { name: selectedProjectName })

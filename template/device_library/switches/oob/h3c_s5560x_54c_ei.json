@@ -1,0 +1,34 @@
+{
+  "id": "h3c_s5560x_54c_ei",
+  "vendor": "H3C",
+  "model": "S5560X-54C-EI",
+  "category": "switches_oob",
+  "description": "H3C S5560X-54C-EI 48×GE RJ45 电口 + 4×10GE SFP+（OOB 接入，BMC/ILO）",
+  "power_watts": 60,
+  "weight_kg": 6.7,
+  "u_height": 1,
+  "depth_mm": 360,
+  "cooling": "air",
+  "name_prefix": "OOB-S5560X-54C-EI",
+  "port_count": 52,
+  "port_speed": "1G",
+  "port_type": "RJ45",
+  "downlink_prefix": "GigabitEthernet",
+  "uplink_prefix": "TenGigabitEthernet",
+  "tags": [
+    "交换机",
+    "H3C",
+    "1G",
+    "10G",
+    "带外网络",
+    "接入"
+  ],
+  "applicable_networks": [
+    "oob"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-08-14",
+  "updated_at": "2026-08-14"
+}

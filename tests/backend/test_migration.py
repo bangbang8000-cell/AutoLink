@@ -413,7 +413,7 @@ class TestDesignerAliasResolution:
             }
             json_path = self._write_project(tmpdir, refs)
             designer = NetworkDesignerV2(json_path)
-            assert designer._device_profiles['param_switch'].id == 'h3c_s9850_64h'
+            assert designer._device_profiles['param_switch'].id == 'h3c_s9850_32h'  # H1：旧 id 经别名迁移
 
 
 class TestProtocolBasedDeviceSelection:

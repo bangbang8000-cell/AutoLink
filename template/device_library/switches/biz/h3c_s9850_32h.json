@@ -1,0 +1,33 @@
+{
+  "id": "h3c_s9850_32h",
+  "vendor": "H3C",
+  "model": "S9850-32H",
+  "category": "switches_biz",
+  "description": "H3C S9850-32H 32×100GE QSFP28（H=100G），业务汇聚/带内管理汇聚",
+  "power_watts": 420,
+  "weight_kg": 11,
+  "u_height": 1,
+  "depth_mm": 600,
+  "cooling": "air",
+  "name_prefix": "Biz-S9850-32H",
+  "port_count": 32,
+  "port_speed": "100G",
+  "port_type": "QSFP28",
+  "downlink_prefix": "Eth",
+  "uplink_prefix": "Eth",
+  "tags": [
+    "交换机",
+    "H3C",
+    "100G",
+    "业务网络",
+    "汇聚"
+  ],
+  "applicable_networks": [
+    "biz"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-07-28",
+  "updated_at": "2026-08-14"
+}

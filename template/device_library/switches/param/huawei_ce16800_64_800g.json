@@ -3,7 +3,7 @@
   "vendor": "华为",
   "model": "CloudEngine 16800",
   "category": "switches_param",
-  "description": "华为 CloudEngine 16800 64端口800G RoCEv2参数面交换机，国产化高端AI训练交换机，支持智能无损和可视化运维",
+  "description": "华为 CE16800 框式核心，64×800G 为线卡组合（建议按子卡核实）",
   "power_watts": 1500,
   "weight_kg": 20,
   "u_height": 1,
@@ -21,11 +21,19 @@
   "rdma_type": "RoCEv2",
   "price_range": "极高",
   "eol_date": "",
-  "tags": ["交换机", "华为", "CloudEngine", "16800", "800G", "RoCEv2", "参数面", "国产化", "Rail-Optimized"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "华为",
+    "800G",
+    "参数网络",
+    "框式"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/enterprise-networking/switches/cloudengine-16800",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-08-14"
 }

@@ -2,8 +2,8 @@
   "id": "huawei_ce8850_64cq_ei",
   "vendor": "华为",
   "model": "CloudEngine 8850-64CQ-EI",
-  "category": "switches_param",
-  "description": "华为 CloudEngine 8850-64CQ-EI 64端口400G RoCEv2参数面交换机，适用于AI训练高速互联",
+  "category": "switches_biz",
+  "description": "华为 CE8850-64CQ-EI 64×100GE QSFP28（12.8T）",
   "power_watts": 400,
   "weight_kg": 10,
   "u_height": 1,
@@ -11,15 +11,23 @@
   "cooling": "air",
   "name_prefix": "Param-CE8850",
   "port_count": 64,
-  "port_speed": "400G",
-  "port_type": "QSFP56",
+  "port_speed": "100G",
+  "port_type": "QSFP28",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "华为", "CloudEngine", "400G", "RoCEv2", "参数面"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "华为",
+    "100G",
+    "业务网络",
+    "汇聚"
+  ],
+  "applicable_networks": [
+    "biz"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-08-14"
 }

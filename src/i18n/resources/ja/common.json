@@ -1,5 +1,9 @@
 {
-  "app": { "title": "AutoLink", "subtitle": "AIデータセンターネットワーク計画・可視化ツール", "description": "AIデータセンター向けネットワーク計画・可視化ツール。GPU Scale-Up デュアルスタック（NVLink/UALink/UB）と Scale-Out（IB/RoCE/UEC）の一体設計に対応し、トポロジー自動生成、デバイス選定、ラック計画、スマート検証、納品レポートの全プロセス機能を提供します。AI 対話（AIHUB）と 9 社 Provider を内蔵し、容量計画（国産シーンを含む 17 プロファイル）、ATOP トポロジー推奨、一括最適化とスマート修復、データセンタールーム配置などのスマート機能を提供します。" },
+  "app": {
+    "title": "AutoLink",
+    "subtitle": "AIデータセンターネットワーク計画・可視化ツール",
+    "description": "AIデータセンター向けネットワーク計画・可視化ツール。GPU Scale-Up デュアルスタック（NVLink/UALink/UB）と Scale-Out（IB/RoCE/UEC）の一体設計に対応し、トポロジー自動生成、デバイス選定、ラック計画、スマート検証、納品レポートの全プロセス機能を提供します。AI 対話（AIHUB）と 9 社 Provider を内蔵し、容量計画（国産シーンを含む 17 プロファイル）、ATOP トポロジー推奨、一括最適化とスマート修復、データセンタールーム配置などのスマート機能を提供します。"
+  },
   "search": "検索",
   "cancel": "キャンセル",
   "confirm": "確認",
@@ -23,7 +27,8 @@
     "visualization": "可視化",
     "visualizationWithProject": "可視化 - {{name}}",
     "deviceLibrary": "デバイスライブラリ",
-    "chat": "AI アシスタント"
+    "chat": "AI アシスタント",
+    "aidcPlan": "AIDC プラン"
   },
   "confirmDelete": {
     "title": {
@@ -272,11 +277,20 @@
       "upToDate": "最新バージョンです",
       "checkUpdateFailed": "更新の確認に失敗しました",
       "guideLoadFailed": "ユーザーガイドを読み込めませんでした"
-    }
+    },
+    "aidcPlan": "AIDC プラン"
   },
-  "theme": { "light": "ライト", "dark": "ダーク", "system": "システム" },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
   "language": {
-    "zh-CN": "简体中文", "en": "English", "ja": "日本語", "ko": "한국어", "zh-TW": "繁體中文"
+    "zh-CN": "简体中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "zh-TW": "繁體中文"
   },
   "status": {
     "ready": "準備完了",

@@ -3,7 +3,7 @@
   "vendor": "华为",
   "model": "CE8860-4C-EI",
   "category": "switches_param",
-  "description": "华为 CloudEngine CE8860-4C-EI 4插槽框式数据中心交换机，支持400G QSFP56板卡，适用于AI智算参数面Spine/Core层",
+  "description": "华为 CE8860-4C-EI 8800 系列 100G 世代框式，最大 128×100GE",
   "power_watts": 1500,
   "weight_kg": 25,
   "u_height": 4,
@@ -11,15 +11,23 @@
   "cooling": "air",
   "name_prefix": "Param-CE8860",
   "port_count": 128,
-  "port_speed": "400G",
-  "port_type": "QSFP56",
+  "port_speed": "100G",
+  "port_type": "QSFP28",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "华为", "CloudEngine", "400G", "RoCEv2", "参数面", "Spine"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "华为",
+    "100G",
+    "参数网络",
+    "框式"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/cloudengine",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-08-14"
 }

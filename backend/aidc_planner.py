@@ -51,8 +51,8 @@ DEFAULTS = {
     'device_models': {
         'SPINE': 'H3C S9827', 'LEAF': 'H3C S9827',
         'STO_SPINE': 'H3C S9825-128B', 'STO_LEAF': 'H3C S9825-128B',
-        'BIZ_AGG': 'H3C S9850', 'BIZ_ACCESS': 'H3C S6805',
-        'OOB_AGG': 'H3C S5820V2', 'OOB_ACCESS': 'H3C S5820V2',
+        'BIZ_AGG': 'H3C S9850-32H', 'BIZ_ACCESS': 'H3C S6850-56HF',
+        'OOB_AGG': 'H3C S6805-56HF-G', 'OOB_ACCESS': 'H3C S5560X-54C-EI',
     },
 }
 

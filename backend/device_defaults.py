@@ -35,11 +35,11 @@ IB_DEFAULTS_BY_GPU: Dict[str, Dict[str, str]] = {
     },
 }
 
-# RoCE 协议默认交换机：H3C 系列
+# RoCE 协议默认交换机：H3C 系列（H1 纠错：原 S9850-64H/S9820-64H/S9820-8C 为 100G/框式误用，改真实 400G）
 ROCE_DEFAULTS: Dict[str, str] = {
-    'param_leaf_switch': 'h3c_s9850_64h',
-    'param_spine_switch': 'h3c_s9820_64h',
-    'param_core_switch': 'h3c_s9820_8c',
+    'param_leaf_switch': 'h3c_s9825_64d',
+    'param_spine_switch': 'h3c_s9827',
+    'param_core_switch': 'h3c_s9827',
 }
 
 # 兜底 IB 默认（GPU 类型未知时）
@@ -72,16 +72,16 @@ STORAGE_DEFAULT_IDS: List[str] = list(
     )
 )
 
-# 业务网默认交换机（biz_port_speed=25G 对齐）
+# 业务网默认交换机（D-1/D-2：BIZ_AGG=S9850-32H 100G 汇聚，BIZ_ACCESS=S6850-56HF 25G 接入）
 BIZ_DEFAULTS: Dict[str, str] = {
     'biz_access_switch': 'h3c_s6850_56hf',
-    'biz_agg_switch': 'h3c_s6520x_54qc_ei',
+    'biz_agg_switch': 'h3c_s9850_32h',
 }
 
-# 带外管理网默认交换机
+# 带外管理网默认交换机（D-3：AGG=S6805-56HF-G，ACC=S5560X-54C-EI）
 OOB_DEFAULTS: Dict[str, str] = {
-    'oob_access_switch': 'h3c_s5130s_52p_ei',
-    'oob_agg_switch': 'h3c_s5120v3_52p_ei',
+    'oob_access_switch': 'h3c_s5560x_54c_ei',
+    'oob_agg_switch': 'h3c_s6805_56hf_g',
 }
 
 # 全部设备引用键（按网络分组，供说明输出）

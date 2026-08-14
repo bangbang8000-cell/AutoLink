@@ -86,8 +86,6 @@
       "description": "RoCEv2/IB 高速参数面交换机（含Leaf/Spine/Core，支持Rail-Optimized）",
       "directory": "switches/param",
       "device_ids": [
-        "nvidia_mqm9700_64_400g_ib",
-        "nvidia_mqm9790_64_400g_ib",
         "nvidia_mqm8700_40_200g_ib",
         "nvidia_mqm8790_40_200g_ib",
         "nvidia_q3200_72_800g_ib",
@@ -95,22 +93,21 @@
         "nvidia_sn5600_64_400g",
         "nvidia_sn5400_64_200g",
         "nvidia_sn5240_64_800g",
-        "huawei_ce9860_4c_ei",
-        "huawei_ce8860_4c_ei",
-        "huawei_ce8850_64cq_ei",
-        "huawei_ce16800_64_800g",
-        "h3c_s9850_64h",
-        "h3c_s9820_64h",
-        "h3c_s9820_8c",
-        "h3c_s12500r_48_800g",
         "ruijie_rg_s6990_64oc2xs",
         "ruijie_rg_s9910_128oc2vs",
-        "ruijie_rg_s6980_64qc",
         "h3c_s12500r_cpo_51_2t",
-        "ruijie_s6910_32oc2vs_1_6t",
         "generic_64p_400g",
+        "h3c_s9820_64h",
+        "h3c_s9820_8c",
+        "h3c_s9825_64d",
         "h3c_s9827",
-        "h3c_s9825_64d"
+        "huawei_ce16800_64_800g",
+        "huawei_ce8860_4c_ei",
+        "huawei_ce9860_4c_ei",
+        "nvidia_mqm9700_64_400g_ib",
+        "nvidia_mqm9790_64_400g_ib",
+        "ruijie_rg_s6980_64qc",
+        "ruijie_rg_s6910_32oc2vs_1_6t"
       ]
     },
     {
@@ -122,7 +119,6 @@
         "huawei_ce6881_48s6cq",
         "huawei_ce6885h",
         "nvidia_sn4600c",
-        "ruijie_rg_s6510_48vs8cq",
         "generic_48p_200g",
         "h3c_s9825_128b"
       ]
@@ -137,14 +133,17 @@
         "h3c_s6520x_54qc_ei",
         "h3c_s6850_56hf",
         "huawei_ce6860_48s6cq",
-        "huawei_s5735_l48p4x_a",
         "huawei_s6730_h48x6c",
         "huawei_s5731_h48t4xc",
-        "ruijie_rg_s5310_48gt4xs",
         "ruijie_rg_s6120_48xs8cq",
         "ruijie_rg_s6000_8c_400g",
         "generic_48p_25g",
-        "h3c_s6805_48p"
+        "h3c_s12500r_48_800g",
+        "h3c_s9850_32h",
+        "huawei_ce8850_64cq_ei",
+        "ruijie_rg_s6510_48vs8cq",
+        "huawei_s5735_l48p4x_a",
+        "ruijie_rg_s5310_48gt4xs"
       ]
     },
     {
@@ -156,12 +155,14 @@
         "h3c_s5130s_52p_ei",
         "h3c_s5130s_28p_ei",
         "h3c_s5120v3_52p_ei",
-        "huawei_s5735_l48t4x_a",
         "huawei_s5732_h48s6q",
-        "ruijie_rg_s2928g",
         "ruijie_rg_s5750c_48gt4xs_h",
         "generic_48p_1g",
-        "h3c_s5820v2_24p"
+        "h3c_s6805_56hf_g",
+        "h3c_s5820v2_52qf",
+        "huawei_s5735_l48t4x_a",
+        "ruijie_rg_s2928g",
+        "h3c_s5560x_54c_ei"
       ]
     },
     {

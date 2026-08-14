@@ -5,6 +5,7 @@ export type ActivityType =
   | 'search'
   | 'project'
   | 'design'
+  | 'aidc_plan'
   | 'workbench'
   | 'visualization'
   | 'device_library'

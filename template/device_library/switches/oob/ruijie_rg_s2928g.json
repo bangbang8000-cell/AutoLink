@@ -3,23 +3,31 @@
   "vendor": "锐捷",
   "model": "RG-S2928G",
   "category": "switches_oob",
-  "description": "锐捷 RG-S2928G 48端口1G带外管理交换机，适用于带外管理网络接入",
+  "description": "锐捷 RG-S2928G 24×GE + 4×GE SFP = 28 口",
   "power_watts": 60,
   "weight_kg": 4,
   "u_height": 1,
   "depth_mm": 380,
   "cooling": "air",
   "name_prefix": "OOB-S2928G",
-  "port_count": 48,
+  "port_count": 28,
   "port_speed": "1G",
   "port_type": "RJ45",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "锐捷", "Ruijie", "1G", "带外管理"],
-  "applicable_networks": ["oob"],
+  "tags": [
+    "交换机",
+    "锐捷",
+    "1G",
+    "带外网络",
+    "接入"
+  ],
+  "applicable_networks": [
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-08-14"
 }

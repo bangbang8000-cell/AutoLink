@@ -1,5 +1,5 @@
 {
-  "id": "ruijie_s6910_32oc2vs_1_6t",
+  "id": "ruijie_rg_s6910_32oc2vs_1_6t",
   "vendor": "锐捷",
   "model": "S6910-32OC2VS-1.6T",
   "category": "switches_param",
@@ -18,11 +18,20 @@
   "uplink_prefix": "Eth",
   "origin": "domestic",
   "lead_time": "10-14周",
-  "tags": ["交换机", "锐捷", "1.6T", "OSFP-XD", "国产化", "参数面"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "锐捷",
+    "1.6T",
+    "OSFP-XD",
+    "国产化",
+    "参数面"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": false,
   "datasheet_url": "",
   "added_at": "2026-08-02",
-  "updated_at": "2026-08-02"
+  "updated_at": "2026-08-14"
 }

@@ -37,9 +37,9 @@ export const IB_DEFAULTS_BY_GPU: Record<string, Record<string, string>> = {
 
 /** RoCE 协议默认交换机：H3C 系列 */
 export const ROCE_DEFAULTS: Record<string, string> = {
-  param_leaf_switch: 'h3c_s9850_64h',
-  param_spine_switch: 'h3c_s9820_64h',
-  param_core_switch: 'h3c_s9820_8c',
+  param_leaf_switch: 'h3c_s9825_64d',
+  param_spine_switch: 'h3c_s9827',
+  param_core_switch: 'h3c_s9827',
 }
 
 /** 兜底 IB 默认（GPU 类型未知时） */
@@ -77,13 +77,13 @@ export const STORAGE_DEFAULT_IDS = new Set<string>([
 /** 业务网默认交换机（biz_port_speed=25G 对齐） */
 export const BIZ_DEFAULTS: Record<string, string> = {
   biz_access_switch: 'h3c_s6850_56hf',
-  biz_agg_switch: 'h3c_s6520x_54qc_ei',
+  biz_agg_switch: 'h3c_s9850_32h',
 }
 
 /** 带外管理网默认交换机 */
 export const OOB_DEFAULTS: Record<string, string> = {
-  oob_access_switch: 'h3c_s5130s_52p_ei',
-  oob_agg_switch: 'h3c_s5120v3_52p_ei',
+  oob_access_switch: 'h3c_s5560x_54c_ei',
+  oob_agg_switch: 'h3c_s6805_56hf_g',
 }
 
 /** 按 GPU 设备库 id 解析 IB 默认交换机（gb300/nvl72 → 800G；b200/b300 → 800G；其余 → 400G） */

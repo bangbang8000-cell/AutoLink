@@ -9,14 +9,21 @@
   "u_height": 2,
   "depth_mm": 680,
   "cooling": "air",
-  "name_prefix": "S9825-128B",
+  "name_prefix": "Storage-S9825-128B",
   "port_count": 128,
   "port_speed": "200G",
-  "port_type": "QSFP56-DD",
+  "port_type": "QSFP56",
   "downlink_prefix": "TwoHundredGigE",
   "uplink_prefix": "TwoHundredGigE",
-  "tags": ["交换机", "H3C", "200G", "存储网络"],
-  "applicable_networks": ["storage"],
+  "tags": [
+    "交换机",
+    "H3C",
+    "200G",
+    "存储网络"
+  ],
+  "applicable_networks": [
+    "storage"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",

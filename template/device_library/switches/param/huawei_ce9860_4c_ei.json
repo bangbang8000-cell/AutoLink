@@ -3,23 +3,31 @@
   "vendor": "华为",
   "model": "CloudEngine 9860-4C-EI",
   "category": "switches_param",
-  "description": "华为 CloudEngine 9860-4C-EI 64端口400G RoCEv2参数面交换机，适用于AI训练高速互联",
+  "description": "华为 CE9860-4C-EI 4 插槽框式（4U，25.6T），最大 32×400GE 或 128×100GE",
   "power_watts": 450,
   "weight_kg": 11,
   "u_height": 1,
   "depth_mm": 600,
   "cooling": "air",
   "name_prefix": "Param-CE9860",
-  "port_count": 64,
+  "port_count": 32,
   "port_speed": "400G",
-  "port_type": "QSFP56",
+  "port_type": "QSFP-DD",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "华为", "CloudEngine", "400G", "RoCEv2", "参数面"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "华为",
+    "400G",
+    "参数网络",
+    "框式"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-08-14"
 }
