@@ -93,10 +93,6 @@ def _repeat(vals, n):
     return [vals[i % len(vals)] for i in range(n)]
 
 
-def _adj(ip):
-    return str(ipaddress.ip_address(ip) + 1)
-
-
 AS_MIN, AS_MAX = 65001, 65500
 VLAN_MAX = 4094
 
@@ -141,7 +137,6 @@ def plan_aidc(macro: dict) -> dict:
     seg = m.get('ip_segments', DEFAULTS['ip_segments'])
     lo = AddressPool(seg['loopback'])
     mg = AddressPool(seg['oob'])
-    ic = AddressPool(seg['interconnect'])
     cgw = AddressPool(seg['compute'])
 
     devices = []
@@ -170,11 +165,10 @@ def plan_aidc(macro: dict) -> dict:
                 terms.append({'src': h, 'src_port': f'TwoHundredGigE1/0/{p}:{sub}',
                               'vlan': 100 + (lf - 1) * 2 + (sub - 1),
                               'desc': f'GPU-R{lf}-{p * 2 + sub - 2}'})
-        # 上联 Spine（/31）
+        # 上联 Spine（互联 IP 由 MC 分配器按 /31 网段统一分配，D22：AL 只带互联段范围）
         for i in range(32):
-            local_ip = ic.take(1)[0]
-            conns.append({'src': h, 'src_port': f'FourHundredGigE1/0/{33 + i}', 'src_ip': local_ip,
-                          'dst': 'SPINE', 'dst_ip': _adj(local_ip), 'rate': '400G',
+            conns.append({'src': h, 'src_port': f'FourHundredGigE1/0/{33 + i}',
+                          'dst': 'SPINE', 'rate': '400G',
                           'desc': f'to-P-Spine-{(i // 16) + 1}'})
         # 网关
         gws = [cgw.take(1)[0] for _ in (0, 1)]
@@ -192,9 +186,8 @@ def plan_aidc(macro: dict) -> dict:
             terms.append({'src': h, 'src_port': f'TwoHundredGigE1/0/{i}',
                           'vlan': 200 + (i % 10), 'desc': f'STO-{lf}-{i}'})
         for i in range(1):
-            local_ip = ic.take(1)[0]
-            conns.append({'src': h, 'src_port': 'TwoHundredGigE1/0/33', 'src_ip': local_ip,
-                          'dst': 'STO_SPINE', 'dst_ip': _adj(local_ip), 'rate': '200G',
+            conns.append({'src': h, 'src_port': 'TwoHundredGigE1/0/33',
+                          'dst': 'STO_SPINE', 'rate': '200G',
                           'desc': 'to-S-Spine'})
 
     # 业务&管理网（BIZ-AGG 100G 下行，ACC MLAG）
@@ -210,9 +203,8 @@ def plan_aidc(macro: dict) -> dict:
             terms.append({'src': h, 'src_port': f'Twenty-FiveGigE1/0/{i}',
                           'vlan': 300 + (c % 2), 'desc': f'BIZ-{c}-{i}'})
         for i in range(2):
-            local_ip = ic.take(1)[0]
-            conns.append({'src': h, 'src_port': f'HundredGigE1/0/{i + 1}', 'src_ip': local_ip,
-                          'dst': 'BIZ_AGG', 'dst_ip': _adj(local_ip), 'rate': '100G',
+            conns.append({'src': h, 'src_port': f'HundredGigE1/0/{i + 1}',
+                          'dst': 'BIZ_AGG', 'rate': '100G',
                           'desc': f'to-BIZ-AGG-{i + 1}'})
 
     # 带外网
@@ -225,9 +217,8 @@ def plan_aidc(macro: dict) -> dict:
         for i in range(1, 9):
             terms.append({'src': h, 'src_port': f'GigabitEthernet1/0/{i}',
                           'vlan': 400, 'desc': f'OOB-{o}-{i}'})
-        local_ip = ic.take(1)[0]
-        conns.append({'src': h, 'src_port': 'GigabitEthernet1/0/25', 'src_ip': local_ip,
-                      'dst': 'OOB_AGG', 'dst_ip': _adj(local_ip), 'rate': '1G',
+        conns.append({'src': h, 'src_port': 'GigabitEthernet1/0/25',
+                      'dst': 'OOB_AGG', 'rate': '1G',
                       'desc': 'to-OOB-AGG', 'trunk': True})
 
     # 设备 rack（契约 v1.1：从命名解析）
