@@ -14,6 +14,8 @@ const ALLOWED_TOP_LEVEL = new Set([
   // T6.1: 拓扑/机柜数据按项目持久化,需纳入导入导出白名单
   'topology.json',
   'rack_layout.json',
+  // P1（A-6）：AIDC 规划文件随项目导入/导出往返
+  'plan.json',
   'output',
 ])
 

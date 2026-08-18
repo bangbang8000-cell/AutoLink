@@ -566,6 +566,63 @@ def handle_design_from_gpus(params):
         return {'error': f'design:from-gpus 失败: {e}'}
 
 
+# ================= AIDC 项目化（P1 A-3/A-5/A-7，契约 v1.2） =================
+
+@register_action('aidc:project:create')
+def handle_aidc_project_create(params):
+    """P1：新建 AIDC 项目（workspace/<name>/，mint projectId，写 plan.json/快照）。"""
+    from aidc_project import create_aidc_project
+    p = dict(params or {})
+    project_dir = p.get('projectDir')
+    if not project_dir:
+        return {'error': '缺 projectDir'}
+    try:
+        return create_aidc_project(project_dir, p.get('name', ''),
+                                   p.get('macro'), p.get('projectId'))
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'aidc:project:create 失败: {e}'}
+
+
+@register_action('aidc:project:save')
+def handle_aidc_project_save(params):
+    """P1：保存 AIDC 项目（重新生成；planHash 变化 → planVersion+1 + 历史快照）。"""
+    from aidc_project import save_aidc_project
+    p = dict(params or {})
+    project_dir = p.get('projectDir')
+    if not project_dir:
+        return {'error': '缺 projectDir'}
+    try:
+        return save_aidc_project(project_dir, p.get('macro'))
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'aidc:project:save 失败: {e}'}
+
+
+@register_action('aidc:project:load')
+def handle_aidc_project_load(params):
+    """P1：打开 AIDC 项目（元数据 + 最近 plan + macro + 历史清单）。"""
+    from aidc_project import load_aidc_project
+    p = dict(params or {})
+    if not p.get('projectDir'):
+        return {'error': '缺 projectDir'}
+    try:
+        return load_aidc_project(p['projectDir'])
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'aidc:project:load 失败: {e}'}
+
+
+@register_action('aidc:project:list')
+def handle_aidc_project_list(params):
+    """P1：列出 workspace 下所有 AIDC 项目。"""
+    from aidc_project import list_aidc_projects
+    p = dict(params or {})
+    if not p.get('workspaceDir'):
+        return {'error': '缺 workspaceDir'}
+    try:
+        return list_aidc_projects(p['workspaceDir'])
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'aidc:project:list 失败: {e}'}
+
+
 @register_action('design')
 def handle_design(params):
     """处理拓扑设计请求"""

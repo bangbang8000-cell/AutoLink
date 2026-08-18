@@ -65,9 +65,23 @@ const electronAPI = {
   aidc: {
     plan: (params?: Record<string, unknown>) =>
       ipcRenderer.invoke('plan:aidc', params),
-    // G2（REQ-A3）：导出 plan:table（json|excel），保存对话框在主进程弹出
-    exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel') =>
+    // G2（REQ-A3）+ 契约 v1.2（A-2）：导出 plan:table（json|excel|zip 交付包），保存对话框在主进程弹出
+    exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel' | 'zip') =>
       ipcRenderer.invoke('plan:aidc:export', params, format),
+    // P1（V-AL4）：保存拓扑 PNG（base64 → 文件）
+    savePng: (base64: string, defaultName: string) =>
+      ipcRenderer.invoke('aidc:savePng', base64, defaultName),
+    // P1（A-3/A-5/A-7）：AIDC 项目化
+    project: {
+      create: (name: string, macro: Record<string, unknown>, projectId?: string) =>
+        ipcRenderer.invoke('aidc:project:create', name, macro, projectId),
+      save: (name: string, macro: Record<string, unknown>) =>
+        ipcRenderer.invoke('aidc:project:save', name, macro),
+      load: (name: string) =>
+        ipcRenderer.invoke('aidc:project:load', name),
+      list: () =>
+        ipcRenderer.invoke('aidc:project:list'),
+    },
   },
   design: {
     generate: (projectName: string, configINI?: string) =>

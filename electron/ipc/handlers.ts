@@ -264,12 +264,14 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       .filter((d) => d.isDirectory())
     return dirs.map((d, i) => {
       const projectDir = path.join(wsp, d.name)
-      // 状态推断:基于关键文件存在性
-      let status: 'ready' | 'configured' | 'designed' | 'layouted' = 'ready'
+      // 状态推断:基于关键文件存在性（P1 A-3：AIDC 项目含 plan.json → 'planned'）
+      let status: 'ready' | 'planned' | 'configured' | 'designed' | 'layouted' = 'ready'
       if (fs.existsSync(path.join(projectDir, 'rack_layout.json'))) {
         status = 'layouted'
       } else if (fs.existsSync(path.join(projectDir, 'topology.json'))) {
         status = 'designed'
+      } else if (fs.existsSync(path.join(projectDir, 'plan.json'))) {
+        status = 'planned'
       } else if (
         fs.existsSync(path.join(projectDir, 'network_config.ini')) ||
         fs.existsSync(path.join(projectDir, 'project_config.json'))
@@ -345,6 +347,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       const tplConfig = path.join(tplDir, 'network_config.ini')
       if (fs.existsSync(tplConfig)) {
         fs.copyFileSync(tplConfig, path.join(projectDir, 'network_config.ini'))
+      }
+      // P1（A-6）：AIDC 模板带 plan.json，一并复制（AIDC 项目据此恢复）
+      const tplPlan = path.join(tplDir, 'plan.json')
+      if (fs.existsSync(tplPlan)) {
+        fs.copyFileSync(tplPlan, path.join(projectDir, 'plan.json'))
       }
     } else {
       const defaultConfig = path.join(getBackendPath(), 'network_config.ini')
@@ -614,6 +621,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     'rack_layout.json',
     // V3.0.4-T3-1: 机房矩阵布局（RoomMatrix 持久化）
     'room_layout.json',
+    // P1（A-5）：AIDC 规划文件（plan:table v1.2）按项目持久化
+    'plan.json',
   ])
   ipcMain.handle('project:saveFile', wrapHandler(async (_event, name: string, relativePath: string, content: string) => {
     sanitizeName(name)
@@ -818,20 +827,62 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return pythonService.call('plan:aidc', params ?? {})
   }))
 
-  // G2（REQ-A3）：AIDC 规划导出（plan:table JSON / Excel）——保存对话框 + 后端写盘
-  ipcMain.handle('plan:aidc:export', wrapHandler(async (_event, params: Record<string, unknown>, format: 'json' | 'excel') => {
-    const ext = format === 'excel' ? 'xlsx' : 'json'
+  // G2（REQ-A3）+ 契约 v1.2（A-2）：AIDC 规划导出（JSON / Excel / ZIP 交付包）
+  // —— 保存对话框默认文件名带项目身份：{projectName}_{projectId前8}.{ext}（契约 v1.2 §6.4）
+  ipcMain.handle('plan:aidc:export', wrapHandler(async (_event, params: Record<string, unknown>, format: 'json' | 'excel' | 'zip') => {
+    const ext = format === 'excel' ? 'xlsx' : format === 'zip' ? 'zip' : 'json'
+    const p = params ?? {}
+    const projName = String(p.projectName ?? p.project_name ?? '')
+    const projId = String(p.projectId ?? p.project_id ?? '')
+    const id8 = projId.replace(/-/g, '').slice(0, 8)
+    const base = projName || 'aidc_plan'
+    const defaultPath = id8 ? `${base}_${id8}.${ext}` : `${base}.${ext}`
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '导出 AIDC 规划',
-      defaultPath: `aidc_plan.${ext}`,
+      defaultPath,
       filters: format === 'excel'
         ? [{ name: 'Excel 规划表', extensions: ['xlsx'] }]
-        : [{ name: 'plan:table JSON', extensions: ['json'] }],
+        : format === 'zip'
+          ? [{ name: 'AIDC 交付包 ZIP', extensions: ['zip'] }]
+          : [{ name: 'plan:table JSON', extensions: ['json'] }],
     })
     if (result.canceled || !result.filePath) {
       return { canceled: true, path: '' }
     }
     return pythonService.call('plan:aidc:export', { ...(params ?? {}), format, filepath: result.filePath })
+  }))
+
+  // P1（A-3/A-5/A-7）：AIDC 项目化——新建/保存/打开/列表（workspace/<name>/ 落盘 + 版本快照）
+  const aidcProjectDir = (name: string): string => {
+    sanitizeName(name)
+    return path.join(getWorkspacePath(), name)
+  }
+  ipcMain.handle('aidc:project:create', wrapHandler(async (_event, name: string, macro: Record<string, unknown>, projectId?: string) => {
+    return pythonService.call('aidc:project:create', { projectDir: aidcProjectDir(name), name, macro, projectId })
+  }))
+  ipcMain.handle('aidc:project:save', wrapHandler(async (_event, name: string, macro: Record<string, unknown>) => {
+    return pythonService.call('aidc:project:save', { projectDir: aidcProjectDir(name), macro })
+  }))
+  ipcMain.handle('aidc:project:load', wrapHandler(async (_event, name: string) => {
+    return pythonService.call('aidc:project:load', { projectDir: aidcProjectDir(name) })
+  }))
+  ipcMain.handle('aidc:project:list', wrapHandler(async () => {
+    return pythonService.call('aidc:project:list', { workspaceDir: getWorkspacePath() })
+  }))
+
+  // P1（V-AL4）：保存拓扑 PNG（base64 → 保存对话框 → 写盘）
+  ipcMain.handle('aidc:savePng', wrapHandler(async (_event, base64: string, defaultName: string) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出拓扑 PNG',
+      defaultPath: defaultName || '拓扑.png',
+      filters: [{ name: 'PNG 图片', extensions: ['png'] }],
+    })
+    if (result.canceled || !result.filePath) {
+      return { canceled: true, path: '' }
+    }
+    const buffer = Buffer.from(base64, 'base64')
+    fs.writeFileSync(result.filePath, buffer)
+    return { ok: true, path: result.filePath }
   }))
 
   ipcMain.handle('design:generate', wrapHandler(async (_event, projectName: string, configINI?: string) => {
@@ -1399,8 +1450,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     // Create template directory
     fs.mkdirSync(destDir, { recursive: true })
 
-    // Copy config files
-    const filesToCopy = ['network_config.ini', 'project_config.json', 'project.json']
+    // Copy config files（P1 A-6：AIDC 项目含 plan.json，一并进模板）
+    const filesToCopy = ['network_config.ini', 'project_config.json', 'project.json', 'plan.json']
     for (const file of filesToCopy) {
       const src = path.join(srcDir, file)
       if (fs.existsSync(src)) {

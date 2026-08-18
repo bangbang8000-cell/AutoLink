@@ -1,5 +1,5 @@
 /**
- * AIDC 规划 plan:table 契约 v1.1 类型（AL 侧前端，MC-AL/docs/plan_table_契约v1.1）
+ * AIDC 规划 plan:table 契约 v1.2 类型（AL 侧前端，MC-AL/docs/plan_table_契约v1.2）
  */
 export interface PlanMeta {
   project: string
@@ -13,6 +13,14 @@ export interface PlanMeta {
   projectType?: string
   /** 桥接标识：契约能力版本 */
   bridgeVersion?: string
+  /** 契约 v1.2：项目身份（机器匹配键，AL mint） */
+  projectId?: string
+  /** 契约 v1.2：人类可读项目名 */
+  projectName?: string
+  /** 契约 v1.2：AL 规划版本（自增） */
+  planVersion?: number
+  /** 契约 v1.2：planHash = sha256(canonical macro) */
+  planHash?: string
 }
 
 export interface PlanDevice {

@@ -11,7 +11,7 @@ export interface ProjectInfo {
   id: number
   name: string
   index: number
-  status?: 'ready' | 'configured' | 'designed' | 'layouted'
+  status?: 'ready' | 'planned' | 'configured' | 'designed' | 'layouted'
   fileCount?: number
   updatedAt?: string
   description?: string
@@ -19,7 +19,7 @@ export interface ProjectInfo {
 
 export interface ProjectStatus {
   name: string
-  status: 'ready' | 'configured' | 'designed' | 'layouted'
+  status: 'ready' | 'planned' | 'configured' | 'designed' | 'layouted'
 }
 
 export interface TemplateInfo {

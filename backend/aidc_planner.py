@@ -12,18 +12,31 @@ AIDC 规划器（AL 侧，P1.3）。
 """
 
 import datetime
+import hashlib
 import io
 import ipaddress
 import json
+import uuid
 
 
-# ---------------- 桥接标识（plan:table 契约 v1.1，MC-AL/docs/plan_table_契约v1.1） ----------------
+# ---------------- 桥接标识（plan:table 契约 v1.2，MC-AL/docs/plan_table_契约v1.2） ----------------
+CONTRACT_VERSION = '1.2'
 BRIDGE_META = {
     'source': 'autolink',          # 来源系统：AL 产出
     'projectType': 'aidc',         # 项目类型：AIDC 桥接
     'bridgeVersion': '1.0',        # 桥接契约能力版本
-    'schema': 'plan:table/1.1',    # schema 标识
+    'schema': 'plan:table/1.2',    # schema 标识
 }
+
+
+def canonical_macro(macro: dict) -> str:
+    """契约 v1.2 §1.3：canonical(macro) = json.dumps(macro, sort_keys=True, ensure_ascii=False)。"""
+    return json.dumps(macro, sort_keys=True, ensure_ascii=False)
+
+
+def plan_hash(macro: dict) -> str:
+    """planHash = sha256(canonical(macro))。双端算法一致（契约 v1.2 §1.3），变更检测权威判据。"""
+    return hashlib.sha256(canonical_macro(macro).encode('utf-8')).hexdigest()
 
 
 # ---------------- 默认值（F10/F14/F16） ----------------
@@ -226,25 +239,37 @@ def plan_aidc(macro: dict) -> dict:
         d['rack'] = int(d['name'].split('-R', 1)[1].split('-', 1)[0])
 
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+    macro = {
+        'site': site, 'gpuCount': gpu,
+        'pfcQueue': pfc, 'cnpQueue': cnp, 'bgpMaxPaths': m['bgp_max_paths'],
+        'convergence': m['convergence'], 'rails': m['rails'],
+        'naming': {'format': m['naming_format'], 'abbr': SCN_ABBR},
+        'ipSegments': seg,
+        'vlanRanges': m['vlan_ranges'], 'asRange': m['as_range'],
+        'ospf': m['ospf'],
+        'deviceModels': m['device_models'],
+    }
+    # 契约 v1.2 §1.1/§1.2：项目身份 + 版本。projectId 未提供则 mint（会话内稳定由面板持有）；
+    # projectName/planVersion 可选；planHash 权威 = sha256(canonical(macro))。
+    project_id = str(m.get('project_id') or m.get('projectId') or uuid.uuid4())
+    project_name = str(m.get('project_name') or m.get('projectName') or '')
+    plan_version = int(m.get('plan_version') or m.get('planVersion') or 1)
+    meta = {
+        'project': f'aidc_{gpu}', 'site': site,
+        'version': CONTRACT_VERSION, 'schema': BRIDGE_META['schema'],
+        'generatedAt': now,
+        'source': BRIDGE_META['source'],
+        'projectType': BRIDGE_META['projectType'],
+        'bridgeVersion': BRIDGE_META['bridgeVersion'],
+        'projectId': project_id,
+        'planHash': plan_hash(macro),
+        'planVersion': plan_version,
+    }
+    if project_name:
+        meta['projectName'] = project_name
     return {
-        'meta': {
-            'project': f'aidc_{gpu}', 'site': site,
-            'version': '1.1', 'schema': BRIDGE_META['schema'],
-            'generatedAt': now,
-            'source': BRIDGE_META['source'],
-            'projectType': BRIDGE_META['projectType'],
-            'bridgeVersion': BRIDGE_META['bridgeVersion'],
-        },
-        'macro': {
-            'site': site, 'gpuCount': gpu,
-            'pfcQueue': pfc, 'cnpQueue': cnp, 'bgpMaxPaths': m['bgp_max_paths'],
-            'convergence': m['convergence'], 'rails': m['rails'],
-            'naming': {'format': m['naming_format'], 'abbr': SCN_ABBR},
-            'ipSegments': seg,
-            'vlanRanges': m['vlan_ranges'], 'asRange': m['as_range'],
-            'ospf': m['ospf'],
-            'deviceModels': m['device_models'],
-        },
+        'meta': meta,
+        'macro': macro,
         'topology': {
             'layers': 2, 'spines': spine_n, 'leaves': leaf_n, 'pods': None,
             'scale': {'gpuCount': gpu, 'spine': spine_n, 'leaf': leaf_n},
@@ -287,12 +312,46 @@ def _write_plan_excel(plan: dict, filepath: str) -> None:
             df.to_excel(w, sheet_name=name, index=False)
 
 
+def _delivery_readme(plan: dict) -> str:
+    """交付包 README（契约 v1.2 §6.4 产物版本戳）。"""
+    meta = plan.get('meta', {})
+    macro = plan.get('macro', {})
+    lines = [
+        f"# {meta.get('projectName') or meta.get('project', 'aidc')} 规划交付包",
+        '',
+        f"- 项目编号 (projectId)：{meta.get('projectId', '-')}",
+        f"- 项目名称 (projectName)：{meta.get('projectName', '-')}",
+        f"- 规划版本 (planVersion)：{meta.get('planVersion', '-')}",
+        f"- 规划哈希 (planHash)：{meta.get('planHash', '-')}",
+        f"- 生成时间：{meta.get('generatedAt', '-')}",
+        f"- GPU 规模：{macro.get('gpuCount', '-')} · 站点：{macro.get('site', '-')}",
+        f"- 契约：{meta.get('schema', '-')}（source={meta.get('source')} / projectType={meta.get('projectType')} / bridgeVersion={meta.get('bridgeVersion')}）",
+        '',
+        "## 内容",
+        "",
+        "- `plan.json`：plan:table 规划文件（MC 导入主输入，自包含）",
+        "",
+        "## 交付说明",
+        "",
+        "本包由 AIDC AutoLink 规划生成，供 MagicCommander 导入做微观细化与配置渲染。",
+        "导入后请核对项目编号与规划版本；同项目更新重导入将保留 MC 侧微观细化（allocator_state）。",
+    ]
+    return '\n'.join(lines)
+
+
 def export_plan(macro: dict, filepath: str, fmt: str = 'json') -> str:
-    """G2：plan:table → 文件（json | excel），返回落盘路径。"""
+    """G2：plan:table → 文件（json | excel | zip 交付包），返回落盘路径。"""
+    import zipfile
     plan = plan_aidc(macro)
     if 'error' in plan:
         raise ValueError(plan['error'])
-    if fmt == 'excel':
+    if fmt == 'zip':
+        if not filepath.lower().endswith('.zip'):
+            filepath += '.zip'
+        with zipfile.ZipFile(filepath, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.writestr('plan.json', json.dumps(plan, ensure_ascii=False, indent=2))
+            z.writestr('README.md', _delivery_readme(plan))
+    elif fmt == 'excel':
         if not filepath.lower().endswith('.xlsx'):
             filepath += '.xlsx'
         _write_plan_excel(plan, filepath)

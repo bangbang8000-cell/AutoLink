@@ -8,21 +8,54 @@
  *   - 拓扑预览：轻量 SVG（AidcTopologyPreview）
  *   - 桥接标识 chips（source/projectType/bridgeVersion，契约 v1.1）
  */
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionCard } from '@/components/ui/SectionCard'
 import { Tabs } from '@/components/ui/Tabs'
-import { Network, Zap, Server, GitBranch, ChevronDown, ChevronRight, Tag } from 'lucide-react'
+import {
+  Network, Zap, Server, GitBranch, ChevronDown, ChevronRight, Tag,
+  FolderOpen, History,
+} from 'lucide-react'
 import { PlanTopologyView } from './PlanTopologyView'
 import {
   ROLE_LABEL, macroNum,
-  type PlanConnection, type PlanDevice, type PlanSummary, type PlanTerminal,
+  type PlanConnection, type PlanDevice, type PlanMacro, type PlanSummary, type PlanTerminal,
 } from './aidcTypes'
 
 // ---- 辅助：camelCase 优先读取宏观数值 ----
 const mnum = (p: PlanSummary, camel: string, snake: string, fb: number) =>
   macroNum(p.macro, camel, snake) ?? fb
+
+/** 契约 v1.2（P1 A-4）：plan.macro(camelCase) → 输入 snake_case（重开回填完整宏观，含高级参数）。 */
+function macroToInput(m: Partial<PlanMacro> | Record<string, unknown>): Record<string, unknown> {
+  const M = (m ?? {}) as Record<string, unknown>
+  const naming = M.naming as PlanMacro['naming'] | undefined
+  return {
+    site: M.site,
+    gpu_count: M.gpuCount,
+    pfc_queue: M.pfcQueue,
+    cnp_queue: M.cnpQueue,
+    bgp_max_paths: M.bgpMaxPaths,
+    convergence: M.convergence,
+    rails: M.rails,
+    naming_format: naming?.format,
+    ip_segments: M.ipSegments,
+    vlan_ranges: M.vlanRanges,
+    as_range: M.asRange,
+    ospf: M.ospf,
+    device_models: M.deviceModels,
+  }
+}
+
+/** 高级（面板未暴露编辑）宏观参数：随项目持久化并在重开时透传，避免丢参数。 */
+function extractAdv(input: Record<string, unknown>): Record<string, unknown> {
+  const adv: Record<string, unknown> = {}
+  for (const k of ['bgp_max_paths', 'naming_format', 'ip_segments', 'ospf', 'device_models']) {
+    if (input[k] !== undefined && input[k] !== null) adv[k] = input[k]
+  }
+  return adv
+}
 
 /** 设备清单按角色分组 */
 function useGroups(plan: PlanSummary | null) {
@@ -132,6 +165,35 @@ function TerminalsView({ terms }: { terms: PlanTerminal[] }) {
   )
 }
 
+/** P1（V-AL2）：机柜/上架分布视图（按 rack 分组列出设备）。 */
+function RackView({ plan }: { plan: PlanSummary }) {
+  const racks = useMemo(() => {
+    const by: Record<string, PlanDevice[]> = {}
+    for (const d of plan.deviceList) {
+      const r = d.rack != null ? String(d.rack).padStart(2, '0') : '?'
+      ;(by[r] ??= []).push(d)
+    }
+    return Object.entries(by).sort((a, b) => Number(a[0]) - Number(b[0]))
+  }, [plan])
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {racks.map(([rack, devs]) => (
+        <div key={rack} className="border rounded p-2">
+          <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">机柜 R{rack} · {devs.length} 台</div>
+          <div className="space-y-0.5">
+            {devs.map((d) => (
+              <div key={d.name} className="flex justify-between text-2xs font-mono">
+                <span>{d.name}</span>
+                <span className="text-gray-400">{d.role}{d.asn ? ` · AS${d.asn}` : ''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function MacroView({ plan }: { plan: PlanSummary }) {
   const m = plan.macro
   const rows: Array<[string, string]> = [
@@ -168,7 +230,31 @@ function MacroView({ plan }: { plan: PlanSummary }) {
   )
 }
 
+const genUuid = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `aidc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+
+interface AidcProjectItem {
+  name: string
+  projectId: string
+  projectName: string
+  planVersion: number
+  updatedAt?: string
+  site?: string
+  gpuCount?: number
+}
+
 export function AidcPlannerPanel() {
+  // 契约 v1.2（P1）：项目身份——P1 起由 AL 项目持久化（会话内 mint 作为未保存时兜底）
+  const [projectId, setProjectId] = useState(genUuid)
+  const [projectName, setProjectName] = useState('')
+  const [currentProject, setCurrentProject] = useState<string | null>(null)
+  const [projects, setProjects] = useState<AidcProjectItem[]>([])
+  const [openName, setOpenName] = useState('')
+  const [advMacro, setAdvMacro] = useState<Record<string, unknown>>({})
+  const [history, setHistory] = useState<Array<{ version: number; planHash: string; generatedAt?: string }>>([])
+  const [projectLoading, setProjectLoading] = useState(false)
   // 基础参数
   const [site, setSite] = useState('BJ01')
   const [gpuCount, setGpuCount] = useState('64')
@@ -192,6 +278,10 @@ export function AidcPlannerPanel() {
   const [exportMsg, setExportMsg] = useState('')
 
   const buildParams = () => ({
+    // 契约 v1.2：项目身份
+    project_id: projectId,
+    ...(projectName.trim() ? { project_name: projectName.trim() } : {}),
+    ...advMacro, // 高级宏观（持久化透传，避免只传基础字段丢参数）
     site,
     gpu_count: Number(gpuCount),
     pfc_queue: Number(pfcQueue),
@@ -207,6 +297,15 @@ export function AidcPlannerPanel() {
     },
   })
 
+  const refreshProjects = useCallback(async () => {
+    try {
+      const res = (await window.electron.aidc.project.list()) as { ok?: boolean; projects?: AidcProjectItem[] }
+      if (res?.ok) setProjects(res.projects ?? [])
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { refreshProjects() }, [refreshProjects])
+
   const run = async () => {
     setLoading(true)
     setError('')
@@ -221,7 +320,7 @@ export function AidcPlannerPanel() {
     }
   }
 
-  const doExport = async (format: 'json' | 'excel') => {
+  const doExport = async (format: 'json' | 'excel' | 'zip') => {
     setExporting(true)
     setExportMsg('')
     try {
@@ -229,6 +328,120 @@ export function AidcPlannerPanel() {
       if (res?.canceled) setExportMsg('已取消')
       else if (res?.error) setExportMsg(`导出失败: ${res.error}`)
       else setExportMsg(`已导出 → ${res?.path ?? ''}`)
+    } catch (e) {
+      setExportMsg(`导出失败: ${String(e)}`)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // P1（A-4）：项目打开/保存/另存为 + PNG 评审导出
+  const openProject = async (name: string) => {
+    if (!name) return
+    setProjectLoading(true); setError(''); setExportMsg('')
+    try {
+      const res = (await window.electron.aidc.project.load(name)) as {
+        error?: string; name: string; projectId: string; projectName?: string
+        plan?: PlanSummary; macro?: PlanMacro
+        history?: Array<{ version: number; planHash: string; generatedAt?: string }>
+      }
+      if (res?.error) { setError(res.error); return }
+      setCurrentProject(res.name ?? name)
+      setProjectId(res.projectId || projectId)
+      if (res.projectName) setProjectName(res.projectName)
+      const inp = macroToInput((res.macro as Partial<PlanMacro> | undefined) ?? {})
+      setSite(String(inp.site ?? 'BJ01'))
+      setGpuCount(String(inp.gpu_count ?? 64))
+      setPfcQueue(String(inp.pfc_queue ?? 3))
+      setCnpQueue(String(inp.cnp_queue ?? 6))
+      setConvergence(String(inp.convergence ?? 1))
+      setRails(String(inp.rails ?? 8))
+      if (Array.isArray(inp.as_range)) {
+        setAsStart(String(inp.as_range[0])); setAsEnd(String(inp.as_range[1]))
+      }
+      const vr = inp.vlan_ranges as Record<string, [number, number]> | undefined
+      if (vr) {
+        setVlanCompute(vr.compute?.join(',') ?? '100,199')
+        setVlanStorage(vr.storage?.join(',') ?? '200,299')
+        setVlanBiz(vr.biz?.join(',') ?? '300,399')
+        setVlanOob(vr.oob?.join(',') ?? '400,499')
+      }
+      setAdvMacro(extractAdv(inp))
+      setPlan(res.plan ?? null)
+      setHistory(res.history ?? [])
+      setExportMsg(`已打开项目 ${name}（v${res.plan?.meta?.planVersion ?? ''}）`)
+    } catch (e) {
+      setError(`打开失败: ${String(e)}`)
+    } finally {
+      setProjectLoading(false)
+    }
+  }
+
+  const saveProject = async () => {
+    const name = projectName.trim()
+    if (!name) { setError('请填写项目名再保存'); return }
+    setProjectLoading(true); setError(''); setExportMsg('')
+    try {
+      const macro = buildParams()
+      const res = (currentProject
+        ? await window.electron.aidc.project.save(currentProject, macro)
+        : await window.electron.aidc.project.create(name, macro)) as {
+          error?: string; name: string; projectId: string
+          plan?: PlanSummary; planVersion: number; changed?: boolean
+        }
+      if (res?.error) { setError(res.error); return }
+      setCurrentProject(res.name ?? currentProject)
+      setProjectId(res.projectId)
+      if (res.plan) setPlan(res.plan)
+      setHistory([])
+      setExportMsg(res.changed === false
+        ? `已保存（无变更，仍 v${res.planVersion}）`
+        : `已保存 v${res.planVersion}${res.changed ? '（新版本）' : ''}`)
+      await refreshProjects()
+    } catch (e) {
+      setError(`保存失败: ${String(e)}`)
+    } finally {
+      setProjectLoading(false)
+    }
+  }
+
+  const saveAsProject = async () => {
+    const name = projectName.trim()
+    if (!name) { setError('请填写新项目名'); return }
+    setProjectLoading(true); setError(''); setExportMsg('')
+    try {
+      const res = (await window.electron.aidc.project.create(name, buildParams())) as {
+        error?: string; name: string; projectId: string
+        plan?: PlanSummary; planVersion: number
+      }
+      if (res?.error) { setError(res.error); return }
+      setCurrentProject(res.name ?? name)
+      setProjectId(res.projectId)
+      if (res.plan) setPlan(res.plan)
+      setHistory([])
+      setExportMsg(`已另存为新项目 ${res.name}（v${res.planVersion}）`)
+      await refreshProjects()
+    } catch (e) {
+      setError(`另存失败: ${String(e)}`)
+    } finally {
+      setProjectLoading(false)
+    }
+  }
+
+  const doExportPng = async () => {
+    if (!plan) { setError('请先生成规划'); return }
+    setExporting(true); setExportMsg('')
+    try {
+      const { exportPlanTopologyPng } = await import('@/utils/exportPlanTopologyPng')
+      const base64 = await exportPlanTopologyPng(plan)
+      const base = plan.meta.projectName || plan.meta.project || 'aidc_plan'
+      const id8 = String(plan.meta.projectId || '').replace(/-/g, '').slice(0, 8)
+      const res = (await window.electron.aidc.savePng(
+        base64, `${base}${id8 ? `_${id8}` : ''}_拓扑.png`,
+      )) as { canceled?: boolean; error?: string; path?: string }
+      if (res?.canceled) setExportMsg('已取消')
+      else if (res?.error) setExportMsg(`导出失败: ${res.error}`)
+      else setExportMsg(`拓扑 PNG 已导出 → ${res.path}`)
     } catch (e) {
       setExportMsg(`导出失败: ${String(e)}`)
     } finally {
@@ -249,16 +462,51 @@ export function AidcPlannerPanel() {
     { value: 'dev', label: '设备清单' },
     { value: 'conn', label: '接线' },
     { value: 'term', label: '终端' },
+    { value: 'rack', label: '机柜' },
     { value: 'macro', label: '宏观参数' },
     { value: 'topo', label: '拓扑' },
   ]
 
   return (
     <SectionCard title="AIDC 规划">
-      <p className="text-xs text-gray-500 mb-3">宏观参数 → plan:table（契约 v1.1）→ MC 导入渲染</p>
+      <p className="text-xs text-gray-500 mb-3">宏观参数 → plan:table（契约 v1.2）→ MC 导入渲染 · 项目化：保存/打开/版本/评审</p>
+
+      {/* P1（A-4）：项目保存/打开 */}
+      <div className="flex flex-wrap items-center gap-2 mb-3 p-2 border rounded bg-gray-50/50 dark:bg-app-surface">
+        <FolderOpen size={14} className="text-gray-400" />
+        <select
+          value={openName}
+          onChange={(e) => setOpenName(e.target.value)}
+          className="text-xs rounded border bg-white dark:bg-app px-2 py-1 max-w-[220px]"
+          aria-label="选择 AIDC 项目"
+        >
+          <option value="">选择 AIDC 项目…</option>
+          {projects.map((p) => (
+            <option key={p.name} value={p.name}>
+              {p.projectName || p.name}（v{p.planVersion}）
+            </option>
+          ))}
+        </select>
+        <Button size="sm" variant="secondary" onClick={() => openProject(openName)}
+          disabled={projectLoading || !openName}>打开</Button>
+        <Button size="sm" variant="secondary" onClick={saveProject}
+          disabled={projectLoading}>保存</Button>
+        {currentProject && (
+          <Button size="sm" variant="ghost" onClick={saveAsProject}
+            disabled={projectLoading}>另存为</Button>
+        )}
+        {currentProject && (
+          <span className="text-xs text-gray-500 font-mono">当前：{currentProject}</span>
+        )}
+      </div>
 
       {/* 基础参数 */}
       <div className="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <label className="text-sm">项目名（可选）</label>
+          <Input value={projectName} onChange={(e) => setProjectName(e.target.value)}
+            placeholder={`${site}-${gpuCount}台`} aria-label="项目名" />
+        </div>
         <div>
           <label className="text-sm">机房</label>
           <Input value={site} onChange={(e) => setSite(e.target.value)} aria-label="机房" />
@@ -331,6 +579,13 @@ export function AidcPlannerPanel() {
         <Button variant="secondary" size="sm" onClick={() => doExport('excel')} disabled={exporting}>
           {exporting ? '导出中…' : '导出规划 Excel'}
         </Button>
+        <Button variant="secondary" size="sm" onClick={() => doExport('zip')} disabled={exporting}>
+          {exporting ? '导出中…' : '导出交付包'}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={doExportPng}
+          disabled={exporting || !plan}>
+          {exporting ? '导出中…' : '导出拓扑PNG'}
+        </Button>
         {exportMsg && <span className="text-xs text-gray-500">{exportMsg}</span>}
       </div>
 
@@ -341,7 +596,12 @@ export function AidcPlannerPanel() {
           {/* 摘要 + 桥接标识 */}
           <div className="flex flex-wrap items-center gap-2 text-sm mb-3">
             <span className="flex items-center gap-1"><GitBranch size={16} />
-              {plan.meta.project} · {plan.meta.site} · PFC={pfcDisp} · CNP={cnpDisp}
+              {plan.meta.projectName || plan.meta.project} · {plan.meta.site}
+              {plan.meta.planVersion ? <span className="text-gray-400">v{plan.meta.planVersion}</span> : null}
+              {plan.meta.projectId ? (
+                <span className="text-gray-400 font-mono">#{String(plan.meta.projectId).replace(/-/g, '').slice(0, 8)}</span>
+              ) : null}
+              · PFC={pfcDisp} · CNP={cnpDisp}
             </span>
             {(plan.meta.source || plan.meta.projectType || plan.meta.bridgeVersion) && (
               <span className="flex items-center gap-1 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded px-1.5 py-0.5">
@@ -354,6 +614,21 @@ export function AidcPlannerPanel() {
               <span className="flex items-center gap-1"><Server size={14} /> {totalDevices} 台</span>
             </span>
           </div>
+
+          {/* P1（A-7）：版本历史 */}
+          {history.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 mt-2 text-2xs">
+              <History size={12} className="text-gray-400" />
+              <span className="text-gray-500">版本历史：</span>
+              {history.map((h) => (
+                <span key={h.version}
+                  className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-app-surface text-gray-500 font-mono"
+                  title={`v${h.version} · ${h.generatedAt ?? ''} · ${h.planHash?.slice(0, 12) ?? ''}`}>
+                  v{h.version}{h.generatedAt ? ` · ${h.generatedAt.slice(0, 10)}` : ''}
+                </span>
+              ))}
+            </div>
+          )}
 
           <Tabs items={tabItems} defaultValue="dev">
             {(active) => (
@@ -375,6 +650,7 @@ export function AidcPlannerPanel() {
                 )}
                 {active === 'conn' && <ConnectionsView conns={plan.connections} />}
                 {active === 'term' && <TerminalsView terms={plan.terminals} />}
+                {active === 'rack' && <RackView plan={plan} />}
                 {active === 'macro' && <MacroView plan={plan} />}
                 {active === 'topo' && <PlanTopologyView plan={plan} />}
               </div>

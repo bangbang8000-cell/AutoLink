@@ -1,7 +1,7 @@
 interface Window {
   electron: {
     project: {
-      list: () => Promise<{ id: number; name: string; index: number; status?: 'ready' | 'configured' | 'designed' | 'layouted'; fileCount?: number; updatedAt?: string; description?: string }[]>
+      list: () => Promise<{ id: number; name: string; index: number; status?: 'ready' | 'planned' | 'configured' | 'designed' | 'layouted'; fileCount?: number; updatedAt?: string; description?: string }[]>
       create: (name: string, options?: { template?: string; empty?: boolean }) => Promise<void>
       createWithConfig: (config: import('@/types/project-config').ProjectConfig) => Promise<void>
       delete: (ids: string[]) => Promise<void>
@@ -87,9 +87,34 @@ interface Window {
     // G2: 导出 plan:table（json|excel，保存对话框在主进程）
     aidc: {
       plan: (params?: Record<string, unknown>) => Promise<unknown>
-      exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel') => Promise<{
+      exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel' | 'zip') => Promise<{
         canceled?: boolean; path?: string; ok?: boolean; error?: string
       }>
+      /** P1（V-AL4）：保存拓扑 PNG（base64 → 文件） */
+      savePng: (base64: string, defaultName: string) => Promise<{
+        canceled?: boolean; path?: string; error?: string
+      }>
+      /** P1（A-3/A-5/A-7）：AIDC 项目化 */
+      project: {
+        create: (name: string, macro: Record<string, unknown>, projectId?: string) => Promise<{
+          error?: string; ok?: boolean; name?: string; projectId?: string
+          plan?: unknown; planVersion?: number; changed?: boolean
+        }>
+        save: (name: string, macro: Record<string, unknown>) => Promise<{
+          error?: string; ok?: boolean; name?: string; projectId?: string
+          plan?: unknown; planVersion?: number; changed?: boolean
+        }>
+        load: (name: string) => Promise<{
+          error?: string; ok?: boolean; name?: string; projectId?: string; projectName?: string
+          plan?: unknown; macro?: unknown; history?: Array<{ version: number; planHash: string; generatedAt?: string }>
+        }>
+        list: () => Promise<{
+          error?: string; ok?: boolean; projects?: Array<{
+            name: string; projectId: string; projectName: string; planVersion: number
+            updatedAt?: string; site?: string; gpuCount?: number
+          }>
+        }>
+      }
     }
     // V3.1.3-T7-4: 容量规划（模型档案 + 推荐）
     capacity: {

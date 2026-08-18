@@ -1,17 +1,20 @@
-"""AIDC 规划器 plan:table 契约 v1.1 测试（G0：桥接标识 + camelCase + 补齐字段）。
+"""AIDC 规划器 plan:table 契约 v1.2 测试（G0 桥接标识 + 契约 v1.2 身份/版本 + camelCase + 补齐字段）。
 
 覆盖 backend/aidc_planner.py：
-  - plan_aidc 输出符合契约 v1.1（meta 桥接标识 / macro camelCase / topology / protocols.ospf）
+  - plan_aidc 输出符合契约 v1.2（meta 桥接标识 / projectId / planHash / planVersion / macro camelCase）
   - deviceList 逐设备含 rack
   - 规模映射（64 台 = 22 设备）与非法档位报错
   - validate_macro 兼容 camelCase/snake_case 输入
+  - 导出 json/excel/zip（交付包）
 """
 import io
 import json
+import zipfile
 
 import pytest
 
-from aidc_planner import DEFAULTS, SCN_ABBR, _SCALE, export_plan, plan_aidc, validate_macro
+from aidc_planner import (CONTRACT_VERSION, SCN_ABBR, _SCALE, export_plan,
+                          plan_aidc, plan_hash, validate_macro)
 
 
 class TestPlanAidcContract:
@@ -21,10 +24,47 @@ class TestPlanAidcContract:
         assert meta['source'] == 'autolink'
         assert meta['projectType'] == 'aidc'
         assert meta['bridgeVersion'] == '1.0'
-        assert meta['schema'] == 'plan:table/1.1'
-        assert meta['version'] == '1.1'
+        assert meta['schema'] == 'plan:table/1.2'
+        assert meta['version'] == CONTRACT_VERSION == '1.2'
         assert meta['generatedAt']
         assert meta['project'] == 'aidc_64'
+        # 契约 v1.2：身份 + 版本必带
+        assert meta['projectId']
+        assert meta['planHash']
+        assert meta['planVersion'] == 1
+
+    def test_identity_project_id(self):
+        pid = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
+        plan = plan_aidc({'gpu_count': 64, 'project_id': pid,
+                          'project_name': 'H3C-64台-BJ01', 'plan_version': 3})
+        meta = plan['meta']
+        assert meta['projectId'] == pid
+        assert meta['projectName'] == 'H3C-64台-BJ01'
+        assert meta['planVersion'] == 3
+        # projectId/projectName 不泄漏进 macro（planHash 只覆盖 macro）
+        assert 'project_id' not in plan['macro'] and 'projectId' not in plan['macro']
+
+    def test_project_id_minted_when_absent(self):
+        a = plan_aidc({'gpu_count': 64})
+        b = plan_aidc({'gpu_count': 64})
+        assert a['meta']['projectId'] and b['meta']['projectId']
+        assert a['meta']['projectId'] != b['meta']['projectId']  # 无 project_id 时每次 mint 新 UUID
+
+    def test_plan_hash_deterministic_and_change_detection(self):
+        a = plan_aidc({'gpu_count': 64})
+        b = plan_aidc({'gpu_count': 64})
+        assert a['meta']['planHash'] == b['meta']['planHash']  # 同 macro → 同 hash
+        c = plan_aidc({'gpu_count': 64, 'pfc_queue': 4})
+        assert a['meta']['planHash'] != c['meta']['planHash']  # 参数变 → hash 变
+        assert c['meta']['planVersion'] == 1  # 未显式传 plan_version 时恒为 1（自增由项目层负责）
+
+    def test_plan_hash_matches_util(self):
+        plan = plan_aidc({'gpu_count': 64, 'project_id': 'x'})
+        assert plan['meta']['planHash'] == plan_hash(plan['macro'])  # 与 canonical 算法一致
+        # generatedAt 不参与哈希（meta 不在 macro 内）
+        macro1 = {'site': 'BJ01', 'gpuCount': 64}
+        macro2 = {'gpuCount': 64, 'site': 'BJ01'}
+        assert plan_hash(macro1) == plan_hash(macro2)  # sort_keys 无关键序
 
     def test_macro_camelcase(self):
         plan = plan_aidc({'gpu_count': 64})
@@ -89,6 +129,18 @@ class TestExport:
         wb = load_workbook(path)
         for sheet in ('设备清单', '接线', '终端', '宏观参数', '协议', '收敛比'):
             assert sheet in wb.sheetnames
+
+    def test_export_zip_delivery_package(self, tmp_path):
+        """契约 v1.2（A-2）：交付包 ZIP 含 plan.json + README（版本戳）。"""
+        path = export_plan({'gpu_count': 64, 'project_id': 'PID001', 'project_name': 'Demo'},
+                           str(tmp_path / 'pkg'), 'zip')
+        assert path.endswith('.zip')
+        with zipfile.ZipFile(path) as zf:
+            assert 'plan.json' in zf.namelist() and 'README.md' in zf.namelist()
+            readme = zf.read('README.md').decode('utf-8')
+            assert 'projectId' in readme and 'planVersion' in readme and 'planHash' in readme
+            plan = json.loads(zf.read('plan.json').decode('utf-8'))
+            assert plan['meta']['projectId'] == 'PID001'
 
     def test_export_invalid_scale_raises(self):
         with pytest.raises(ValueError):
