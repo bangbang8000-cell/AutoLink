@@ -906,8 +906,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       throw new Error(`配置文件不存在: ${configPath}`)
     }
 
-    // 打磨轮（AL-B2）：拓扑生成对大规模（1024 台等）耗时可超 60s，单独放宽到 10 分钟
-    return pythonService.call('design', { configFile: configPath }, 600000)
+    // 打磨轮（AL-B2 复核）：后端 1024 档实测 6s；超 120s 即视为进程卡死，超时自动杀进程恢复（避免"一直转圈"）
+    return pythonService.call('design', { configFile: configPath }, 120000)
   }))
 
   ipcMain.handle('design:validate', wrapHandler(async (_event, projectName: string, configINI?: string) => {

@@ -30,7 +30,7 @@ import '@xyflow/react/dist/style.css'
 import {
   Download, Filter, Network, X, Activity, RotateCcw, Save, Maximize2,
   Search, MousePointer2, Box, Undo2, Redo2, AlignStartHorizontal, AlignEndHorizontal,
-  AlignStartVertical, AlignEndVertical, Trash2, Tags, Loader2, Sparkles,
+  AlignStartVertical, AlignEndVertical, Trash2, Tags, Loader2, Sparkles, AlertTriangle,
 } from 'lucide-react'
 import { useDesignStore, type TopologyNode, type TopologyEdge } from '@/stores/design.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -406,6 +406,8 @@ function TopologyFlowInner() {
 // 不渲染 Pod 内边(服务器-Leaf / Leaf-Spine 全互联),只渲染跨 Pod 骨架边,
 // 避免 10W+ 条边全量构建导致渲染进程卡死;用户可点击 Pod 框展开查看内部。
 const EDGE_LIMIT = 30000
+// 打磨轮（v1.2 复核）：折叠后仍超此边数 → 按步长抽样，防止 react-flow 卡死（"渲染拓扑一直转圈"根因）
+const MAX_DISPLAY_EDGES = 5000
 
 function collectAllPods(topology: { nodes: TopologyNode[] } | null): Set<string> {
   const pods = new Set<string>()
@@ -456,8 +458,8 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
   }, [topology, collapsedPods])
 
   /* ---------- filtered data ---------- */
-  const { filteredNodes, filteredEdges } = useMemo(() => {
-    if (!topology) return { filteredNodes: [], filteredEdges: [] }
+  const { filteredNodes, filteredEdges, simplified } = useMemo(() => {
+    if (!topology) return { filteredNodes: [], filteredEdges: [], simplified: false }
     let nodes = topology.nodes
     let edges = topology.edges
     if (filter !== '全部') {
@@ -484,7 +486,15 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         return !(sp && effectiveCollapsed.has(sp)) && !(tp && effectiveCollapsed.has(tp))
       })
     }
-    return { filteredNodes: nodes, filteredEdges: edges }
+    // 打磨轮（v1.2 复核）：超大拓扑降载——边数仍超上限时按步长抽样显示，
+    // 避免 react-flow 渲染数万条 SVG 边卡死（"一直转圈"根因）
+    let simplified = false
+    if (edges.length > MAX_DISPLAY_EDGES) {
+      const stride = Math.ceil(edges.length / MAX_DISPLAY_EDGES)
+      edges = edges.filter((_, i) => i % stride === 0)
+      simplified = true
+    }
+    return { filteredNodes: nodes, filteredEdges: edges, simplified }
   }, [topology, filter, effectiveCollapsed])
 
   /* ---------- v2.7.3-T6: 通过 Web Worker 计算布局(大规模拓扑不阻塞主线程) ---------- */
@@ -1030,6 +1040,12 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
               </>
             )}
           </div>
+          {/* 打磨轮（v1.2 复核）：超大拓扑简化提示 */}
+          {simplified && (
+            <span className="flex items-center gap-1 text-2xs text-warning-500">
+              <AlertTriangle size={11} /> 超大拓扑已简化（边数过多，抽样显示）
+            </span>
+          )}
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />
           <button onClick={handleFitView} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500" title={t('topology:fitViewHint')}>
             <Maximize2 size={14} />
