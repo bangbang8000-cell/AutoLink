@@ -29,6 +29,7 @@ export function ProjectExplorer() {
   const addToast = useToastStore((s) => s.addToast)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
+  const setExplorerGroupMode = useUIStore((s) => s.setExplorerGroupMode)
   const explorerGroupMode = useUIStore((s) => s.explorerGroupMode)
   // V3.3.1-T14-7: 侧栏云端分组（登录后展示云端项目）
   const loggedIn = useCloudStore((s) => s.loggedIn)
@@ -555,6 +556,22 @@ export function ProjectExplorer() {
               : t('common:explorer.templates', '模板中心')}
           </button>
         ))}
+        {/* 打磨轮（v1.2 复核）：分组模式切换（智能/真实）由设置移入项目浏览器 */}
+        {activePane === 'projects' && (
+          <div className="ml-auto pr-2 flex items-center gap-0.5 shrink-0">
+            {(['smart', 'raw'] as const).map((m) => (
+              <button key={m} type="button" onClick={() => setExplorerGroupMode(m)}
+                className={`text-2xs px-1.5 py-0.5 rounded transition-colors ${
+                  explorerGroupMode === m
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'
+                }`}
+                title={m === 'smart' ? '智能分组（按文件用途）' : '真实分组（按文件系统目录）'}>
+                {m === 'smart' ? '智能' : '真实'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content */}

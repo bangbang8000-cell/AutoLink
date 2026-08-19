@@ -152,6 +152,33 @@ export function DesignTab() {
 
   // V3.1.3-T7-4: 容量规划推荐向导（apply 回调置于 handleUpdateConfig 之后）
   const [showCapacity, setShowCapacity] = useState(false)
+  // 打磨轮（v1.2 复核）：配置预设并入设计工作台
+  const [presets, setPresets] = useState<Array<{ id: string; name: string }>>([])
+
+  useEffect(() => {
+    window.electron.config.listSchema()
+      .then((r) => setPresets((r as { presets?: Array<{ id: string; name: string }> })?.presets || []))
+      .catch(() => setPresets([]))
+  }, [])
+
+  const handleApplyPreset = async (presetId: string) => {
+    if (!presetId) return
+    try {
+      const state = useDesignStore.getState()
+      const res = (await window.electron.config.applyPreset(presetId, state.config)) as unknown as
+        { config?: DesignConfig; errors?: string[] }
+      if (res?.errors?.length) {
+        addToast('error', `预设应用失败: ${res.errors.join('; ')}`, 5000)
+        return
+      }
+      if (res?.config) {
+        state.updateConfig(res.config)
+        addToast('success', '预设已应用到设计配置（可点「生成拓扑」查看）', 4000)
+      }
+    } catch (err) {
+      addToast('error', `预设应用失败: ${(err as Error).message}`, 5000)
+    }
+  }
 
   // V2.9.2-T4: 配置变更标记 dirty(关闭需确认); 重置后清除
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
@@ -241,6 +268,17 @@ export function DesignTab() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* 打磨轮（v1.2 复核）：配置预设并入设计工作台 */}
+          {presets.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => { const v = e.target.value; e.target.value = ''; void handleApplyPreset(v) }}
+              className="px-1.5 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app text-gray-500"
+              aria-label="应用预设">
+              <option value="">应用预设…</option>
+              {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
           {/* V3.1.3-T7-4: 容量规划推荐入口 */}
           <button
             onClick={() => setShowCapacity(true)}
