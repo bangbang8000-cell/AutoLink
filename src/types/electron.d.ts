@@ -104,6 +104,10 @@ interface Window {
           error?: string; ok?: boolean; name?: string; projectId?: string
           plan?: unknown; planVersion?: number; changed?: boolean
         }>
+        init: (name: string, macro: Record<string, unknown>) => Promise<{
+          error?: string; ok?: boolean; name?: string; projectId?: string
+          plan?: unknown; planVersion?: number; changed?: boolean
+        }>
         load: (name: string) => Promise<{
           error?: string; ok?: boolean; name?: string; projectId?: string; projectName?: string
           plan?: unknown; macro?: unknown; history?: Array<{ version: number; planHash: string; generatedAt?: string }>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { useProjectStore } from '@/stores/project.store'
 import { ProjectProvider } from '@/stores/ProjectContext'
-import { useUIStore, type ActivityType } from '@/stores/ui.store'
+import { useUIStore, type ActivityType, type WorkbenchSubview } from '@/stores/ui.store'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -27,14 +27,10 @@ import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizar
 import { matchShortcut } from '@/utils/shortcuts'
 import i18n from '@/i18n'
 
-/** Map activity types to workspace tab config */
-const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'design' | 'visualization' | 'aidcPlan' | 'deviceLibrary' | 'chat'; titleKey: string; closable: boolean }> = {
+/** Map activity types to workspace tab config（打磨轮 P-A：design/aidc_plan/visualization 已并入工作台子视图，不再映射独立 Tab） */
+const WORKSPACE_TAB_CONFIG: Record<string, { type: 'workbench' | 'deviceLibrary' | 'chat'; titleKey: string; closable: boolean }> = {
   workbench: { type: 'workbench', titleKey: 'common:tabs.workbench', closable: false },
-  design: { type: 'design', titleKey: 'common:tabs.design', closable: true },
-  visualization: { type: 'visualization', titleKey: 'common:tabs.visualization', closable: true },
   device_library: { type: 'deviceLibrary', titleKey: 'common:tabs.deviceLibrary', closable: true },
-  // H3（D-7）：AIDC 规划独立入口
-  aidc_plan: { type: 'aidcPlan', titleKey: 'common:tabs.aidcPlan', closable: true },
   // V3.2.1: ai 入口 → AI 对话 Tab（此前点击仅高亮侧栏，无实际内容）
   ai: { type: 'chat', titleKey: 'common:menu.ai', closable: true },
 }
@@ -45,6 +41,7 @@ export default function App() {
   const fetchTemplates = useProjectStore((s) => s.fetchTemplates)
   const activeActivity = useUIStore((s) => s.activeActivity)
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
+  const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const togglePanel = useUIStore((s) => s.togglePanel)
@@ -165,14 +162,17 @@ export default function App() {
     setActiveActivity(activity)
     const config = WORKSPACE_TAB_CONFIG[activity]
     if (config) {
-      // H3（D-7）：design/device_library/aidc_plan 点击即开 Tab（不再两级跳转）
       let title = t(config.titleKey)
-      if (activity === 'visualization' && selectedProjectName) {
-        title = t('common:tabs.visualizationWithProject', { name: selectedProjectName })
-      }
       openTab({ type: config.type, title, closable: config.closable })
     }
-  }, [openTab, setActiveActivity, selectedProjectName, t])
+  }, [openTab, setActiveActivity, t])
+
+  // 打磨轮（P-A）：打开工作台并聚焦指定子视图（快捷键/入口直达 AIDC/设计/可视化）
+  const openWorkbenchSubview = useCallback((view: WorkbenchSubview) => {
+    setActiveActivity('workbench')
+    setWorkbenchSubview(view)
+    openTab({ type: 'workbench', title: t('common:tabs.workbench'), closable: false })
+  }, [openTab, setActiveActivity, setWorkbenchSubview, t])
 
   // v2.7.3-T1: 统一快捷键派发(从 shortcuts.ts 映射表驱动)
   useEffect(() => {
@@ -196,9 +196,11 @@ export default function App() {
         case 'togglePanel': togglePanel(); break
         case 'view-project': setActiveActivity('project'); break
         case 'view-search': handleActivityClick('search'); break
-        case 'view-design': handleActivityClick('design'); break
+        // 打磨轮（P-A）：设计/可视化/AIDC 规划已并入工作台，快捷键直达对应子视图
+        case 'view-design': openWorkbenchSubview('design'); break
         case 'view-workbench': handleActivityClick('workbench'); break
-        case 'view-visualization': handleActivityClick('visualization'); break
+        case 'view-visualization': openWorkbenchSubview('visualization'); break
+        case 'view-aidcPlan': openWorkbenchSubview('aidc'); break
         case 'view-deviceLibrary': handleActivityClick('device_library'); break
         case 'view-ai': handleActivityClick('ai'); break
         case 'view-cloud': handleActivityClick('cloud'); break
@@ -209,7 +211,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, activeTabId, closeTab, reopenLastClosed, setShowCreateProjectWizard, setShowShortcutsDialog, saveConfig, selectedProjectName])
+  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, openWorkbenchSubview, activeTabId, closeTab, reopenLastClosed, setShowCreateProjectWizard, setShowShortcutsDialog, saveConfig, selectedProjectName])
 
   const renderSidebarContent = useCallback(() => {
     return <ErrorBoundary key={activeActivity}><FileExplorer /></ErrorBoundary>

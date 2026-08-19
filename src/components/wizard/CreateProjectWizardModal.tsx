@@ -14,7 +14,7 @@ interface Props {
 
 export function CreateProjectWizardModal({ templateName, onClose }: Props) {
   const { t } = useTranslation()
-  const { openWizard, closeWizard, config, loadTemplateConfig } = useWizardStore()
+  const { openWizard, closeWizard, config, loadTemplateConfig, aidcEnabled, aidcMacro } = useWizardStore()
   const { createProjectWithConfig } = useProjectStore()
   const { loadLibrary } = useDeviceLibraryStore()
   const addToast = useToastStore((s) => s.addToast)
@@ -42,6 +42,10 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
   const handleComplete = async () => {
     try {
       await createProjectWithConfig(config)
+      // 打磨轮（AL-B1）：开启 AIDC 规划参数 → 创建后转为 AIDC 项目（plan.json + projectId + aidc_macro 注入）
+      if (aidcEnabled) {
+        await window.electron.aidc.project.init(config.meta.name, aidcMacro)
+      }
       closeWizard()
       onClose()
       addToast('success', t('common:toast.projectCreated'))

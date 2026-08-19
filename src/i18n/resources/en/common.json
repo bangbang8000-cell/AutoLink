@@ -2,7 +2,7 @@
   "app": {
     "title": "AutoLink",
     "subtitle": "AI Data Center Network Planning & Visualization",
-    "description": "A network planning and visualization tool for AI data centers. Supports integrated GPU Scale-Up dual-stack (NVLink/UALink/UB) and Scale-Out (IB/RoCE/UEC) design, with topology auto-generation, device selection, rack planning, intelligent validation, and delivery reports. Built-in AI assistant (AIHUB) with 9 major provider integrations, plus capacity planning (17 presets incl. domestic scenarios), ATOP topology recommendation, batch optimization with smart repair, and data-center room placement."
+    "description": "AutoLink is an AI data center network planning and visualization tool: input GPU scale, generate topology, device selection, rack and delivery reports in one go, and export AIDC plans to MagicCommander for config rendering."
   },
   "search": "Search",
   "cancel": "Cancel",
@@ -327,17 +327,12 @@
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "Key Features",
     "features": [
-      "Topology Design - Scale-Up (NVLink/UALink/UB) + Scale-Out (IB/RoCE/UEC) dual-stack auto-generation",
-      "Device Selection - 120 mainstream devices + intelligent optical module matching",
-      "Smart Validation - 22 hard rules (connectivity/port capacity/module/power)",
-      "Rack Planning - multi-constraint auto packing with U-position visualization",
-      "Combined Fabric - converged storage+business+inband management, 1-to-2 breakout",
-      "Delivery Reports - cabling table/BOM/device list/rack table + PDF report",
-      "AI Chat (AIHUB) - conversational management / requirement generation / file parsing, 9 vendors",
-      "Capacity Planning - 17 presets (incl. domestic) → comm/topology/TCO, FP8 exact calc",
-      "ATOP Topology - model comm features → ZCube 2D/3D topology one-click apply",
-      "Batch Optimize & Smart Repair - batch suggestions + one-click fix with re-validation",
-      "Room Placement - constraint satisfaction + multi-objective optimization, matrix placement"
+      "Network Planning - Scale-Up (NVLink/UALink/UB) + Scale-Out (IB/RoCE/UEC) dual-stack topology",
+      "Device Selection & Validation - 120-device library + 22 hard validation rules",
+      "Rack & Converged Fabric - rack mounting, converged storage/biz/OOB, room layout",
+      "AIDC Plan & MC Integration - export plan to MagicCommander for config rendering",
+      "Delivery Reports - connections / BOM / device list / rack tables + PDF",
+      "AI Assistant - AIHub conversational planning, capacity recommendation, batch optimization"
     ],
     "close": "Close",
     "checkUpdate": "Check for Updates",

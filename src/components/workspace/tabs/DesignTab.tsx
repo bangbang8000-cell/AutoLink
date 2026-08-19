@@ -189,11 +189,22 @@ export function DesignTab() {
   const handleGenerate = useCallback(async () => {
     if (!selectedProjectName) return
     await generate(selectedProjectName)
-    // Auto-open topology tab and init rack on success
+    // 打磨轮（AL-B2）：生成后自动打开拓扑视图；空拓扑给出可读提示；initFromTopology 失败不阻断打开视图
     const state = useDesignStore.getState()
+    if (state.error) {
+      useToastStore.getState().addToast('error', `生成拓扑失败: ${state.error}`, 6000)
+      return
+    }
     if (state.topology && state.topology.nodes.length > 0) {
       openTab({ type: 'visualization', title: `拓扑视图 - ${selectedProjectName}`, closable: true, projectName: selectedProjectName })
-      initFromTopology(state.topology.nodes)
+      try {
+        initFromTopology(state.topology.nodes)
+      } catch (err) {
+        console.error('[DesignTab] initFromTopology failed:', err)
+        useToastStore.getState().addToast('warning', '拓扑已生成，但机柜初始化未完成', 5000)
+      }
+    } else {
+      useToastStore.getState().addToast('warning', '生成拓扑结果为空，请检查网络/规模配置', 5000)
     }
   }, [selectedProjectName, generate, openTab, initFromTopology])
 

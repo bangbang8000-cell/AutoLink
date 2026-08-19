@@ -82,6 +82,38 @@ def create_aidc_project(project_dir: str, name: str, macro: dict,
             'plan': plan, 'planVersion': 1, 'changed': True}
 
 
+def init_aidc_project(project_dir: str, macro: dict) -> dict:
+    """打磨轮（AL-B1）：向导创建普通项目后，转 AIDC 项目——mint projectId、写 plan.json/快照、
+    在 project_config.json 注入 aidc_macro、标记 projectType=aidc。幂等（已初始化则直接返回）。"""
+    if not os.path.isdir(project_dir):
+        return {'error': f'项目目录不存在: {project_dir}'}
+    plan = _read_json(os.path.join(project_dir, 'plan.json'))
+    if plan and plan.get('meta', {}).get('projectId'):
+        return {'ok': True, 'name': os.path.basename(project_dir.rstrip('/')),
+                'projectId': plan['meta']['projectId'], 'plan': plan,
+                'planVersion': plan['meta'].get('planVersion', 1), 'changed': False}
+    meta = _read_json(os.path.join(project_dir, 'project.json')) or {}
+    name = meta.get('name') or os.path.basename(project_dir.rstrip('/'))
+    pid = meta.get('projectId') or str(uuid.uuid4())
+    plan = plan_aidc({**(macro or {}), 'project_id': pid,
+                      'project_name': name, 'plan_version': 1})
+    if 'error' in plan:
+        return plan
+    plan = _finalize_plan(plan, pid, name, 1)
+    _write_json(os.path.join(project_dir, 'plan.json'), plan)
+    _write_json(os.path.join(project_dir, 'plan_history', 'v1.plan.json'), plan)
+    cfg = _read_json(os.path.join(project_dir, 'project_config.json')) or {}
+    cfg['aidc_macro'] = plan['macro']
+    cfg['aidc_meta'] = {k: plan['meta'].get(k)
+                        for k in ('projectId', 'projectName', 'planVersion', 'planHash')}
+    _write_json(os.path.join(project_dir, 'project_config.json'), cfg)
+    meta.update({'projectId': pid, 'projectName': name, 'projectType': 'aidc',
+                 'updatedAt': _now()})
+    _write_json(os.path.join(project_dir, 'project.json'), meta)
+    return {'ok': True, 'name': name, 'projectId': pid,
+            'plan': plan, 'planVersion': 1, 'changed': True}
+
+
 def save_aidc_project(project_dir: str, macro: dict) -> dict:
     """保存 AIDC 项目：重新生成；planHash 变化 → planVersion 自增 + 写历史快照。"""
     meta = _read_json(os.path.join(project_dir, 'project.json')) or {}

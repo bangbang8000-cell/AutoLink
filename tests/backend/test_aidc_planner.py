@@ -142,6 +142,17 @@ class TestExport:
             plan = json.loads(zf.read('plan.json').decode('utf-8'))
             assert plan['meta']['projectId'] == 'PID001'
 
+    def test_export_zip_with_topology_png(self, tmp_path):
+        """打磨轮（AL-B3）：交付包 ZIP 附带拓扑 PNG。"""
+        import base64
+        png = base64.b64encode(b'FAKEPNG').decode('utf-8')
+        path = export_plan({'gpu_count': 64, 'project_id': 'PID', 'project_name': 'Demo'},
+                           str(tmp_path / 'pkg'), 'zip', png_base64=png)
+        with zipfile.ZipFile(path) as zf:
+            names = zf.namelist()
+            assert '拓扑图.png' in names
+            assert zf.read('拓扑图.png') == b'FAKEPNG'
+
     def test_export_invalid_scale_raises(self):
         with pytest.raises(ValueError):
             export_plan({'gpu_count': 96}, 'x.json', 'json')

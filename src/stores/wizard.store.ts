@@ -5,11 +5,26 @@ import type { DeviceRef } from '@/types/device-profile'
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5
 
+/** 打磨轮（AL-B1）：向导 AIDC 规划参数默认值（snake_case，与 aidc_project/plan_aidc 输入一致） */
+export const DEFAULT_AIDC_MACRO: Record<string, unknown> = {
+  gpu_count: 64,
+  site: 'BJ01',
+  pfc_queue: 3,
+  cnp_queue: 6,
+  convergence: 1,
+  rails: 8,
+  as_range: [65001, 65500],
+  vlan_ranges: { compute: [100, 199], storage: [200, 299], biz: [300, 399], oob: [400, 499] },
+}
+
 interface WizardState {
   open: boolean
   step: WizardStep
   config: ProjectConfig
   templateName: string | null
+  /** 打磨轮（AL-B1）：是否包含 AIDC 规划参数 */
+  aidcEnabled: boolean
+  aidcMacro: Record<string, unknown>
 
   openWizard: (templateName?: string | null) => void
   closeWizard: () => void
@@ -25,6 +40,8 @@ interface WizardState {
   updateRackConfig: (rack: Partial<ProjectRackConfig>) => void
   loadTemplateConfig: (tplConfig: ProjectConfig | null) => void
   resetConfig: () => void
+  setAidcEnabled: (enabled: boolean) => void
+  updateAidcMacro: (patch: Partial<Record<string, unknown>>) => void
 
   setTemplateName: (name: string | null) => void
 }
@@ -34,6 +51,8 @@ export const useWizardStore = create<WizardState>()((set, get) => ({
   step: 1,
   config: createDefaultProjectConfig(''),
   templateName: null,
+  aidcEnabled: false,
+  aidcMacro: { ...DEFAULT_AIDC_MACRO },
 
   openWizard: (templateName) => {
     set({
@@ -41,6 +60,8 @@ export const useWizardStore = create<WizardState>()((set, get) => ({
       step: 1,
       config: createDefaultProjectConfig(''),
       templateName: templateName ?? null,
+      aidcEnabled: false,
+      aidcMacro: { ...DEFAULT_AIDC_MACRO },
     })
   },
 
@@ -103,7 +124,11 @@ export const useWizardStore = create<WizardState>()((set, get) => ({
     set((s) => ({ config: { ...s.config, rack_config: { ...s.config.rack_config, ...rack } } })),
 
   // V2.9.5-T5: 重置为默认（放弃模板预填，从头创建）
-  resetConfig: () => set({ config: createDefaultProjectConfig(''), templateName: null }),
+  resetConfig: () => set({ config: createDefaultProjectConfig(''), templateName: null, aidcEnabled: false, aidcMacro: { ...DEFAULT_AIDC_MACRO } }),
+
+  setAidcEnabled: (enabled) => set({ aidcEnabled: enabled }),
+  updateAidcMacro: (patch) =>
+    set((s) => ({ aidcMacro: { ...s.aidcMacro, ...patch } })),
 
   setTemplateName: (name) => set({ templateName: name }),
 }))

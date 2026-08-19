@@ -27,6 +27,8 @@ import { SearchPanel } from '@/components/search/SearchPanel'
 
 export function FileExplorer() {
   const activeActivity = useUIStore((s) => s.activeActivity)
+  // 打磨轮（v1.2 / M2）：云平台开关关闭时云中心回落到项目浏览器
+  const cloudEnabled = useUIStore((s) => s.cloudEnabled)
 
   switch (activeActivity) {
     // V3.3.1: 全局搜索（本地 + 云端二合一）
@@ -36,8 +38,8 @@ export function FileExplorer() {
     case 'workbench':      return <WorkbenchExplorer />
     case 'visualization':  return <VisualizationExplorer />
     case 'device_library': return <DeviceLibExplorer />
-    // V3.3.0-T13: 云中心
-    case 'cloud':          return <CloudPanel />
+    // V3.3.0-T13: 云中心（v1.2：仅云开关开启时显示）
+    case 'cloud':          return cloudEnabled ? <CloudPanel /> : <ProjectExplorer />
     case 'settings':       return <SettingsExplorer />
     default:           return <ProjectExplorer />
   }

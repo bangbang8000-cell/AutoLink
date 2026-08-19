@@ -16,6 +16,7 @@ export type ShortcutAction =
   | 'view-design'
   | 'view-workbench'
   | 'view-visualization'
+  | 'view-aidcPlan'
   | 'view-deviceLibrary'
   | 'view-search'
   | 'view-ai'
@@ -65,6 +66,8 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
       { keys: 'Ctrl+Shift+D', action: 'view-design', descKey: 'designView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'd' },
       { keys: 'Ctrl+Shift+W', action: 'view-workbench', descKey: 'workbenchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'w' },
       { keys: 'Ctrl+Shift+V', action: 'view-visualization', descKey: 'visualizationView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'v' },
+      // 打磨轮（P-A）：AIDC 规划已并入工作台，Ctrl+Shift+P 直达 AIDC 规划子视图
+      { keys: 'Ctrl+Shift+P', action: 'view-aidcPlan', descKey: 'aidcPlanView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'p' },
       { keys: 'Ctrl+Shift+L', action: 'view-deviceLibrary', descKey: 'deviceLibraryView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'l' },
       { keys: 'Ctrl+Shift+A', action: 'view-ai', descKey: 'aiView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'a' },
       // V3.3.0-T13: 云中心

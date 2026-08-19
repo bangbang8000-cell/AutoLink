@@ -58,8 +58,8 @@ describe('UIStore', () => {
 
   describe('setActiveActivity', () => {
     it('应切换当前激活的活动', () => {
-      useUIStore.getState().setActiveActivity('design')
-      expect(useUIStore.getState().activeActivity).toBe('design')
+      useUIStore.getState().setActiveActivity('project')
+      expect(useUIStore.getState().activeActivity).toBe('project')
     })
 
     it('应支持切换到所有活动类型', () => {

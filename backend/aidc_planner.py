@@ -339,8 +339,13 @@ def _delivery_readme(plan: dict) -> str:
     return '\n'.join(lines)
 
 
-def export_plan(macro: dict, filepath: str, fmt: str = 'json') -> str:
-    """G2：plan:table → 文件（json | excel | zip 交付包），返回落盘路径。"""
+def export_plan(macro: dict, filepath: str, fmt: str = 'json',
+                png_base64: str | None = None) -> str:
+    """G2 + 打磨轮（AL-B3）：plan:table → 文件（json | excel | zip 交付包），返回落盘路径。
+
+    png_base64：可选——zip 交付包额外写入「拓扑图.png」（AL 生成拓扑图作为导出文件之一）。
+    """
+    import base64
     import zipfile
     plan = plan_aidc(macro)
     if 'error' in plan:
@@ -351,6 +356,11 @@ def export_plan(macro: dict, filepath: str, fmt: str = 'json') -> str:
         with zipfile.ZipFile(filepath, 'w', zipfile.ZIP_DEFLATED) as z:
             z.writestr('plan.json', json.dumps(plan, ensure_ascii=False, indent=2))
             z.writestr('README.md', _delivery_readme(plan))
+            if png_base64:
+                try:
+                    z.writestr('拓扑图.png', base64.b64decode(png_base64))
+                except (ValueError, TypeError):  # noqa: BLE001
+                    pass  # 拓扑图失败不阻塞交付包
     elif fmt == 'excel':
         if not filepath.lower().endswith('.xlsx'):
             filepath += '.xlsx'

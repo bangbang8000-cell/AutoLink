@@ -28,6 +28,24 @@ interface DeviceGroup {
   serverRefKeys: { refKey: string; countKey: string; label: string; category: string }[]
 }
 
+// 打磨轮（AL-B4）：一键选厂商预设（网络设备/服务器双维度）
+const NETWORK_VENDORS = ['NVIDIA', '华为', 'H3C', '锐捷']
+const SERVER_VENDORS = ['超微', '华为', 'H3C', '中兴', '浪潮', '曙光']
+
+const VENDOR_ALIASES: Record<string, string[]> = {
+  NVIDIA: ['nvidia', '英伟达'],
+  '华为': ['huawei', '华为'],
+  H3C: ['h3c', '华三'],
+  '锐捷': ['ruijie', '锐捷'],
+  '超微': ['supermicro', '超微'],
+  '中兴': ['zte', '中兴'],
+  '浪潮': ['inspur', '浪潮'],
+  '曙光': ['sugon', '曙光'],
+}
+
+const matchesVendor = (deviceVendor: string, preset: string): boolean =>
+  (VENDOR_ALIASES[preset] ?? [preset.toLowerCase()]).some((a) => deviceVendor.toLowerCase().includes(a))
+
 const DEVICE_GROUPS: DeviceGroup[] = [
   {
     networkKey: 'param_network',
@@ -154,6 +172,33 @@ export function WizardStepDevices() {
     [removeDeviceRef],
   )
 
+  // 打磨轮（AL-B4）：一键选厂商 → 按厂商过滤设备库并预填设备类型（缺型号不预填，走"选择设备"搜索补齐）
+  const applyVendorPreset = useCallback((vendor: string, kind: 'network' | 'server') => {
+    const refs: Record<string, DeviceRef> = {}
+    if (kind === 'network') {
+      const enabledSwitchRefs = DEVICE_GROUPS
+        .filter((g) => config.networks[g.networkKey])
+        .flatMap((g) => g.refKeys)
+      for (const refKey of enabledSwitchRefs) {
+        const device = allDevices.find((d) =>
+          d.category.startsWith('switches') && matchesVendor(d.vendor, vendor))
+        if (device) refs[refKey] = { library_id: device.id }
+      }
+    } else {
+      const enabledServerRefs = DEVICE_GROUPS
+        .filter((g) => config.networks[g.networkKey])
+        .flatMap((g) => g.serverRefKeys.map((s) => s.refKey))
+      for (const refKey of enabledServerRefs) {
+        const entry = DEVICE_GROUPS.flatMap((g) => g.serverRefKeys).find((s) => s.refKey === refKey)
+        if (!entry) continue
+        const device = allDevices.find((d) =>
+          d.category.startsWith(entry.category) && matchesVendor(d.vendor, vendor))
+        if (device) refs[refKey] = { library_id: device.id }
+      }
+    }
+    if (Object.keys(refs).length > 0) updateDeviceRefs(refs)
+  }, [allDevices, config.networks, updateDeviceRefs])
+
   /* ---------- find device in library ---------- */
 
   const findDevice = (refKey: string): LibraryDevice | undefined => {
@@ -173,6 +218,29 @@ export function WizardStepDevices() {
         <p className="text-xs text-gray-400">
           协议 {config.topology.param_protocol === 'IB' ? 'IB' : 'RoCE'} — 已为您推荐默认交换机，可按需更换
         </p>
+      </div>
+
+      {/* 打磨轮（AL-B4/B5）：一键选厂商 → 预填同厂商设备；缺型号可"选择设备"搜索补齐、已填可校对 */}
+      <div className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-2xs text-gray-500 w-16 shrink-0">网络设备厂商</span>
+          {NETWORK_VENDORS.map((v) => (
+            <button key={v} type="button" onClick={() => applyVendorPreset(v, 'network')}
+              className="px-2.5 py-1 text-xs rounded border border-gray-200 dark:border-edge-subtle hover:border-primary-400 hover:text-primary-500 text-gray-600 dark:text-gray-300">
+              {v}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-2xs text-gray-500 w-16 shrink-0">服务器厂商</span>
+          {SERVER_VENDORS.map((v) => (
+            <button key={v} type="button" onClick={() => applyVendorPreset(v, 'server')}
+              className="px-2.5 py-1 text-xs rounded border border-gray-200 dark:border-edge-subtle hover:border-primary-400 hover:text-primary-500 text-gray-600 dark:text-gray-300">
+              {v}
+            </button>
+          ))}
+        </div>
+        <p className="text-2xs text-gray-400">点选厂商后自动预填该厂商设备类型（仅已启用网络）；厂商缺某型号时点「选择设备」搜索补齐，已填设备可逐项更换校对。</p>
       </div>
 
       {DEVICE_GROUPS.map((group) => {

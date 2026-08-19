@@ -544,10 +544,11 @@ def handle_plan_aidc_export(params):
     p = dict(params or {})
     filepath = p.pop('filepath', None)
     fmt = str(p.pop('format', 'json')).lower()
+    png_base64 = p.pop('pngBase64', None) or p.pop('png_base64', None)
     if not filepath:
         return {'error': '缺 filepath'}
     try:
-        path = export_plan(p, filepath, fmt)
+        path = export_plan(p, filepath, fmt, png_base64=png_base64)
         return {'ok': True, 'path': path}
     except Exception as e:  # noqa: BLE001
         return {'error': f'导出失败: {e}'}
@@ -581,6 +582,20 @@ def handle_aidc_project_create(params):
                                    p.get('macro'), p.get('projectId'))
     except Exception as e:  # noqa: BLE001
         return {'error': f'aidc:project:create 失败: {e}'}
+
+
+@register_action('aidc:project:init')
+def handle_aidc_project_init(params):
+    """打磨轮（AL-B1）：向导建普通项目后转 AIDC（mint projectId + plan.json + aidc_macro 注入）。"""
+    from aidc_project import init_aidc_project
+    p = dict(params or {})
+    project_dir = p.get('projectDir')
+    if not project_dir:
+        return {'error': '缺 projectDir'}
+    try:
+        return init_aidc_project(project_dir, p.get('macro'))
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'aidc:project:init 失败: {e}'}
 
 
 @register_action('aidc:project:save')

@@ -190,25 +190,28 @@ export const defaultDesignConfig: DesignConfig = {
 /* ---------- helpers ---------- */
 
 function configToINI(config: DesignConfig): string {
+  // 打磨轮（AL-B2）：对缺失字段给兜底默认值，避免输出 "xxx = undefined" 导致后端解析失败、生成拓扑失败
+  const num = (v: unknown, fb: number) => (v == null || Number.isNaN(Number(v)) ? fb : Number(v))
+  const str = (v: unknown, fb: string) => (v == null ? fb : String(v))
   return `[DEFAULT]
-downlink_mode = ${config.downlink_mode}
+downlink_mode = ${str(config.downlink_mode, 'custom')}
 
-num_servers = ${config.num_servers}
-additional_storage_servers = ${config.additional_storage_servers}
-additional_compute_servers = ${config.additional_compute_servers}
-param_ports_per_server = ${config.param_ports_per_server}
-storage_ports_per_server = ${config.storage_ports_per_server}
-param_switch_ports = ${config.param_switch_ports}
-storage_switch_ports = ${config.storage_switch_ports}
-param_speed = ${config.param_speed}
-storage_speed = ${config.storage_speed}
-param_downlink_limit = ${config.param_downlink_limit}
-storage_downlink_limit = ${config.storage_downlink_limit}
-biz_downlink_limit = ${config.biz_downlink_limit}
-oob_downlink_limit = ${config.oob_downlink_limit}
-rail_mode = ${config.rail_mode}
-rail_count = ${config.rail_count}
-param_protocol = ${config.param_protocol}
+num_servers = ${num(config.num_servers, 64)}
+additional_storage_servers = ${num(config.additional_storage_servers, 0)}
+additional_compute_servers = ${num(config.additional_compute_servers, 0)}
+param_ports_per_server = ${num(config.param_ports_per_server, 8)}
+storage_ports_per_server = ${num(config.storage_ports_per_server, 1)}
+param_switch_ports = ${num(config.param_switch_ports, 64)}
+storage_switch_ports = ${num(config.storage_switch_ports, 40)}
+param_speed = ${str(config.param_speed, '400G')}
+storage_speed = ${str(config.storage_speed, '200G')}
+param_downlink_limit = ${num(config.param_downlink_limit, 25)}
+storage_downlink_limit = ${num(config.storage_downlink_limit, 20)}
+biz_downlink_limit = ${num(config.biz_downlink_limit, 25)}
+oob_downlink_limit = ${num(config.oob_downlink_limit, 25)}
+rail_mode = ${str(config.rail_mode, 'none')}
+rail_count = ${num(config.rail_count, 0)}
+param_protocol = ${str(config.param_protocol, 'RoCE')}
 cable_param_server_leaf = MPO
 cable_param_leaf_spine = MPO
 cable_param_spine_core = MPO

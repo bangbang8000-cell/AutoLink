@@ -767,6 +767,9 @@ function ConfigPresetsSettings() {
 // V3.3.0-T13: 云平台设置（服务器地址 + 测试连接 + 登录/登出）
 function CloudSettings() {
   const { t } = useTranslation()
+  // 打磨轮（v1.2 / M2）：云平台总体开关（默认关）
+  const cloudEnabled = useUIStore((s) => s.cloudEnabled)
+  const setCloudEnabled = useUIStore((s) => s.setCloudEnabled)
   const baseUrl = useCloudStore((s) => s.baseUrl)
   const setBaseUrl = useCloudStore((s) => s.setBaseUrl)
   const loggedIn = useCloudStore((s) => s.loggedIn)
@@ -804,6 +807,15 @@ function CloudSettings() {
 
   return (
     <SettingsSection title={t('common:explorer.settings.cloud.title')}>
+      {/* v1.2：云平台总体开关（关时隐藏云一级菜单/云入口） */}
+      <SettingsRow label={t('common:explorer.settings.cloud.enabled', '启用云平台')}>
+        <Toggle checked={cloudEnabled} onChange={setCloudEnabled} />
+      </SettingsRow>
+      {!cloudEnabled && (
+        <p className="text-2xs text-gray-400 px-4 pb-2 -mt-1">
+          {t('common:explorer.settings.cloud.enabledHint', '关闭时云平台一级菜单与云入口隐藏，不影响离线使用')}
+        </p>
+      )}
       {/* 服务器地址 */}
       <SettingsRow label={t('common:explorer.settings.cloud.serverUrl')}>
         <div className="flex items-center gap-1 flex-1">

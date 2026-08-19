@@ -2,7 +2,7 @@
   "app": {
     "title": "AutoLink",
     "subtitle": "AI 資料中心網路規劃與可視化工具",
-    "description": "面向 AI 智算中心的網路規劃與視覺化工具,支援 GPU Scale-Up 雙棧（NVLink/UALink/UB）與 Scale-Out（IB/RoCE/UEC）一體化設計,提供拓撲自動生成、設備選型、機櫃規劃、智慧校驗與交付報告全流程能力。內建 AI 對話（AIHUB）與 9 大廠商 Provider,提供容量規劃（17 檔案含國產場景）、ATOP 拓撲推薦、批次最佳化與智慧修復、機房智慧落位等智慧化能力。"
+    "description": "AutoLink 是 AI 智算中心網路規劃與視覺化工具：輸入 GPU 規模，一鍵產生拓撲、設備選型、機櫃與交付報告，並支援 AIDC 規劃匯出給 MagicCommander 渲染設定。"
   },
   "search": "搜尋",
   "cancel": "取消",
@@ -327,17 +327,12 @@
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "主要功能",
     "features": [
-      "拓撲設計 - GPU Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）雙棧自動生成",
-      "設備選型 - 120 款主流設備庫 + 光模組智慧選型",
-      "智慧校驗 - 22 條硬規則（連通性/連接埠容量/光模組/功耗）",
-      "機櫃規劃 - 多約束自動装箱與 U 位視覺化管理",
-      "三合一融合網 - 儲存+業務+帶內管理融合組網,1分2 高速口扇出",
-      "交付報告 - 佈線表/BOM/設備清單/機櫃表 + PDF 報告",
-      "AI 對話（AIHUB） - 對話式管理/需求生成/範例解析,9 大廠商 Provider",
-      "容量規劃 - 17 檔案（含國產場景）→ 通訊量/拓撲/TCO 推薦,FP8 精確計算",
-      "ATOP 拓撲推薦 - 模型通訊特徵 → ZCube 2D/3D 拓撲一鍵應用",
-      "批次最佳化與智慧修復 - 建議批次套用 + 驗證錯誤一鍵修復複核閉環",
-      "機房智慧落位 - 約束滿足 + 多目標最佳化,矩陣落位視覺化與對話驅動"
+      "網路規劃 - Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）雙棧拓撲",
+      "設備選型與驗證 - 120 款設備庫 + 22 條硬驗證規則",
+      "機櫃與融合網路 - 機櫃上架、儲存/業務/帶外融合、機房落位",
+      "AIDC 規劃與 MC 整合 - 匯出 plan 給 MagicCommander 渲染設定",
+      "交付報告 - 連接表 / BOM / 設備清單 / 機櫃表 + PDF 報告",
+      "AI 助手 - AIHub 對話式規劃、容量推薦、批次最佳化"
     ],
     "close": "關閉",
     "checkUpdate": "檢查更新",

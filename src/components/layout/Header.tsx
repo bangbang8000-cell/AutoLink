@@ -29,8 +29,9 @@ export function Header() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
 
-  // V3.3.0-T13: 云登录态（头像按钮）
+  // V3.3.0-T13: 云登录态（头像按钮）+ v1.2 云开关
   const cloudLoggedIn = useCloudStore((s) => s.loggedIn)
+  const cloudEnabled = useUIStore((s) => s.cloudEnabled)
   const cloudUsername = useCloudStore((s) => s.username)
 
   const isMac = window.electron?.versions?.platform === 'darwin'
@@ -122,11 +123,11 @@ export function Header() {
         {/* Update */}
         <UpdatePopover />
 
-        {/* V3.3.0-T13: 云连接状态 */}
-        <CloudStatusIndicator />
+        {/* V3.3.0-T13: 云连接状态（v1.2：仅云开关开启时显示） */}
+        {cloudEnabled && <CloudStatusIndicator />}
 
         {/* V3.3.0-T13: 云账户菜单（已登录时显示头像） */}
-        {cloudLoggedIn && (
+        {cloudEnabled && cloudLoggedIn && (
           <div className="relative">
             <button
               onClick={() => { setProfileOpen(!profileOpen); setThemeOpen(false); setLangOpen(false) }}

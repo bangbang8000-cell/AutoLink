@@ -245,7 +245,7 @@ interface AidcProjectItem {
   gpuCount?: number
 }
 
-export function AidcPlannerPanel() {
+export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: string }) {
   // 契约 v1.2（P1）：项目身份——P1 起由 AL 项目持久化（会话内 mint 作为未保存时兜底）
   const [projectId, setProjectId] = useState(genUuid)
   const [projectName, setProjectName] = useState('')
@@ -324,10 +324,19 @@ export function AidcPlannerPanel() {
     setExporting(true)
     setExportMsg('')
     try {
-      const res = await window.electron.aidc.exportPlan(buildParams(), format)
+      // 打磨轮（AL-B3）：交付包 ZIP 附带拓扑 PNG（AL 生成拓扑图作为导出文件之一）
+      let pngBase64: string | undefined
+      if (format === 'zip' && plan) {
+        try {
+          const { exportPlanTopologyPng } = await import('@/utils/exportPlanTopologyPng')
+          pngBase64 = await exportPlanTopologyPng(plan)
+        } catch { /* 拓扑图生成失败不阻塞交付包 */ }
+      }
+      const res = await window.electron.aidc.exportPlan(
+        { ...buildParams(), ...(pngBase64 ? { pngBase64 } : {}) }, format)
       if (res?.canceled) setExportMsg('已取消')
       else if (res?.error) setExportMsg(`导出失败: ${res.error}`)
-      else setExportMsg(`已导出 → ${res?.path ?? ''}`)
+      else setExportMsg(`已导出 → ${res?.path ?? ''}${pngBase64 ? '（含拓扑图）' : ''}`)
     } catch (e) {
       setExportMsg(`导出失败: ${String(e)}`)
     } finally {
@@ -376,6 +385,15 @@ export function AidcPlannerPanel() {
       setProjectLoading(false)
     }
   }
+
+  // 打磨轮（P-A）：工作台绑定当前 AIDC 项目——传入 boundProjectName 时自动加载（含切换项目）
+  useEffect(() => {
+    if (boundProjectName && boundProjectName !== currentProject) {
+      void openProject(boundProjectName)
+    }
+    // openProject 随渲染重建，这里仅依赖 boundProjectName/currentProject，避免循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundProjectName, currentProject])
 
   const saveProject = async () => {
     const name = projectName.trim()

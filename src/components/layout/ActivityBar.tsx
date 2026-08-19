@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Wrench, Network, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Cpu,
+  FolderOpen, Zap, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -12,20 +12,15 @@ interface ActivityItem {
   shortcut: string
 }
 
-// H3（D-7）：业务区 6（项目/设计/AIDC规划/工作台/可视化/设备库）
-const businessActivities: ActivityItem[] = [
-  { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
-  { id: 'design', icon: <Wrench size={20} />, labelKey: 'menu.design', shortcut: 'Ctrl+Shift+D' },
-  { id: 'aidc_plan', icon: <Cpu size={20} />, labelKey: 'menu.aidcPlan', shortcut: 'Ctrl+Shift+P' },
-  { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
-  { id: 'visualization', icon: <Network size={20} />, labelKey: 'menu.visualization', shortcut: 'Ctrl+Shift+V' },
-  { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
-]
-
-// H3（D-7）：工具区 3（AI/云/设置）
-const toolActivities: ActivityItem[] = [
-  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
+// 打磨轮（P-A）：一级菜单重排 —— 搜索/云平台/AI助手/项目浏览器/工作台/设备库/设置
+// （拓扑设计、AIDC 规划、可视化已并入工作台子视图）
+const ACTIVITIES: ActivityItem[] = [
+  { id: 'search', icon: <Search size={20} />, labelKey: 'menu.search', shortcut: 'Ctrl+Shift+F' },
   { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
+  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
+  { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
+  { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
+  { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
 
@@ -55,6 +50,9 @@ export function ActivityBar({ onActivityClick }: Props) {
   const activeActivity = useUIStore((s) => s.activeActivity)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
+  // 打磨轮（v1.2 / M2）：云平台开关关闭时隐藏云一级菜单
+  const cloudEnabled = useUIStore((s) => s.cloudEnabled)
+  const activities = ACTIVITIES.filter((a) => a.id !== 'cloud' || cloudEnabled)
 
   const handleClick = (item: ActivityItem) => {
     if (onActivityClick) {
@@ -88,10 +86,7 @@ export function ActivityBar({ onActivityClick }: Props) {
   return (
     <div className="w-12 flex flex-col items-center py-2 gap-0.5 shrink-0 bg-gray-100 dark:bg-app border-e border-gray-200 dark:border-edge-subtle">
       <div className="flex-1 flex flex-col items-center gap-0.5 w-full">
-        {businessActivities.map(renderItem)}
-        {/* H3（D-7）：业务区/工具区分隔条 */}
-        <div className="w-8 h-px my-1.5 bg-gray-300 dark:bg-edge-subtle" />
-        {toolActivities.map(renderItem)}
+        {activities.map(renderItem)}
       </div>
       <button
         onClick={toggleSidebar}

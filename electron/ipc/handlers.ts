@@ -822,9 +822,9 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     )
   }))
 
-  // P1.3: AIDC 规划（宏观参数 → plan:table，AL→MC 接口契约）
+  // P1.3: AIDC 规划（宏观参数 → plan:table，AL→MC 接口契约）——大 GPU 规模耗时长，放宽到 5 分钟
   ipcMain.handle('plan:aidc', wrapHandler(async (_event, params?: Record<string, unknown>) => {
-    return pythonService.call('plan:aidc', params ?? {})
+    return pythonService.call('plan:aidc', params ?? {}, 300000)
   }))
 
   // G2（REQ-A3）+ 契约 v1.2（A-2）：AIDC 规划导出（JSON / Excel / ZIP 交付包）
@@ -862,6 +862,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
   ipcMain.handle('aidc:project:save', wrapHandler(async (_event, name: string, macro: Record<string, unknown>) => {
     return pythonService.call('aidc:project:save', { projectDir: aidcProjectDir(name), macro })
+  }))
+  // 打磨轮（AL-B1）：向导建普通项目后转 AIDC（mint projectId + plan.json + aidc_macro 注入）
+  ipcMain.handle('aidc:project:init', wrapHandler(async (_event, name: string, macro: Record<string, unknown>) => {
+    return pythonService.call('aidc:project:init', { projectDir: aidcProjectDir(name), macro })
   }))
   ipcMain.handle('aidc:project:load', wrapHandler(async (_event, name: string) => {
     return pythonService.call('aidc:project:load', { projectDir: aidcProjectDir(name) })
@@ -902,7 +906,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       throw new Error(`配置文件不存在: ${configPath}`)
     }
 
-    return pythonService.call('design', { configFile: configPath })
+    // 打磨轮（AL-B2）：拓扑生成对大规模（1024 台等）耗时可超 60s，单独放宽到 10 分钟
+    return pythonService.call('design', { configFile: configPath }, 600000)
   }))
 
   ipcMain.handle('design:validate', wrapHandler(async (_event, projectName: string, configINI?: string) => {

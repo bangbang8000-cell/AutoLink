@@ -4,10 +4,10 @@ import { persist } from 'zustand/middleware'
 export type ActivityType =
   | 'search'
   | 'project'
-  | 'design'
-  | 'aidc_plan'
+  | 'design'          // 废弃保留：拓扑设计已并入工作台子视图（无一级入口，留作向后兼容）
+  | 'aidc_plan'       // 废弃保留：AIDC 规划已并入工作台子视图
   | 'workbench'
-  | 'visualization'
+  | 'visualization'   // 废弃保留：可视化已并入工作台子视图
   | 'device_library'
   | 'ai'
   | 'cloud'
@@ -20,6 +20,9 @@ export type AccentColor = 'sky' | 'emerald' | 'violet' | 'rose'
 
 /** 项目浏览器分组模式:smart=智能分组(按文件用途),raw=真实分组(按文件系统目录) */
 export type ExplorerGroupMode = 'smart' | 'raw'
+
+/** 打磨轮（P-A）：工作台子视图——常规 / AIDC 规划 / 设计 / 可视化 */
+export type WorkbenchSubview = 'main' | 'aidc' | 'design' | 'visualization'
 
 /** V3.1.1-T5-5: AI Provider 配置（BYO-Key） */
 export interface AIProviderConfig {
@@ -53,8 +56,16 @@ interface UIState {
   showShortcutsDialog: boolean
   /** V3.1.1-T5-5: AI 配置（默认厂商/自主模式/各厂商 BYO-Key） */
   aiConfig: AIConfig
+  /** 打磨轮（P-A）：工作台当前子视图 */
+  workbenchSubview: WorkbenchSubview
+  /** 打磨轮（v1.2 / M2）：云平台总体开关（默认关；关时隐藏云一级菜单/云入口） */
+  cloudEnabled: boolean
 
   setActiveActivity: (activity: ActivityType) => void
+  /** 打磨轮（P-A）：切换工作台子视图 */
+  setWorkbenchSubview: (view: WorkbenchSubview) => void
+  /** 打磨轮（v1.2 / M2）：设置云平台开关 */
+  setCloudEnabled: (v: boolean) => void
   toggleSidebar: () => void
   togglePanel: () => void
   setTheme: (mode: ThemeMode) => void
@@ -95,8 +106,12 @@ export const useUIStore = create<UIState>()(
         autonomyMode: 'semi_auto',
         providers: {},
       },
+      workbenchSubview: 'main',
+      cloudEnabled: false,
 
       setActiveActivity: (activity) => set({ activeActivity: activity }),
+      setWorkbenchSubview: (view) => set({ workbenchSubview: view }),
+      setCloudEnabled: (v) => set({ cloudEnabled: v }),
 
       toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
 
@@ -161,6 +176,7 @@ export const useUIStore = create<UIState>()(
         explorerProjectListHeight: state.explorerProjectListHeight,
         explorerGroupMode: state.explorerGroupMode,
         aiConfig: state.aiConfig,
+        cloudEnabled: state.cloudEnabled,
       }),
     },
   ),

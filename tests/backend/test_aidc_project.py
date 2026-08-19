@@ -9,8 +9,8 @@
 import json
 import os
 
-from aidc_project import (create_aidc_project, list_aidc_projects,
-                          load_aidc_project, save_aidc_project)
+from aidc_project import (create_aidc_project, init_aidc_project,
+                          list_aidc_projects, load_aidc_project, save_aidc_project)
 
 MACRO = {'gpu_count': 64, 'site': 'BJ01', 'pfc_queue': 3, 'cnp_queue': 6}
 
@@ -77,6 +77,36 @@ class TestSaveVersion:
         create_aidc_project(d, 'p', MACRO)
         assert save_aidc_project(d, MACRO)['planVersion'] == 1
         assert save_aidc_project(d, {**MACRO, 'cnp_queue': 7})['planVersion'] == 2
+
+
+class TestInitWizardProject:
+    """打磨轮（AL-B1）：向导建普通项目后转 AIDC（init_aidc_project）。"""
+
+    def test_init_converts_wizard_project(self, tmp_path):
+        d = str(tmp_path / 'proj')
+        os.makedirs(d)
+        json.dump({'name': '向导项目'}, open(os.path.join(d, 'project.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump({}, open(os.path.join(d, 'project_config.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        r = init_aidc_project(d, {'gpu_count': 64, 'site': 'BJ01', 'pfc_queue': 3, 'cnp_queue': 6})
+        assert r['ok'] and r['projectId'] and r['planVersion'] == 1
+        assert os.path.exists(os.path.join(d, 'plan.json'))
+        cfg = json.load(open(os.path.join(d, 'project_config.json'), encoding='utf-8'))
+        assert cfg['aidc_macro']['gpuCount'] == 64
+        meta = json.load(open(os.path.join(d, 'project.json'), encoding='utf-8'))
+        assert meta['projectType'] == 'aidc' and meta['projectId'] == r['projectId']
+
+    def test_init_idempotent(self, tmp_path):
+        d = str(tmp_path / 'proj')
+        os.makedirs(d)
+        json.dump({'name': 'p'}, open(os.path.join(d, 'project.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump({}, open(os.path.join(d, 'project_config.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        init_aidc_project(d, {'gpu_count': 64})
+        r = init_aidc_project(d, {'gpu_count': 64})
+        assert r['changed'] is False  # 已初始化直接返回
+
+    def test_init_missing_dir_errors(self, tmp_path):
+        r = init_aidc_project(str(tmp_path / 'nope'), {'gpu_count': 64})
+        assert '不存在' in r['error']
 
 
 class TestLoadList:

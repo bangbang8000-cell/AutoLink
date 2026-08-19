@@ -77,6 +77,8 @@ const electronAPI = {
         ipcRenderer.invoke('aidc:project:create', name, macro, projectId),
       save: (name: string, macro: Record<string, unknown>) =>
         ipcRenderer.invoke('aidc:project:save', name, macro),
+      init: (name: string, macro: Record<string, unknown>) =>
+        ipcRenderer.invoke('aidc:project:init', name, macro),
       load: (name: string) =>
         ipcRenderer.invoke('aidc:project:load', name),
       list: () =>

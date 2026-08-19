@@ -36,7 +36,7 @@ interface QueuedRequest {
   reject: (e: Error) => void
 }
 
-const DEFAULT_TIMEOUT_MS = 60000 // 60秒默认超时
+const DEFAULT_TIMEOUT_MS = 180000 // 打磨轮（AL-B2）：默认超时提升到 3 分钟（大项目拓扑/规划计算常超 60s）
 const MAX_CONCURRENT = 3         // V3.0.0-T0-6: 并发请求上限
 const MAX_QUEUE = 50             // V3.4.1-L6: 排队上限（超出直接拒绝，防渲染层洪水）
 const MAX_BUFFER = 1024 * 1024   // V3.4.1-L6: 单行 stdout 缓冲上限（超限重置该行）
@@ -98,8 +98,12 @@ class PythonService {
         }
         this.clearIdleTimer()
         const timer = setTimeout(() => {
-          this.settle(requestId)
-          reject(new Error(`Python 请求超时 (${timeoutMs / 1000}s): ${action}`))
+          // 打磨轮（v1.2 / 0 号）：超时说明 Python 进程卡死（如大项目设计/渲染），
+          // 仅 settle 会导致旧任务继续占用进程、后续请求排队 → 一直转圈。
+          // 改为杀掉并重置进程，下次调用自动拉起新进程恢复。
+          const reason = `Python 请求超时 (${timeoutMs / 1000}s): ${action}，已重启引擎`
+          this.killAndReset(reason)
+          reject(new Error(reason))
         }, timeoutMs)
         this.pending.set(requestId, { requestId, action, resolve, reject, onEvent, timer })
         this.send({ action, params, requestId })
@@ -276,6 +280,24 @@ class PythonService {
   }
 
   /** 结算单个请求（清 timer + 移除 pending + 释放并发槽 + 调度队列），再执行结果回调 */
+  /** 打磨轮（v1.2 / 0 号）：进程疑似卡死（超时）→ 杀掉并重置，拒绝其余在途请求，下次调用拉新进程 */
+  private killAndReset(reason: string): void {
+    const proc = this.proc
+    this.proc = null
+    if (proc) {
+      try { proc.kill('SIGKILL') } catch { /* ignore */ }
+    }
+    this.buffer = ''
+    this.stderrTail = ''
+    for (const [, p] of this.pending) {
+      clearTimeout(p.timer)
+      p.reject(new Error(reason))
+    }
+    this.pending.clear()
+    this.activeCount = 0
+    this.resetIdleTimer()
+  }
+
   private settle(requestId: string): void {
     const p = this.pending.get(requestId)
     if (!p) {
