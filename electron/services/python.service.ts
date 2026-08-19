@@ -39,7 +39,9 @@ interface QueuedRequest {
 const DEFAULT_TIMEOUT_MS = 180000 // 打磨轮（AL-B2）：默认超时提升到 3 分钟（大项目拓扑/规划计算常超 60s）
 const MAX_CONCURRENT = 3         // V3.0.0-T0-6: 并发请求上限
 const MAX_QUEUE = 50             // V3.4.1-L6: 排队上限（超出直接拒绝，防渲染层洪水）
-const MAX_BUFFER = 1024 * 1024   // V3.4.1-L6: 单行 stdout 缓冲上限（超限重置该行）
+// 打磨轮（v1.2 复核）：修复大响应被 1MB 缓冲丢弃 → 请求悬空至超时（拓扑设计"一直转圈"真根因）。
+// 1024 档 design 响应实测 ~50MB；缓冲上限提到 256MB（仍防异常大块垃圾，超限才重置）。
+const MAX_BUFFER = 256 * 1024 * 1024
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000   // 空闲 5 分钟关闭进程（下次请求自动重启）
 const MAX_RESTARTS = 5           // 异常退出自动重启上限
 const RESTART_BASE_MS = 1000     // 退避基数（1s,2s,4s... 上限 30s）
