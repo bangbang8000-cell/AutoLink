@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useRackStore, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
+import { useRackStore, CABINET_TYPE_LABELS, type CabinetType, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
 import { RackPowerHeatView } from '@/components/rack/RackPowerHeatView'
@@ -48,6 +48,7 @@ export function RackTab({ cabinetId }: Props) {
   const unplacedDevices = useRackStore((s) => s.unplacedDevices)
   const placeDevice = useRackStore((s) => s.placeDevice)
   const removeDevice = useRackStore((s) => s.removeDevice)
+  const updateCabinet = useRackStore((s) => s.updateCabinet)
   const selectCabinet = useRackStore((s) => s.selectCabinet)
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
   const getPowerUsage = useRackStore((s) => s.getPowerUsage)
@@ -196,6 +197,21 @@ export function RackTab({ cabinetId }: Props) {
               </>
             )}
           </div>
+          {/* 打磨轮（v1.4 / AL-R2b）：柜类型微调 → 由工作台机柜子视图联动 C 回写矩阵格类型 */}
+          <select
+            value={cabinet.type}
+            onChange={(e) => {
+              updateCabinet(cabinet.id, { type: e.target.value as CabinetType })
+              markDirty()
+            }}
+            className="px-1.5 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-700 dark:text-gray-200"
+            aria-label="机柜类型"
+            title="机柜类型（变更将同步到矩阵格）"
+          >
+            {Object.entries(CABINET_TYPE_LABELS).map(([k, label]) => (
+              <option key={k} value={k}>{label}</option>
+            ))}
+          </select>
           <span className="text-2xs text-gray-400 dark:text-gray-500">
             {cabinet.totalU}U · {t('rackTab.devices', { count: cabinet.devices.length })}
           </span>

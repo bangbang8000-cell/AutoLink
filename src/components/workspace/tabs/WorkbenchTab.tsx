@@ -16,6 +16,7 @@ import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
+import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { useToastStore } from '@/stores/toast.store'
 
 /** 打磨轮（v1.2 / AL-2）：渲染结果查看（按项目输出批次，参考 MC OutputPanel） */
@@ -97,21 +98,50 @@ function RenderResultsView({ projectName }: { projectName: string }) {
   )
 }
 
-/** 打磨轮（v1.4）：机柜子视图——机房矩阵（定义/默认配比自动布点）+ 逐柜微调（RackTab） */
+/** 打磨轮（v1.4）：机柜子视图——平面矩阵一览（DataCenterLayout）+ 逐柜微调（RackTab），双向联动 */
 function RackWorkbenchView({ projectName }: { projectName: string }) {
   const addToast = useToastStore((s) => s.addToast)
   const matrix = useRoomStore((s) => s.matrix)
   const loadMatrix = useRoomStore((s) => s.loadMatrix)
   const createMatrix = useRoomStore((s) => s.createMatrix)
   const composeDefaults = useRoomStore((s) => s.composeDefaults)
+  const selectedPosition = useRoomStore((s) => s.selectedPosition)
+  const selectPosition = useRoomStore((s) => s.selectPosition)
+  const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
   const cabinets = useRackStore((s) => s.cabinets)
+  const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
+  const selectCabinet = useRackStore((s) => s.selectCabinet)
   const gpuCount = useDesignStore((s) => s.config.num_servers)
+  const topology = useDesignStore((s) => s.topology)
   const [rowsInput, setRowsInput] = useState('10')
   const [colsInput, setColsInput] = useState('15')
 
   useEffect(() => {
     loadMatrix(projectName).catch(() => {})
   }, [projectName, loadMatrix])
+
+  // 打磨轮（v1.4 / AL-R2b 联动 A）：矩阵选中格（有已上架机柜）→ RackTab 选中对应机柜（等值守卫防死循环）
+  useEffect(() => {
+    if (!selectedPosition) return
+    const cell = matrix?.cells.find((c) => `${c.row}${c.col}` === selectedPosition)
+    if (cell?.cabinetId != null && cell.cabinetId !== selectedCabinetId) selectCabinet(cell.cabinetId)
+  }, [selectedPosition, matrix, selectedCabinetId, selectCabinet])
+
+  // 打磨轮（v1.4 / AL-R2b 联动 B）：RackTab 选中机柜 → 矩阵高亮对应格
+  useEffect(() => {
+    if (selectedCabinetId == null) return
+    const cell = matrix?.cells.find((c) => c.cabinetId === selectedCabinetId)
+    if (cell) {
+      const pos = `${cell.row}${cell.col}`
+      if (pos !== selectedPosition) selectPosition(pos)
+    }
+  }, [selectedCabinetId, matrix, selectedPosition, selectPosition])
+
+  // 打磨轮（v1.4 / AL-R2b 联动 C）：RackTab 改柜类型 → 回写矩阵格类型（syncCabinetToCell 内等值守卫收敛）
+  useEffect(() => {
+    if (!matrix) return
+    for (const cab of cabinets) syncCabinetToCell(cab.id)
+  }, [cabinets, matrix, syncCabinetToCell])
 
   const createMtx = async () => {
     const rows: string[] = []
@@ -137,16 +167,41 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
     addToast('success', '已按默认配比布点（每列 1 电源 + 空调 + GPU(1柜1台) + 网络），可微调', 5000)
   }
 
+  // 打磨轮（v1.4 / AL-R2c）：按矩阵自动落位（通用入口，用设计拓扑节点；AIDC 应用到设计亦自动触发）
+  const applyMatrix = async () => {
+    const nodes = topology?.nodes
+    if (!nodes || nodes.length === 0) {
+      addToast('warning', '请先生成拓扑（「设计」子视图生成，或 AIDC 规划「应用到设计」）', 4000)
+      return
+    }
+    await useRoomStore.getState().applyMatrixRackLayout(projectName, nodes)
+  }
+
+  const saveAll = async () => {
+    await useRoomStore.getState().saveMatrix(projectName)
+    await useRackStore.getState().saveRackLayout(projectName)
+    addToast('success', '机房矩阵与机柜布局已保存', 3000)
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">机柜（机房矩阵 + 逐柜）</span>
+    <div className="h-full flex flex-col gap-3">
+      {/* 工具行 */}
+      <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">机柜（平面矩阵 + 逐柜微调）</span>
         {matrix ? (
           <>
             <span className="text-2xs text-gray-400">矩阵 {matrix.rows.length}排×{matrix.cols.length}列</span>
             <button type="button" onClick={autoCompose}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
               <Download size={11} /> 自动布点默认配比
+            </button>
+            <button type="button" onClick={applyMatrix}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+              <Download size={11} /> 按矩阵自动落位
+            </button>
+            <button type="button" onClick={saveAll}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-green-600 hover:bg-green-700 text-white">
+              <FileCheck2 size={11} /> 保存
             </button>
           </>
         ) : (
@@ -164,7 +219,18 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
           </div>
         )}
       </div>
-      <RackTab cabinetId={null} />
+
+      {/* 平面矩阵一览（矩阵存在时内嵌 DataCenterLayout/RoomMatrixView，格子类型区分、可标记/拖拽上架） */}
+      {matrix && (
+        <div className="h-[440px] shrink-0 rounded border overflow-hidden bg-white dark:bg-app">
+          <DataCenterLayout />
+        </div>
+      )}
+
+      {/* 逐柜微调（RackTab） */}
+      <div className="flex-1 min-h-0 rounded border overflow-hidden">
+        <RackTab cabinetId={null} />
+      </div>
     </div>
   )
 }

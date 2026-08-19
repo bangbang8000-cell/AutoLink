@@ -9,7 +9,12 @@
  */
 import { create } from 'zustand'
 import { useToastStore } from './toast.store'
-import { useRackStore, type RackCabinet } from './rack.store'
+import { useRackStore, type RackCabinet, type RackTopologyNode } from './rack.store'
+import {
+  layoutRacksFromMatrix,
+  type RackMatrixLayoutOptions,
+  type RackMatrixLayoutStats,
+} from '@/utils/rackMatrixLayout'
 
 /** 落位校验结果：errors 阻塞落位；warnings 非阻塞提示（散热等） */
 export interface MountCheck {
@@ -126,6 +131,14 @@ interface RoomState {
   selectPosition: (position: string | null) => void
   /** 打磨轮（v1.4）：默认列配比自动布点——每列 1 电源 + 空调占位 + GPU(1柜1台) + 网络 */
   composeDefaults: (opts?: { gpuCount?: number; networkCount?: number }) => void
+  /** 打磨轮（v1.4 / AL-R2b）：机柜类型微调 → 回写矩阵格子类型（仅 ROOM_MARK_TYPES 内；combined 不改） */
+  syncCabinetToCell: (cabinetId: number) => void
+  /** 打磨轮（v1.4 / AL-R2c）：按矩阵格子构建机柜并落位、持久化（rack_layout.json + room_layout.json） */
+  applyMatrixRackLayout: (
+    projectName: string,
+    nodes: RackTopologyNode[],
+    opts?: RackMatrixLayoutOptions,
+  ) => Promise<{ ok: boolean; errors: string[]; stats?: RackMatrixLayoutStats }>
   mountCabinet: (position: string, cabinetId: number) => MountCheck
   unmountCabinet: (position: string) => MountCheck
   // V3.1.4-T8-2: 机房智能落位
@@ -316,6 +329,52 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     }
 
     set({ matrix: { ...matrix, cells } })
+  },
+
+  // 打磨轮（v1.4 / AL-R2b）：RackTab 改柜类型 → 回写矩阵格子类型（等值守卫防死循环）
+  syncCabinetToCell: (cabinetId) => {
+    const { matrix } = get()
+    if (!matrix) return
+    const cabinet = useRackStore.getState().cabinets.find((c) => c.id === cabinetId)
+    if (!cabinet) return
+    if (!ROOM_MARK_TYPES.has(cabinet.type)) return // 域外类型（security/custom/scaleup）不可标记，不写回
+    const cell = matrix.cells.find((c) => c.cabinetId === cabinetId)
+    if (!cell || cell.type === 'combined' || cell.type === cabinet.type) return
+    set({
+      matrix: {
+        ...matrix,
+        cells: matrix.cells.map((c) => (c.cabinetId === cabinetId ? { ...c, type: cabinet.type } : c)),
+      },
+    })
+  },
+
+  // 打磨轮（v1.4 / AL-R2c）：AIDC 机柜 = 矩阵——按矩阵格子构建机柜并落位、持久化
+  applyMatrixRackLayout: async (projectName, nodes, opts) => {
+    let matrix = get().matrix
+    if (!matrix) {
+      // 兜底：store 未加载时从 room_layout.json 读取（用户可能未进过机柜子视图）
+      await get().loadMatrix(projectName)
+      matrix = get().matrix
+    }
+    if (!matrix) {
+      useToastStore.getState().addToast('warning', '未定义机柜矩阵，请先在「机柜」子视图创建并布点', 5000)
+      return { ok: false, errors: ['机房矩阵未加载'] }
+    }
+    if (!nodes || nodes.length === 0) {
+      useToastStore.getState().addToast('warning', '拓扑为空，未生成机柜', 4000)
+      return { ok: true, errors: [], stats: { gpu: 0, network: 0, storage: 0, compute: 0, mounted: 0, overflow: 0 } }
+    }
+    const { cabinets, unplacedDevices, cells, stats } = layoutRacksFromMatrix(matrix, nodes, opts)
+    useRackStore.getState().setRacks(cabinets, unplacedDevices, cabinets.length ? cabinets[0].id : null)
+    set({ matrix: { ...matrix, cells }, selectedPosition: null })
+    await useRackStore.getState().saveRackLayout(projectName)
+    await get().saveMatrix(projectName)
+    useToastStore.getState().addToast(
+      'success',
+      `已按矩阵落位：GPU ${stats.gpu} / 网络 ${stats.network} / 存储 ${stats.storage} / 通算 ${stats.compute} 柜（覆盖原手工上架）`,
+      5000,
+    )
+    return { ok: true, errors: [], stats }
   },
 
   mountCabinet: (position, cabinetId) => {

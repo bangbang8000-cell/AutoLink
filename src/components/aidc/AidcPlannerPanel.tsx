@@ -18,6 +18,7 @@ import {
   FolderOpen, History, Wrench,
 } from 'lucide-react'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
+import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
 import {
   ROLE_LABEL, macroNum,
   type PlanConnection, type PlanDevice, type PlanMacro, type PlanSummary, type PlanTerminal,
@@ -307,7 +308,16 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       }
       ds.updateConfig(patch as DesignConfig)
       await ds.generate(boundProjectName)
-      setExportMsg('已应用到设计并生成拓扑（可在「设计/拓扑/机柜」子视图查看）')
+      // 打磨轮（v1.4 / AL-R2c）：AIDC 机柜 = 矩阵（矩阵权威；无矩阵回退按拓扑生成）
+      const topo = useDesignStore.getState().topology
+      if (topo?.nodes?.length) {
+        const res = await ensureMatrixRacks(boundProjectName, topo.nodes)
+        setExportMsg(res.usedMatrix
+          ? '已应用到设计并生成拓扑（已按机柜矩阵落位，可到「机柜」子视图微调）'
+          : '已应用到设计并生成拓扑（未定义机柜矩阵，机柜按拓扑生成）')
+      } else {
+        setExportMsg('已应用到设计并生成拓扑（拓扑为空）')
+      }
     } catch (e) {
       setError(`应用到设计失败: ${(e as Error).message}`)
     } finally {

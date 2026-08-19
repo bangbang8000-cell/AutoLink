@@ -22,6 +22,8 @@ const ROOM_TYPE_COLORS: Record<string, { bg: string; text: string; border: strin
   storage: RACK_TYPE_COLORS.storage,
   compute: RACK_TYPE_COLORS.compute,
   combined: { bg: '#f3e8ff', text: '#7e22ce', border: '#c084fc' }, // 紫：组合
+  // v1.4: 电源柜（橙色，与空调/柱子区分）
+  power: RACK_TYPE_COLORS.power,
   empty: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' },    // 浅灰：未标记
 }
 
@@ -32,7 +34,7 @@ const LABEL_W = 34
 const LABEL_H = 24
 
 const MARK_TOOLS: RoomMarkTool[] = [
-  'select', 'ac', 'pillar', 'gpu', 'network', 'storage', 'compute', 'combined', 'clear',
+  'select', 'ac', 'pillar', 'gpu', 'network', 'storage', 'compute', 'combined', 'power', 'clear',
 ]
 
 /** 机房矩阵视图：工具栏 + 机柜面板 + 网格（V3.0.4-T3-3 拖拽上架/移动/卸载） */

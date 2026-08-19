@@ -9,8 +9,8 @@ import {
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore, type DesignConfig, type DesignSummary, type EstimateParams } from '@/stores/design.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
-import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
+import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
 import { NumberInput, Toggle } from '@/components/ui'
 import { PUEEstimatePanel } from './PUEEstimatePanel'
 import { ReportViewPanel } from './ReportViewPanel'
@@ -147,7 +147,6 @@ export function DesignTab() {
     updateConfig, resetConfig, generate, loadConfig, loadSavedTopology, clearResults, estimate,
   } = useDesignStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
-  const initFromTopology = useRackStore((s) => s.initFromTopology)
   const addToast = useToastStore((s) => s.addToast)
 
   // V3.1.3-T7-4: 容量规划推荐向导（apply 回调置于 handleUpdateConfig 之后）
@@ -224,16 +223,17 @@ export function DesignTab() {
     }
     if (state.topology && state.topology.nodes.length > 0) {
       openTab({ type: 'visualization', title: `拓扑视图 - ${selectedProjectName}`, closable: true, projectName: selectedProjectName })
+      // 打磨轮（v1.4 / AL-R2c）：有矩阵按矩阵落位（GPU 1柜1台），无矩阵回退按拓扑生成
       try {
-        initFromTopology(state.topology.nodes)
+        await ensureMatrixRacks(selectedProjectName, state.topology.nodes)
       } catch (err) {
-        console.error('[DesignTab] initFromTopology failed:', err)
+        console.error('[DesignTab] ensureMatrixRacks failed:', err)
         useToastStore.getState().addToast('warning', '拓扑已生成，但机柜初始化未完成', 5000)
       }
     } else {
       useToastStore.getState().addToast('warning', '生成拓扑结果为空，请检查网络/规模配置', 5000)
     }
-  }, [selectedProjectName, generate, openTab, initFromTopology])
+  }, [selectedProjectName, generate, openTab])
 
   const handleReEstimate = useCallback((params: EstimateParams) => {
     if (!selectedProjectName) return

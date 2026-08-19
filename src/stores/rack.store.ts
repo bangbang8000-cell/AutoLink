@@ -94,6 +94,8 @@ interface RackState {
 
   initDefault: (serverCount: number, rackType?: number, powerLimit?: number) => void
   initFromTopology: (topologyNodes: RackTopologyNode[], rackType?: number, powerLimit?: number) => void
+  /** 打磨轮（v1.4 / AL-R2c）：整表替换机柜布局（矩阵落位用，避免逐条 addCabinet 污染 id） */
+  setRacks: (cabinets: RackCabinet[], unplacedDevices?: UnplacedDevice[], selectedCabinetId?: number | null) => void
   loadRackLayout: (projectName: string) => Promise<void>
   saveRackLayout: (projectName: string) => Promise<void>
   addCabinet: (totalU?: number, type?: CabinetType, powerLimit?: number) => void
@@ -221,6 +223,16 @@ export const useRackStore = create<RackState>()(
       selectedCabinetId: cabinets.length > 0 ? cabinets[0].id : null,
     })
   },
+
+  setRacks: (cabinets, unplacedDevices = [], selectedCabinetId = null) =>
+    set({
+      cabinets,
+      unplacedDevices,
+      selectedCabinetId,
+      selectedDevice: null,
+      addDeviceMode: false,
+      editingDevice: null,
+    }),
 
   loadRackLayout: async (projectName) => {
     try {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useRackStore, toCabinetType } from '../stores/rack.store'
-import type { RackCabinet, RackDevice, CabinetType } from '../stores/rack.store'
+import type { RackCabinet, RackDevice, CabinetType, UnplacedDevice } from '../stores/rack.store'
 
 // Mock electron API
 const mockElectron = {
@@ -378,6 +378,36 @@ describe('RackStore', () => {
       const state = useRackStore.getState()
       // 单列不够2列，被跳过
       expect(state.cabinets.length).toBe(0)
+    })
+  })
+
+  // ===== 打磨轮（v1.4 / AL-R2c）: 整表替换机柜布局 =====
+
+  describe('setRacks', () => {
+    it('整表替换 cabinets/unplacedDevices/selectedCabinetId 并清选中/编辑态', () => {
+      const cabs: RackCabinet[] = [{ id: 5, name: '机柜 A3', totalU: 42, type: 'gpu', power_limit: 6000, devices: [] }]
+      const unplaced: UnplacedDevice[] = [{ id: 'gpu-9', name: 'GPU服务器_9', type: 'GPU Server', height: 8, power_watts: 1000 }]
+      useRackStore.setState({
+        selectedDevice: { id: 'x', name: 'x', type: 'x', cabinetId: 1, startU: 1, endU: 8, power_watts: 0 },
+        addDeviceMode: true,
+        editingDevice: 'x',
+      })
+      useRackStore.getState().setRacks(cabs, unplaced, 5)
+      const s = useRackStore.getState()
+      expect(s.cabinets).toEqual(cabs)
+      expect(s.unplacedDevices).toEqual(unplaced)
+      expect(s.selectedCabinetId).toBe(5)
+      expect(s.selectedDevice).toBeNull()
+      expect(s.addDeviceMode).toBe(false)
+      expect(s.editingDevice).toBeNull()
+    })
+
+    it('缺省参数 → 空列表 + 空选中', () => {
+      useRackStore.getState().setRacks([])
+      const s = useRackStore.getState()
+      expect(s.cabinets).toEqual([])
+      expect(s.unplacedDevices).toEqual([])
+      expect(s.selectedCabinetId).toBeNull()
     })
   })
 })

@@ -598,4 +598,114 @@ describe('RoomStore', () => {
       expect(useRoomStore.getState().applyOptimize({ success: true, placements: [], scores: {}, issues: [], stats: { total_items: 0, placed: 0, unplaced: 0, elapsed_ms: null } }).ok).toBe(false)
     })
   })
+
+  // ===== 打磨轮（v1.4 / AL-R2b）: 机柜类型微调 → 回写矩阵格子类型 =====
+
+  describe('syncCabinetToCell', () => {
+    it('已上架 gpu 柜改 storage → 格子类型回写', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu'
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'storage' })] })
+      useRoomStore.getState().syncCabinetToCell(1)
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('storage')
+    })
+
+    it('域外类型（security）不写回', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu'
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'security' })] })
+      useRoomStore.getState().syncCabinetToCell(1)
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('gpu')
+    })
+
+    it('未上架机柜为 no-op', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu'
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'storage' })] })
+      useRoomStore.getState().syncCabinetToCell(1)
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('gpu')
+    })
+
+    it('combined 格不覆盖', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'combined'
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'network' })] })
+      useRoomStore.getState().syncCabinetToCell(1)
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('combined')
+    })
+
+    it('等值时 matrix 引用不变（防死循环）', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu'
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'gpu' })] })
+      const before = useRoomStore.getState().matrix
+      useRoomStore.getState().syncCabinetToCell(1)
+      expect(useRoomStore.getState().matrix).toBe(before)
+    })
+  })
+
+  // ===== 打磨轮（v1.4 / AL-R2c）: AIDC 机柜 = 矩阵（GPU 1柜1台） =====
+
+  describe('applyMatrixRackLayout', () => {
+    const gpuMatrix = (): RoomMatrixData => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu' // A1 → gpu 格
+      return m
+    }
+    const nodes = () => [
+      { id: 'GPU服务器_1', type: 'server', group: 'GPU服务器组1', podid: 'pod-1', uHeight: 8, powerWatts: 1000 },
+    ]
+
+    beforeEach(() => {
+      useRackStore.setState({ cabinets: [], unplacedDevices: [], selectedCabinetId: null })
+    })
+
+    it('有矩阵 → 建柜 + 写格子 + 双文件持久化', async () => {
+      useRoomStore.setState({ matrix: gpuMatrix() })
+      const saveFile = window.electron.project.saveFile as unknown as ReturnType<typeof vi.fn>
+      const res = await useRoomStore.getState().applyMatrixRackLayout('P', nodes())
+      expect(res.ok).toBe(true)
+      expect(useRackStore.getState().cabinets.length).toBeGreaterThan(0)
+      expect(useRackStore.getState().cabinets[0].type).toBe('gpu')
+      expect(useRoomStore.getState().matrix!.cells.some((c) => c.cabinetId != null)).toBe(true)
+      const saved = saveFile.mock.calls.map((c) => c[1] as string)
+      expect(saved).toContain('rack_layout.json')
+      expect(saved).toContain('room_layout.json')
+    })
+
+    it('无矩阵 → ok:false + warning 提示', async () => {
+      const res = await useRoomStore.getState().applyMatrixRackLayout('P', nodes())
+      expect(res.ok).toBe(false)
+      expect(res.errors).toContain('机房矩阵未加载')
+      expect(useToastStore.getState().toasts.some((t) => t.type === 'warning')).toBe(true)
+    })
+
+    it('空拓扑 → 无副作用返回', async () => {
+      const m = makeMatrix()
+      useRoomStore.setState({ matrix: m })
+      const res = await useRoomStore.getState().applyMatrixRackLayout('P', [])
+      expect(res.ok).toBe(true)
+      expect(res.stats).toEqual({ gpu: 0, network: 0, storage: 0, compute: 0, mounted: 0, overflow: 0 })
+      expect(useRackStore.getState().cabinets).toHaveLength(0)
+      expect(useRoomStore.getState().matrix!.cells.every((c) => c.cabinetId == null)).toBe(true)
+    })
+
+    it('store 无矩阵但文件有 → loadMatrix 兜底后仍落位', async () => {
+      window.electron.project.getFile = vi.fn().mockImplementation(
+        async (_proj: string, file: string) => (file === 'room_layout.json' ? JSON.stringify(gpuMatrix()) : null),
+      )
+      const res = await useRoomStore.getState().applyMatrixRackLayout('P', nodes())
+      expect(res.ok).toBe(true)
+      expect(useRackStore.getState().cabinets.length).toBeGreaterThan(0)
+    })
+  })
 })
