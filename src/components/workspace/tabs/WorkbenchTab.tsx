@@ -46,13 +46,10 @@ export function WorkbenchTab() {
       .catch(() => {})
   }, [selectedProjectName])
 
-  // 自动聚焦：AIDC 项目 → AIDC 规划子视图；否则常规
+  // 打磨轮（v1.2 复核）：切换项目回到「常规渲染」——AIDC 按钮保持白色，点选才变蓝（避免"已选中"误解）
   useEffect(() => {
-    if (!selectedProjectName) return
-    const isAidc = aidcProjects.includes(selectedProjectName)
-    if (isAidc && subview !== 'aidc') setWorkbenchSubview('aidc')
-    else if (!isAidc && subview === 'aidc') setWorkbenchSubview('main')
-  }, [selectedProjectName, aidcProjects, subview, setWorkbenchSubview])
+    if (selectedProjectName) setWorkbenchSubview('main')
+  }, [selectedProjectName, setWorkbenchSubview])
 
   // AL-A5：工作台内新建 AIDC 项目（默认 64 台参数，后续向导版见 P-B）
   const createAidcProject = useCallback(async () => {
@@ -106,10 +103,13 @@ export function WorkbenchTab() {
       <div className="flex items-center gap-1 px-4 py-1.5 border-b border-gray-200 dark:border-edge-subtle shrink-0">
         {SUBVIEWS.map((s) => (
           <button key={s.id} type="button" onClick={() => setWorkbenchSubview(s.id)}
-            className={clsx('px-3 py-1 text-xs rounded',
+            className={clsx('px-3 py-1 text-xs rounded transition-colors',
               subview === s.id
                 ? 'bg-primary-500 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-app-hover')}>
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-app-hover',
+              // 非 AIDC 项目：AIDC 规划按钮置灰（仍可点入查看/新建）
+              s.id === 'aidc' && !isAidc && subview !== 'aidc' && 'opacity-40')}
+            title={s.id === 'aidc' && !isAidc ? '当前项目非 AIDC 规划类（可点入新建 AIDC 项目）' : undefined}>
             {s.id === 'aidc' ? <Cpu size={12} className="inline mr-1" /> : null}
             {s.label}
           </button>
