@@ -21,8 +21,8 @@ export type AccentColor = 'sky' | 'emerald' | 'violet' | 'rose'
 /** 项目浏览器分组模式:smart=智能分组(按文件用途),raw=真实分组(按文件系统目录) */
 export type ExplorerGroupMode = 'smart' | 'raw'
 
-/** 打磨轮（P-A）：工作台子视图——常规 / AIDC 规划 / 设计 / 可视化 */
-export type WorkbenchSubview = 'main' | 'aidc' | 'design' | 'visualization'
+/** 打磨轮（P-A/v1.2）：工作台子视图——AIDC 规划 / 常规渲染 / 渲染结果 / 设计 / 可视化 */
+export type WorkbenchSubview = 'aidc' | 'main' | 'results' | 'design' | 'visualization'
 
 /** V3.1.1-T5-5: AI Provider 配置（BYO-Key） */
 export interface AIProviderConfig {

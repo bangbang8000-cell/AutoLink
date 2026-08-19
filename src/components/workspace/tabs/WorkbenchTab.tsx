@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, RefreshCw, FolderOpen as FolderIcon } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -13,6 +13,85 @@ import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
 import { useToastStore } from '@/stores/toast.store'
+
+/** 打磨轮（v1.2 / AL-2）：渲染结果查看（按项目输出批次，参考 MC OutputPanel） */
+function RenderResultsView({ projectName }: { projectName: string }) {
+  const addToast = useToastStore((s) => s.addToast)
+  const [batches, setBatches] = useState<Array<{ name: string; files: Array<{ name: string; path: string }> }>>([])
+  const [busy, setBusy] = useState(false)
+
+  const refresh = useCallback(() => {
+    window.electron.project.listOutputBatches(projectName)
+      .then((b) => setBatches((b as Array<{ name: string; files: Array<{ name: string; path: string }> }>) || []))
+      .catch(() => setBatches([]))
+  }, [projectName])
+
+  useEffect(() => { refresh() }, [refresh])
+
+  const exportBatch = async (batch?: string) => {
+    setBusy(true)
+    try {
+      const res = await window.electron.render.exportOutput(projectName, batch)
+      if (res?.canceled) return
+      if (res?.ok) addToast('success', `已导出 → ${res.path}`)
+    } catch (e) {
+      addToast('error', `导出失败: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <FileCheck2 size={14} className="text-info-500" />
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">渲染结果 — {projectName}</span>
+        <button type="button" onClick={refresh}
+          className="ml-auto flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
+          <RefreshCw size={11} /> 刷新
+        </button>
+        <button type="button" onClick={() => exportBatch(undefined)} disabled={busy || batches.length === 0}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
+          <Download size={11} /> 导出全部渲染结果
+        </button>
+      </div>
+      <p className="text-2xs text-gray-400">每次渲染按时间戳生成一个批次目录（output/&lt;时间戳&gt;/），可单独导出或全部打包。</p>
+
+      {batches.length === 0 ? (
+        <p className="text-2xs text-gray-400 border rounded p-4 text-center">暂无渲染结果（在「常规渲染」执行一键渲染后生成）</p>
+      ) : (
+        <div className="space-y-2">
+          {batches.map((b) => (
+            <div key={b.name} className="border rounded overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300">
+                <FolderIcon size={12} className="text-gray-400" />
+                {b.name}
+                <span className="text-2xs text-gray-400">{b.files.length} 个文件</span>
+                <div className="ml-auto flex items-center gap-1">
+                  <button type="button" onClick={() => exportBatch(b.name)} disabled={busy}
+                    className="flex items-center gap-1 px-2 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
+                    <Download size={10} /> 导出批次
+                  </button>
+                </div>
+              </div>
+              {b.files.length > 0 && (
+                <div className="px-3 py-1.5 space-y-0.5">
+                  {b.files.map((f) => (
+                    <div key={f.path} className="flex items-center gap-2 text-2xs font-mono text-gray-500 dark:text-gray-400">
+                      <span>·</span>
+                      <span>{f.name}</span>
+                      <span className="ml-auto text-gray-300 dark:text-gray-600">{f.path}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function WorkbenchTab() {
   const { t } = useTranslation()
@@ -169,6 +248,9 @@ export function WorkbenchTab() {
         )}
 
         {/* ===== 设计 ===== */}
+        {/* ===== 渲染结果 ===== */}
+        {subview === 'results' && <RenderResultsView projectName={selectedProjectName} />}
+
         {subview === 'design' && <DesignTab />}
 
         {/* ===== 可视化 ===== */}

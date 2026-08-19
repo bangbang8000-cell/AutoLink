@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
-  Cpu, Network, Database, FolderOpen,
+  Cpu, Network, Database, FolderOpen, FileCheck2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -163,10 +163,11 @@ function DesignExplorer() {
   )
 }
 
-// 打磨轮（v1.2）：工作台子视图按钮（中栏）——点击加载工作区对应界面
+// 打磨轮（v1.2）：工作台子视图按钮（中栏）——点击加载工作区对应界面；AIDC 规划优先
 const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; label: string; icon: React.ReactNode }> = [
-  { id: 'main', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
   { id: 'aidc', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
+  { id: 'main', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
+  { id: 'results', label: '渲染结果', icon: <FileCheck2 size={13} className="text-info-500" /> },
   { id: 'design', label: '设计', icon: <Wrench size={13} className="text-warning-500" /> },
   { id: 'visualization', label: '可视化', icon: <Network size={13} className="text-info-500" /> },
 ]

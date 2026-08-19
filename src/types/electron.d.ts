@@ -437,6 +437,7 @@ interface Window {
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
       deleteOutput: (projects: string[]) => Promise<{ deleted: number }>
+      exportOutput: (projectName: string, batchName?: string) => Promise<{ canceled?: boolean; ok?: boolean; path?: string }>
       onProgress: (callback: (data: unknown) => void) => () => void
     }
     app: {

@@ -816,6 +816,9 @@ function CloudSettings() {
           {t('common:explorer.settings.cloud.enabledHint', '关闭时云平台一级菜单与云入口隐藏，不影响离线使用')}
         </p>
       )}
+      {/* 配置界面优化（v1.2 复核）：云开关关闭时仅显示开关与提示，配置区隐藏 */}
+      {cloudEnabled && (
+      <>
       {/* 服务器地址 */}
       <SettingsRow label={t('common:explorer.settings.cloud.serverUrl')}>
         <div className="flex items-center gap-1 flex-1">
@@ -874,6 +877,8 @@ function CloudSettings() {
 
       {showLogin && (
         <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
+      )}
+      </>
       )}
     </SettingsSection>
   )

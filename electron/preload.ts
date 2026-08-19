@@ -208,6 +208,8 @@ const electronAPI = {
       ipcRenderer.invoke('render:exportConnections', projectName, outputTypes),
     deleteOutput: (projects: string[]) =>
       ipcRenderer.invoke('render:deleteOutput', projects),
+    exportOutput: (projectName: string, batchName?: string) =>
+      ipcRenderer.invoke('render:exportOutput', projectName, batchName),
     onProgress: (callback: (data: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
       ipcRenderer.on('render:progress', handler)

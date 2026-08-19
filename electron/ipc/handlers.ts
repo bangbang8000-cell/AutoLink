@@ -1128,6 +1128,40 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return { deleted }
   }))
 
+  // 打磨轮（v1.2 / AL-2）：导出渲染结果 ZIP（output 或指定批次 output/<batch>）
+  ipcMain.handle('render:exportOutput', wrapHandler(async (_event, projectName: string, batchName?: string) => {
+    sanitizeName(projectName)
+    const wsp = getWorkspacePath()
+    const base = path.join(wsp, projectName, 'output')
+    if (!fs.existsSync(base)) {
+      throw new Error('该项目尚无渲染结果')
+    }
+    const srcDir = batchName ? path.join(base, batchName) : base
+    if (!fs.existsSync(srcDir)) {
+      throw new Error(`渲染批次不存在: ${batchName ?? ''}`)
+    }
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出渲染结果',
+      defaultPath: `${projectName}_渲染结果${batchName ? `_${batchName}` : ''}.zip`,
+      filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }],
+    })
+    if (result.canceled || !result.filePath) {
+      return { canceled: true, path: '' }
+    }
+    const archiver = await import('archiver')
+    const out = fs.createWriteStream(result.filePath)
+    const archive = archiver.default('zip', { zlib: { level: 6 } })
+    await new Promise<void>((resolve, reject) => {
+      out.on('close', () => resolve())
+      archive.on('error', (err) => reject(err))
+      archive.pipe(out)
+      const relBase = batchName ? path.join('output', batchName) : 'output'
+      archive.directory(srcDir, relBase)
+      archive.finalize()
+    })
+    return { ok: true, path: result.filePath }
+  }))
+
   // ===== Export =====
   ipcMain.handle('export:saveFile', wrapHandler(async (_event, projectName: string, fileName: string, base64Data: string) => {
     // V3.2.2-R11.1: fileName 单层文件名 + base64 边界校验（防路径穿越/超大载荷）
