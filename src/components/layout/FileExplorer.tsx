@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
-  Cpu, Network, Database, FolderOpen, FileCheck2,
+  Cpu, Network, Database, FolderOpen, FileCheck2, Download,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -163,13 +163,15 @@ function DesignExplorer() {
   )
 }
 
-// 打磨轮（v1.2）：工作台子视图按钮（中栏）——点击加载工作区对应界面；AIDC 规划优先
-const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; label: string; icon: React.ReactNode }> = [
-  { id: 'aidc', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
-  { id: 'main', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
-  { id: 'results', label: '渲染结果', icon: <FileCheck2 size={13} className="text-info-500" /> },
-  { id: 'design', label: '设计', icon: <Wrench size={13} className="text-warning-500" /> },
-  { id: 'visualization', label: '可视化', icon: <Network size={13} className="text-info-500" /> },
+// 打磨轮（v1.3）：工作台子视图按流程排序——①规划 ②设计 ③渲染 ④校对（拓扑/机柜/结果）⑤归档导出
+const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; stage: string; label: string; icon: React.ReactNode }> = [
+  { id: 'aidc', stage: '①规划', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
+  { id: 'design', stage: '②设计', label: '设计', icon: <Wrench size={13} className="text-warning-500" /> },
+  { id: 'main', stage: '③渲染', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
+  { id: 'visualization', stage: '④校对', label: '拓扑', icon: <Network size={13} className="text-info-500" /> },
+  { id: 'rack', stage: '④校对', label: '机柜', icon: <Database size={13} className="text-purple-500" /> },
+  { id: 'results', stage: '④校对', label: '渲染结果', icon: <FileCheck2 size={13} className="text-info-500" /> },
+  { id: 'export', stage: '⑤归档', label: '导出', icon: <Download size={13} className="text-success-500" /> },
 ]
 
 function WorkbenchExplorer() {
@@ -227,7 +229,9 @@ function WorkbenchExplorer() {
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover',
                 )}>
                 {s.icon}
-                {s.label}
+                <span className="truncate">{s.label}</span>
+                <span className={clsx('ml-auto text-2xs shrink-0',
+                  subview === s.id ? 'text-white/70' : 'text-gray-400 dark:text-gray-500')}>{s.stage}</span>
               </button>
             ))}
           </div>

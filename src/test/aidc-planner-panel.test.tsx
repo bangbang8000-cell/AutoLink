@@ -2,7 +2,7 @@
  * AidcPlannerPanel 组件测试（G1：REQ-A1/A2）。
  * - 生成规划后展示 v1.1 摘要 + 桥接标识 chip + 设备/接线/终端计数
  * - 高级宏观参数可编辑并随请求下发
- * - 五个视图 tab 可切换（设备/接线/终端/宏观/拓扑）
+ * - 视图 tab（设备/接线/终端/宏观；v1.3 起拓扑/机柜由工作台设计子视图提供）
  */
 import '@/i18n'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -61,8 +61,8 @@ describe('AidcPlannerPanel', () => {
     expect(screen.getByText(/桥接 autolink\/aidc\/v1.0/)).toBeInTheDocument()
     expect(screen.getByText(/3 台/)).toBeInTheDocument()
     expect(screen.getByText(/接线 1/)).toBeInTheDocument()
-    // 五个 tab
-    for (const label of ['设备清单', '接线', '终端', '宏观参数', '拓扑']) {
+    // v1.3：独立拓扑/机柜 Tab 移除（统一由工作台设计子视图提供）
+    for (const label of ['设备清单', '接线', '终端', '宏观参数']) {
       expect(screen.getByRole('tab', { name: label })).toBeInTheDocument()
     }
   })

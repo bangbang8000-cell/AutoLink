@@ -12,6 +12,7 @@ import { WorkbenchResultCard } from '@/components/workbench/WorkbenchResultCard'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
+import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { useToastStore } from '@/stores/toast.store'
 
 /** 打磨轮（v1.2 / AL-2）：渲染结果查看（按项目输出批次，参考 MC OutputPanel） */
@@ -89,6 +90,46 @@ function RenderResultsView({ projectName }: { projectName: string }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/** 打磨轮（v1.3）：归档/导出子视图（导出给 MC + 渲染结果） */
+function ExportView({ projectName }: { projectName: string }) {
+  const addToast = useToastStore((s) => s.addToast)
+  const [busy, setBusy] = useState(false)
+  const exportBatch = async (batch?: string) => {
+    setBusy(true)
+    try {
+      const res = await window.electron.render.exportOutput(projectName, batch)
+      if (res?.canceled) return
+      if (res?.ok) addToast('success', `已导出 → ${res.path}`)
+    } catch (e) {
+      addToast('error', `导出失败: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Download size={14} className="text-success-500" />
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">归档 / 导出 — {projectName}</span>
+      </div>
+      <div className="border rounded p-3 space-y-1.5">
+        <p className="text-2xs text-gray-500">导出给 MagicCommander（AIDC 交付包）</p>
+        <p className="text-2xs text-gray-400">请在「AIDC 规划」视图导出 plan.json / 交付包 ZIP / 规划 Excel / 拓扑 PNG（含项目编号与版本）。</p>
+      </div>
+      <div className="border rounded p-3 space-y-2">
+        <p className="text-2xs text-gray-500">导出渲染结果（output 批次）</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => exportBatch(undefined)} disabled={busy}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
+            <Download size={12} /> 导出全部渲染结果（ZIP）
+          </button>
+        </div>
+        <p className="text-2xs text-gray-400">在「渲染结果」视图可单独导出某个批次。</p>
+      </div>
     </div>
   )
 }
@@ -255,6 +296,12 @@ export function WorkbenchTab() {
 
         {/* ===== 可视化 ===== */}
         {subview === 'visualization' && <TopologyTab />}
+
+        {/* ===== 机柜（v1.3：复用设计 RackTab） ===== */}
+        {subview === 'rack' && <RackTab cabinetId={null} />}
+
+        {/* ===== 归档/导出（v1.3） ===== */}
+        {subview === 'export' && <ExportView projectName={selectedProjectName} />}
       </div>
     </div>
   )

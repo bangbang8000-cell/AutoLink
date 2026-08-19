@@ -15,9 +15,9 @@ import { SectionCard } from '@/components/ui/SectionCard'
 import { Tabs } from '@/components/ui/Tabs'
 import {
   Network, Zap, Server, GitBranch, ChevronDown, ChevronRight, Tag,
-  FolderOpen, History,
+  FolderOpen, History, Wrench,
 } from 'lucide-react'
-import { PlanTopologyView } from './PlanTopologyView'
+import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import {
   ROLE_LABEL, macroNum,
   type PlanConnection, type PlanDevice, type PlanMacro, type PlanSummary, type PlanTerminal,
@@ -165,34 +165,6 @@ function TerminalsView({ terms }: { terms: PlanTerminal[] }) {
   )
 }
 
-/** P1（V-AL2）：机柜/上架分布视图（按 rack 分组列出设备）。 */
-function RackView({ plan }: { plan: PlanSummary }) {
-  const racks = useMemo(() => {
-    const by: Record<string, PlanDevice[]> = {}
-    for (const d of plan.deviceList) {
-      const r = d.rack != null ? String(d.rack).padStart(2, '0') : '?'
-      ;(by[r] ??= []).push(d)
-    }
-    return Object.entries(by).sort((a, b) => Number(a[0]) - Number(b[0]))
-  }, [plan])
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {racks.map(([rack, devs]) => (
-        <div key={rack} className="border rounded p-2">
-          <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">机柜 R{rack} · {devs.length} 台</div>
-          <div className="space-y-0.5">
-            {devs.map((d) => (
-              <div key={d.name} className="flex justify-between text-2xs font-mono">
-                <span>{d.name}</span>
-                <span className="text-gray-400">{d.role}{d.asn ? ` · AS${d.asn}` : ''}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 function MacroView({ plan }: { plan: PlanSummary }) {
   const m = plan.macro
@@ -315,6 +287,29 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       else setPlan(res)
     } catch (e) {
       setError(`规划失败: ${String(e)}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 打磨轮（v1.3）：AIDC 规划 → 应用到设计（写设计配置结构字段 + 设计:generate），
+  // 使拓扑/机柜/常规渲染都以设计为事实源（工作台统一）
+  const applyToDesign = async () => {
+    if (!boundProjectName) { setError('请先在工作台选择/创建 AIDC 项目'); return }
+    if (!plan) { setError('请先生成规划'); return }
+    setLoading(true); setError(''); setExportMsg('')
+    try {
+      const ds = useDesignStore.getState()
+      const patch: Partial<DesignConfig> = {
+        num_servers: Number(plan.macro.gpuCount ?? 64),
+        rail_count: Number(plan.macro.rails ?? 8),
+        param_protocol: 'RoCE',
+      }
+      ds.updateConfig(patch as DesignConfig)
+      await ds.generate(boundProjectName)
+      setExportMsg('已应用到设计并生成拓扑（可在「设计/拓扑/机柜」子视图查看）')
+    } catch (e) {
+      setError(`应用到设计失败: ${(e as Error).message}`)
     } finally {
       setLoading(false)
     }
@@ -476,13 +471,12 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
   const pfcDisp = plan ? mnum(plan, 'pfcQueue', 'pfc_queue', 0) : 0
   const cnpDisp = plan ? mnum(plan, 'cnpQueue', 'cnp_queue', 0) : 0
 
+  // 打磨轮（v1.3）：机柜/拓扑移至工作台设计子视图（TopologyTab/RackTab 以设计为源），AIDC 规划不再独立
   const tabItems = [
     { value: 'dev', label: '设备清单' },
     { value: 'conn', label: '接线' },
     { value: 'term', label: '终端' },
-    { value: 'rack', label: '机柜' },
     { value: 'macro', label: '宏观参数' },
-    { value: 'topo', label: '拓扑' },
   ]
 
   return (
@@ -589,6 +583,10 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       <Button onClick={run} disabled={loading}>
         {loading ? '生成中…' : '生成规划'}
       </Button>
+      <Button variant="secondary" onClick={applyToDesign} disabled={loading || !plan}
+        className="ml-2">
+        <Wrench size={12} className="inline mr-1" /> 应用到设计
+      </Button>
 
       <div className="flex items-center gap-2 mt-2">
         <Button variant="secondary" size="sm" onClick={() => doExport('json')} disabled={exporting}>
@@ -668,9 +666,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
                 )}
                 {active === 'conn' && <ConnectionsView conns={plan.connections} />}
                 {active === 'term' && <TerminalsView terms={plan.terminals} />}
-                {active === 'rack' && <RackView plan={plan} />}
                 {active === 'macro' && <MacroView plan={plan} />}
-                {active === 'topo' && <PlanTopologyView plan={plan} />}
               </div>
             )}
           </Tabs>
