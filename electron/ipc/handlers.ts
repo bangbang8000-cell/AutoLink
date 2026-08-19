@@ -6,6 +6,7 @@ import { execSync } from 'child_process'
 import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath, getDocPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
 import { projectIOService } from '../services/project-io.service.js'
+import archiver from 'archiver'
 
 // Shared category-to-directory mapping for device library
 // V2.7.6-T8: 旧索引向后兼容映射 (新索引应在 category 中声明 "directory" 字段)
@@ -1148,12 +1149,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (result.canceled || !result.filePath) {
       return { canceled: true, path: '' }
     }
-    const archiver = await import('archiver')
     const out = fs.createWriteStream(result.filePath)
-    const archive = archiver.default('zip', { zlib: { level: 6 } })
+    const archive = archiver('zip', { zlib: { level: 6 } })
     await new Promise<void>((resolve, reject) => {
       out.on('close', () => resolve())
-      archive.on('error', (err) => reject(err))
+      archive.on('error', (err: Error) => reject(err))
       archive.pipe(out)
       const relBase = batchName ? path.join('output', batchName) : 'output'
       archive.directory(srcDir, relBase)
