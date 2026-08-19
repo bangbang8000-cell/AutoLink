@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Sun, Moon, Monitor, Globe, Palette,
-  Cpu, Wifi, Download, Search,
+  Cpu, Wifi, Download, Search, Settings as SettingsIcon,
   Upload, RotateCcw, Check,
   Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText, Cloud,
 } from 'lucide-react'
@@ -65,12 +65,15 @@ export function SettingsExplorer() {
   })
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="px-3 py-2 border-b border-gray-200 dark:border-edge-subtle shrink-0">
-        <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('common:explorer.settings.title')}</span>
-      </div>
-      {/* V3.0.4-T3-4: 搜索框 */}
-      <div className="px-3 py-1.5 border-b border-gray-200 dark:border-edge-subtle shrink-0">
+    <div className="h-full overflow-auto">
+      <div className="p-3 space-y-3">
+        {/* 打磨轮（v1.3）：配置界面改上下布局（参考 MC）——顶部分段 Tab + 下方内容 */}
+        <div className="flex items-center gap-2 mb-1">
+          <SettingsIcon size={16} className="text-gray-400" />
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('common:explorer.settings.title')}</span>
+        </div>
+
+        {/* V3.0.4-T3-4: 搜索框 */}
         <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app">
           <Search size={12} className="text-gray-400 shrink-0" />
           <input
@@ -80,10 +83,9 @@ export function SettingsExplorer() {
             className="w-full text-xs bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400"
           />
         </div>
-      </div>
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: category nav */}
-        <div className="w-36 shrink-0 border-r border-gray-200 dark:border-edge-subtle overflow-auto py-1">
+
+        {/* 顶部 Tab 导航（上下布局） */}
+        <div className="flex flex-wrap rounded-lg border p-0.5 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
           {visibleCats.map((cat) => {
             const Icon = cat.icon
             return (
@@ -91,30 +93,28 @@ export function SettingsExplorer() {
                 key={cat.key}
                 onClick={() => setActiveCat(cat.key)}
                 className={clsx(
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors text-left',
+                  'flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-xs transition-colors',
                   activeCat === cat.key
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-l-primary-500'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover/50 border-l-2 border-l-transparent',
+                    ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
                 )}
               >
                 <Icon size={13} />
-                <span>{t(`common:explorer.settings.categories.${cat.label}`)}</span>
+                <span className="truncate">{t(`common:explorer.settings.categories.${cat.label}`)}</span>
               </button>
             )
           })}
         </div>
 
-        {/* Right: content */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-3">
-            {activeCat === 'appearance' && <AppearanceSettings />}
-            {activeCat === 'language' && <LanguageSettings />}
-            {activeCat === 'projectDefaults' && <ProjectDefaultsSettings />}
-            {activeCat === 'network' && <NetworkSettings />}
-            {activeCat === 'ai' && <AISettings />}
-            {activeCat === 'diagnostics' && <DiagnosticsSettings />}
-            {activeCat === 'cloud' && <CloudSettings />}
-          </div>
+        {/* 下方内容 */}
+        <div className="pt-1">
+          {activeCat === 'appearance' && <AppearanceSettings />}
+          {activeCat === 'language' && <LanguageSettings />}
+          {activeCat === 'projectDefaults' && <ProjectDefaultsSettings />}
+          {activeCat === 'network' && <NetworkSettings />}
+          {activeCat === 'ai' && <AISettings />}
+          {activeCat === 'diagnostics' && <DiagnosticsSettings />}
+          {activeCat === 'cloud' && <CloudSettings />}
         </div>
       </div>
     </div>
