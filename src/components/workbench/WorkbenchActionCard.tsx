@@ -29,7 +29,7 @@ export function WorkbenchActionCard() {
   const exportToExcel = useRackStore((s) => s.exportToExcel)
   const {
     progress, selectedOutputTypes, batchMode, batchProjects,
-    setProgress, addResult, clearResults, resetProgress,
+    setProgress, addResult, clearResults, resetProgress, deleteOutput,
   } = useRenderStore()
   const addToast = useToastStore((s) => s.addToast)
 
@@ -217,6 +217,22 @@ export function WorkbenchActionCard() {
     resetProgress()
   }, [clearResults, resetProgress])
 
+  // 打磨轮（v1.2 / AL-2）：批量删除渲染结果（output/output-label/yaml）
+  const handleDeleteOutput = useCallback(async () => {
+    const projects = batchMode ? batchProjects : selectedProjectName ? [selectedProjectName] : []
+    if (projects.length === 0) {
+      addToast('warning', t('common:toast.selectRenderProject'))
+      return
+    }
+    try {
+      const res = await deleteOutput(projects)
+      addToast('success', `已删除 ${res.deleted} 项渲染结果（${projects.length} 个项目）`)
+      useProjectStore.getState().fetchProjects()
+    } catch (err) {
+      addToast('error', `删除失败: ${(err as Error).message}`)
+    }
+  }, [batchMode, batchProjects, selectedProjectName, deleteOutput, addToast, t])
+
   return (
     <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
       <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
@@ -252,7 +268,9 @@ export function WorkbenchActionCard() {
             ) : (
               <Play size={13} />
             )}
-            {t('workbench:oneClickRender')}
+            {batchMode && batchProjects.length > 0
+              ? `批量渲染 ${batchProjects.length} 个项目`
+              : t('workbench:oneClickRender')}
           </button>
 
           <button
@@ -270,6 +288,18 @@ export function WorkbenchActionCard() {
           >
             <Trash2 size={13} />
             {t('workbench:clear')}
+          </button>
+
+          {/* 打磨轮（v1.2 / AL-2）：批量删除渲染结果 */}
+          <button
+            onClick={handleDeleteOutput}
+            disabled={isRendering || (!batchMode && !selectedProjectName)}
+            className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50"
+          >
+            <Trash2 size={13} />
+            {batchMode && batchProjects.length > 0
+              ? `删除 ${batchProjects.length} 个项目渲染结果`
+              : '删除渲染结果'}
           </button>
         </div>
       </div>

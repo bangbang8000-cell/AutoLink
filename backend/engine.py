@@ -1565,20 +1565,23 @@ def handle_export(params):
 
     designer = NetworkDesignerV2(config_file)
     os.makedirs(output_dir, exist_ok=True)
+    # 打磨轮（v1.2 / AL-2）：每次渲染写入时间戳批次目录（对齐 MC output/<ts>/）
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    batch_dir = os.path.join(output_dir, ts)
+    os.makedirs(batch_dir, exist_ok=True)
 
     results = []
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     mode = designer.downlink_mode
     # V2.9.3-T6: 报告数据复用 estimation(收敛比等)
     estimation = _estimate_design(designer, params.get('estimateParams', {}))
 
     if 'connections' in output_types:
-        fn = os.path.join(output_dir, f"AI智算网络_{mode}模式_{ts}.xlsx")
+        fn = os.path.join(batch_dir, f"AI智算网络_{mode}模式_{ts}.xlsx")
         export_all_connections(designer, fn)
         results.append({"type": "connections", "file": fn, "status": "success"})
 
     if 'deviceList' in output_types:
-        fn = os.path.join(output_dir, f"设备清单_{mode}模式_{ts}.xlsx")
+        fn = os.path.join(batch_dir, f"设备清单_{mode}模式_{ts}.xlsx")
         try:
             device_df = generate_device_list(designer)
             with pd.ExcelWriter(fn, engine='openpyxl') as writer:
@@ -1589,7 +1592,7 @@ def handle_export(params):
 
     # V2.4: 布线指导表
     if 'cablingGuide' in output_types:
-        fn = os.path.join(output_dir, f"布线指导表_{mode}模式_{ts}.xlsx")
+        fn = os.path.join(batch_dir, f"布线指导表_{mode}模式_{ts}.xlsx")
         try:
             export_cabling_guide(designer, fn)
             results.append({"type": "cablingGuide", "file": fn, "status": "success"})
@@ -1598,7 +1601,7 @@ def handle_export(params):
 
     # V2.4: BOM 成本估算
     if 'bom' in output_types:
-        fn = os.path.join(output_dir, f"BOM成本估算_{mode}模式_{ts}.xlsx")
+        fn = os.path.join(batch_dir, f"BOM成本估算_{mode}模式_{ts}.xlsx")
         try:
             export_bom(designer, fn)
             results.append({"type": "bom", "file": fn, "status": "success"})
@@ -1615,7 +1618,7 @@ def handle_export(params):
 
     # V2.4.6: PDF 报告文件导出
     if 'pdfReport' in output_types:
-        fn = os.path.join(output_dir, f"设计报告_{mode}模式_{ts}.pdf")
+        fn = os.path.join(batch_dir, f"设计报告_{mode}模式_{ts}.pdf")
         try:
             export_pdf_report(designer, fn)
             results.append({"type": "pdfReport", "file": fn, "status": "success"})
@@ -1624,7 +1627,7 @@ def handle_export(params):
 
     return {
         "results": results,
-        "outputDir": output_dir,
+        "outputDir": batch_dir,
     }
 
 

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Cpu, Plus } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useRenderStore } from '@/stores/render.store'
-import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
+import { useUIStore } from '@/stores/ui.store'
 import { WorkbenchScopeCard } from '@/components/workbench/WorkbenchScopeCard'
 import { WorkbenchReadinessCard } from '@/components/workbench/WorkbenchReadinessCard'
 import { WorkbenchOutputCard } from '@/components/workbench/WorkbenchOutputCard'
@@ -13,14 +13,6 @@ import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
 import { useToastStore } from '@/stores/toast.store'
-import clsx from 'clsx'
-
-const SUBVIEWS: Array<{ id: WorkbenchSubview; label: string }> = [
-  { id: 'main', label: '常规渲染' },
-  { id: 'aidc', label: 'AIDC 规划' },
-  { id: 'design', label: '设计' },
-  { id: 'visualization', label: '可视化' },
-]
 
 export function WorkbenchTab() {
   const { t } = useTranslation()
@@ -99,22 +91,7 @@ export function WorkbenchTab() {
         </span>
       </div>
 
-      {/* 打磨轮（P-A）：子视图切换 */}
-      <div className="flex items-center gap-1 px-4 py-1.5 border-b border-gray-200 dark:border-edge-subtle shrink-0">
-        {SUBVIEWS.map((s) => (
-          <button key={s.id} type="button" onClick={() => setWorkbenchSubview(s.id)}
-            className={clsx('px-3 py-1 text-xs rounded transition-colors',
-              subview === s.id
-                ? 'bg-primary-500 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-app-hover',
-              // 非 AIDC 项目：AIDC 规划按钮置灰（仍可点入查看/新建）
-              s.id === 'aidc' && !isAidc && subview !== 'aidc' && 'opacity-40')}
-            title={s.id === 'aidc' && !isAidc ? '当前项目非 AIDC 规划类（可点入新建 AIDC 项目）' : undefined}>
-            {s.id === 'aidc' ? <Cpu size={12} className="inline mr-1" /> : null}
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {/* 打磨轮（v1.2）：子视图切换按钮已移至中栏（WorkbenchExplorer）；工作区仅渲染对应界面 */}
 
       {/* 内容区 */}
       <div className="flex-1 overflow-auto p-4">

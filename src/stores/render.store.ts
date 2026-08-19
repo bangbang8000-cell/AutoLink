@@ -34,6 +34,8 @@ interface RenderState {
   setBatchMode: (enabled: boolean) => void
   setBatchProjects: (projects: string[]) => void
   toggleBatchProject: (name: string) => void
+  /** 打磨轮（v1.2 / AL-2）：批量删除渲染结果（output/output-label/yaml） */
+  deleteOutput: (projects: string[]) => Promise<{ deleted: number }>
 }
 
 export const useRenderStore = create<RenderState>()((set) => ({
@@ -71,4 +73,9 @@ export const useRenderStore = create<RenderState>()((set) => ({
         ? s.batchProjects.filter((n) => n !== name)
         : [...s.batchProjects, name],
     })),
+
+  deleteOutput: async (projects) => {
+    if (!window.electron?.render?.deleteOutput) return { deleted: 0 }
+    return window.electron.render.deleteOutput(projects)
+  },
 }))

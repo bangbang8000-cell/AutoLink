@@ -1111,6 +1111,23 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }
   }))
 
+  // 打磨轮（v1.2 / AL-2）：批量删除渲染结果（output / output-label / yaml）
+  ipcMain.handle('render:deleteOutput', wrapHandler(async (_event, projects: string[]) => {
+    const wsp = getWorkspacePath()
+    let deleted = 0
+    for (const name of projects ?? []) {
+      sanitizeName(name)
+      for (const sub of ['output', 'output-label', 'yaml']) {
+        const dir = path.join(wsp, name, sub)
+        if (fs.existsSync(dir)) {
+          fs.rmSync(dir, { recursive: true, force: true })
+          deleted++
+        }
+      }
+    }
+    return { deleted }
+  }))
+
   // ===== Export =====
   ipcMain.handle('export:saveFile', wrapHandler(async (_event, projectName: string, fileName: string, base64Data: string) => {
     // V3.2.2-R11.1: fileName 单层文件名 + base64 边界校验（防路径穿越/超大载荷）

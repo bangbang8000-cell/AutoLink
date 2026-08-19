@@ -436,6 +436,7 @@ interface Window {
     }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
+      deleteOutput: (projects: string[]) => Promise<{ deleted: number }>
       onProgress: (callback: (data: unknown) => void) => () => void
     }
     app: {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useUIStore } from '@/stores/ui.store'
+import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -163,6 +163,14 @@ function DesignExplorer() {
   )
 }
 
+// 打磨轮（v1.2）：工作台子视图按钮（中栏）——点击加载工作区对应界面
+const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; label: string; icon: React.ReactNode }> = [
+  { id: 'main', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
+  { id: 'aidc', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
+  { id: 'design', label: '设计', icon: <Wrench size={13} className="text-warning-500" /> },
+  { id: 'visualization', label: '可视化', icon: <Network size={13} className="text-info-500" /> },
+]
+
 function WorkbenchExplorer() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
@@ -173,6 +181,8 @@ function WorkbenchExplorer() {
   const selectedOutputTypes = useRenderStore((s) => s.selectedOutputTypes)
   const toggleOutputType = useRenderStore((s) => s.toggleOutputType)
   const openTab = useWorkspaceStore((s) => s.openTab)
+  const subview = useUIStore((s) => s.workbenchSubview)
+  const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   const handleOpenFullWorkbench = () => {
     openTab({ type: 'workbench', title: t('common:explorer.workbench.title'), closable: false })
@@ -202,6 +212,26 @@ function WorkbenchExplorer() {
       </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
+        {/* 打磨轮（v1.2）：工作台子视图按钮（点击加载工作区对应界面） */}
+        <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-app/50 text-2xs font-medium text-gray-500 dark:text-gray-400">工作台视图</div>
+          <div className="p-1.5 space-y-0.5">
+            {WORKBENCH_SUBVIEWS.map((s) => (
+              <button key={s.id} type="button"
+                onClick={() => setWorkbenchSubview(s.id)}
+                className={clsx(
+                  'w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded transition-colors',
+                  subview === s.id
+                    ? 'bg-primary-500 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover',
+                )}>
+                {s.icon}
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Project info */}
         <div className="bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs">
