@@ -27,11 +27,12 @@ ROOM_TYPE_NETWORK = CABINET_TYPE_NETWORK            # 网络柜
 ROOM_TYPE_STORAGE = CABINET_TYPE_STORAGE            # 存储柜
 ROOM_TYPE_COMPUTE = CABINET_TYPE_COMPUTE            # 通算柜
 ROOM_TYPE_COMBINED = 'combined'                     # 组合柜（任意设备域）
+ROOM_TYPE_POWER = 'power'                           # v1.4 电源柜（无设备，仅占位标记）
 ROOM_TYPE_EMPTY = 'empty'                           # 未标记（默认，宽松无类型约束）
 
 # 可标记的机柜类型（UI 展示用）
 ROOM_TYPES = (ROOM_TYPE_GPU, ROOM_TYPE_NETWORK, ROOM_TYPE_STORAGE,
-              ROOM_TYPE_COMPUTE, ROOM_TYPE_COMBINED)
+              ROOM_TYPE_COMPUTE, ROOM_TYPE_COMBINED, ROOM_TYPE_POWER)
 
 # --- 占位类型（不可放置设备） ---
 PLACEHOLDER_AC = 'ac'          # 空调占位

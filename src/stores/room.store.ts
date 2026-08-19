@@ -69,8 +69,8 @@ export interface RoomOptimizeParams {
   resetExisting?: boolean
 }
 
-/** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值） */
-const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined'])
+/** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值；v1.4 加 power 电源柜） */
+const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
 
 /** 标记工具：select 选择；ac/pillar 占位；类型标记；clear 清除标记 */
 export type RoomMarkTool =
@@ -82,6 +82,7 @@ export type RoomMarkTool =
   | 'storage'
   | 'compute'
   | 'combined'
+  | 'power'
   | 'clear'
 
 /** 占位/类型标记对应的 i18n key 后缀（rack.json room.typeLabels.*） */
@@ -94,10 +95,11 @@ export const ROOM_TOOL_LABEL_KEYS: Record<RoomMarkTool, string> = {
   storage: 'room.typeStorage',
   compute: 'room.typeCompute',
   combined: 'room.typeCombined',
+  power: 'room.typePower',
   clear: 'room.clear',
 }
 
-const TYPE_TOOLS = new Set<RoomMarkTool>(['gpu', 'network', 'storage', 'compute', 'combined'])
+const TYPE_TOOLS = new Set<RoomMarkTool>(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
 const PLACEHOLDER_TOOLS = new Set<RoomMarkTool>(['ac', 'pillar'])
 
 /** 机柜类型 → 设备域（对齐 backend RoomConstraints.type_device_map；域外类型如 security/custom/scaleup 视为无限制） */
@@ -122,6 +124,8 @@ interface RoomState {
   setMarkTool: (tool: RoomMarkTool) => void
   markCell: (position: string) => void
   selectPosition: (position: string | null) => void
+  /** 打磨轮（v1.4）：默认列配比自动布点——每列 1 电源 + 空调占位 + GPU(1柜1台) + 网络 */
+  composeDefaults: (opts?: { gpuCount?: number; networkCount?: number }) => void
   mountCabinet: (position: string, cabinetId: number) => MountCheck
   unmountCabinet: (position: string) => MountCheck
   // V3.1.4-T8-2: 机房智能落位
@@ -271,6 +275,48 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   },
 
   selectPosition: (position) => set({ selectedPosition: position }),
+
+  // 打磨轮（v1.4）：默认列配比——每列 1 电源 + 1 空调占位，GPU 1柜1台、网络柜按规模均摊
+  composeDefaults: (opts) => {
+    const { matrix } = get()
+    if (!matrix) return
+    const { gpuCount = 0, networkCount = 0 } = opts || {}
+    const cols = [...matrix.cols].sort((a, b) => a - b)
+    const rows = [...matrix.rows].sort()
+    const perCol = Math.max(1, cols.length)
+    const gpuPerCol = Math.ceil(gpuCount / perCol)
+    const netPerCol = Math.ceil(networkCount / perCol)
+
+    const cells = matrix.cells.map((cell) => {
+      // 每列底部 1 电源柜
+      if (cell.row === rows[rows.length - 1]) return { ...cell, type: 'power', placeholder: null }
+      // 每列顶部 1 空调占位
+      if (cell.row === rows[0]) return { ...cell, type: 'empty', placeholder: 'ac' }
+      return cell
+    })
+
+    const emptyByCol = new Map<number, RoomCellData[]>()
+    for (const c of cells) {
+      if (c.type === 'empty' && c.placeholder === null) {
+        const arr = emptyByCol.get(c.col) || []
+        arr.push(c)
+        emptyByCol.set(c.col, arr)
+      }
+    }
+    // 每列按 网络→GPU 顺序填充空位（GPU 1柜1台）
+    const mark = (cell: RoomCellData, type: string) => {
+      const i = cells.findIndex((c) => c.row === cell.row && c.col === cell.col)
+      if (i >= 0) cells[i] = { ...cells[i], type, placeholder: null }
+    }
+    for (const col of cols) {
+      const pool = emptyByCol.get(col) || []
+      let idx = 0
+      for (let n = 0; n < netPerCol && idx < pool.length; n++, idx++) mark(pool[idx], 'network')
+      for (let n = 0; n < gpuPerCol && idx < pool.length; n++, idx++) mark(pool[idx], 'gpu')
+    }
+
+    set({ matrix: { ...matrix, cells } })
+  },
 
   mountCabinet: (position, cabinetId) => {
     const { matrix } = get()

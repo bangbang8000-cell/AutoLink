@@ -828,7 +828,8 @@
     "typeGpu": "GPU 캐비닛",
     "typeNetwork": "네트워크 캐비닛",
     "typeStorage": "스토리지 캐비닛",
-    "typeCompute": "컴퓨트 캐비닛"
+    "typeCompute": "컴퓨트 캐비닛",
+    "typePower": "전원 캐비닛"
   },
   "repair": {
     "title": "스마트 수리",

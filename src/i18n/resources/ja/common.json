@@ -828,7 +828,8 @@
     "typeGpu": "GPUキャビネット",
     "typeNetwork": "ネットワークキャビネット",
     "typeStorage": "ストレージキャビネット",
-    "typeCompute": "コンピュートキャビネット"
+    "typeCompute": "コンピュートキャビネット",
+    "typePower": "電源キャビネット"
   },
   "repair": {
     "title": "スマート修復",

@@ -828,7 +828,8 @@
     "typeGpu": "GPU 櫃",
     "typeNetwork": "網路櫃",
     "typeStorage": "儲存櫃",
-    "typeCompute": "通算櫃"
+    "typeCompute": "通算櫃",
+    "typePower": "電源櫃"
   },
   "repair": {
     "title": "智慧修復",

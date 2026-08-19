@@ -13,7 +13,7 @@ export interface RackDevice {
   power_watts: number
 }
 
-export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom' | 'scaleup'
+export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom' | 'scaleup' | 'power'
 
 // V2.9.1-T4: 拓扑节点机柜字段（与后端 NetworkObject 分配结果对齐）
 export interface RackTopologyNode {
@@ -38,6 +38,8 @@ export const CABINET_TYPE_LABELS: Record<CabinetType, string> = {
   custom: '自定义',
   // V2.9.3-T4: Scale-Up GPU 节点柜
   scaleup: 'Scale-Up柜',
+  // v1.4: 电源柜
+  power: '电源柜',
 }
 
 // V2.9.2: 从拓扑节点推断机柜类型（服务器按 group 分类，交换机归为网络柜）
@@ -61,6 +63,8 @@ export const RACK_TYPE_COLORS: Record<CabinetType, { bg: string; text: string; b
   custom: { bg: '#f1f5f9', text: '#475569', border: '#94a3b8' },     // 灰
   // V2.9.3-T4: Scale-Up 柜 (琥珀色, 与 scale_up 网络色一致)
   scaleup: { bg: '#fef3c7', text: '#b45309', border: '#f59e0b' },    // 琥珀
+  // v1.4: 电源柜 (橙色/深红, 与空调/柱子区分)
+  power: { bg: '#ffedd5', text: '#c2410c', border: '#fb923c' },      // 橙
 }
 
 export interface RackCabinet {

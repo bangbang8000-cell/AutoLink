@@ -828,7 +828,8 @@
     "typeGpu": "GPU 柜",
     "typeNetwork": "网络柜",
     "typeStorage": "存储柜",
-    "typeCompute": "通算柜"
+    "typeCompute": "通算柜",
+    "typePower": "电源柜"
   },
   "repair": {
     "title": "智能修复",

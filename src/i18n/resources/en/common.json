@@ -828,7 +828,8 @@
     "typeGpu": "GPU Cabinet",
     "typeNetwork": "Network Cabinet",
     "typeStorage": "Storage Cabinet",
-    "typeCompute": "Compute Cabinet"
+    "typeCompute": "Compute Cabinet",
+    "typePower": "Power Cabinet"
   },
   "repair": {
     "title": "Smart Repair",

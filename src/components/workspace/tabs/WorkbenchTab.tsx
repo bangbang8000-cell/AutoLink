@@ -4,6 +4,9 @@ import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, RefreshCw, Folde
 import { useProjectStore } from '@/stores/project.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useUIStore } from '@/stores/ui.store'
+import { useRoomStore } from '@/stores/room.store'
+import { useRackStore } from '@/stores/rack.store'
+import { useDesignStore } from '@/stores/design.store'
 import { WorkbenchScopeCard } from '@/components/workbench/WorkbenchScopeCard'
 import { WorkbenchReadinessCard } from '@/components/workbench/WorkbenchReadinessCard'
 import { WorkbenchOutputCard } from '@/components/workbench/WorkbenchOutputCard'
@@ -90,6 +93,78 @@ function RenderResultsView({ projectName }: { projectName: string }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/** 打磨轮（v1.4）：机柜子视图——机房矩阵（定义/默认配比自动布点）+ 逐柜微调（RackTab） */
+function RackWorkbenchView({ projectName }: { projectName: string }) {
+  const addToast = useToastStore((s) => s.addToast)
+  const matrix = useRoomStore((s) => s.matrix)
+  const loadMatrix = useRoomStore((s) => s.loadMatrix)
+  const createMatrix = useRoomStore((s) => s.createMatrix)
+  const composeDefaults = useRoomStore((s) => s.composeDefaults)
+  const cabinets = useRackStore((s) => s.cabinets)
+  const gpuCount = useDesignStore((s) => s.config.num_servers)
+  const [rowsInput, setRowsInput] = useState('10')
+  const [colsInput, setColsInput] = useState('15')
+
+  useEffect(() => {
+    loadMatrix(projectName).catch(() => {})
+  }, [projectName, loadMatrix])
+
+  const createMtx = async () => {
+    const rows: string[] = []
+    const n = Math.max(1, Number(rowsInput) || 1)
+    for (let i = 0; i < n; i++) rows.push(String.fromCharCode(65 + i)) // A, B, C…
+    const cols = Array.from({ length: Math.max(1, Number(colsInput) || 1) }, (_, i) => i + 1)
+    const ok = await createMatrix(projectName, rows, cols)
+    if (ok) {
+      addToast('success', '机柜矩阵已创建，可「自动布点默认配比」', 5000)
+      await loadMatrix(projectName)
+    } else {
+      addToast('error', '矩阵创建失败', 5000)
+    }
+  }
+
+  const autoCompose = () => {
+    if (!matrix) {
+      addToast('warning', '请先定义机柜矩阵（排/列）', 4000)
+      return
+    }
+    const net = Math.max(4, cabinets.filter((c) => c.type === 'network').length)
+    composeDefaults({ gpuCount: gpuCount || 64, networkCount: net })
+    addToast('success', '已按默认配比布点（每列 1 电源 + 空调 + GPU(1柜1台) + 网络），可微调', 5000)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">机柜（机房矩阵 + 逐柜）</span>
+        {matrix ? (
+          <>
+            <span className="text-2xs text-gray-400">矩阵 {matrix.rows.length}排×{matrix.cols.length}列</span>
+            <button type="button" onClick={autoCompose}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
+              <Download size={11} /> 自动布点默认配比
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <label className="text-2xs text-gray-400">排数
+              <input className="w-12 ml-1 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
+                value={rowsInput} onChange={(e) => setRowsInput(e.target.value)} />
+            </label>
+            <label className="text-2xs text-gray-400">列数
+              <input className="w-12 ml-1 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
+                value={colsInput} onChange={(e) => setColsInput(e.target.value)} />
+            </label>
+            <button type="button" onClick={createMtx}
+              className="px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white">创建矩阵</button>
+          </div>
+        )}
+      </div>
+      <RackTab cabinetId={null} />
     </div>
   )
 }
@@ -297,8 +372,8 @@ export function WorkbenchTab() {
         {/* ===== 可视化 ===== */}
         {subview === 'visualization' && <TopologyTab />}
 
-        {/* ===== 机柜（v1.3：复用设计 RackTab） ===== */}
-        {subview === 'rack' && <RackTab cabinetId={null} />}
+        {/* ===== 机柜（v1.4：机房矩阵默认配比 + RackTab 微调） ===== */}
+        {subview === 'rack' && <RackWorkbenchView projectName={selectedProjectName} />}
 
         {/* ===== 归档/导出（v1.3） ===== */}
         {subview === 'export' && <ExportView projectName={selectedProjectName} />}

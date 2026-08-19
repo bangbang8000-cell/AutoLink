@@ -37,6 +37,7 @@
     "unmount": "Remove Cabinet",
     "mount": "Mount Cabinet",
     "dragHint": "Drag a cabinet onto the grid to mount; drag a mounted cabinet to another cell to move it",
-    "noCabinets": "No cabinets imported yet. Render a topology or import cabinets first"
+    "noCabinets": "No cabinets imported yet. Render a topology or import cabinets first",
+    "typePower": "Power Cabinet"
   }
 }
