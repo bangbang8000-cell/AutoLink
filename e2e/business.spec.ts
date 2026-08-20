@@ -81,14 +81,14 @@ test('业务链路：新建项目 → 生成拓扑 → 一键渲染 → 机房�
     const rf = window.locator('.react-flow')
     await expect(rf.locator('.react-flow__node').first()).toBeVisible({ timeout: 30_000 })
 
-    // ── 3. 一键渲染（导出连接关系表/上机表/拓扑图/设备清单）──
+    // ── 3. 一键渲染（导出连接关系表/上机表/拓扑图/设备清单等 9 类材料）──
     await window.keyboard.press('Control+Shift+W')
     await window.getByRole('button', { name: '一键渲染' }).click()
     await expect(window.getByText('渲染完成')).toBeVisible({ timeout: 120_000 })
     await expect(window.getByText('渲染结果', { exact: true })).toBeVisible()
-    const editor = window.getByTestId('editor')
+    // v1.5/v1.6：渲染结果在工作台结果卡展示材料标签（连接关系表/拓扑图 等）
     for (const label of ['连接关系表', '拓扑图']) {
-      await expect(editor.getByText(label, { exact: true })).toBeVisible()
+      await expect(window.getByText(label, { exact: true }).first()).toBeVisible()
     }
 
     // ── 4. 机房落位：IPC 直调（无 UI Tab 入口；验证渲染层→zod 门禁→后端优化器全链路）──
