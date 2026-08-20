@@ -22,8 +22,8 @@ export function WorkbenchReadinessCard() {
   const totalDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0) + unplacedDevices.length
   const placedDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0)
   const rackReady = totalDevices > 0 && placedDevices === totalDevices
-  // 打磨轮（v1.6 / AL-N1d）：渲染门禁 = 组网设计 valid（软门禁，机柜设计为建议项）
-  const renderReady = valid === true
+  // 打磨轮（v1.6 / AL-N1d）：渲染门禁 = 组网设计有拓扑产出（软门禁，机柜设计为建议项）
+  const renderReady = valid === true || (summary?.totalServers ?? 0) > 0
 
   const handleValidate = useCallback(async () => {
     if (!selectedProjectName) return

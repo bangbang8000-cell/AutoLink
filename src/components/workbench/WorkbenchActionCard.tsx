@@ -37,9 +37,9 @@ export function WorkbenchActionCard() {
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   const isRendering = progress.status === 'rendering'
-  // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计(拓扑 valid) 就启用渲染；
-  // 机柜设计未就绪时提示（软门禁，不硬置灰，避免阻断"仅拓扑/表项"渲染）
-  const designReady = designValid === true
+  // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计有拓扑产出即可渲染（软门禁）；
+  // 机柜设计未就绪时提示，不硬置灰
+  const designReady = designValid === true || (topology?.nodes?.length ?? 0) > 0
   const rackReady = !!matrix && cabinets.length > 0
   const renderGate = designReady
   const cleanupRef = useRef<(() => void) | null>(null)
