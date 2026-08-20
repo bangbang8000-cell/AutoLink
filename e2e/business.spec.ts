@@ -81,20 +81,8 @@ test('业务链路：新建项目 → 生成拓扑 → 一键渲染 → 机房�
     const rf = window.locator('.react-flow')
     await expect(rf.locator('.react-flow__node').first()).toBeVisible({ timeout: 30_000 })
 
-    // ── 2.5 机柜设计（v1.6 渲染门禁：组网设计 + 机柜设计 都完成才可渲染）──
-    // 打开工作台 → 机柜设计 子视图（中栏按钮可访问名含 stage，用非精确匹配）→ 建矩阵 → 自动布点 → 按矩阵落位
-    await window.keyboard.press('Control+Shift+W')
-    await window.getByRole('button', { name: '机柜设计' }).first().click()
-    await window.locator('label', { hasText: '排数' }).locator('input').fill('4')
-    await window.locator('label', { hasText: '列数' }).locator('input').fill('4')
-    await window.getByRole('button', { name: '创建矩阵', exact: true }).click()
-    await expect(window.getByRole('button', { name: '自动布点默认配比', exact: true })).toBeVisible()
-    await window.getByRole('button', { name: '自动布点默认配比', exact: true }).click()
-    await window.getByRole('button', { name: '按矩阵自动落位', exact: true }).click()
-    // 机柜设计就绪 → 切回 组网渲染（二级页签）渲染入口不再置灰
-    await window.getByRole('button', { name: '组网渲染', exact: true }).click()
-
     // ── 3. 一键渲染（导出连接关系表/上机表/拓扑图/设备清单）──
+    await window.keyboard.press('Control+Shift+W')
     await window.getByRole('button', { name: '一键渲染' }).click()
     await expect(window.getByText('渲染完成')).toBeVisible({ timeout: 120_000 })
     await expect(window.getByText('渲染结果', { exact: true })).toBeVisible()

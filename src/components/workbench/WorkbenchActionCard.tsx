@@ -37,10 +37,11 @@ export function WorkbenchActionCard() {
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   const isRendering = progress.status === 'rendering'
-  // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计(拓扑 valid) + 机柜设计(矩阵+柜) 都完成才可渲染
+  // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计(拓扑 valid) 就启用渲染；
+  // 机柜设计未就绪时提示（软门禁，不硬置灰，避免阻断"仅拓扑/表项"渲染）
   const designReady = designValid === true
   const rackReady = !!matrix && cabinets.length > 0
-  const renderGate = designReady && rackReady
+  const renderGate = designReady
   const cleanupRef = useRef<(() => void) | null>(null)
   const prevStatusRef = useRef(progress.status)
 
@@ -261,15 +262,19 @@ export function WorkbenchActionCard() {
           </div>
         )}
 
-        {/* 打磨轮（v1.6 / AL-N1d）：渲染门禁提示——未就绪时说明缺哪步 */}
+        {/* 打磨轮（v1.6 / AL-N1d）：渲染门禁提示——组网设计未就绪时置灰；机柜设计未就绪仅提示（软门禁） */}
         {!renderGate && !isRendering && (
           <div className="px-2.5 py-1.5 rounded border border-warning-200 dark:border-warning-800 bg-warning-50/60 dark:bg-warning-900/20 text-2xs text-warning-700 dark:text-warning-300">
             {t('workbench:renderGateHint', '完成组网设计')}
-            {designReady ? ' ✓' : '（未就绪）'}
-            {' 与 '}
-            {t('workbench:rackDesign', '机柜设计')}
-            {rackReady ? ' ✓' : '（未就绪）'}
-            {' 后即可渲染'}
+            {designReady ? ' ✓' : '（未就绪，先在设计页生成拓扑）'}
+            {' 后可渲染'}
+            {!rackReady && (
+              <>
+                {' · '}
+                {t('workbench:rackDesign', '机柜设计')}
+                {'（未就绪，建议先完成以输出机柜材料）'}
+              </>
+            )}
           </div>
         )}
 

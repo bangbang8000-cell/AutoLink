@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
-import { useRoomStore } from '@/stores/room.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 
@@ -16,7 +15,6 @@ export function WorkbenchReadinessCard() {
   const validate = useDesignStore((s) => s.validate)
   const cabinets = useRackStore((s) => s.cabinets)
   const unplacedDevices = useRackStore((s) => s.unplacedDevices)
-  const matrix = useRoomStore((s) => s.matrix)
   const addToast = useToastStore((s) => s.addToast)
 
   const [validatingTopo, setValidatingTopo] = useState(false)
@@ -24,9 +22,8 @@ export function WorkbenchReadinessCard() {
   const totalDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0) + unplacedDevices.length
   const placedDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0)
   const rackReady = totalDevices > 0 && placedDevices === totalDevices
-  // 打磨轮（v1.6 / AL-N1d）：机柜设计就绪 = 有矩阵 + 有柜；渲染门禁 = 组网设计 valid + 机柜设计就绪
-  const rackDesignReady = !!matrix && cabinets.length > 0
-  const renderReady = valid === true && rackDesignReady
+  // 打磨轮（v1.6 / AL-N1d）：渲染门禁 = 组网设计 valid（软门禁，机柜设计为建议项）
+  const renderReady = valid === true
 
   const handleValidate = useCallback(async () => {
     if (!selectedProjectName) return
@@ -129,7 +126,7 @@ export function WorkbenchReadinessCard() {
             <AlertTriangle size={12} className="text-warning-500 shrink-0" />
           )}
           <span className="text-gray-600 dark:text-gray-300 font-medium">
-            {t('workbench:renderReady', '可渲染（组网设计 + 机柜设计）')}:
+            {t('workbench:renderReady', '可渲染（组网设计就绪）')}:
           </span>
           <span className={renderReady ? 'text-success-600 dark:text-success-400 font-medium' : 'text-warning-600 dark:text-warning-400'}>
             {renderReady ? t('workbench:topologyComplete', '就绪') : '未就绪'}
