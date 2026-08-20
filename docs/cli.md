@@ -255,3 +255,57 @@ CLI (autolink-cli) ── argparse ──► cli.execute(action, params)  ──
 |----|------|
 | 0 | 成功 |
 | 2 | CLI 参数错误 / action 执行失败（错误信息在 stderr） |
+
+## 10. 打磨轮 v1.5：输出管理 / 柜内智能落位 / AI 接管
+
+> v1.5 新增：项目输出版本化管理、柜内智能落位、一键渲染的 CLI 化；命令均可 `--format json` 输出、稳定退出码（0 成功 / 2 参数或执行失败）。
+
+### 10.1 项目输出管理（CLI 原生 `output` 域）
+
+```bash
+# 列出项目输出版本批次（vN_ts 目录 + 根目录散文件）
+python -m cli output list --project <项目名>
+
+# 删除单批次
+python -m cli output delete --project <项目名> --batch v3_20260820_120000
+
+# 清空项目输出（仅 output/ 产物目录，不动源文件）
+python -m cli output clear --project <项目名>
+
+# 文本格式（--format text）
+python -m cli output list --project <项目名> --format text
+```
+
+- 项目名/批次名做路径安全校验（`..` / `/` / `\` 拒绝，退出码 2）。
+- 版本批次命名 `output/<项目>/<vN>_<yyyyMMdd-HHmmss>/`，含 `manifest.json`（config_hash/统计）。
+
+### 10.2 柜内智能落位（引擎 action `rack:optimize`，注册表自动暴露）
+
+```bash
+# 把待上架设备按 类型偏好 + U 位 + 功率 放进现有柜（GPU 1柜1台上限）
+python -m cli rack optimize --json '{"cabinets":[{"id":1,"type":"gpu","totalU":42,"power_limit":6000,"devices":[]}],"unplaced_devices":[{"id":"gpu-1","type":"GPU Server","height":8,"power_watts":1000}]}'
+```
+
+返回 `{success, placements[{deviceId,cabinetId,startU,endU}], unplaced[], issues[], stats{placed,unplaced}}`。
+
+### 10.3 渲染基础材料（引擎 action `export`）
+
+```bash
+# 一次导出全部后端材料到新版本批次（连接/设备/布线/BOM/PDF）
+python -m cli export --config <项目>/project_config.json --output-dir <项目>/output \
+  --output-types connections,deviceList,cablingGuide,bom,pdfReport
+```
+
+返回 `{results[], outputDir, batchName, version}`。**前端图形材料**（拓扑图/机房布局图/柜上架图）需 GUI 渲染（canvas），CLI 覆盖后端表格/报告部分。
+
+### 10.4 AI 接管手册（自动化 / 无 GUI）
+
+供 AI 助手或 CI 整流程接管，命令幂等、非交互、stdout 纯 JSON：
+
+1. **设计生成**：`python -m cli design generate --config <项目>/project_config.json`（返回 topology/validation）
+2. **基础材料渲染**：`python -m cli export --config ... --output-types connections,deviceList,cablingGuide,bom,pdfReport`
+3. **机柜落位**：`python -m cli rack optimize --json '{...}'`（矩阵级用 `room optimize`，柜内级用 `rack optimize`）
+4. **输出管理**：`output list` → 检查 `manifest.json` → `output delete/clear` 维护保留策略
+5. **交付包**：GUI 侧 `render:exportOutput` 出 ZIP；CLI 侧可 `output list` 定位批次后打包
+
+> 约定：所有命令 `--format json` 供程序解析；失败写 `cli-audit.jsonl`（含脱敏参数）并返回退出码 2。

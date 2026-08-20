@@ -47,5 +47,11 @@
   "oneClickRender": "一键渲染",
   "preview": "预览",
   "clear": "清除输出",
-  "renderResults": "渲染结果"
+  "renderResults": "渲染结果",
+  "pdfReport": "设计报告 (PDF)",
+  "pdfReportDesc": "整网设计方案报告",
+  "roomLayout": "机房布局图 (PNG)",
+  "roomLayoutDesc": "机柜机房整体-机柜布局图",
+  "rackImages": "柜上架图 (PNG)",
+  "rackImagesDesc": "每个机柜内设备上架图"
 }

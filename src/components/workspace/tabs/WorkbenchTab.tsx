@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, RefreshCw, FolderOpen as FolderIcon } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
-import { useRenderStore } from '@/stores/render.store'
 import { useUIStore } from '@/stores/ui.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
@@ -17,89 +16,12 @@ import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
+import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
-
-/** 打磨轮（v1.2 / AL-2）：渲染结果查看（按项目输出批次，参考 MC OutputPanel） */
-function RenderResultsView({ projectName }: { projectName: string }) {
-  const addToast = useToastStore((s) => s.addToast)
-  const [batches, setBatches] = useState<Array<{ name: string; files: Array<{ name: string; path: string }> }>>([])
-  const [busy, setBusy] = useState(false)
-
-  const refresh = useCallback(() => {
-    window.electron.project.listOutputBatches(projectName)
-      .then((b) => setBatches((b as Array<{ name: string; files: Array<{ name: string; path: string }> }>) || []))
-      .catch(() => setBatches([]))
-  }, [projectName])
-
-  useEffect(() => { refresh() }, [refresh])
-
-  const exportBatch = async (batch?: string) => {
-    setBusy(true)
-    try {
-      const res = await window.electron.render.exportOutput(projectName, batch)
-      if (res?.canceled) return
-      if (res?.ok) addToast('success', `已导出 → ${res.path}`)
-    } catch (e) {
-      addToast('error', `导出失败: ${(e as Error).message}`)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <FileCheck2 size={14} className="text-info-500" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">渲染结果 — {projectName}</span>
-        <button type="button" onClick={refresh}
-          className="ml-auto flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
-          <RefreshCw size={11} /> 刷新
-        </button>
-        <button type="button" onClick={() => exportBatch(undefined)} disabled={busy || batches.length === 0}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
-          <Download size={11} /> 导出全部渲染结果
-        </button>
-      </div>
-      <p className="text-2xs text-gray-400">每次渲染按时间戳生成一个批次目录（output/&lt;时间戳&gt;/），可单独导出或全部打包。</p>
-
-      {batches.length === 0 ? (
-        <p className="text-2xs text-gray-400 border rounded p-4 text-center">暂无渲染结果（在「常规渲染」执行一键渲染后生成）</p>
-      ) : (
-        <div className="space-y-2">
-          {batches.map((b) => (
-            <div key={b.name} className="border rounded overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300">
-                <FolderIcon size={12} className="text-gray-400" />
-                {b.name}
-                <span className="text-2xs text-gray-400">{b.files.length} 个文件</span>
-                <div className="ml-auto flex items-center gap-1">
-                  <button type="button" onClick={() => exportBatch(b.name)} disabled={busy}
-                    className="flex items-center gap-1 px-2 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
-                    <Download size={10} /> 导出批次
-                  </button>
-                </div>
-              </div>
-              {b.files.length > 0 && (
-                <div className="px-3 py-1.5 space-y-0.5">
-                  {b.files.map((f) => (
-                    <div key={f.path} className="flex items-center gap-2 text-2xs font-mono text-gray-500 dark:text-gray-400">
-                      <span>·</span>
-                      <span>{f.name}</span>
-                      <span className="ml-auto text-gray-300 dark:text-gray-600">{f.path}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 /** 打磨轮（v1.4）：机柜子视图——平面矩阵一览（DataCenterLayout）+ 逐柜微调（RackTab），双向联动 */
 function RackWorkbenchView({ projectName }: { projectName: string }) {
+  const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const matrix = useRoomStore((s) => s.matrix)
   const loadMatrix = useRoomStore((s) => s.loadMatrix)
@@ -111,20 +33,27 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
   const cabinets = useRackStore((s) => s.cabinets)
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
   const selectCabinet = useRackStore((s) => s.selectCabinet)
+  const optimizeRacks = useRackStore((s) => s.optimizeRacks)
   const gpuCount = useDesignStore((s) => s.config.num_servers)
   const topology = useDesignStore((s) => s.topology)
   const [rowsInput, setRowsInput] = useState('10')
   const [colsInput, setColsInput] = useState('15')
+  // 打磨轮（v1.5 / AL-R1a）：两段式——①机房-机柜布局 ②柜内设备布放
+  const [segment, setSegment] = useState<'layout' | 'racks'>('layout')
 
   useEffect(() => {
     loadMatrix(projectName).catch(() => {})
   }, [projectName, loadMatrix])
 
-  // 打磨轮（v1.4 / AL-R2b 联动 A）：矩阵选中格（有已上架机柜）→ RackTab 选中对应机柜（等值守卫防死循环）
+  // 打磨轮（v1.4 / AL-R2b 联动 A，v1.5 增强）：矩阵选中格（有已上架机柜）→ RackTab 选中对应机柜
+  // 并自动切到「②柜内设备布放」段呈现（等值守卫防死循环）
   useEffect(() => {
     if (!selectedPosition) return
     const cell = matrix?.cells.find((c) => `${c.row}${c.col}` === selectedPosition)
-    if (cell?.cabinetId != null && cell.cabinetId !== selectedCabinetId) selectCabinet(cell.cabinetId)
+    if (cell?.cabinetId != null) {
+      if (cell.cabinetId !== selectedCabinetId) selectCabinet(cell.cabinetId)
+      setSegment('racks')
+    }
   }, [selectedPosition, matrix, selectedCabinetId, selectCabinet])
 
   // 打磨轮（v1.4 / AL-R2b 联动 B）：RackTab 选中机柜 → 矩阵高亮对应格
@@ -183,54 +112,85 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
     addToast('success', '机房矩阵与机柜布局已保存', 3000)
   }
 
+  // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（待上架池 → 现有柜 U 位）
+  const runRackOptimize = async () => {
+    const res = await optimizeRacks(1)
+    if (res && (res.stats?.placed ?? 0) > 0) {
+      await useRackStore.getState().saveRackLayout(projectName)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col gap-3">
       {/* 工具行 */}
       <div className="flex items-center gap-2 flex-wrap shrink-0">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">机柜（平面矩阵 + 逐柜微调）</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('rack:rackDesign')}</span>
+        {/* 两段式切换（v1.5 / AL-R1a） */}
+        <div className="flex items-center bg-white dark:bg-app border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
+          <button type="button" onClick={() => setSegment('layout')}
+            className={`px-2.5 py-1 text-xs transition-colors ${segment === 'layout' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
+            {t('rack:segmentLayout')}
+          </button>
+          <button type="button" onClick={() => setSegment('racks')}
+            className={`px-2.5 py-1 text-xs transition-colors ${segment === 'racks' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
+            {t('rack:segmentRacks')}
+          </button>
+        </div>
         {matrix ? (
           <>
             <span className="text-2xs text-gray-400">矩阵 {matrix.rows.length}排×{matrix.cols.length}列</span>
             <button type="button" onClick={autoCompose}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
-              <Download size={11} /> 自动布点默认配比
+              <Download size={11} /> {t('rack:autoCompose')}
             </button>
             <button type="button" onClick={applyMatrix}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
-              <Download size={11} /> 按矩阵自动落位
+              <Download size={11} /> {t('rack:applyMatrix')}
+            </button>
+            <button type="button" onClick={runRackOptimize}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+              <Download size={11} /> {t('rack:rackOptimize')}
             </button>
             <button type="button" onClick={saveAll}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-green-600 hover:bg-green-700 text-white">
-              <FileCheck2 size={11} /> 保存
+              <FileCheck2 size={11} /> {t('common:save', '保存')}
             </button>
           </>
         ) : (
           <div className="flex items-center gap-1.5">
-            <label className="text-2xs text-gray-400">排数
+            <label className="text-2xs text-gray-400">{t('rack:room.rows', '排数')}
               <input className="w-12 ml-1 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
                 value={rowsInput} onChange={(e) => setRowsInput(e.target.value)} />
             </label>
-            <label className="text-2xs text-gray-400">列数
+            <label className="text-2xs text-gray-400">{t('rack:room.cols', '列数')}
               <input className="w-12 ml-1 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
                 value={colsInput} onChange={(e) => setColsInput(e.target.value)} />
             </label>
             <button type="button" onClick={createMtx}
-              className="px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white">创建矩阵</button>
+              className="px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white">{t('rack:room.create', '创建矩阵')}</button>
           </div>
         )}
       </div>
 
-      {/* 平面矩阵一览（矩阵存在时内嵌 DataCenterLayout/RoomMatrixView，格子类型区分、可标记/拖拽上架） */}
-      {matrix && (
-        <div className="h-[440px] shrink-0 rounded border overflow-hidden bg-white dark:bg-app">
-          <DataCenterLayout />
+      {/* 段一：机房-机柜布局设计（平面矩阵） */}
+      {segment === 'layout' && (
+        <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">
+          {matrix ? (
+            <DataCenterLayout />
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs text-gray-400 p-6">
+              请先在上方定义机柜矩阵（排/列）→「自动布点默认配比」→ 布局/标记/拖拽上架
+            </div>
+          )}
         </div>
       )}
 
-      {/* 逐柜微调（RackTab） */}
-      <div className="flex-1 min-h-0 rounded border overflow-hidden">
-        <RackTab cabinetId={null} />
-      </div>
+      {/* 段二：柜内设备布放设计（RackTab 逐柜微调 + 智能落位） */}
+      {segment === 'racks' && (
+        <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">
+          <RackTab cabinetId={null} />
+        </div>
+      )}
     </div>
   )
 }
@@ -280,8 +240,6 @@ export function WorkbenchTab() {
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const selectProject = useProjectStore((s) => s.selectProject)
   const addToast = useToastStore((s) => s.addToast)
-  const progress = useRenderStore((s) => s.progress)
-  const isRendering = progress.status === 'rendering'
   const subview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
@@ -383,22 +341,7 @@ export function WorkbenchTab() {
               <WorkbenchActionCard />
             </div>
 
-            {isRendering && (
-              <div className="mb-4 space-y-1.5">
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-                    {progress.message}
-                  </span>
-                  <span className="font-medium tabular-nums">{progress.progress}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300"
-                    style={{ width: `${progress.progress}%` }} />
-                </div>
-              </div>
-            )}
-
+            {/* 渲染进度已由 ActionCard 内展示（v1.5 进度唯一化） */}
             <div>
               <WorkbenchResultCard />
             </div>
@@ -430,8 +373,8 @@ export function WorkbenchTab() {
         )}
 
         {/* ===== 设计 ===== */}
-        {/* ===== 渲染结果 ===== */}
-        {subview === 'results' && <RenderResultsView projectName={selectedProjectName} />}
+        {/* ===== 输出结果（v1.5：统一材料树 + 预览三态 + 导出/删除/清空） ===== */}
+        {subview === 'results' && <OutputResultsView projectName={selectedProjectName} />}
 
         {subview === 'design' && <DesignTab />}
 

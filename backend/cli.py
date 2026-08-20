@@ -23,6 +23,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import shutil
 import sys
 import datetime
 from typing import Any, Dict, List, Optional
@@ -475,6 +477,8 @@ def build_parser() -> argparse.ArgumentParser:
             p = _add_action_parser(action_sub, domain, action)
             run_parsers.setdefault(domain, {})[_sub_name(action)] = p
     parser._run_parsers = run_parsers  # 域级缺省 run 用（内部）
+    # 打磨轮（v1.5 / AL-C1a）：output 域（CLI 原生，非引擎 action）
+    _add_output_parser(subparsers)
     return parser
 
 
@@ -514,6 +518,70 @@ def _collect_params(args) -> Dict[str, Any]:
     return params
 
 
+# ================================================================
+#  打磨轮（v1.5 / AL-C1a）：output 域（项目输出管理，CLI 原生，非引擎 action）
+# ================================================================
+
+def _safe_output_name(name: str) -> str:
+    """项目/批次名安全校验（防路径穿越）"""
+    if not name or name in ('.', '..') or '..' in name or '/' in name or '\\' in name:
+        raise CLIError(f"非法名称: {name}")
+    return name
+
+
+def _project_output_dir(project: str) -> str:
+    from manage import workspace_dir
+    return os.path.join(workspace_dir(), _safe_output_name(project), 'output')
+
+
+def cmd_output_list(project: str) -> Dict[str, Any]:
+    """列出项目输出版本批次（vN_ts 目录 + 根目录散文件）"""
+    out = _project_output_dir(project)
+    if not os.path.isdir(out):
+        return {'project': project, 'batches': [], 'root_files': [], 'exists': False}
+    batches = sorted(d for d in os.listdir(out) if os.path.isdir(os.path.join(out, d)))
+    root_files = sorted(f for f in os.listdir(out) if os.path.isfile(os.path.join(out, f)))
+    return {'project': project, 'batches': batches, 'root_files': root_files, 'exists': True}
+
+
+def cmd_output_delete(project: str, batch: Optional[str] = None) -> Dict[str, Any]:
+    """删除单批次或清空项目输出（仅 output/ 产物目录）"""
+    out = _project_output_dir(project)
+    if not os.path.isdir(out):
+        return {'project': project, 'deleted': 0}
+    if batch:
+        _safe_output_name(batch)
+        target = os.path.join(out, batch)
+        if not os.path.isdir(target):
+            raise CLIError(f"批次不存在: {batch}")
+        shutil.rmtree(target, ignore_errors=True)
+        return {'project': project, 'batch': batch, 'deleted': 1}
+    for entry in os.listdir(out):
+        p = os.path.join(out, entry)
+        if os.path.isdir(p):
+            shutil.rmtree(p, ignore_errors=True)
+        else:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+    return {'project': project, 'cleared': True, 'deleted': 0}
+
+
+def _add_output_parser(subparsers) -> argparse.ArgumentParser:
+    """output 域：list / delete / clear（CLI 原生）"""
+    p = subparsers.add_parser('output', help='项目输出管理（版本批次 list/delete/clear）')
+    out_sub = p.add_subparsers(dest='out_cmd', metavar='<command>')
+    for cmd, help_text in (('list', '列出项目输出版本批次'), ('delete', '删除批次/清空项目输出'), ('clear', '清空项目输出')):
+        sp = out_sub.add_parser(cmd, help=help_text)
+        sp.add_argument('--project', required=True, help='项目名')
+        if cmd == 'delete':
+            sp.add_argument('--batch', default=None, help='批次目录名（缺省=清空项目输出）')
+        sp.add_argument('--format', choices=['json', 'text'], default='json', help='输出格式（默认 json）')
+        sp.set_defaults(out_cmd=cmd)
+    return p
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI 入口：解析 → 执行 → 输出（stdout JSON/NDJSON/文本）
 
@@ -551,6 +619,30 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     domain = namespace.domain
     sub = getattr(namespace, 'sub', None)
+
+    # 打磨轮（v1.5 / AL-C1a）：output 域（CLI 原生）
+    if domain == 'output':
+        out_cmd = getattr(namespace, 'out_cmd', None)
+        if not out_cmd:
+            print('output 请指定子命令：list / delete / clear', file=sys.stderr)
+            return 0
+        try:
+            if out_cmd == 'list':
+                result = cmd_output_list(namespace.project)
+            elif out_cmd == 'clear':
+                result = cmd_output_delete(namespace.project)
+            else:  # delete
+                result = cmd_output_delete(namespace.project, getattr(namespace, 'batch', None))
+        except CLIError as e:
+            print(str(e), file=sys.stderr)
+            return 2
+        if getattr(namespace, 'format', 'json') == 'json':
+            sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+        else:
+            for k, v in result.items():
+                sys.stdout.write(f"{k}: {json.dumps(v, ensure_ascii=False)}\n")
+        return 0
+
     if sub is None:
         # 域级调用 → 单子命令域或存在 run 时自动执行，否则打印域帮助
         # 注意：顶层 parse_known_args 会把未知 option 的值误当作子命令 positional，

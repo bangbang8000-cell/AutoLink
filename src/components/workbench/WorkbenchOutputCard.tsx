@@ -1,8 +1,9 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { FileSpreadsheet, GitBranch, Table2, List, Cable, Calculator } from 'lucide-react'
+import { FileSpreadsheet, GitBranch, Table2, List, Cable, Calculator, FileText, Map, Box } from 'lucide-react'
 import { useRenderStore, type OutputType } from '@/stores/render.store'
 
+// 打磨轮（v1.5 / AL-O1c）：输出类型 6 → 9（补 布线指导/BOM 已接入 + PDF报告/机房布局图/柜上架图）
 const outputDefs: { type: OutputType; icon: React.ReactNode; labelKey: string; descKey: string }[] = [
   {
     type: 'connections',
@@ -39,6 +40,24 @@ const outputDefs: { type: OutputType; icon: React.ReactNode; labelKey: string; d
     icon: <Calculator size={14} className="text-gray-400" />,
     labelKey: 'workbench:bom',
     descKey: 'workbench:bomDesc',
+  },
+  {
+    type: 'pdfReport',
+    icon: <FileText size={14} className="text-gray-400" />,
+    labelKey: 'workbench:pdfReport',
+    descKey: 'workbench:pdfReportDesc',
+  },
+  {
+    type: 'roomLayout',
+    icon: <Map size={14} className="text-gray-400" />,
+    labelKey: 'workbench:roomLayout',
+    descKey: 'workbench:roomLayoutDesc',
+  },
+  {
+    type: 'rackImages',
+    icon: <Box size={14} className="text-gray-400" />,
+    labelKey: 'workbench:rackImages',
+    descKey: 'workbench:rackImagesDesc',
   },
 ]
 

@@ -4,6 +4,7 @@ AutoLink V2.1 - Engine 模块单元测试
 """
 import sys
 import os
+import re
 import json
 import tempfile
 
@@ -203,6 +204,66 @@ storage_speed = 200G
         """缺少配置文件"""
         result = handle_export({})
         assert "error" in result
+
+    # ===== 打磨轮（v1.5 / AL-O1b）：版本+时间戳归档 + manifest + 保留策略 =====
+
+    def _write_ini(self, tmpdir, num_servers=10):
+        ini_path = os.path.join(tmpdir, 'network_config.ini')
+        with open(ini_path, 'w') as f:
+            f.write(f"""[DEFAULT]
+num_servers = {num_servers}
+switch_ports = 64
+param_ports_per_server = 8
+param_speed = 400G
+storage_ports_per_server = 1
+storage_switch_ports = 48
+storage_speed = 200G
+""")
+        return ini_path
+
+    def test_version_archiving_same_config_reuses_version(self):
+        """同配置重复渲染 → 版本不递增（新时间戳批次），manifest 落盘"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = self._write_ini(tmpdir)
+            output_dir = os.path.join(tmpdir, 'output')
+            r1 = handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"]})
+            r2 = handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"]})
+            assert r1["version"] == 1
+            assert r2["version"] == 1
+            assert re.match(r'^v1_[0-9_]+$', r1["batchName"])
+            assert r1["batchName"] != r2["batchName"]
+            mf = os.path.join(output_dir, r1["batchName"], 'manifest.json')
+            assert os.path.exists(mf)
+            with open(mf, 'r', encoding='utf-8') as f:
+                manifest = json.load(f)
+            assert manifest["version"] == 1
+            assert manifest["config_hash"]
+
+    def test_version_archiving_config_change_increments(self):
+        """配置变化 → 版本递增"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = self._write_ini(tmpdir, num_servers=10)
+            output_dir = os.path.join(tmpdir, 'output')
+            r1 = handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"]})
+            self._write_ini(tmpdir, num_servers=20)
+            r2 = handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"]})
+            assert r1["version"] == 1
+            assert r2["version"] == 2
+
+    def test_version_archiving_retention(self):
+        """保留策略：只保留最近 N 版，更旧版本批次被删除"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini_path = self._write_ini(tmpdir, num_servers=10)
+            output_dir = os.path.join(tmpdir, 'output')
+            handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"]})  # v1
+            self._write_ini(tmpdir, num_servers=20)
+            handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"]})  # v2
+            self._write_ini(tmpdir, num_servers=30)
+            handle_export({"configFile": ini_path, "outputDir": output_dir, "outputTypes": ["connections"],
+                           "outputRetention": 1})  # v3，保留 1 版
+            dirs = [d for d in os.listdir(output_dir) if re.match(r'^v\d+_', d)]
+            assert len(dirs) == 1
+            assert dirs[0].startswith('v3_')
 
 
 class TestPowerSummary:

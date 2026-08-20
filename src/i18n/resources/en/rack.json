@@ -39,5 +39,12 @@
     "dragHint": "Drag a cabinet onto the grid to mount; drag a mounted cabinet to another cell to move it",
     "noCabinets": "No cabinets imported yet. Render a topology or import cabinets first",
     "typePower": "Power Cabinet"
-  }
+  },
+  "rackDesign": "Rack Design",
+  "segmentLayout": "① Room-Rack Layout",
+  "segmentRacks": "② In-Rack Placement",
+  "autoCompose": "Auto-compose Defaults",
+  "applyMatrix": "Apply by Matrix",
+  "rackOptimize": "Optimize In-Rack",
+  "applyToSameType": "Apply to Same Type"
 }

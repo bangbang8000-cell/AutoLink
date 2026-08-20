@@ -3,7 +3,9 @@
     "target": "ES2022",
     "module": "node16",
     "moduleResolution": "node16",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "outDir": "dist-electron",
     "rootDir": "electron",
     "strict": true,
@@ -14,6 +16,10 @@
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["electron"],
-  "exclude": ["electron/preload.ts"]
+  "include": [
+    "electron"
+  ],
+  "exclude": [
+    "electron/splash-preload.ts"
+  ]
 }

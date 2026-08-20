@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- V3.2.2-R11.1: splash 纯内联静态页，严格 CSP -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; base-uri 'none'">
+  <!-- 打磨轮（v1.5 / AL-V1a）：品牌入场 + 真实启动阶段进度（splash:stage） -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'unsafe-inline'; base-uri 'none'">
   <title>AutoLink</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,141 +24,55 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
       position: relative;
     }
-    /* Animated background particles */
-    .particles {
-      position: absolute; inset: 0;
-      overflow: hidden; pointer-events: none;
-    }
-    .particle {
-      position: absolute;
-      width: 4px; height: 4px;
-      background: rgba(125, 211, 252, 0.4);
-      border-radius: 50%;
-      animation: float 8s infinite ease-in-out;
-    }
+    /* Animated background particles（克制，不干扰品牌） */
+    .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .particle { position: absolute; width: 3px; height: 3px; background: rgba(125,211,252,0.35); border-radius: 50%; animation: float 9s infinite ease-in-out; }
     .particle:nth-child(1) { left: 15%; top: 20%; animation-delay: 0s; }
-    .particle:nth-child(2) { left: 80%; top: 15%; animation-delay: 1s; }
-    .particle:nth-child(3) { left: 25%; top: 75%; animation-delay: 2s; }
-    .particle:nth-child(4) { left: 70%; top: 80%; animation-delay: 3s; }
-    .particle:nth-child(5) { left: 50%; top: 10%; animation-delay: 4s; }
-    .particle:nth-child(6) { left: 10%; top: 50%; animation-delay: 5s; }
-    .particle:nth-child(7) { left: 90%; top: 50%; animation-delay: 6s; }
-    .particle:nth-child(8) { left: 40%; top: 90%; animation-delay: 7s; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
-      50% { transform: translateY(-30px) scale(1.5); opacity: 0.8; }
-    }
+    .particle:nth-child(2) { left: 80%; top: 15%; animation-delay: 1.5s; }
+    .particle:nth-child(3) { left: 25%; top: 75%; animation-delay: 2.5s; }
+    .particle:nth-child(4) { left: 70%; top: 82%; animation-delay: 3.5s; }
+    .particle:nth-child(5) { left: 50%; top: 10%; animation-delay: 4.5s; }
+    .particle:nth-child(6) { left: 88%; top: 55%; animation-delay: 5.5s; }
+    .particle:nth-child(7) { left: 8%; top: 55%; animation-delay: 6.5s; }
+    .particle:nth-child(8) { left: 42%; top: 92%; animation-delay: 7.5s; }
+    @keyframes float { 0%,100% { transform: translateY(0); opacity: 0.3; } 50% { transform: translateY(-26px); opacity: 0.7; } }
 
-    /* Logo container */
-    .logo-wrap {
-      position: relative;
-      width: 120px; height: 120px;
-      margin-bottom: 24px;
-    }
+    /* Logo：一次柔和入场（不循环旋转） */
+    .logo-wrap { position: relative; width: 120px; height: 120px; margin-bottom: 22px; }
     .logo-svg {
       width: 100%; height: 100%;
-      animation: logoIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: logoIn 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) both;
     }
     @keyframes logoIn {
-      0% { transform: scale(0.5) rotate(-10deg); opacity: 0; }
-      100% { transform: scale(1) rotate(0); opacity: 1; }
+      0% { transform: scale(0.55); opacity: 0; filter: blur(6px); }
+      60% { transform: scale(1.06); }
+      100% { transform: scale(1); opacity: 1; filter: blur(0); }
     }
-    /* Rotating ring around logo */
-    .ring {
-      position: absolute; inset: -8px;
-      border: 2px solid transparent;
-      border-top-color: #7dd3fc;
-      border-right-color: #a78bfa;
-      border-radius: 20px;
-      animation: spin 2s linear infinite;
-      opacity: 0.6;
+    /* 一次光扫（从左到右，非循环） */
+    .sheen {
+      position: absolute; inset: 0; border-radius: 24px;
+      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.18) 46%, rgba(255,255,255,0.18) 54%, transparent 70%);
+      transform: translateX(-140%);
+      animation: sheenSweep 1.1s ease-out 0.5s 1 forwards;
+      pointer-events: none;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes sheenSweep { to { transform: translateX(140%); } }
 
-    /* App name */
     .app-name {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 2px;
+      font-size: 27px; font-weight: 700; letter-spacing: 2px;
       background: linear-gradient(90deg, #7dd3fc, #a78bfa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: fadeIn 0.8s 0.2s both;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: fadeIn 0.8s 0.15s both;
     }
-    .app-subtitle {
-      font-size: 12px;
-      color: rgba(255,255,255,0.5);
-      margin-top: 6px;
-      letter-spacing: 1px;
-      animation: fadeIn 0.8s 0.4s both;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    .app-subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 6px; letter-spacing: 1px; animation: fadeIn 0.8s 0.3s both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Loading indicator */
-    .loader {
-      margin-top: 36px;
-      display: flex; align-items: center; gap: 8px;
-      animation: fadeIn 0.8s 0.6s both;
-    }
-    .loader-dots {
-      display: flex; gap: 6px;
-    }
-    .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #7dd3fc;
-      animation: bounce 1.4s infinite ease-in-out both;
-    }
-    .dot:nth-child(1) { animation-delay: -0.32s; }
-    .dot:nth-child(2) { animation-delay: -0.16s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-    .loader-text {
-      font-size: 11px;
-      color: rgba(255,255,255,0.6);
-      letter-spacing: 1px;
-    }
+    /* 阶段文案 + 真实进度条 */
+    .stage-text { margin-top: 34px; font-size: 11px; color: rgba(255,255,255,0.62); letter-spacing: 1px; animation: fadeIn 0.6s 0.4s both; min-height: 16px; }
+    .progress-wrap { margin-top: 14px; width: 220px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; animation: fadeIn 0.6s 0.45s both; }
+    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #7dd3fc, #a78bfa); border-radius: 2px; transition: width 0.45s ease; }
 
-    /* Progress bar */
-    .progress-wrap {
-      margin-top: 20px;
-      width: 200px;
-      height: 3px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 2px;
-      overflow: hidden;
-      animation: fadeIn 0.8s 0.8s both;
-    }
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #7dd3fc, #a78bfa);
-      border-radius: 2px;
-      animation: progress 2.5s ease-in-out;
-    }
-    @keyframes progress {
-      0% { width: 0%; }
-      30% { width: 30%; }
-      50% { width: 50%; }
-      70% { width: 70%; }
-      100% { width: 95%; }
-    }
-
-    /* Version */
-    .version {
-      position: absolute;
-      bottom: 16px;
-      font-size: 10px;
-      color: rgba(255,255,255,0.3);
-      letter-spacing: 1px;
-    }
+    .version { position: absolute; bottom: 16px; font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
   </style>
 </head>
 <body>
@@ -171,36 +85,26 @@
     </div>
 
     <div class="logo-wrap">
-      <div class="ring"></div>
+      <div class="sheen"></div>
       <svg class="logo-svg" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#0EA5E9"/>
-            <stop offset="55%" stop-color="#2563EB"/>
-            <stop offset="100%" stop-color="#7C3AED"/>
+            <stop offset="0%" stop-color="#0EA5E9"/><stop offset="55%" stop-color="#2563EB"/><stop offset="100%" stop-color="#7C3AED"/>
           </linearGradient>
           <linearGradient id="bgSheen" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
-            <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.04"/>
-            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/><stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.04"/><stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
           </linearGradient>
           <linearGradient id="legGrad" x1="160" y1="392" x2="352" y2="120" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7DD3FC"/>
-            <stop offset="55%" stop-color="#FFFFFF"/>
-            <stop offset="100%" stop-color="#C4B5FD"/>
+            <stop offset="0%" stop-color="#7DD3FC"/><stop offset="55%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#C4B5FD"/>
           </linearGradient>
           <linearGradient id="barGrad" x1="112" y1="260" x2="400" y2="260" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7DD3FC"/>
-            <stop offset="50%" stop-color="#FFFFFF"/>
-            <stop offset="100%" stop-color="#C4B5FD"/>
+            <stop offset="0%" stop-color="#7DD3FC"/><stop offset="50%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#C4B5FD"/>
           </linearGradient>
           <filter id="glowLeg" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="4" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
           <filter id="nodeGlow" x="-120%" y="-120%" width="340%" height="340%">
-            <feGaussianBlur stdDeviation="6" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
         <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bgGrad)"/>
@@ -211,18 +115,7 @@
         </g>
         <path d="M 112 260 L 400 260" fill="none" stroke="url(#barGrad)" stroke-width="40" stroke-linecap="round"/>
         <g filter="url(#nodeGlow)" fill="#FFFFFF">
-          <circle cx="256" cy="120" r="18"/>
-          <circle cx="160" cy="392" r="18"/>
-          <circle cx="352" cy="392" r="18"/>
-          <circle cx="112" cy="260" r="18"/>
-          <circle cx="400" cy="260" r="18"/>
-        </g>
-        <g fill="#FFFFFF">
-          <circle cx="256" cy="112" r="5"/>
-          <circle cx="152" cy="384" r="5"/>
-          <circle cx="344" cy="384" r="5"/>
-          <circle cx="104" cy="252" r="5"/>
-          <circle cx="392" cy="252" r="5"/>
+          <circle cx="256" cy="120" r="18"/><circle cx="160" cy="392" r="18"/><circle cx="352" cy="392" r="18"/><circle cx="112" cy="260" r="18"/><circle cx="400" cy="260" r="18"/>
         </g>
       </svg>
     </div>
@@ -230,20 +123,42 @@
     <div class="app-name">AutoLink</div>
     <div class="app-subtitle">AI 智算中心网络规划与可视化工具</div>
 
-    <div class="loader">
-      <div class="loader-dots">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
-      <span class="loader-text">加载中...</span>
-    </div>
+    <div class="stage-text" id="stageText">…</div>
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
 
-    <div class="progress-wrap">
-      <div class="progress-bar"></div>
-    </div>
-
-    <div class="version">v3.4.2</div>
+    <div class="version" id="versionText">…</div>
   </div>
+
+  <script>
+    // 打磨轮（v1.5 / AL-V1a）：真实启动阶段进度
+    var STAGE_LABELS = {
+      boot:        { 'zh-CN': '正在启动…', 'zh-TW': '正在啟動…', en: 'Starting…', ja: '起動中…', ko: '시작 중…' },
+      'loading-ui':{ 'zh-CN': '加载界面…', 'zh-TW': '載入介面…', en: 'Loading UI…', ja: '画面を読み込み中…', ko: '인터페이스 로드 중…' },
+      'ui-ready':  { 'zh-CN': '界面就绪…', 'zh-TW': '介面就緒…', en: 'UI ready…', ja: '画面準備完了…', ko: '인터페이스 준비 완료…' },
+      ready:       { 'zh-CN': '就绪', 'zh-TW': '就緒', en: 'Ready', ja: '準備完了', ko: '준비 완료' }
+    };
+    var stageEl = document.getElementById('stageText');
+    var barEl = document.getElementById('progressBar');
+    var locale = 'zh-CN';
+
+    function setStage(stage, progress) {
+      var m = STAGE_LABELS[stage];
+      stageEl.textContent = (m && m[locale]) ? m[locale] : (m ? m['zh-CN'] : '');
+      if (progress != null) barEl.style.width = Math.max(progress, 4) + '%';
+    }
+    // 兜底：无事件时也缓慢推进到 90%，避免空转
+    setInterval(function () {
+      var w = parseFloat(barEl.style.width) || 0;
+      if (w < 90) barEl.style.width = Math.min(w + 2, 90) + '%';
+    }, 400);
+
+    window.splash && window.splash.getAppInfo && window.splash.getAppInfo().then(function (info) {
+      if (info && info.version) document.getElementById('versionText').textContent = 'v' + info.version;
+      if (info && info.locale) locale = info.locale;
+    });
+    window.splash && window.splash.onStage && window.splash.onStage(function (data) {
+      setStage(data && data.stage, data && data.progress);
+    });
+  </script>
 </body>
 </html>

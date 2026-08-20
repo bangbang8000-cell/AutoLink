@@ -17,7 +17,17 @@ export interface RenderResult {
   timestamp: string
 }
 
-export type OutputType = 'connections' | 'rackTable' | 'topology' | 'deviceList' | 'cablingGuide' | 'bom'
+// 打磨轮（v1.5 / AL-O1c）：输出类型扩至 9 类（含 布线指导/BOM/PDF报告/机房布局图/柜上架图）
+export type OutputType =
+  | 'connections'
+  | 'rackTable'
+  | 'topology'
+  | 'deviceList'
+  | 'cablingGuide'
+  | 'bom'
+  | 'pdfReport'
+  | 'roomLayout'
+  | 'rackImages'
 
 interface RenderState {
   progress: RenderProgress
@@ -41,7 +51,8 @@ interface RenderState {
 export const useRenderStore = create<RenderState>()((set) => ({
   progress: { status: 'idle', message: '', progress: 0 },
   results: [],
-  selectedOutputTypes: ['connections', 'rackTable', 'topology', 'deviceList'],
+  // 打磨轮（v1.5 / AL-O1c）：默认一键渲染全部材料
+  selectedOutputTypes: ['connections', 'deviceList', 'rackTable', 'topology', 'cablingGuide', 'bom', 'pdfReport', 'roomLayout', 'rackImages'],
   batchMode: false,
   batchProjects: [],
 

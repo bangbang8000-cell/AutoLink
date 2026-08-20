@@ -39,5 +39,12 @@
     "dragHint": "拖拽机柜到矩阵上架；已上架机柜拖到其他格可移动",
     "noCabinets": "暂无已导入机柜，请先渲染拓扑或导入机柜",
     "typePower": "电源柜"
-  }
+  },
+  "rackDesign": "机柜设计",
+  "segmentLayout": "① 机房-机柜布局",
+  "segmentRacks": "② 柜内设备布放",
+  "autoCompose": "自动布点默认配比",
+  "applyMatrix": "按矩阵自动落位",
+  "rackOptimize": "柜内智能落位",
+  "applyToSameType": "应用到同类柜"
 }

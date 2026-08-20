@@ -96,6 +96,10 @@ interface RackState {
   initFromTopology: (topologyNodes: RackTopologyNode[], rackType?: number, powerLimit?: number) => void
   /** 打磨轮（v1.4 / AL-R2c）：整表替换机柜布局（矩阵落位用，避免逐条 addCabinet 污染 id） */
   setRacks: (cabinets: RackCabinet[], unplacedDevices?: UnplacedDevice[], selectedCabinetId?: number | null) => void
+  /** 打磨轮（v1.5 / AL-R1b）：柜内智能落位（后端 rack:optimize → 应用 U 位方案） */
+  optimizeRacks: (gpuPerCabinet?: number) => Promise<{ stats?: { placed: number; unplaced: number } } | null>
+  /** 打磨轮（v1.5 / AL-R1d）：把源柜的 U 位布局/功率设置批量应用到所有同类柜 */
+  applyCabinetTemplate: (sourceId: number) => { applied: number; skipped: number }
   loadRackLayout: (projectName: string) => Promise<void>
   saveRackLayout: (projectName: string) => Promise<void>
   addCabinet: (totalU?: number, type?: CabinetType, powerLimit?: number) => void
@@ -107,7 +111,8 @@ interface RackState {
   moveDevice: (deviceId: string, fromCabinet: number, toCabinet: number, newStartU: number) => boolean
   selectedDeviceInfo: (id: string) => RackDevice | null
   selectDevice: (id: string | null) => void
-  exportToExcel: (projectName: string) => Promise<string>
+  /** 打磨轮（v1.5 / AL-O1b）：batchName 提供时写入版本批次目录 output/<batch>/ */
+  exportToExcel: (projectName: string, batchName?: string) => Promise<string>
   importCabinetList: (csvData: string) => void
   getPowerUsage: (cabinetId: number) => { used: number; limit: number; percent: number; exceeded: boolean }
   getPowerUsageAll: () => { total: number; limit: number; percent: number }
@@ -233,6 +238,100 @@ export const useRackStore = create<RackState>()(
       addDeviceMode: false,
       editingDevice: null,
     }),
+
+  // 打磨轮（v1.5 / AL-R1b）：柜内智能落位——待上架池 → 现有柜 U 位
+  optimizeRacks: async (gpuPerCabinet = 1) => {
+    const { cabinets, unplacedDevices } = get()
+    if (unplacedDevices.length === 0) {
+      useToastStore.getState().addToast('warning', '待上架设备池为空，暂无可落位设备', 4000)
+      return null
+    }
+    if (cabinets.length === 0) {
+      useToastStore.getState().addToast('warning', '无机柜可放置，请先创建/上架机柜', 4000)
+      return null
+    }
+    if (!window.electron?.rack?.optimize) {
+      useToastStore.getState().addToast('error', '柜内智能落位能力不可用（Electron 桥接未就绪）', 5000)
+      return null
+    }
+    try {
+      const res = await window.electron.rack.optimize({
+        cabinets: cabinets.map((c) => ({
+          id: c.id, type: c.type, totalU: c.totalU, power_limit: c.power_limit,
+          devices: c.devices.map((d) => ({ id: d.id, startU: d.startU, endU: d.endU, power_watts: d.power_watts })),
+        })),
+        unplaced_devices: unplacedDevices.map((d) => ({ id: d.id, name: d.name, type: d.type, height: d.height, power_watts: d.power_watts })),
+        gpu_per_cabinet: gpuPerCabinet,
+      })
+      if (!res?.success) {
+        useToastStore.getState().addToast('error', '落位计算失败', 5000)
+        return null
+      }
+      const stats = res.stats ?? { placed: 0, unplaced: 0 }
+      // 应用方案：把放置结果写入柜内（信任后端约束校验）
+      const poolById = new Map(unplacedDevices.map((d) => [d.id, d]))
+      const placedIds = new Set((res.placements ?? []).map((p) => p.deviceId))
+      set((s) => ({
+        cabinets: s.cabinets.map((c) => {
+          const added = (res.placements ?? [])
+            .filter((p) => p.cabinetId === c.id)
+            .map((p) => {
+              const d = poolById.get(p.deviceId)!
+              return { id: d.id, name: d.name, type: d.type, cabinetId: c.id, startU: p.startU, endU: p.endU, power_watts: d.power_watts }
+            })
+          return added.length > 0 ? { ...c, devices: [...c.devices, ...added] } : c
+        }),
+        unplacedDevices: s.unplacedDevices.filter((d) => !placedIds.has(d.id)),
+      }))
+      useToastStore.getState().addToast(
+        'success',
+        `柜内智能落位完成：放置 ${stats.placed} 台${stats.unplaced > 0 ? `，${stats.unplaced} 台无位置留在待上架池` : ''}`,
+        5000,
+      )
+      return { stats }
+    } catch (err) {
+      useToastStore.getState().addToast('error', err instanceof Error ? err.message : '落位失败', 5000)
+      return null
+    }
+  },
+
+  // 打磨轮（v1.5 / AL-R1d）：批量应用柜模板到同类柜（totalU/power_limit + 同类型设备 U 位对齐）
+  applyCabinetTemplate: (sourceId) => {
+    const { cabinets } = get()
+    const source = cabinets.find((c) => c.id === sourceId)
+    if (!source) return { applied: 0, skipped: 0 }
+    let applied = 0
+    let skipped = 0
+    const newCabinets = cabinets.map((c) => {
+      if (c.id === sourceId || c.type !== source.type) return c
+      const devices = [...c.devices]
+      for (const sd of source.devices) {
+        // 已在同 U 位 → 跳过
+        if (devices.some((d) => !(sd.endU < d.startU || sd.startU > d.endU))) {
+          skipped++
+          continue
+        }
+        const targetIdx = devices.findIndex((d) => d.type === sd.type)
+        if (targetIdx < 0) {
+          skipped++
+          continue
+        }
+        const target = devices[targetIdx]
+        const height = target.endU - target.startU + 1
+        const newEnd = sd.startU + height - 1
+        const conflict = devices.some((d, i) => i !== targetIdx && !(newEnd < d.startU || sd.startU > d.endU))
+        if (conflict || newEnd > c.totalU) {
+          skipped++
+          continue
+        }
+        devices[targetIdx] = { ...target, startU: sd.startU, endU: newEnd }
+        applied++
+      }
+      return { ...c, totalU: source.totalU, power_limit: source.power_limit, devices }
+    })
+    set({ cabinets: newCabinets })
+    return { applied, skipped }
+  },
 
   loadRackLayout: async (projectName) => {
     try {
@@ -397,6 +496,12 @@ export const useRackStore = create<RackState>()(
     )
     if (hasConflict) return false
 
+    // 打磨轮（v1.5 / AL-R1e）：跨柜移动补功率校验（不超目标柜功率上限）
+    const targetPower = toCab.devices
+      .filter((d) => d.id !== deviceId)
+      .reduce((s, d) => s + d.power_watts, 0)
+    if (targetPower + device.power_watts > toCab.power_limit) return false
+
     const moved: RackDevice = { ...device, cabinetId: toCabinet, startU: newStartU, endU: newEndU }
 
     set((s) => ({
@@ -428,7 +533,7 @@ export const useRackStore = create<RackState>()(
     set({ selectedDevice: info, addDeviceMode: false, editingDevice: null })
   },
 
-  exportToExcel: async (projectName) => {
+  exportToExcel: async (projectName, batchName) => {
     const { cabinets } = get()
     const rows: Record<string, string | number>[] = []
 
@@ -484,7 +589,10 @@ export const useRackStore = create<RackState>()(
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const fileName = `上机表_${timestamp}.xlsx`
 
-    const filePath = await window.electron?.export?.saveFile(projectName, fileName, wbout)
+    // 打磨轮（v1.5 / AL-O1b）：批次渲染 → 写入版本批次目录 output/<batch>/<file>
+    const filePath = batchName
+      ? await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${fileName}`, wbout)
+      : await window.electron?.export?.saveFile(projectName, fileName, wbout)
     return filePath || ''
   },
 

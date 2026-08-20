@@ -12,6 +12,9 @@ V2.7.6-T7: action 处理改为 decorator 注册(@register_action('design'))
 import sys
 import json
 import os
+import re
+import shutil
+import hashlib
 import datetime
 
 # Add backend directory to path
@@ -1220,6 +1223,26 @@ def handle_room_optimize(params):
     return optimize_from_params(params)
 
 
+@register_action('rack:optimize')
+def handle_rack_optimize(params):
+    """打磨轮（v1.5 / AL-R1b）：柜内智能落位——把待上架设备按 U+功率+类型偏好放进现有柜
+
+    参数:
+        cabinets: 现有柜 [{id, type, totalU, power_limit, devices:[{id,startU,endU,power_watts}]}]
+        unplaced_devices: 待上架池 [{id, name, type, height, power_watts}]
+        gpu_per_cabinet: GPU 每柜台数上限（默认 1柜1台）
+    返回:
+        {success, placements[{deviceId,cabinetId,startU,endU}], unplaced[], issues[], stats{placed,unplaced}}
+    """
+    from rack_optimizer import optimize_rack_placements
+    params = dict(params or {})
+    return optimize_rack_placements(
+        cabinets=params.get('cabinets') or [],
+        unplaced_devices=params.get('unplaced_devices') or [],
+        gpu_per_cabinet=int(params.get('gpu_per_cabinet') or 1),
+    )
+
+
 @register_action('room:set-type')
 def handle_room_set_type(params):
     """V3.1.4-T8-3: 标记矩阵位置机柜类型（对话驱动：AI 按用户需求标记类型域，落盘到项目矩阵）
@@ -1553,21 +1576,93 @@ def handle_ai_clear(params):
     return {'status': 'ok'}
 
 
+# ===== 打磨轮（v1.5 / AL-O1b）：输出版本归档 v<N>_<ts> + manifest.json + 保留策略 =====
+
+def _config_hash(config_file):
+    """设计配置内容哈希（同配置 → 同版本；变化 → 递增版本）"""
+    try:
+        with open(config_file, 'rb') as f:
+            return hashlib.sha256(f.read()).hexdigest()[:16]
+    except Exception:
+        return 'unknown'
+
+
+def _latest_version_meta(output_dir):
+    """返回 (最新版本号, 该版本 manifest 的 config_hash)；无批次 → (0, None)"""
+    best = (0, None)
+    for name in os.listdir(output_dir):
+        m = re.match(r'^v(\d+)_', name)
+        if not m or not os.path.isdir(os.path.join(output_dir, name)):
+            continue
+        v = int(m.group(1))
+        chash = None
+        manifest_path = os.path.join(output_dir, name, 'manifest.json')
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path, 'r', encoding='utf-8') as f:
+                    chash = json.load(f).get('config_hash')
+            except Exception:
+                pass
+        if v > best[0]:
+            best = (v, chash)
+    return best
+
+
+def _next_version(output_dir, config_hash):
+    """同配置 → 沿用最新版本（新时间戳批次）；配置变化 → v+1"""
+    v, latest_hash = _latest_version_meta(output_dir)
+    if v > 0 and latest_hash == config_hash:
+        return v
+    return v + 1
+
+
+def _enforce_retention(output_dir, retention):
+    """保留最近 retention 个不同版本，删除更旧版本的全部批次目录"""
+    if retention <= 0:
+        return
+    versions = {}
+    for name in os.listdir(output_dir):
+        m = re.match(r'^v(\d+)_', name)
+        if not m:
+            continue
+        versions.setdefault(int(m.group(1)), []).append(os.path.join(output_dir, name))
+    if len(versions) <= retention:
+        return
+    for v in sorted(versions)[:len(versions) - retention]:
+        for d in versions[v]:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def _write_manifest(batch_dir, **fields):
+    manifest = {
+        'schema_version': 1,
+        'render_time': datetime.datetime.now().isoformat(timespec='seconds'),
+    }
+    manifest.update(fields)
+    with open(os.path.join(batch_dir, 'manifest.json'), 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+
+
 @register_action('export')
 def handle_export(params):
-    """处理渲染导出请求"""
+    """处理渲染导出请求（v1.5：版本+时间戳归档 + manifest.json + 保留策略）"""
     config_file, error = _get_config_file(params)
     if error:
         return {"error": error}
 
     output_dir = params.get('outputDir', 'output')
     output_types = params.get('outputTypes', [])
+    retention = int(params.get('outputRetention', 10) or 10)
 
     designer = NetworkDesignerV2(config_file)
     os.makedirs(output_dir, exist_ok=True)
-    # 打磨轮（v1.2 / AL-2）：每次渲染写入时间戳批次目录（对齐 MC output/<ts>/）
+
+    # v1.5：版本号 + 时间戳批次目录（配置变化才递增版本）
+    config_hash = _config_hash(config_file)
+    version = _next_version(output_dir, config_hash)
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    batch_dir = os.path.join(output_dir, ts)
+    batch_name = f"v{version}_{ts}"
+    batch_dir = os.path.join(output_dir, batch_name)
     os.makedirs(batch_dir, exist_ok=True)
 
     results = []
@@ -1625,9 +1720,35 @@ def handle_export(params):
         except Exception as e:
             results.append({"type": "pdfReport", "file": fn, "status": "error", "error": str(e)})
 
+    # v1.5：manifest.json（版本/配置哈希/统计）+ 保留策略轮转
+    _write_manifest(
+        batch_dir,
+        project=os.path.basename(os.path.dirname(os.path.abspath(config_file))),
+        version=version,
+        config_hash=config_hash,
+        downlink_mode=mode,
+        output_types=output_types,
+        results=[{"type": r.get("type"), "status": r.get("status")} for r in results],
+        stats={
+            "servers": len(getattr(designer, 'servers', [])),
+            "param_leaves": len(getattr(designer, 'param_leaves', [])),
+            "param_spines": len(getattr(designer, 'param_spines', [])),
+            "param_cores": len(getattr(designer, 'param_cores', [])),
+            "storage_leaves": len(getattr(designer, 'storage_leaves', [])),
+            "storage_spines": len(getattr(designer, 'storage_spines', [])),
+            "biz_access": len(getattr(designer, 'biz_access', [])),
+            "biz_agg": len(getattr(designer, 'biz_agg', [])),
+            "oob_access": len(getattr(designer, 'oob_access', [])),
+            "oob_agg": len(getattr(designer, 'oob_agg', [])),
+        },
+    )
+    _enforce_retention(output_dir, retention)
+
     return {
         "results": results,
         "outputDir": batch_dir,
+        "batchName": batch_name,
+        "version": version,
     }
 
 

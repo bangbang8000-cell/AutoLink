@@ -47,5 +47,11 @@
   "oneClickRender": "원클릭 렌더링",
   "preview": "미리보기",
   "clear": "출력 지우기",
-  "renderResults": "렌더링 결과"
+  "renderResults": "렌더링 결과",
+  "pdfReport": "설계 보고서 (PDF)",
+  "pdfReportDesc": "전체 설계안 보고서",
+  "roomLayout": "기계실 레이아웃 (PNG)",
+  "roomLayoutDesc": "기계실·랙 전체 배치도",
+  "rackImages": "랙 상단도 (PNG)",
+  "rackImagesDesc": "랙 내부 장비 배치도"
 }

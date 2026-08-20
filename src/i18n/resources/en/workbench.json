@@ -47,5 +47,11 @@
   "oneClickRender": "One-Click Render",
   "preview": "Preview",
   "clear": "Clear Output",
-  "renderResults": "Render Results"
+  "renderResults": "Render Results",
+  "pdfReport": "Design Report (PDF)",
+  "pdfReportDesc": "Full design proposal report",
+  "roomLayout": "Room Layout (PNG)",
+  "roomLayoutDesc": "Room-rack floor plan overview",
+  "rackImages": "Rack Elevation (PNG)",
+  "rackImagesDesc": "Per-cabinet device elevation"
 }

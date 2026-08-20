@@ -434,10 +434,23 @@ interface Window {
       models: (cfg: { baseUrl: string; apiKey: string }) => Promise<{ status: string; models: string[]; message?: string }>
       clear: (sessionId: string) => Promise<{ status: string }>
     }
+    rack: {
+      optimize: (params: {
+        cabinets?: Array<{ id: number; type: string; totalU?: number; power_limit?: number; devices?: Array<{ id: string; startU?: number; endU?: number; power_watts?: number }> }>
+        unplaced_devices?: Array<{ id: string; name: string; type: string; height?: number; power_watts?: number }>
+        gpu_per_cabinet?: number
+      }) => Promise<{ success?: boolean; placements?: Array<{ deviceId: string; cabinetId: number; startU: number; endU: number }>; unplaced?: string[]; issues?: string[]; stats?: { placed: number; unplaced: number } }>
+    }
     render: {
       exportConnections: (projectName: string, outputTypes: string[]) => Promise<unknown>
       deleteOutput: (projects: string[]) => Promise<{ deleted: number }>
       exportOutput: (projectName: string, batchName?: string) => Promise<{ canceled?: boolean; ok?: boolean; path?: string }>
+      // 打磨轮（v1.5 / AL-O1b）：前端生成物写入版本批次目录 output/<batch>/<file>
+      saveOutputFile: (projectName: string, relPath: string, base64Data: string) => Promise<string>
+      // 打磨轮（v1.5 / AL-O1e）：读取输出文件（预览）
+      readOutputFile: (projectName: string, relPath: string) => Promise<{ base64: string; ext: string; size: number }>
+      // 打磨轮（v1.5 / AL-O1f）：清空全部项目输出
+      clearAllOutput: () => Promise<{ deleted: number }>
       onProgress: (callback: (data: unknown) => void) => () => void
     }
     app: {

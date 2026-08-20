@@ -322,3 +322,51 @@ class TestAudit:
                              monkeypatch, capsys, audit)
         assert rc == 0
         json.loads(out)
+
+
+# ================================================================
+#  打磨轮（v1.5 / AL-C1a）：output 域 CLI（list/delete/clear）
+# ================================================================
+
+class TestOutputCommands:
+    def _mk_ws(self, tmp_path):
+        """构造临时 workspace（$AUTOLINK_USER_DATA/workspace）：ProjA 含 2 版本批次 + 根目录散文件"""
+        wsp = tmp_path / 'ws'
+        out = wsp / 'workspace' / 'ProjA' / 'output'
+        (out / 'v1_20260820_000001').mkdir(parents=True)
+        (out / 'v1_20260820_000001' / 'manifest.json').write_text('{}', encoding='utf-8')
+        (out / 'v2_20260820_000002').mkdir(parents=True)
+        (out / 'root.txt').write_text('x', encoding='utf-8')
+        return str(wsp)
+
+    def test_output_list(self, monkeypatch, capsys, tmp_path):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', self._mk_ws(tmp_path))
+        rc, out, _ = run_cli(['output', 'list', '--project', 'ProjA'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 0
+        data = json.loads(out)
+        assert 'v1_20260820_000001' in data['batches']
+        assert 'root.txt' in data['root_files']
+
+    def test_output_delete_batch(self, monkeypatch, capsys, tmp_path):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', self._mk_ws(tmp_path))
+        rc, out, _ = run_cli(['output', 'delete', '--project', 'ProjA', '--batch', 'v1_20260820_000001'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 0
+        assert json.loads(out)['deleted'] == 1
+        assert not (tmp_path / 'ws' / 'workspace' / 'ProjA' / 'output' / 'v1_20260820_000001').exists()
+
+    def test_output_clear(self, monkeypatch, capsys, tmp_path):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', self._mk_ws(tmp_path))
+        rc, out, _ = run_cli(['output', 'clear', '--project', 'ProjA'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 0
+        assert json.loads(out)['cleared'] is True
+        assert not (tmp_path / 'ws' / 'workspace' / 'ProjA' / 'output' / 'v2_20260820_000002').exists()
+
+    def test_output_bad_name_rejected(self, monkeypatch, capsys, tmp_path):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', self._mk_ws(tmp_path))
+        rc, _, err = run_cli(['output', 'list', '--project', '../evil'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 2
+        assert '非法' in err

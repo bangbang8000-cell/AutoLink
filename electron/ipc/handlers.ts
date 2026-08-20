@@ -51,8 +51,11 @@ import {
   exportSaveFileSchema,
   httpsUrlSchema,
   optimizeApplySchema,
+  outputReadFileSchema,
+  outputSaveFileSchema,
   paramsObjectSchema,
   projectNameSchema,
+  rackOptimizeSchema,
   repairApplySchema,
   roomCreateSchema,
   roomOptimizeSchema,
@@ -667,6 +670,17 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     }, 20000)
   }))
 
+  // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（柜+待上架设备池 → U 位方案）
+  ipcMain.handle('rack:optimize', wrapHandler(async (_event, params?: Record<string, unknown>) => {
+    assertParsed(rackOptimizeSchema, params ?? {}, 'rack:optimize')
+    const p = params ?? {}
+    return pythonService.call('rack:optimize', {
+      cabinets: p.cabinets,
+      unplaced_devices: p.unplaced_devices,
+      gpu_per_cabinet: p.gpu_per_cabinet,
+    }, 20000)
+  }))
+
   // ===== Config（V3.0.4-T3-4: 统一配置体系） =====
   ipcMain.handle('config:list-schema', wrapHandler(async () => {
     return pythonService.call('config:list-schema', {})
@@ -1154,6 +1168,48 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     zip.addLocalFolder(srcDir, relBase)
     zip.writeZip(result.filePath)
     return { ok: true, path: result.filePath }
+  }))
+
+  // 打磨轮（v1.5 / AL-O1b）：前端生成物（上机表/拓扑图/布局图/柜图）写入版本批次目录
+  ipcMain.handle('render:saveOutputFile', wrapHandler(async (_event, projectName: string, relPath: string, base64Data: string) => {
+    assertParsed(outputSaveFileSchema, { projectName, relPath, base64Data }, 'render:saveOutputFile')
+    const segments = ['output', ...relPath.replace(/^output\//, '').split('/')]
+    const filePath = sanitizeProjectPath(projectName, ...segments)
+    if (!fs.existsSync(path.dirname(filePath))) {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    }
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'))
+    return filePath
+  }))
+
+  // 打磨轮（v1.5 / AL-O1e）：读取输出文件（预览，返回 base64 + 扩展名 + 大小）
+  ipcMain.handle('render:readOutputFile', wrapHandler(async (_event, projectName: string, relPath: string) => {
+    assertParsed(outputReadFileSchema, { projectName, relPath }, 'render:readOutputFile')
+    const segments = ['output', ...relPath.replace(/^output\//, '').split('/')]
+    const filePath = sanitizeProjectPath(projectName, ...segments)
+    if (!fs.existsSync(filePath)) throw new Error('文件不存在')
+    const buf = fs.readFileSync(filePath)
+    return {
+      base64: buf.toString('base64'),
+      ext: path.extname(filePath).slice(1).toLowerCase() || 'file',
+      size: buf.length,
+    }
+  }))
+
+  // 打磨轮（v1.5 / AL-O1f）：清空全部项目输出（仅 output/ 产物目录，不动源文件）
+  ipcMain.handle('render:clearAllOutput', wrapHandler(async () => {
+    const wsp = getWorkspacePath()
+    let deleted = 0
+    for (const name of fs.readdirSync(wsp, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)) {
+      const outDir = path.join(wsp, name, 'output')
+      if (fs.existsSync(outDir)) {
+        fs.rmSync(outDir, { recursive: true, force: true })
+        deleted++
+      }
+    }
+    return { deleted }
   }))
 
   // ===== Export =====

@@ -97,6 +97,8 @@ class AutoLinkApp {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        // 打磨轮（v1.5 / AL-V1a）：启动动画 preload（真实阶段事件 + 版本/语言）
+        preload: path.join(__dirname, 'splash-preload.cjs'),
       },
     })
 
@@ -110,8 +112,25 @@ class AutoLinkApp {
       this.splashWindow = null
     })
 
+    // 打磨轮（v1.5 / AL-V1a）：真实启动阶段事件（驱动进度条）
+    this.emitSplashStage('boot', 5)
+
+    // 超时兜底：10s 内主界面未就绪也关闭启动窗，避免卡在启动页
+    setTimeout(() => {
+      if (this.splashWindow && !this.splashWindow.isDestroyed()) {
+        this.splashWindow.close()
+      }
+    }, 10000)
+
     // Create main window (hidden) while splash is showing
     this.createMainWindow()
+  }
+
+  /** 打磨轮（v1.5 / AL-V1a）：向启动动画窗口发送阶段进度 */
+  private emitSplashStage(stage: string, progress: number): void {
+    if (this.splashWindow && !this.splashWindow.isDestroyed()) {
+      this.splashWindow.webContents.send('splash:stage', { stage, progress })
+    }
   }
 
   private createMainWindow(): void {
@@ -141,6 +160,12 @@ class AutoLinkApp {
       this.mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
     }
 
+    // 打磨轮（v1.5 / AL-V1a）：启动阶段事件
+    this.emitSplashStage('loading-ui', 30)
+    this.mainWindow.webContents.once('did-finish-load', () => {
+      this.emitSplashStage('ui-ready', 70)
+    })
+
     this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       // V3.2.2 加固：仅放行 https 外部链接（与 httpsUrlSchema 收紧口径一致）
       if (url.startsWith('https://')) {
@@ -154,6 +179,9 @@ class AutoLinkApp {
 
     // Show main window and close splash when ready (min 1.5s splash display)
     this.mainWindow.once('ready-to-show', () => {
+      // 打磨轮（v1.5 / AL-V1a）：就绪阶段事件
+      this.emitSplashStage('ready', 100)
+
       const minSplashTime = 1500
       const elapsed = Date.now() - this.splashStartTime
       const delay = Math.max(0, minSplashTime - elapsed)

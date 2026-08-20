@@ -6,7 +6,8 @@ describe('RenderStore', () => {
     useRenderStore.setState({
       progress: { status: 'idle', message: '', progress: 0 },
       results: [],
-      selectedOutputTypes: ['connections', 'rackTable', 'topology', 'deviceList'],
+      // 打磨轮（v1.5 / AL-O1c）：默认一键渲染全部 9 类材料
+      selectedOutputTypes: ['connections', 'deviceList', 'rackTable', 'topology', 'cablingGuide', 'bom', 'pdfReport', 'roomLayout', 'rackImages'],
       batchMode: false,
       batchProjects: [],
     })
@@ -21,12 +22,17 @@ describe('RenderStore', () => {
       expect(progress.error).toBeUndefined()
     })
 
-    it('默认选中四种输出类型', () => {
+    it('默认选中全部九种输出类型（v1.5 一键渲染全部材料）', () => {
       expect(useRenderStore.getState().selectedOutputTypes).toEqual([
         'connections',
+        'deviceList',
         'rackTable',
         'topology',
-        'deviceList',
+        'cablingGuide',
+        'bom',
+        'pdfReport',
+        'roomLayout',
+        'rackImages',
       ])
     })
 
@@ -100,11 +106,10 @@ describe('RenderStore', () => {
       expect(useRenderStore.getState().selectedOutputTypes).toContain('rackTable')
     })
 
-    it('未选中的类型调用应添加', () => {
-      // 先移除 bom(默认未选中)
-      const before = useRenderStore.getState().selectedOutputTypes
-      expect(before).not.toContain('bom')
-      useRenderStore.getState().toggleOutputType('bom' as OutputType)
+    it('未选中的类型调用应添加（先移除再添加）', () => {
+      useRenderStore.getState().toggleOutputType('bom') // 移除
+      expect(useRenderStore.getState().selectedOutputTypes).not.toContain('bom')
+      useRenderStore.getState().toggleOutputType('bom' as OutputType) // 再添加
       expect(useRenderStore.getState().selectedOutputTypes).toContain('bom')
     })
   })

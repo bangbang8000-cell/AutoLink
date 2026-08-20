@@ -155,6 +155,14 @@ const electronAPI = {
       resetExisting?: boolean
     }) => ipcRenderer.invoke('room:optimize', params),
   },
+  // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（柜+待上架设备池 → U 位方案）
+  rack: {
+    optimize: (params: {
+      cabinets?: Array<{ id: number; type: string; totalU?: number; power_limit?: number; devices?: Array<{ id: string; startU?: number; endU?: number; power_watts?: number }> }>
+      unplaced_devices?: Array<{ id: string; name: string; type: string; height?: number; power_watts?: number }>
+      gpu_per_cabinet?: number
+    }) => ipcRenderer.invoke('rack:optimize', params),
+  },
   // V3.0.4-T3-4: 统一配置体系（schema/预设/导入导出）
   config: {
     listSchema: () =>
@@ -210,6 +218,15 @@ const electronAPI = {
       ipcRenderer.invoke('render:deleteOutput', projects),
     exportOutput: (projectName: string, batchName?: string) =>
       ipcRenderer.invoke('render:exportOutput', projectName, batchName),
+    // 打磨轮（v1.5 / AL-O1b）：前端生成物写入版本批次目录 output/<batch>/<file>
+    saveOutputFile: (projectName: string, relPath: string, base64Data: string) =>
+      ipcRenderer.invoke('render:saveOutputFile', projectName, relPath, base64Data),
+    // 打磨轮（v1.5 / AL-O1e）：读取输出文件（预览）
+    readOutputFile: (projectName: string, relPath: string) =>
+      ipcRenderer.invoke('render:readOutputFile', projectName, relPath),
+    // 打磨轮（v1.5 / AL-O1f）：清空全部项目输出
+    clearAllOutput: () =>
+      ipcRenderer.invoke('render:clearAllOutput'),
     onProgress: (callback: (data: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
       ipcRenderer.on('render:progress', handler)

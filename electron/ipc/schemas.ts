@@ -131,6 +131,33 @@ export const exportSaveFileSchema = z.object({
   base64Data: z.string().min(1).max(50_000_000, '数据过大'),
 })
 
+/** 打磨轮（v1.5 / AL-O1b）：输出相对路径（output/<batch>/<file> 或 output/<file>），防穿越 */
+const outputRelPathSchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .regex(/^output\/[^/\\][^/\\]*(\/[^/\\]+)*$/, '非法输出路径')
+
+/** 渲染产物写入批次：base64 → output/<batch>/<file>（前端生成物并入版本批次） */
+export const outputSaveFileSchema = z.object({
+  projectName: projectNameSchema,
+  relPath: outputRelPathSchema,
+  base64Data: z.string().min(1).max(50_000_000, '数据过大'),
+})
+
+/** 读取输出文件（预览）：base64 + 扩展名 + 大小 */
+export const outputReadFileSchema = z.object({
+  projectName: projectNameSchema,
+  relPath: outputRelPathSchema,
+})
+
+/** 柜内智能落位（rack:optimize）：柜 + 待上架设备池 */
+export const rackOptimizeSchema = z.object({
+  cabinets: z.array(z.record(z.string(), z.unknown())).max(500).default([]),
+  unplaced_devices: z.array(z.record(z.string(), z.unknown())).max(5000).default([]),
+  gpu_per_cabinet: z.number().int().min(1).max(64).optional(),
+})
+
 /** shell:openExternal 仅允许 https */
 export const httpsUrlSchema = z.string().startsWith('https://', '仅允许 https 链接')
 

@@ -47,5 +47,11 @@
   "oneClickRender": "ワンクリックレンダリング",
   "preview": "プレビュー",
   "clear": "出力をクリア",
-  "renderResults": "レンダリング結果"
+  "renderResults": "レンダリング結果",
+  "pdfReport": "設計レポート (PDF)",
+  "pdfReportDesc": "全体設計案のレポート",
+  "roomLayout": "機房レイアウト (PNG)",
+  "roomLayoutDesc": "機櫃・機房全体の平面図",
+  "rackImages": "ラック搭載図 (PNG)",
+  "rackImagesDesc": "各ラック内の機器搭載図"
 }

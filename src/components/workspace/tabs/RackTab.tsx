@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRackStore, CABINET_TYPE_LABELS, type CabinetType, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useToastStore } from '@/stores/toast.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
 import { RackPowerHeatView } from '@/components/rack/RackPowerHeatView'
 import { RackMultiCompareView } from '@/components/rack/RackMultiCompareView'
@@ -49,9 +50,11 @@ export function RackTab({ cabinetId }: Props) {
   const placeDevice = useRackStore((s) => s.placeDevice)
   const removeDevice = useRackStore((s) => s.removeDevice)
   const updateCabinet = useRackStore((s) => s.updateCabinet)
+  const applyCabinetTemplate = useRackStore((s) => s.applyCabinetTemplate)
   const selectCabinet = useRackStore((s) => s.selectCabinet)
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
   const getPowerUsage = useRackStore((s) => s.getPowerUsage)
+  const addToast = useToastStore((s) => s.addToast)
 
   const [selectedUnplaced, setSelectedUnplaced] = useState<string | null>(null)
   const [showUnplaced, setShowUnplaced] = useState(true)
@@ -215,6 +218,25 @@ export function RackTab({ cabinetId }: Props) {
           <span className="text-2xs text-gray-400 dark:text-gray-500">
             {cabinet.totalU}U · {t('rackTab.devices', { count: cabinet.devices.length })}
           </span>
+          {/* 打磨轮（v1.5 / AL-R1d）：把当前柜 U 位布局/功率应用到所有同类柜 */}
+          <button
+            type="button"
+            onClick={() => {
+              const sameType = cabinets.filter((c) => c.type === cabinet.type && c.id !== cabinet.id).length
+              if (sameType === 0) {
+                addToast('warning', '无同类机柜可应用', 4000)
+                return
+              }
+              if (!window.confirm(`将当前柜的 U 位布局/功率上限应用到 ${sameType} 个同类柜？`)) return
+              const r = applyCabinetTemplate(cabinet.id)
+              markDirty()
+              addToast('success', `已应用到同类柜：对齐 ${r.applied} 处，跳过 ${r.skipped} 处`, 4000)
+            }}
+            className="px-1.5 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 shrink-0"
+            title={t('rack:applyToSameType', '应用到所有同类柜（U 位布局/功率上限）')}
+          >
+            {t('rack:applyToSameType', '应用到同类柜')}
+          </button>
         </div>
 
         <div className="flex items-center gap-3">

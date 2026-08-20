@@ -410,4 +410,79 @@ describe('RackStore', () => {
       expect(s.selectedCabinetId).toBeNull()
     })
   })
+
+  // ===== 打磨轮（v1.5 / AL-R1d）：批量应用到同类柜 =====
+
+  describe('applyCabinetTemplate', () => {
+    const gpuCab = (id: number, name: string, device: { startU: number; endU: number }) => ({
+      id, name, totalU: 42, type: 'gpu' as const, power_limit: 6000,
+      devices: [{ id: `gpu-${id}`, name: `GPU服务器_${id}`, type: 'GPU Server', cabinetId: id, ...device, power_watts: 1000 }],
+    })
+
+    it('把源柜 U 位布局应用到同类柜（同类型设备对齐）', () => {
+      useRackStore.setState({
+        cabinets: [
+          gpuCab(1, '机柜 A1', { startU: 2, endU: 9 }),
+          gpuCab(2, '机柜 A2', { startU: 20, endU: 27 }),
+          { id: 3, name: '机柜 B1', totalU: 42, type: 'network' as const, power_limit: 6000, devices: [] },
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(r.applied).toBe(1)
+      const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
+      expect(target.devices[0].startU).toBe(2)
+      expect(target.devices[0].endU).toBe(9)
+      // 网络柜不受影响
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 3)!.devices).toHaveLength(0)
+    })
+
+    it('目标槽位冲突则跳过', () => {
+      useRackStore.setState({
+        cabinets: [
+          gpuCab(1, '机柜 A1', { startU: 2, endU: 9 }),
+          {
+            id: 2, name: '机柜 A2', totalU: 42, type: 'gpu' as const, power_limit: 6000,
+            devices: [
+              { id: 'gpu-2', name: 'GPU服务器_2', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 8, power_watts: 1000 },
+              { id: 'sw-1', name: '交换机_1', type: 'Switch', cabinetId: 2, startU: 10, endU: 10, power_watts: 300 },
+            ],
+          },
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(r.applied).toBe(0)
+      expect(r.skipped).toBeGreaterThan(0)
+    })
+  })
+
+  // ===== 打磨轮（v1.5 / AL-R1e）：跨柜移动功率校验 =====
+
+  describe('moveDevice 功率校验', () => {
+    it('跨柜移动超目标柜功率上限被拒', () => {
+      useRackStore.setState({
+        cabinets: [
+          { id: 1, name: '机柜 A1', totalU: 42, type: 'gpu', power_limit: 6000,
+            devices: [{ id: 'gpu-1', name: 'GPU服务器_1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 5000 }] },
+          { id: 2, name: '机柜 A2', totalU: 42, type: 'gpu', power_limit: 6000,
+            devices: [{ id: 'gpu-2', name: 'GPU服务器_2', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 8, power_watts: 4000 }] },
+        ],
+      })
+      // 5000W → 已用 4000W 的柜（上限 6000）→ 超限
+      const ok = useRackStore.getState().moveDevice('gpu-1', 1, 2, 10)
+      expect(ok).toBe(false)
+    })
+
+    it('功率充足时允许跨柜移动', () => {
+      useRackStore.setState({
+        cabinets: [
+          { id: 1, name: '机柜 A1', totalU: 42, type: 'gpu', power_limit: 6000,
+            devices: [{ id: 'gpu-1', name: 'GPU服务器_1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 1000 }] },
+          { id: 2, name: '机柜 A2', totalU: 42, type: 'gpu', power_limit: 6000, devices: [] },
+        ],
+      })
+      const ok = useRackStore.getState().moveDevice('gpu-1', 1, 2, 1)
+      expect(ok).toBe(true)
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.devices).toHaveLength(1)
+    })
+  })
 })

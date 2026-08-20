@@ -47,5 +47,11 @@
   "oneClickRender": "一鍵渲染",
   "preview": "預覽",
   "clear": "清除輸出",
-  "renderResults": "渲染結果"
+  "renderResults": "渲染結果",
+  "pdfReport": "設計報告 (PDF)",
+  "pdfReportDesc": "整網設計方案報告",
+  "roomLayout": "機房佈局圖 (PNG)",
+  "roomLayoutDesc": "機櫃機房整體-機櫃佈局圖",
+  "rackImages": "櫃上架圖 (PNG)",
+  "rackImagesDesc": "每個機櫃內設備上架圖"
 }

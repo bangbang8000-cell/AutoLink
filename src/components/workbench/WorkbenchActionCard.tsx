@@ -5,8 +5,10 @@ import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
+import { useUIStore } from '@/stores/ui.store'
 import { useToastStore } from '@/stores/toast.store'
 import { exportTopologyPng } from '@/utils/exportTopology'
+import { roomLayoutArt, rackElevationSvg, rackElevationSize, svgToPngBase64 } from '@/utils/exportGraphics'
 
 // V2.9.1-T4: IPC 动态返回结构类型化（避免 any）
 interface RenderProgressData {
@@ -15,11 +17,8 @@ interface RenderProgressData {
   progress?: number
 }
 
-interface ExportConnectionsResult {
-  data?: {
-    results?: { type?: string; file?: string }[]
-  }
-}
+// 打磨轮（v1.5 / AL-O1c）：由后端 Python 生成的材料类型（一次 export 调用合并）
+const PYTHON_TYPES = ['connections', 'deviceList', 'cablingGuide', 'bom', 'pdfReport']
 
 export function WorkbenchActionCard() {
   const { t } = useTranslation()
@@ -32,6 +31,7 @@ export function WorkbenchActionCard() {
     setProgress, addResult, clearResults, resetProgress, deleteOutput,
   } = useRenderStore()
   const addToast = useToastStore((s) => s.addToast)
+  const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   const isRendering = progress.status === 'rendering'
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -65,6 +65,8 @@ export function WorkbenchActionCard() {
     }
   }, [setProgress])
 
+  // 打磨轮（v1.5 / AL-O1c）：一键渲染全部材料——Python 类型一次调用合并 → 版本批次目录；
+  // 前端产物（上机表/拓扑图/布局图/柜图）写入同一批次；分步进度按实际产物动态计数。
   const handleRender = useCallback(async () => {
     if (!selectedProjectName && !batchMode) {
       addToast('warning', t('common:toast.selectProjectFirst'))
@@ -80,11 +82,11 @@ export function WorkbenchActionCard() {
     clearResults()
     setProgress({ status: 'rendering', message: '开始渲染...', progress: 0 })
 
-    const totalSteps =
-      (selectedOutputTypes.includes('connections') ? projects.length : 0) +
-      (selectedOutputTypes.includes('rackTable') ? projects.length : 0) +
-      (selectedOutputTypes.includes('topology') ? projects.length : 0) +
-      (selectedOutputTypes.includes('deviceList') ? projects.length : 0)
+    const pythonTypes = selectedOutputTypes.filter((t) => PYTHON_TYPES.includes(t))
+    const frontendTypes = selectedOutputTypes.filter((t) => !PYTHON_TYPES.includes(t))
+    // 每项目步数 = Python 合并 1 步 + 前端每类型 1 步
+    const stepsPerProject = (pythonTypes.length > 0 ? 1 : 0) + frontendTypes.length
+    const totalSteps = projects.length * Math.max(stepsPerProject, 1)
     let completedSteps = 0
 
     const updateProgress = () => {
@@ -95,107 +97,102 @@ export function WorkbenchActionCard() {
       })
     }
 
-    for (let i = 0; i < projects.length; i++) {
-      const projectName = projects[i]
+    const nowIso = () => new Date().toISOString()
+    const batchRel = (batch: string | undefined, file: string) =>
+      `output/${batch ? `${batch}/` : ''}${file}`
 
+    for (const projectName of projects) {
+      let batchName: string | undefined
       try {
-        // 1. Export connections table (via Python engine)
-        if (selectedOutputTypes.includes('connections')) {
-          setProgress({ message: `[${projectName}] 生成连接关系表...` })
+        // 1. Python 基础材料（连接/设备/布线/BOM/PDF 一次调用，产出版本批次目录）
+        if (pythonTypes.length > 0) {
+          setProgress({ message: `[${projectName}] 生成基础表项与报告...` })
           try {
-            const result = await window.electron.render.exportConnections(projectName, ['connections'])
-            const data = result as ExportConnectionsResult
-            const file = data?.data?.results?.[0]?.file || `${projectName}/output/连接关系表.xlsx`
-            addResult({
-              type: 'connections',
-              file: typeof file === 'string' ? file : `${projectName}/output/连接关系表.xlsx`,
-              status: 'success',
-              timestamp: new Date().toISOString(),
-            })
+            const result = await window.electron.render.exportConnections(projectName, pythonTypes)
+            const data = result as { batchName?: string; version?: number; results?: { type?: string; file?: string; status?: string }[] }
+            batchName = data?.batchName
+            for (const r of data?.results ?? []) {
+              if (!r.type) continue
+              addResult({
+                type: r.type,
+                file: r.file ?? '',
+                status: r.status === 'success' ? 'success' : 'error',
+                error: r.status === 'success' ? undefined : `生成 ${r.type} 失败`,
+                timestamp: nowIso(),
+              })
+            }
           } catch (err) {
-            addResult({
-              type: 'connections',
-              file: `${projectName}/output/连接关系表.xlsx`,
-              status: 'error',
-              error: (err as Error).message,
-              timestamp: new Date().toISOString(),
-            })
+            addToast('error', t('common:toast.renderFailed', { project: projectName, error: (err as Error).message }))
           }
           updateProgress()
         }
 
-        // 2. Export rack table (via rack.store frontend xlsx)
-        if (selectedOutputTypes.includes('rackTable') && cabinets.length > 0) {
+        // 2. 上机表（前端 XLSX → 批次目录）
+        if (frontendTypes.includes('rackTable') && cabinets.length > 0) {
           setProgress({ message: `[${projectName}] 生成上机表...` })
           try {
-            const filePath = await exportToExcel(projectName)
+            const filePath = await exportToExcel(projectName, batchName)
             addResult({
               type: 'rackTable',
-              file: filePath || `${projectName}/output/上机表.xlsx`,
+              file: filePath || batchRel(batchName, '上机表.xlsx'),
               status: filePath ? 'success' : 'error',
               error: filePath ? undefined : '导出失败',
-              timestamp: new Date().toISOString(),
+              timestamp: nowIso(),
             })
           } catch (err) {
-            addResult({
-              type: 'rackTable',
-              file: `${projectName}/output/上机表.xlsx`,
-              status: 'error',
-              error: (err as Error).message,
-              timestamp: new Date().toISOString(),
-            })
+            addResult({ type: 'rackTable', file: batchRel(batchName, '上机表.xlsx'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
         }
 
-        // 3. Export topology PNG (via ECharts utility)
-        if (selectedOutputTypes.includes('topology') && topology) {
+        // 3. 拓扑图（前端 ECharts → 批次目录）
+        if (frontendTypes.includes('topology') && topology) {
           setProgress({ message: `[${projectName}] 生成拓扑图...` })
           try {
             const base64 = await exportTopologyPng(topology.nodes, topology.edges)
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-            const fileName = `组网拓扑图_${timestamp}.png`
-            const filePath = await window.electron?.export?.saveFile(projectName, fileName, base64)
-            addResult({
-              type: 'topology',
-              file: filePath || `${projectName}/output/${fileName}`,
-              status: filePath ? 'success' : 'error',
-              error: filePath ? undefined : '保存失败',
-              timestamp: new Date().toISOString(),
-            })
+            const fileName = '组网拓扑图.png'
+            const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, fileName), base64)
+            addResult({ type: 'topology', file: filePath || batchRel(batchName, fileName), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
           } catch (err) {
-            addResult({
-              type: 'topology',
-              file: `${projectName}/output/组网拓扑图.png`,
-              status: 'error',
-              error: (err as Error).message,
-              timestamp: new Date().toISOString(),
-            })
+            addResult({ type: 'topology', file: batchRel(batchName, '组网拓扑图.png'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
         }
 
-        // 4. Export device list (via Python engine)
-        if (selectedOutputTypes.includes('deviceList')) {
-          setProgress({ message: `[${projectName}] 生成设备清单...` })
+        // 4. 机房-机柜布局图（roomLayoutArt → PNG → 批次目录）
+        if (frontendTypes.includes('roomLayout')) {
+          setProgress({ message: `[${projectName}] 生成机房布局图...` })
           try {
-            const result = await window.electron.render.exportConnections(projectName, ['deviceList'])
-            const data = result as ExportConnectionsResult
-            const file = data?.data?.results?.find((r) => r.type === 'deviceList')?.file
-            addResult({
-              type: 'deviceList',
-              file: file || `${projectName}/output/设备清单.xlsx`,
-              status: file ? 'success' : 'error',
-              timestamp: new Date().toISOString(),
-            })
+            const art = roomLayoutArt()
+            if (!art) {
+              addResult({ type: 'roomLayout', file: batchRel(batchName, '机房布局图.png'), status: 'error', error: '未定义机房矩阵', timestamp: nowIso() })
+            } else {
+              const base64 = await svgToPngBase64(art.svg, art.width, art.height)
+              const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, '机房布局图.png'), base64)
+              addResult({ type: 'roomLayout', file: filePath || batchRel(batchName, '机房布局图.png'), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
+            }
           } catch (err) {
-            addResult({
-              type: 'deviceList',
-              file: `${projectName}/output/设备清单.xlsx`,
-              status: 'error',
-              error: (err as Error).message,
-              timestamp: new Date().toISOString(),
-            })
+            addResult({ type: 'roomLayout', file: batchRel(batchName, '机房布局图.png'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
+          }
+          updateProgress()
+        }
+
+        // 5. 每柜上架图（rackElevationSvg → PNG → racks/ 子目录）
+        if (frontendTypes.includes('rackImages') && cabinets.length > 0) {
+          setProgress({ message: `[${projectName}] 生成柜上架图...` })
+          try {
+            let saved = 0
+            for (const cab of cabinets) {
+              const svg = rackElevationSvg(cab)
+              const size = rackElevationSize(cab)
+              const base64 = await svgToPngBase64(svg, size.width, size.height)
+              const safeName = cab.name.replace(/[^\w一-龥-]/g, '_') || `R${cab.id}`
+              await window.electron.render.saveOutputFile(projectName, batchRel(batchName, `racks/${safeName}.png`), base64)
+              saved++
+            }
+            addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: saved > 0 ? 'success' : 'error', error: saved > 0 ? undefined : '无柜可导出', timestamp: nowIso() })
+          } catch (err) {
+            addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
         }
@@ -206,10 +203,11 @@ export function WorkbenchActionCard() {
 
     setProgress({ status: 'complete', message: '渲染完成', progress: 100 })
     addToast('success', t('common:toast.renderComplete'))
+    useProjectStore.getState().fetchProjects()
   }, [
     selectedProjectName, batchMode, batchProjects, selectedOutputTypes,
     cabinets, topology, exportToExcel,
-    setProgress, addResult, clearResults, addToast,
+    setProgress, addResult, clearResults, addToast, t,
   ])
 
   const handleClear = useCallback(() => {
@@ -274,7 +272,7 @@ export function WorkbenchActionCard() {
           </button>
 
           <button
-            onClick={() => addToast('info', t('common:toast.previewInProgress'))}
+            onClick={() => setWorkbenchSubview('results')}
             className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
           >
             <Eye size={13} />

@@ -39,5 +39,12 @@
     "dragHint": "キャビネットをマトリクスへドラッグして配置。配置済みキャビネットを別セルへドラッグで移動",
     "noCabinets": "キャビネットが未登録です。トポロジを描画またはキャビネットをインポートしてください",
     "typePower": "電源キャビネット"
-  }
+  },
+  "rackDesign": "ラック設計",
+  "segmentLayout": "① 機房-ラック配置",
+  "segmentRacks": "② ラック内配置",
+  "autoCompose": "自動配置デフォルト",
+  "applyMatrix": "マトリクス適用",
+  "rackOptimize": "ラック内最適配置",
+  "applyToSameType": "同種ラックに適用"
 }

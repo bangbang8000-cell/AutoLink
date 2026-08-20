@@ -39,5 +39,12 @@
     "dragHint": "拖曳機櫃到矩陣上架；已上架機櫃拖到其他格可移動",
     "noCabinets": "暫無已匯入機櫃，請先渲染拓撲或匯入機櫃",
     "typePower": "電源櫃"
-  }
+  },
+  "rackDesign": "機櫃設計",
+  "segmentLayout": "① 機房-機櫃佈局",
+  "segmentRacks": "② 櫃內設備佈放",
+  "autoCompose": "自動佈點默認配比",
+  "applyMatrix": "按矩陣自動落位",
+  "rackOptimize": "櫃內智能落位",
+  "applyToSameType": "應用到同類櫃"
 }

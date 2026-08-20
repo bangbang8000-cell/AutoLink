@@ -170,7 +170,8 @@ const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; stage: string; label: st
   { id: 'main', stage: '③渲染', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
   { id: 'visualization', stage: '④校对', label: '拓扑', icon: <Network size={13} className="text-info-500" /> },
   { id: 'rack', stage: '④校对', label: '机柜', icon: <Database size={13} className="text-purple-500" /> },
-  { id: 'results', stage: '④校对', label: '渲染结果', icon: <FileCheck2 size={13} className="text-info-500" /> },
+  // 打磨轮（v1.5 / AL-O1a）：「输出结果」独立一级入口（材料树 + 预览 + 导出/删除/清空）
+  { id: 'results', stage: '④校对', label: '输出结果', icon: <FileCheck2 size={13} className="text-info-500" /> },
   { id: 'export', stage: '⑤归档', label: '导出', icon: <Download size={13} className="text-success-500" /> },
 ]
 
