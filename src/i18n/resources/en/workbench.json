@@ -56,7 +56,7 @@
   "rackImagesDesc": "Per-cabinet device elevation",
   "stepConfig": "Configure & Ready",
   "stepRender": "Render Materials & Actions",
-  "stepResult": "Render Results",
+  "stepResult": "Render Output",
   "output.title": "Output",
   "output.projectLabel": "Select project",
   "output.batches": "{{count}} batches · {{files}} files",

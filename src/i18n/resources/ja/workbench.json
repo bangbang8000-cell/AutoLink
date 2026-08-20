@@ -56,7 +56,7 @@
   "rackImagesDesc": "各ラック内の機器搭載図",
   "stepConfig": "設定と準備",
   "stepRender": "レンダリング材料と操作",
-  "stepResult": "レンダリング結果",
+  "stepResult": "レンダリング出力",
   "output.title": "出力結果",
   "output.projectLabel": "プロジェクト選択",
   "output.batches": "{{count}} バッチ · {{files}} ファイル",
