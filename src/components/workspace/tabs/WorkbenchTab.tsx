@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2 } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
-import { useUIStore } from '@/stores/ui.store'
+import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -18,6 +18,17 @@ import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
+
+/** 打磨轮（v1.6 / AL-T1b）：工作台二级页签标签（对齐 v1.6 命名） */
+const SUBVIEW_LABELS: Record<string, string> = {
+  aidc: 'AIDC 规划',
+  design: '组网设计',
+  rack: '机柜设计',
+  main: '组网渲染',
+  visualization: '拓扑',
+  results: '本项目输出',
+  export: '导出',
+}
 
 /** 打磨轮（v1.4）：机柜子视图——平面矩阵一览（DataCenterLayout）+ 逐柜微调（RackTab），双向联动 */
 function RackWorkbenchView({ projectName }: { projectName: string }) {
@@ -237,15 +248,24 @@ function ExportView({ projectName }: { projectName: string }) {
 
 export function WorkbenchTab() {
   const { t } = useTranslation()
+  const projects = useProjectStore((s) => s.projects)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const selectProject = useProjectStore((s) => s.selectProject)
   const addToast = useToastStore((s) => s.addToast)
   const subview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
+  const setActiveActivity = useUIStore((s) => s.setActiveActivity)
 
   const [aidcProjects, setAidcProjects] = useState<string[]>([])
   const [newAidcName, setNewAidcName] = useState('')
   const [creating, setCreating] = useState(false)
+  // 打磨轮（v1.6 / AL-T1a）：工作台二级页签——访问过的子视图保留（keep-alive 保留状态）
+  const [openedSubviews, setOpenedSubviews] = useState<WorkbenchSubview[]>(['main'])
+
+  // 打开新子视图 → 记入二级页签
+  useEffect(() => {
+    setOpenedSubviews((prev) => (prev.includes(subview) ? prev : [...prev, subview]))
+  }, [subview])
 
   // 加载 AIDC 项目名（判断当前项目类型）
   useEffect(() => {
@@ -287,11 +307,46 @@ export function WorkbenchTab() {
   }, [newAidcName, addToast, selectProject])
 
   if (!selectedProjectName) {
+    // 打磨轮（v1.6 / AL-N1a）：无项目 → 项目引导面板（选择默认项目 / 引导到项目面板新建导入）
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <Zap size={48} className="text-gray-300 dark:text-gray-600 mb-3" />
-        <p className="text-sm text-gray-400 dark:text-gray-500 mb-1">{t('workbench:title')}</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">{t('workbench:noProject')}</p>
+      <div className="h-full overflow-auto p-6">
+        <div className="max-w-md mx-auto mt-10">
+          <div className="flex flex-col items-center text-center mb-6">
+            <Zap size={40} className="text-primary-400 mb-2" />
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">欢迎使用 AutoLink</p>
+            <p className="text-xs text-gray-400 mt-1">选择一个项目开始组网设计；或到「项目」面板新建/导入模板。</p>
+          </div>
+          {projects.length > 0 && (
+            <div className="mb-4">
+              <p className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">选择一个项目作为当前项目：</p>
+              <div className="space-y-1">
+                {projects.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => selectProject(p)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-left transition-colors"
+                  >
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{p.name}</span>
+                    <span className="ml-auto text-2xs text-gray-400 shrink-0">{p.updatedAt ? p.updatedAt.slice(0, 10) : ''}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2 justify-center">
+            <button
+              type="button"
+              onClick={() => setActiveActivity('project')}
+              className="px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+            >
+              前往项目面板（新建 / 导入）
+            </button>
+          </div>
+          {projects.length === 0 && (
+            <p className="text-center text-2xs text-gray-400 mt-3">暂无项目，请在「项目」面板新建或从模板导入。</p>
+          )}
+        </div>
       </div>
     )
   }
@@ -310,12 +365,54 @@ export function WorkbenchTab() {
         </span>
       </div>
 
-      {/* 打磨轮（v1.2）：子视图切换按钮已移至中栏（WorkbenchExplorer）；工作区仅渲染对应界面 */}
+      {/* 打磨轮（v1.6 / AL-T1b）：工作台二级页签栏（访问过的子视图保留，快速切换/关闭） */}
+      <div className="flex items-center gap-0.5 px-3 py-1 border-b border-gray-200 dark:border-edge-subtle bg-gray-50/60 dark:bg-app/40 overflow-x-auto shrink-0">
+        {openedSubviews.map((sv) => {
+          const active = sv === subview
+          return (
+            <div
+              key={sv}
+              className={`flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-2xs rounded-t border-t border-x transition-colors shrink-0 ${active ? 'bg-white dark:bg-app border-gray-200 dark:border-edge-subtle text-primary-600 dark:text-primary-400 font-medium' : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'}`}
+            >
+              <button type="button" onClick={() => setWorkbenchSubview(sv)} className="shrink-0">
+                {SUBVIEW_LABELS[sv] ?? sv}
+              </button>
+              {openedSubviews.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = openedSubviews.filter((x) => x !== sv)
+                    setOpenedSubviews(next)
+                    if (active) setWorkbenchSubview(next[next.length - 1] ?? 'main')
+                  }}
+                  className="shrink-0 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  title="关闭"
+                >
+                  <X size={10} />
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
 
-      {/* 内容区 */}
+      {/* 内容区（keep-alive：隐藏非激活页签，保留各子视图状态） */}
       <div className="flex-1 overflow-auto p-4">
-        {/* ===== 常规渲染 ===== */}
-        {subview === 'main' && (
+        {openedSubviews.map((sv) => (
+          <div key={sv} className={sv === subview ? '' : 'hidden'}>
+            {renderSubview(sv)}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  function renderSubview(sv: WorkbenchSubview): React.ReactNode {
+    // 闭包内 TS 不继承外层 early-return 的收窄；early-return 已保证非空
+    const project = selectedProjectName!
+    switch (sv) {
+      case 'main':
+        return (
           <>
             <div className="bg-white dark:bg-app-elevated border border-gray-200 dark:border-edge-subtle rounded-lg p-4 mb-4 flex items-center gap-4">
               <div className="p-2 rounded-lg bg-warning-100 dark:bg-warning-900/30">
@@ -331,7 +428,6 @@ export function WorkbenchTab() {
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">Ready</span>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4 mb-4">
               <WorkbenchScopeCard />
               <WorkbenchReadinessCard />
@@ -340,16 +436,13 @@ export function WorkbenchTab() {
               <WorkbenchOutputCard />
               <WorkbenchActionCard />
             </div>
-
-            {/* 渲染进度已由 ActionCard 内展示（v1.5 进度唯一化） */}
             <div>
               <WorkbenchResultCard />
             </div>
           </>
-        )}
-
-        {/* ===== AIDC 规划 ===== */}
-        {subview === 'aidc' && (
+        )
+      case 'aidc':
+        return (
           <div>
             {!isAidc && (
               <div className="mb-3 p-3 border rounded bg-warning-50/60 dark:bg-warning-900/20 text-xs text-gray-600 dark:text-gray-300">
@@ -368,25 +461,19 @@ export function WorkbenchTab() {
                 <Plus size={12} /> 新建 AIDC 项目
               </button>
             </div>
-            <AidcPlannerPanel boundProjectName={selectedProjectName} />
+            <AidcPlannerPanel boundProjectName={project} />
           </div>
-        )}
-
-        {/* ===== 设计 ===== */}
-        {/* ===== 输出结果（v1.5：统一材料树 + 预览三态 + 导出/删除/清空） ===== */}
-        {subview === 'results' && <OutputResultsView projectName={selectedProjectName} />}
-
-        {subview === 'design' && <DesignTab />}
-
-        {/* ===== 可视化 ===== */}
-        {subview === 'visualization' && <TopologyTab />}
-
-        {/* ===== 机柜（v1.4：机房矩阵默认配比 + RackTab 微调） ===== */}
-        {subview === 'rack' && <RackWorkbenchView projectName={selectedProjectName} />}
-
-        {/* ===== 归档/导出（v1.3） ===== */}
-        {subview === 'export' && <ExportView projectName={selectedProjectName} />}
-      </div>
-    </div>
-  )
+        )
+      case 'results':
+        return <OutputResultsView projectName={project} />
+      case 'design':
+        return <DesignTab />
+      case 'visualization':
+        return <TopologyTab />
+      case 'rack':
+        return <RackWorkbenchView projectName={project} />
+      case 'export':
+        return <ExportView projectName={project} />
+    }
+  }
 }

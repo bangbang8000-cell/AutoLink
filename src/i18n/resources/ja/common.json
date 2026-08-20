@@ -278,7 +278,8 @@
       "checkUpdateFailed": "更新の確認に失敗しました",
       "guideLoadFailed": "ユーザーガイドを読み込めませんでした"
     },
-    "aidcPlan": "AIDC プラン"
+    "aidcPlan": "AIDC プラン",
+    "output": "出力結果"
   },
   "theme": {
     "light": "ライト",

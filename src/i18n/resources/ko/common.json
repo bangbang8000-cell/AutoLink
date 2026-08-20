@@ -278,7 +278,8 @@
       "checkUpdateFailed": "업데이트 확인 실패",
       "guideLoadFailed": "사용자 가이드를 불러올 수 없습니다"
     },
-    "aidcPlan": "AIDC 계획"
+    "aidcPlan": "AIDC 계획",
+    "output": "출력 결과"
   },
   "theme": {
     "light": "라이트",

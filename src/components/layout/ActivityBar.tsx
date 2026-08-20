@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search,
+  FolderOpen, Zap, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search, Files,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -20,6 +20,8 @@ const ACTIVITIES: ActivityItem[] = [
   { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
   { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
   { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
+  // 打磨轮（v1.6 / AL-O2a）：输出结果一级入口（全部项目）
+  { id: 'output', icon: <Files size={20} />, labelKey: 'menu.output', shortcut: 'Ctrl+Shift+O' },
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
 ]
@@ -38,6 +40,8 @@ const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
   ai: { icon: 'text-fuchsia-500 dark:text-fuchsia-400', bar: 'bg-fuchsia-500' },
   // V3.3.0-T13: 云中心
   cloud: { icon: 'text-cyan-500 dark:text-cyan-400', bar: 'bg-cyan-500' },
+  // 打磨轮（v1.6 / AL-O2a）：输出结果（全部项目）
+  output: { icon: 'text-amber-500 dark:text-amber-400', bar: 'bg-amber-500' },
   settings: { icon: 'text-gray-500 dark:text-gray-400', bar: 'bg-gray-500' },
 }
 

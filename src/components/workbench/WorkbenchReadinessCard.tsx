@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
+import { useRoomStore } from '@/stores/room.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 
@@ -15,6 +16,7 @@ export function WorkbenchReadinessCard() {
   const validate = useDesignStore((s) => s.validate)
   const cabinets = useRackStore((s) => s.cabinets)
   const unplacedDevices = useRackStore((s) => s.unplacedDevices)
+  const matrix = useRoomStore((s) => s.matrix)
   const addToast = useToastStore((s) => s.addToast)
 
   const [validatingTopo, setValidatingTopo] = useState(false)
@@ -22,6 +24,9 @@ export function WorkbenchReadinessCard() {
   const totalDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0) + unplacedDevices.length
   const placedDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0)
   const rackReady = totalDevices > 0 && placedDevices === totalDevices
+  // 打磨轮（v1.6 / AL-N1d）：机柜设计就绪 = 有矩阵 + 有柜；渲染门禁 = 组网设计 valid + 机柜设计就绪
+  const rackDesignReady = !!matrix && cabinets.length > 0
+  const renderReady = valid === true && rackDesignReady
 
   const handleValidate = useCallback(async () => {
     if (!selectedProjectName) return
@@ -67,7 +72,7 @@ export function WorkbenchReadinessCard() {
             <AlertTriangle size={12} className="text-gray-400 shrink-0" />
           )}
           <span className="text-gray-500 dark:text-gray-400">
-            {t('workbench:topologyStatus')}:
+            {t('workbench:networkDesign', '组网设计')}:
           </span>
           <span className={
             valid === true
@@ -99,7 +104,7 @@ export function WorkbenchReadinessCard() {
             <AlertTriangle size={12} className="text-gray-400 shrink-0" />
           )}
           <span className="text-gray-500 dark:text-gray-400">
-            {t('workbench:rackStatus')}:
+            {t('workbench:rackDesign', '机柜设计')}:
           </span>
           <span className={
             rackReady
@@ -113,6 +118,21 @@ export function WorkbenchReadinessCard() {
               : rackReady
                 ? t('workbench:rackComplete')
                 : `${placedDevices}/${totalDevices} ${t('workbench:rackPartially')}`}
+          </span>
+        </div>
+
+        {/* 打磨轮（v1.6 / AL-N1d）：可渲染总览（依赖门禁） */}
+        <div className="flex items-center gap-2 text-xs pt-1 border-t border-gray-100 dark:border-edge-subtle">
+          {renderReady ? (
+            <CheckCircle size={12} className="text-success-500 shrink-0" />
+          ) : (
+            <AlertTriangle size={12} className="text-warning-500 shrink-0" />
+          )}
+          <span className="text-gray-600 dark:text-gray-300 font-medium">
+            {t('workbench:renderReady', '可渲染（组网设计 + 机柜设计）')}:
+          </span>
+          <span className={renderReady ? 'text-success-600 dark:text-success-400 font-medium' : 'text-warning-600 dark:text-warning-400'}>
+            {renderReady ? t('workbench:topologyComplete', '就绪') : '未就绪'}
           </span>
         </div>
       </div>

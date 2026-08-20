@@ -278,7 +278,8 @@
       "checkUpdateFailed": "检查更新失败",
       "guideLoadFailed": "无法加载用户指南"
     },
-    "aidcPlan": "AIDC 规划"
+    "aidcPlan": "AIDC 规划",
+    "output": "输出结果"
   },
   "theme": {
     "light": "亮色",

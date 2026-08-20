@@ -133,6 +133,8 @@ function AppearanceSettings() {
   const setAccent = useUIStore((s) => s.setAccent)
   const [fontSize, setFontSize] = useLocalStorage('autolink-font-size', 14)
   const [animations, setAnimations] = useLocalStorage('autolink-animations', true)
+  // 打磨轮（v1.6 / AL-N1b）：启动行为（last=恢复上次项目 / ask=每次询问）
+  const [launchBehavior, setLaunchBehavior] = useLocalStorage('autolink-launch-behavior', 'last')
 
   // v2.7.3-T11: 实时应用外观设置(启动时由 App.tsx 应用,此处处理用户交互)
   useEffect(() => {
@@ -194,6 +196,15 @@ function AppearanceSettings() {
 
       <SettingsRow label={t('common:explorer.settings.appearance.animations')}>
         <Toggle checked={animations} onChange={setAnimations} />
+      </SettingsRow>
+
+      {/* 打磨轮（v1.6 / AL-N1b）：启动行为 */}
+      <SettingsRow label={t('common:explorer.settings.appearance.launchBehavior', '启动时：')}>
+        <select value={launchBehavior} onChange={(e) => setLaunchBehavior(e.target.value)}
+          className={INPUT_CLASS}>
+          <option value="last">{t('common:explorer.settings.appearance.launchLast', '恢复上次项目')}</option>
+          <option value="ask">{t('common:explorer.settings.appearance.launchAsk', '每次询问选择项目')}</option>
+        </select>
       </SettingsRow>
       <GroupReset group="appearance" />
     </SettingsSection>

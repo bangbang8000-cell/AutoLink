@@ -134,14 +134,19 @@ export default function App() {
         await fetchProjects()
         console.log('[App] Projects loaded successfully')
 
-        // Session restore: auto-select previously selected project
+        // 打磨轮（v1.6 / AL-N1a/N1b）：启动恢复上次项目（行为='ask' 时每次询问 → 不清空选择但显示引导）
         const state = useProjectStore.getState()
-        if (state.selectedProjectName) {
+        const launchBehavior = (() => { try { return localStorage.getItem('autolink-launch-behavior') } catch { return null } })()
+        if (state.selectedProjectName && launchBehavior !== 'ask') {
           const project = state.projects.find((p) => p.name === state.selectedProjectName)
           if (project) {
             state.selectProject(project)
             console.log('[App] Session restored: auto-selected project', state.selectedProjectName)
           }
+        } else if (launchBehavior === 'ask') {
+          // 每次询问：清空选择 → 工作台显示项目引导面板
+          state.selectProject(null)
+          console.log('[App] Launch behavior = ask: showing project picker')
         }
       } catch {
         retries++
@@ -162,7 +167,7 @@ export default function App() {
     setActiveActivity(activity)
     const config = WORKSPACE_TAB_CONFIG[activity]
     if (config) {
-      let title = t(config.titleKey)
+      const title = t(config.titleKey)
       openTab({ type: config.type, title, closable: config.closable })
     }
   }, [openTab, setActiveActivity, t])

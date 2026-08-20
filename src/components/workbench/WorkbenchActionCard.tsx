@@ -4,6 +4,7 @@ import { Play, Eye, Trash2, Loader2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
+import { useRoomStore } from '@/stores/room.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useUIStore } from '@/stores/ui.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -24,7 +25,9 @@ export function WorkbenchActionCard() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const topology = useDesignStore((s) => s.topology)
+  const designValid = useDesignStore((s) => s.valid)
   const cabinets = useRackStore((s) => s.cabinets)
+  const matrix = useRoomStore((s) => s.matrix)
   const exportToExcel = useRackStore((s) => s.exportToExcel)
   const {
     progress, selectedOutputTypes, batchMode, batchProjects,
@@ -34,6 +37,10 @@ export function WorkbenchActionCard() {
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   const isRendering = progress.status === 'rendering'
+  // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计(拓扑 valid) + 机柜设计(矩阵+柜) 都完成才可渲染
+  const designReady = designValid === true
+  const rackReady = !!matrix && cabinets.length > 0
+  const renderGate = designReady && rackReady
   const cleanupRef = useRef<(() => void) | null>(null)
   const prevStatusRef = useRef(progress.status)
 
@@ -254,11 +261,23 @@ export function WorkbenchActionCard() {
           </div>
         )}
 
+        {/* 打磨轮（v1.6 / AL-N1d）：渲染门禁提示——未就绪时说明缺哪步 */}
+        {!renderGate && !isRendering && (
+          <div className="px-2.5 py-1.5 rounded border border-warning-200 dark:border-warning-800 bg-warning-50/60 dark:bg-warning-900/20 text-2xs text-warning-700 dark:text-warning-300">
+            {t('workbench:renderGateHint', '完成组网设计')}
+            {designReady ? ' ✓' : '（未就绪）'}
+            {' 与 '}
+            {t('workbench:rackDesign', '机柜设计')}
+            {rackReady ? ' ✓' : '（未就绪）'}
+            {' 后即可渲染'}
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleRender}
-            disabled={isRendering || selectedOutputTypes.length === 0}
+            disabled={isRendering || selectedOutputTypes.length === 0 || !renderGate}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isRendering ? (

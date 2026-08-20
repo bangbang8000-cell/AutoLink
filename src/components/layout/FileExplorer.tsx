@@ -7,6 +7,8 @@ import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
+import { OutputExplorer } from '@/components/layout/OutputExplorer'
+import { OutputSection } from '@/components/layout/OutputSection'
 import {
   ChevronRight, ChevronDown,
   AlertTriangle,
@@ -40,6 +42,8 @@ export function FileExplorer() {
     case 'device_library': return <DeviceLibExplorer />
     // V3.3.0-T13: 云中心（v1.2：仅云开关开启时显示）
     case 'cloud':          return cloudEnabled ? <CloudPanel /> : <ProjectExplorer />
+    // 打磨轮（v1.6 / AL-O2a）：输出结果（全部项目）
+    case 'output':         return <OutputExplorer />
     case 'settings':       return <SettingsExplorer />
     default:           return <ProjectExplorer />
   }
@@ -163,16 +167,17 @@ function DesignExplorer() {
   )
 }
 
-// 打磨轮（v1.3）：工作台子视图按流程排序——①规划 ②设计 ③渲染 ④校对（拓扑/机柜/结果）⑤归档导出
+// 打磨轮（v1.6 / AL-N1c）：工作台子视图按流程排序——①规划 ②组网设计（含组网设计+机柜设计）③组网渲染 ④校对/输出 ⑤导出
 const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; stage: string; label: string; icon: React.ReactNode }> = [
   { id: 'aidc', stage: '①规划', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
-  { id: 'design', stage: '②设计', label: '设计', icon: <Wrench size={13} className="text-warning-500" /> },
-  { id: 'main', stage: '③渲染', label: '常规渲染', icon: <Zap size={13} className="text-gray-400" /> },
+  { id: 'design', stage: '②组网设计', label: '组网设计', icon: <Wrench size={13} className="text-warning-500" /> },
+  // 打磨轮（v1.6 / AL-N1c）：机柜设计挂到组网设计组下
+  { id: 'rack', stage: '②组网设计', label: '机柜设计', icon: <Database size={13} className="text-purple-500" /> },
+  { id: 'main', stage: '③组网渲染', label: '组网渲染', icon: <Zap size={13} className="text-gray-400" /> },
   { id: 'visualization', stage: '④校对', label: '拓扑', icon: <Network size={13} className="text-info-500" /> },
-  { id: 'rack', stage: '④校对', label: '机柜', icon: <Database size={13} className="text-purple-500" /> },
-  // 打磨轮（v1.5 / AL-O1a）：「输出结果」独立一级入口（材料树 + 预览 + 导出/删除/清空）
-  { id: 'results', stage: '④校对', label: '输出结果', icon: <FileCheck2 size={13} className="text-info-500" /> },
-  { id: 'export', stage: '⑤归档', label: '导出', icon: <Download size={13} className="text-success-500" /> },
+  // 打磨轮（v1.6 / AL-O2c）：本项目输出留在工作台
+  { id: 'results', stage: '④校对', label: '本项目输出', icon: <FileCheck2 size={13} className="text-info-500" /> },
+  { id: 'export', stage: '⑤导出', label: '导出', icon: <Download size={13} className="text-success-500" /> },
 ]
 
 function WorkbenchExplorer() {
@@ -245,6 +250,16 @@ function WorkbenchExplorer() {
             <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{selectedProjectName}</span>
           </div>
         </div>
+
+        {/* 打磨轮（v1.6 / AL-O2c）：本项目输出——文件列表放中栏，点击在工作区预览 */}
+        {subview === 'results' && (
+          <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
+            <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-app/50 text-2xs font-medium text-gray-500 dark:text-gray-400">
+              本项目输出（点击文件在工作区预览）
+            </div>
+            <OutputSection projects={[{ name: selectedProjectName }]} openTab={openTab} />
+          </div>
+        )}
 
         {/* Readiness */}
         <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-2">

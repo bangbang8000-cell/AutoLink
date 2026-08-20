@@ -11,6 +11,7 @@ export type ActivityType =
   | 'device_library'
   | 'ai'
   | 'cloud'
+  | 'output'           // 打磨轮（v1.6 / AL-O2a）：全部项目输出结果（最左边栏一级入口）
   | 'settings'
 
 export type ThemeMode = 'light' | 'dark' | 'system'

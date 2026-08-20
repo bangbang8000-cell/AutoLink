@@ -278,7 +278,8 @@
       "checkUpdateFailed": "Update check failed",
       "guideLoadFailed": "Failed to load user guide"
     },
-    "aidcPlan": "AIDC Plan"
+    "aidcPlan": "AIDC Plan",
+    "output": "Output"
   },
   "theme": {
     "light": "Light",
