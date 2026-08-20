@@ -5,6 +5,7 @@
  *  - 操作：导出批次 ZIP / 导出全部 / 删单文件 / 删批次 / 清空项目 / 清空全部 / 打开位置
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -57,11 +58,12 @@ function base64ToText(base64: string): string {
 
 /** 预览面板：按扩展名选择 文本 / 表格 / 图形 */
 function PreviewPanel({ preview, fileName }: { preview: PreviewData | null; fileName: string }) {
+  const { t } = useTranslation()
   const ext = preview?.ext ?? ''
   if (!preview) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 text-xs">
-        选择左侧文件进行预览
+        {t('workbench:output.selectToPreview', '选择左侧文件进行预览')}
       </div>
     )
   }
@@ -80,11 +82,11 @@ function PreviewPanel({ preview, fileName }: { preview: PreviewData | null; file
   if (XL_EXTS.has(ext)) {
     const table = xlsxToTable(preview.base64)
     if (!table) {
-      return <div className="flex-1 p-4 text-gray-400 text-xs">表格解析失败（可能为空或损坏）</div>
+      return <div className="flex-1 p-4 text-gray-400 text-xs">{t('workbench:output.xlsxFail', '表格解析失败（可能为空或损坏）')}</div>
     }
     return (
       <div className="flex-1 overflow-auto">
-        <div className="px-3 py-1.5 text-2xs text-gray-400 bg-gray-50 dark:bg-app border-b">{table.name}（前 500 行）</div>
+        <div className="px-3 py-1.5 text-2xs text-gray-400 bg-gray-50 dark:bg-app border-b">{t('workbench:output.xlsxRows', { sheet: table.name })}</div>
         <table className="w-full text-xs border-collapse">
           <tbody>
             {table.rows.map((r, i) => (
@@ -100,7 +102,7 @@ function PreviewPanel({ preview, fileName }: { preview: PreviewData | null; file
     )
   }
   // 默认文本
-  const text = TEXT_EXTS.has(ext) || ext === 'file' ? base64ToText(preview.base64) : `（${ext.toUpperCase()} 暂不支持文本预览）`
+  const text = TEXT_EXTS.has(ext) || ext === 'file' ? base64ToText(preview.base64) : t('workbench:output.unsupported', { ext: ext.toUpperCase() })
   return (
     <pre className="flex-1 overflow-auto p-3 text-2xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">
       {text}
@@ -109,6 +111,7 @@ function PreviewPanel({ preview, fileName }: { preview: PreviewData | null; file
 }
 
 export function OutputResultsView({ projectName }: { projectName: string }) {
+  const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const projects = useProjectStore((s) => s.projects)
   const [activeProject, setActiveProject] = useState(projectName)
@@ -148,7 +151,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
       setPreview(d)
     } catch (err) {
       setPreview(null)
-      addToast('error', `预览失败: ${(err as Error).message}`, 4000)
+      addToast('error', t('workbench:output.previewFailed', { err: (err as Error).message }), 4000)
     }
   }, [activeProject, addToast])
 
@@ -156,7 +159,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     try {
       const res = await window.electron.render.exportOutput(activeProject, batchName)
       if (res?.canceled) return
-      if (res?.ok) addToast('success', `已导出 → ${res.path}`, 5000)
+      if (res?.ok) addToast('success', t('workbench:output.exported', { path: res.path }), 5000)
     } catch (err) {
       addToast('error', `导出失败: ${(err as Error).message}`, 5000)
     }
@@ -166,10 +169,10 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     const target = file ?? selectedFile
     if (!target) return
     const rel = target.path.replace(/^output\//, '')
-    if (!window.confirm(`删除文件 ${target.name}？`)) return
+    if (!window.confirm(t('workbench:output.confirmDeleteFile', { name: target.name }))) return
     try {
       await window.electron.project.deleteOutputFile(activeProject, rel)
-      addToast('success', '已删除', 3000)
+      addToast('success', t('workbench:output.deleted', '已删除'), 3000)
       setSelectedFile(null)
       setPreview(null)
       refresh()
@@ -179,10 +182,10 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   }, [selectedFile, activeProject, addToast, refresh])
 
   const handleDeleteBatch = useCallback(async (batch: Batch) => {
-    if (!window.confirm(`删除整个批次 ${batch.name}（${batch.files.length} 个文件）？`)) return
+    if (!window.confirm(t('workbench:output.confirmDeleteBatch', { batch: batch.name, count: batch.files.length }))) return
     try {
       await window.electron.project.deleteOutputBatch(activeProject, batch.name)
-      addToast('success', '批次已删除', 3000)
+      addToast('success', t('workbench:output.batchDeleted', '批次已删除'), 3000)
       refresh()
     } catch (err) {
       addToast('error', `删除失败: ${(err as Error).message}`, 4000)
@@ -190,10 +193,10 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   }, [activeProject, addToast, refresh])
 
   const handleClearProject = useCallback(async () => {
-    if (!window.confirm(`清空项目「${activeProject}」的全部输出？此操作不可恢复。`)) return
+    if (!window.confirm(t('workbench:output.confirmClearProject', { name: activeProject }))) return
     try {
       await window.electron.project.clearOutput(activeProject)
-      addToast('success', '项目输出已清空', 3000)
+      addToast('success', t('workbench:output.projectCleared', '项目输出已清空'), 3000)
       setBatches([])
       setSelectedFile(null)
       setPreview(null)
@@ -203,10 +206,10 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   }, [activeProject, addToast])
 
   const handleClearAll = useCallback(async () => {
-    if (!window.confirm('清空全部项目的输出？此操作不可恢复。')) return
+    if (!window.confirm(t('workbench:output.confirmClearAll', '清空全部项目的输出？此操作不可恢复。'))) return
     try {
       const res = await window.electron.render.clearAllOutput()
-      addToast('success', `已清空 ${res.deleted} 个项目的输出`, 3000)
+      addToast('success', t('workbench:output.clearedAll', { count: res.deleted }), 3000)
       refresh()
     } catch (err) {
       addToast('error', `清空失败: ${(err as Error).message}`, 4000)
@@ -226,33 +229,33 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     <div className="h-full flex flex-col gap-3">
       {/* 头部工具行 */}
       <div className="flex items-center gap-2 flex-wrap shrink-0">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">输出结果</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('workbench:output.title', '输出结果')}</span>
         <select
           value={activeProject}
           onChange={(e) => setActiveProject(e.target.value)}
           className="text-xs rounded border bg-white dark:bg-app px-2 py-1 max-w-[220px]"
-          aria-label="选择项目"
+          aria-label={t('workbench:output.projectLabel', '选择项目')}
         >
           <option value={projectName}>{projectName}</option>
           {projects.filter((p) => p.name !== projectName).map((p) => (
             <option key={p.name} value={p.name}>{p.name}</option>
           ))}
         </select>
-        <span className="text-2xs text-gray-400">{batches.length} 批次 · {totalFiles} 文件</span>
+        <span className="text-2xs text-gray-400">{t('workbench:output.batches', { count: batches.length, files: totalFiles })}</span>
         <button type="button" onClick={refresh} className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
           {busy ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />} 刷新
         </button>
         <button type="button" onClick={() => handleExport()} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
-          <Download size={11} /> 导出全部 ZIP
+          <Download size={11} /> {t('workbench:output.exportAllZip', '导出全部 ZIP')}
         </button>
         <button type="button" onClick={handleClearProject} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-40">
-          <Trash2 size={11} /> 清空项目输出
+          <Trash2 size={11} /> {t('workbench:output.clearProject', '清空项目输出')}
         </button>
         <button type="button" onClick={handleClearAll}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20">
-          <Trash2 size={11} /> 清空全部输出
+          <Trash2 size={11} /> {t('workbench:output.clearAll', '清空全部输出')}
         </button>
       </div>
 
@@ -261,11 +264,11 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         {/* 左侧：批次 → 文件树 */}
         <div className="w-[300px] shrink-0 rounded border overflow-hidden bg-white dark:bg-app flex flex-col">
           <div className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border-b bg-gray-50 dark:bg-app/50">
-            材料（版本批次）
+            {t('workbench:output.materialsTitle', '材料（版本批次）')}
           </div>
           <div className="flex-1 overflow-auto p-2 space-y-1">
             {batches.length === 0 && (
-              <div className="text-xs text-gray-400 text-center py-6">暂无渲染输出（先「一键渲染」生成）</div>
+              <div className="text-xs text-gray-400 text-center py-6">{t('workbench:output.empty', '暂无渲染输出（先「一键渲染」生成）')}</div>
             )}
             {batches.map((batch) => {
               const isOpen = expanded[batch.name]
@@ -278,18 +281,18 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
                     <span className="text-2xs text-gray-400 ml-auto shrink-0">{batch.files.length}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch) }}
-                      className="p-0.5 rounded hover:bg-error-50 text-gray-400 hover:text-error-500 shrink-0" title="删除批次">
+                      className="p-0.5 rounded hover:bg-error-50 text-gray-400 hover:text-error-500 shrink-0" title={t('workbench:output.deleteBatch', '删除批次')}>
                       <Trash2 size={11} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleExport(batch.name) }}
-                      className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 shrink-0" title="导出批次 ZIP">
+                      className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 shrink-0" title={t('workbench:output.exportBatch', '导出批次 ZIP')}>
                       <Download size={11} />
                     </button>
                   </div>
                   {isOpen && (
                     <div className="ml-3 pl-3 border-l border-gray-100 dark:border-edge-subtle space-y-0.5 py-0.5">
-                      {batch.files.length === 0 && <div className="text-2xs text-gray-400 px-2 py-1">空批次</div>}
+                      {batch.files.length === 0 && <div className="text-2xs text-gray-400 px-2 py-1">{t('workbench:output.emptyBatch', '空批次')}</div>}
                       {batch.files.map((file) => (
                         <div key={file.path}
                           className={`group flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer text-2xs ${selectedFile?.path === file.path ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-app-hover'}`}
@@ -298,12 +301,12 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
                           <span className="truncate flex-1" title={file.path}>{file.name}</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenLocation(file) }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-100 text-gray-400" title="打开位置">
+                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-100 text-gray-400" title={t('workbench:output.openLocation', '打开位置')}>
                             <FolderOpen size={11} />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteFile(file) }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-error-50 text-gray-400 hover:text-error-500" title="删除文件">
+                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-error-50 text-gray-400 hover:text-error-500" title={t('workbench:output.deleteFile', '删除文件')}>
                             <Trash2 size={11} />
                           </button>
                         </div>
@@ -320,7 +323,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         <div className="flex-1 min-w-0 rounded border overflow-hidden bg-white dark:bg-app flex flex-col">
           <div className="px-3 py-2 text-xs border-b bg-gray-50 dark:bg-app/50 flex items-center gap-2 shrink-0">
             <Eye size={12} className="text-gray-400" />
-            <span className="text-gray-600 dark:text-gray-300 font-mono truncate flex-1">{selectedFile?.path ?? '未选择文件'}</span>
+            <span className="text-gray-600 dark:text-gray-300 font-mono truncate flex-1">{selectedFile?.path ?? t('workbench:output.noSelection', '未选择文件')}</span>
             {selectedFile && preview && (
               <span className="text-2xs text-gray-400 shrink-0">{fmtSize(preview.size)}</span>
             )}

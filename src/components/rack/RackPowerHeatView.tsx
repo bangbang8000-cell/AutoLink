@@ -1,5 +1,5 @@
 /**
- * AutoLink V2.4.7 — 机架功率热力视图
+ * AutoLink V2.4.7 — 机架{t('rack:powerHeat')}视图
  *
  * 在 2D 机架视图基础上叠加功率密度热力图：
  *   - 设备块按 W/U 功率密度着色（绿 <50W/U · 黄 <150W/U · 红 ≥150W/U）
@@ -74,7 +74,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
           <div className="flex items-center gap-1.5">
             <Flame size={13} className="text-orange-500" />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
-              {cabinet.name} · 功率热力
+              {cabinet.name} · {t('rack:powerHeat')}
             </span>
             {/* V2.9.2: 机柜类型标签 */}
             <span
@@ -93,7 +93,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-2 text-2xs text-gray-500 dark:text-gray-400">
-          <span>功率密度:</span>
+          <span>{t('rack:powerDensity')}</span>
           <span className="flex items-center gap-0.5">
             <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#dcfce7', border: '1px solid #16a34a' }} />
             &lt;50W/U
@@ -198,7 +198,7 @@ export function RackPowerHeatView({ cabinet }: Props) {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRemove(device.id) }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-error-500"
-                        title="移除设备"
+                        title="{t('rack:removeDevice')}"
                       >
                         ✕
                       </button>

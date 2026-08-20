@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { AlertTriangle, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   /** Used power in watts */
@@ -23,6 +24,7 @@ function formatPower(watts: number): string {
  * Red    (≥80%): exceeded / alert
  */
 export function RackPowerBar({ used, limit, compact = false, className }: Props) {
+  const { t } = useTranslation()
   const percent = limit > 0 ? Math.round((used / limit) * 100) : 0
   const exceeded = percent >= 80
   const warning = percent >= 60 && percent < 80
@@ -68,12 +70,12 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
         <div className="flex items-center gap-2">
           <Zap size={16} className={textColor} />
           <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-            机柜功率
+            {t('rack:powerBar')}
           </span>
           {exceeded && (
             <span className="flex items-center gap-1 text-xs text-error-600 dark:text-error-400 font-medium bg-error-100 dark:bg-error-900/30 px-2 py-0.5 rounded">
               <AlertTriangle size={11} />
-              功率超限
+              {t('rack:powerExceeded')}
             </span>
           )}
         </div>
@@ -94,7 +96,7 @@ export function RackPowerBar({ used, limit, compact = false, className }: Props)
       <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-gray-500">
         <span>0W</span>
         <span className={clsx('font-medium', textColor)}>
-          {percent}% · {formatPower(used)} 已用
+          {percent}% · {formatPower(used)} {t('rack:powerUsed')}
         </span>
         <span>{formatPower(limit)}</span>
       </div>

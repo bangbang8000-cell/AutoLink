@@ -1,5 +1,5 @@
 /**
- * AutoLink V2.4.7 — 多柜对比视图
+ * AutoLink V2.4.7 — {t('rack:multiCompare')}
  *
  * 并排展示 2-4 个机柜的紧凑视图，方便对比功率、U位利用率、设备分布。
  *   - 紧凑机柜渲染（宽度 100px 左右）
@@ -7,6 +7,7 @@
  *   - 底部图例
  */
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { type RackCabinet } from '@/stores/rack.store'
 import { Columns, ChevronRight } from 'lucide-react'
 
@@ -27,6 +28,7 @@ const getTypeColor = (type: string): string => {
 }
 
 export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabinet }: Props) {
+  const { t } = useTranslation()
   const [selectedIds, setSelectedIds] = useState<number[]>(() => {
     // 默认选前 4 个机柜
     const initial = cabinets.slice(0, 4).map((c) => c.id)
@@ -53,7 +55,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
   if (cabinets.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-gray-400">
-        暂无机柜数据
+        {t('rack:noCabinetData')}
       </div>
     )
   }
@@ -66,7 +68,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
           <div className="flex items-center gap-1.5">
             <Columns size={13} className="text-info-500" />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
-              多柜对比视图
+              {t('rack:multiCompare')}
             </span>
             <span className="text-2xs text-gray-400">
               ({selectedCabinets.length}/4)
@@ -76,7 +78,7 @@ export function RackMultiCompareView({ cabinets, activeCabinetId, onSelectCabine
             onClick={() => setShowPicker(!showPicker)}
             className="flex items-center gap-1 px-2 py-1 text-2xs rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-600 dark:text-gray-300"
           >
-            选择机柜
+            {t('rack:selectCabinet')}
             <ChevronRight size={11} className={showPicker ? 'rotate-90' : ''} />
           </button>
         </div>

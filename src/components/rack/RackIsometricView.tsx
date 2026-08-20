@@ -203,7 +203,7 @@ export function RackIsometricView({ cabinet }: Props) {
           <div className="flex items-center gap-1.5">
             <Box size={13} className="text-purple-500" />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
-              {cabinet.name} · 3D 等距视图
+              {cabinet.name} · {t('rack:isoView')}
             </span>
             {/* 打磨轮（v1.5 / AL-V1b）：柜类型标签 */}
             <span className="px-1.5 py-0.5 text-2xs rounded bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">
@@ -242,11 +242,11 @@ export function RackIsometricView({ cabinet }: Props) {
                   <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded shadow-lg py-1 min-w-[110px]">
                     <button onClick={handleExportSvg}
                       className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
-                      导出 SVG
+                      {t('rack:exportSvg')}
                     </button>
                     <button onClick={handleExportPng}
                       className="block w-full text-left px-3 py-1 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
-                      导出 PNG
+                      {t('rack:exportPng')}
                     </button>
                   </div>
                 </>

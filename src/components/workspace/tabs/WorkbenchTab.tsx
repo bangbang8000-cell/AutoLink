@@ -19,6 +19,16 @@ import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
 
+/** 打磨轮（v1.6 收尾）：工作台步骤分组标签（5 卡→三步） */
+function StepLabel({ n, text }: { n: string; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5 mb-2">
+      <span className="px-1.5 py-0.5 text-2xs rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-semibold">{n}</span>
+      <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{text}</span>
+    </div>
+  )
+}
+
 /** 打磨轮（v1.6 / AL-T1b）：工作台二级页签标签（对齐 v1.6 命名） */
 const SUBVIEW_LABELS: Record<string, string> = {
   aidc: 'AIDC 规划',
@@ -90,28 +100,28 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
     const cols = Array.from({ length: Math.max(1, Number(colsInput) || 1) }, (_, i) => i + 1)
     const ok = await createMatrix(projectName, rows, cols)
     if (ok) {
-      addToast('success', '机柜矩阵已创建，可「自动布点默认配比」', 5000)
+      addToast('success', t('rack:matrixCreated', '机柜矩阵已创建，可「自动布点默认配比」'), 5000)
       await loadMatrix(projectName)
     } else {
-      addToast('error', '矩阵创建失败', 5000)
+      addToast('error', t('rack:matrixCreateFailed', '矩阵创建失败'), 5000)
     }
   }
 
   const autoCompose = () => {
     if (!matrix) {
-      addToast('warning', '请先定义机柜矩阵（排/列）', 4000)
+      addToast('warning', t('rack:needMatrixFirst', '请先定义机柜矩阵（排/列）'), 4000)
       return
     }
     const net = Math.max(4, cabinets.filter((c) => c.type === 'network').length)
     composeDefaults({ gpuCount: gpuCount || 64, networkCount: net })
-    addToast('success', '已按默认配比布点（每列 1 电源 + 空调 + GPU(1柜1台) + 网络），可微调', 5000)
+    addToast('success', t('rack:autoComposed', '已按默认配比布点（每列 1 电源 + 空调 + GPU(1柜1台) + 网络），可微调'), 5000)
   }
 
   // 打磨轮（v1.4 / AL-R2c）：按矩阵自动落位（通用入口，用设计拓扑节点；AIDC 应用到设计亦自动触发）
   const applyMatrix = async () => {
     const nodes = topology?.nodes
     if (!nodes || nodes.length === 0) {
-      addToast('warning', '请先生成拓扑（「设计」子视图生成，或 AIDC 规划「应用到设计」）', 4000)
+      addToast('warning', t('rack:needTopologyFirst', '请先生成拓扑（「设计」子视图生成，或 AIDC 规划「应用到设计」）'), 4000)
       return
     }
     await useRoomStore.getState().applyMatrixRackLayout(projectName, nodes)
@@ -120,7 +130,7 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
   const saveAll = async () => {
     await useRoomStore.getState().saveMatrix(projectName)
     await useRackStore.getState().saveRackLayout(projectName)
-    addToast('success', '机房矩阵与机柜布局已保存', 3000)
+    addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
   }
 
   // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（待上架池 → 现有柜 U 位）
@@ -428,14 +438,18 @@ export function WorkbenchTab() {
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">Ready</span>
               </div>
             </div>
+            {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
+            <StepLabel n="①" text={t('workbench:stepConfig', '配置与就绪')} />
             <div className="grid grid-cols-2 gap-4 mb-4">
               <WorkbenchScopeCard />
               <WorkbenchReadinessCard />
             </div>
+            <StepLabel n="②" text={t('workbench:stepRender', '渲染材料与操作')} />
             <div className="grid grid-cols-2 gap-4 mb-4">
               <WorkbenchOutputCard />
               <WorkbenchActionCard />
             </div>
+            <StepLabel n="③" text={t('workbench:stepResult', '渲染结果')} />
             <div>
               <WorkbenchResultCard />
             </div>
