@@ -6,7 +6,7 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.4.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.5.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -220,9 +220,9 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.4.3-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.4.3-mac-x64.dmg` / `AutoLink-3.4.3-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.4.3-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.5.0-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.5.0-mac-x64.dmg` / `AutoLink-3.5.0-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.5.0-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 
