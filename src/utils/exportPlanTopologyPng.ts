@@ -1,11 +1,11 @@
 /**
- * P1（V-AL4）：AIDC 规划整网拓扑 → PNG 评审材料（ECharts 渲染，复用 exportTopology）。
+ * P1（V-AL4）：AIDC 规划整网拓扑 → PNG 评审材料（真实渲染截图，复用 exportTopologyView）。
  *
- * plan.deviceList/connections → TopologyNode/Edge（角色→ECharts 分类）→ exportTopologyPng。
+ * plan.deviceList/connections → TopologyNode/Edge（角色→节点类型）→ exportTopologyViewPng。
  */
 import type { PlanSummary } from '@/components/aidc/aidcTypes'
 import type { TopologyEdge, TopologyNode } from '@/stores/design.store'
-import { exportTopologyPng } from './exportTopology'
+import { exportTopologyViewPng } from './exportTopologyView'
 
 /** AIDC 角色 → ECharts 节点类型（对应 TOPOLOGY_NODE_STYLES 分类） */
 const ROLE_TYPE: Record<string, string> = {
@@ -51,5 +51,5 @@ export async function exportPlanTopologyPng(plan: PlanSummary): Promise<string> 
     })
   }
 
-  return exportTopologyPng(nodes, edges)
+  return exportTopologyViewPng(nodes, edges)
 }

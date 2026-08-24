@@ -36,7 +36,7 @@ import { useDesignStore, type TopologyNode, type TopologyEdge } from '@/stores/d
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
-import { exportTopologyPng } from '@/utils/exportTopology'
+import { exportTopologyViewPng } from '@/utils/exportTopologyView'
 import { makeTimestampedFilename } from '@/utils/exportSvg'
 import { NODE_TYPE_LABELS } from '@/constants/labels'
 import {
@@ -849,6 +849,116 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     reactFlow.fitView({ padding: fitViewPadding, duration: 300 })
   }, [reactFlow, fitViewPadding])
 
+  /* ---------- 2026-08-24（修复）：拓扑自适应视口 ----------
+   * 根因：react-flow 的 fitView（prop 或 fitView()）依赖内部 fitViewQueued 机制——
+   * 它会在某次节点更新/测量前被消费，且 getFitViewNodes 只收「已测量」节点，
+   * 若调用时机过早则静默跳过、之后不再重试；视口因此停在错误位置（拓扑显示在视口外）。
+   * 修复：不再依赖 fitView 队列，改为「等待节点测量完成 → 手动计算包围盒 → setViewport」，
+   * 确定性生效、可重试；keep-alive 隐藏页签（容器 0 尺寸）时挂起，显示后经 ResizeObserver 补一次。
+   */
+  const topologyContainerRef = useRef<HTMLDivElement | null>(null)
+  const fittedKeyRef = useRef('')
+  const fitPendingRef = useRef(false)
+  const fitTimerRef = useRef<number | null>(null)
+
+  const fitViewKey = useCallback(
+    () => `${selectedProjectName}::${nodeCount}::${filter}`,
+    [selectedProjectName, nodeCount, filter],
+  )
+
+  /** 手动计算自适应视口：内容包围盒（positionAbsolute + measured/估算尺寸）→ 等比居中 */
+  const computeFitViewport = useCallback(() => {
+    const el = topologyContainerRef.current
+    if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) return null
+    const nodes = reactFlow.getNodes()
+    const visible = nodes.filter((n) => !n.hidden)
+    if (visible.length === 0) return null
+
+    const useMeasured = visible.some((n) => (n.measured?.width ?? 0) > 0)
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const n of visible) {
+      // 拓扑节点均为顶级节点（无父节点），position 即绝对坐标
+      const w = useMeasured ? (n.measured?.width ?? 0) : 0
+      const h = useMeasured ? (n.measured?.height ?? 0) : 0
+      minX = Math.min(minX, n.position.x)
+      minY = Math.min(minY, n.position.y)
+      maxX = Math.max(maxX, n.position.x + w)
+      maxY = Math.max(maxY, n.position.y + h)
+    }
+    if (!isFinite(minX) || maxX <= minX || maxY <= minY) return null
+
+    const cw = el.clientWidth
+    const ch = el.clientHeight
+    const bw = maxX - minX
+    const bh = maxY - minY
+    const zoom = Math.max(
+      minZoom,
+      Math.min(4, Math.min((cw - 2 * fitViewPadding) / bw, (ch - 2 * fitViewPadding) / bh)),
+    )
+    return {
+      x: (cw - bw * zoom) / 2 - minX * zoom,
+      y: (ch - bh * zoom) / 2 - minY * zoom,
+      zoom,
+    }
+  }, [reactFlow, fitViewPadding, minZoom])
+
+  const applyFit = useCallback(() => {
+    const vp = computeFitViewport()
+    if (!vp) return false
+    reactFlow.setViewport(vp, { duration: 250 })
+    return true
+  }, [computeFitViewport, reactFlow])
+
+  /** 等待节点测量完成后应用自适应（最多 ~2s，超时用估算尺寸兜底） */
+  const fitWithRetry = useCallback(async () => {
+    const el = topologyContainerRef.current
+    if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) {
+      fitPendingRef.current = true
+      return
+    }
+    const deadline = Date.now() + 2000
+    for (;;) {
+      const nodes = reactFlow.getNodes()
+      const visible = nodes.filter((n) => !n.hidden)
+      const allMeasured =
+        visible.length > 0 && visible.every((n) => (n.measured?.width ?? 0) > 0)
+      if (allMeasured || Date.now() >= deadline) {
+        applyFit()
+        fitPendingRef.current = false
+        return
+      }
+      await new Promise((r) => setTimeout(r, 80))
+    }
+  }, [applyFit, reactFlow])
+
+  // 布局/节点集变化（项目切换、重新生成、网络过滤）→ 触发一次自适应
+  useEffect(() => {
+    const key = fitViewKey()
+    if (fittedKeyRef.current === key) return
+    fittedKeyRef.current = key
+    fitPendingRef.current = true
+    void fitWithRetry()
+  }, [fitViewKey, fitWithRetry])
+
+  // 卸载时清理未触发的定时器
+  useEffect(() => () => {
+    if (fitTimerRef.current) window.clearTimeout(fitTimerRef.current)
+  }, [])
+
+  // keep-alive 隐藏→显示：容器尺寸恢复后补一次挂起的自适应
+  useEffect(() => {
+    const el = topologyContainerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      if (fitPendingRef.current && el.clientWidth > 0 && el.clientHeight > 0) {
+        fitPendingRef.current = false
+        void fitWithRetry()
+      }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fitWithRetry])
+
   const handleExportPng = useCallback(async () => {
     if (!topology || !selectedProjectName) {
       addToast('error', t('common:toast.noTopologyToExport'))
@@ -858,7 +968,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     setExportingPng(true)
     addToast('info', t('common:toast.generatingTopologyPng'))
     try {
-      const base64 = await exportTopologyPng(topology.nodes, topology.edges)
+      const base64 = await exportTopologyViewPng(topology.nodes, topology.edges, savedLayout)
       const filename = makeTimestampedFilename('组网拓扑图', 'png')
       if (window.electron?.export?.saveFile) {
         await window.electron.export.saveFile(selectedProjectName, filename, base64)
@@ -872,7 +982,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     } finally {
       setExportingPng(false)
     }
-  }, [topology, selectedProjectName, exportingPng, addToast])
+  }, [topology, savedLayout, selectedProjectName, exportingPng, addToast])
 
   const nodeConnectionCount = useMemo(() => {
     if (!selectedNode || !topology) return 0
@@ -1140,7 +1250,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
       </div>
 
       {/* react-flow canvas */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative" ref={topologyContainerRef}>
         <ReactFlow
           nodes={displayNodes}
           edges={displayEdges}
@@ -1156,8 +1266,6 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
           onPaneClick={onPaneClick}
           onPaneMouseLeave={() => { setHoverNodeId(null); setHoverEdgeId(null) }}
           onMove={handleMove}
-          fitView
-          fitViewOptions={{ padding: fitViewPadding }}
           minZoom={minZoom}
           maxZoom={4}
           nodesDraggable

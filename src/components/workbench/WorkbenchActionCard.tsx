@@ -8,7 +8,7 @@ import { useRoomStore } from '@/stores/room.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useUIStore } from '@/stores/ui.store'
 import { useToastStore } from '@/stores/toast.store'
-import { exportTopologyPng } from '@/utils/exportTopology'
+import { exportTopologyViewPng } from '@/utils/exportTopologyView'
 import { roomLayoutArt, rackElevationSvg, rackElevationSize, svgToPngBase64 } from '@/utils/exportGraphics'
 
 // V2.9.1-T4: IPC 动态返回结构类型化（避免 any）
@@ -25,6 +25,8 @@ export function WorkbenchActionCard() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const topology = useDesignStore((s) => s.topology)
+  // 2026-08-24（修复）：导出组网拓扑图时带上 topology.json 保存的布局，内容与拓扑视图一致
+  const savedLayout = useDesignStore((s) => s.layout)
   const designValid = useDesignStore((s) => s.valid)
   const cabinets = useRackStore((s) => s.cabinets)
   const matrix = useRoomStore((s) => s.matrix)
@@ -157,7 +159,7 @@ export function WorkbenchActionCard() {
         if (frontendTypes.includes('topology') && topology) {
           setProgress({ message: `[${projectName}] 生成拓扑图...` })
           try {
-            const base64 = await exportTopologyPng(topology.nodes, topology.edges)
+            const base64 = await exportTopologyViewPng(topology.nodes, topology.edges, savedLayout)
             const fileName = '组网拓扑图.png'
             const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, fileName), base64)
             addResult({ type: 'topology', file: filePath || batchRel(batchName, fileName), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
@@ -214,7 +216,7 @@ export function WorkbenchActionCard() {
     useProjectStore.getState().fetchProjects()
   }, [
     selectedProjectName, batchMode, batchProjects, selectedOutputTypes,
-    cabinets, topology, exportToExcel,
+    cabinets, topology, savedLayout, exportToExcel,
     setProgress, addResult, clearResults, addToast, t,
   ])
 
