@@ -63,29 +63,47 @@ const nodeTypes: NodeTypes = {
 
 /* ---------- filter ---------- */
 
-// V2.7.6-T5: 新增 'Scale-Up' 过滤器支持双栈联合视图
-type FilterType = '全部' | '参数网络' | '存储网络' | 'OOB' | '业务网络' | 'Scale-Up'
-const FILTER_OPTIONS: FilterType[] = ['全部', '参数网络', '存储网络', 'OOB', '业务网络', 'Scale-Up']
+// V2.7.6-T5: 新增 'scale_up' 过滤器支持双栈联合视图
+// AL-M6a(D-15)：FilterType 收敛为英文枚举（逻辑与显示分离），标签映射见 FILTER_OPTIONS
+type FilterType = 'all' | 'param' | 'storage' | 'oob' | 'biz' | 'scale_up'
+
+interface FilterOption {
+  value: FilterType
+  label: string
+}
+
+const FILTER_OPTIONS: FilterOption[] = [
+  { value: 'all', label: '全部' },
+  { value: 'param', label: '参数网络' },
+  { value: 'storage', label: '存储网络' },
+  { value: 'oob', label: 'OOB' },
+  { value: 'biz', label: '业务网络' },
+  { value: 'scale_up', label: 'Scale-Up' },
+]
+
+const FILTER_LABELS: Record<FilterType, string> = Object.fromEntries(
+  FILTER_OPTIONS.map((o) => [o.value, o.label]),
+) as Record<FilterType, string>
 
 /** V2.4.2: 过滤匹配，优先使用 networkType 字段，回退到 description/cableType */
 function matchFilter(description: string, cableType: string, networkType: string, filter: FilterType): boolean {
-  if (filter === '全部') return true
-  // 优先使用 networkType
+  if (filter === 'all') return true
+  // 优先使用 networkType（值域与 NETWORK_TYPE_LABELS/scale_up 语义对齐）
   if (networkType) {
-    if (filter === '参数网络') return networkType === 'param'
-    if (filter === '存储网络') return networkType === 'storage'
-    if (filter === 'OOB') return networkType === 'oob'
-    if (filter === '业务网络') return networkType === 'biz'
+    if (filter === 'param') return networkType === 'param'
+    if (filter === 'storage') return networkType === 'storage'
+    if (filter === 'oob') return networkType === 'oob'
+    if (filter === 'biz') return networkType === 'biz'
     // V2.7.6-T5: Scale-Up 双栈联合视图
-    if (filter === 'Scale-Up') return networkType === 'scale_up'
+    if (filter === 'scale_up') return networkType === 'scale_up'
   }
   // 回退到旧逻辑
-  if (filter === '参数网络') return description.includes('参数') || cableType.includes('参数')
-  if (filter === '存储网络') return description.includes('存储') || cableType.includes('存储')
-  if (filter === 'OOB') return description.includes('OOB') || cableType.includes('OOB')
-  if (filter === '业务网络') return description.includes('业务') || cableType.includes('业务')
+  if (filter === 'param') return description.includes('参数') || cableType.includes('参数')
+  if (filter === 'storage') return description.includes('存储') || cableType.includes('存储')
+  if (filter === 'oob') return description.includes('OOB') || cableType.includes('OOB')
+  if (filter === 'biz') return description.includes('业务') || cableType.includes('业务')
   // V2.7.6-T5: Scale-Up 回退匹配
-  if (filter === 'Scale-Up') {
+  if (filter === 'scale_up') {
     return description.includes('Scale-Up') || description.includes('UALink') ||
            description.includes('NVLink') || description.includes('UB') ||
            cableType.includes('Scale-Up') || cableType.includes('UALink') ||
@@ -187,7 +205,7 @@ function TopologyFlowInner() {
   const removeTopologyNodes = useDesignStore((s) => s.removeTopologyNodes)
   const restoreTopology = useDesignStore((s) => s.restoreTopology)
 
-  const [filter, setFilter] = useState<FilterType>('全部')
+  const [filter, setFilter] = useState<FilterType>('all')
   const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null)
   const [showFilter, setShowFilter] = useState(false)
   const [hasSavedLayout, setHasSavedLayout] = useState(false)
@@ -484,7 +502,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     if (!topology) return { filteredNodes: [], filteredEdges: [], simplified: false }
     let nodes = topology.nodes
     let edges = topology.edges
-    if (filter !== '全部') {
+    if (filter !== 'all') {
       const matchingEdgeSet = new Set<string>()
       for (const edge of topology.edges) {
         if (matchFilter(edge.description, edge.cableType, edge.networkType || '', filter)) {
@@ -588,7 +606,9 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         data: data as unknown as Record<string, unknown>,
         // V3.2.1-T10-2: 网络过滤/折叠切换时节点平滑移动与淡入过渡
         // AL-M4f: 千节点场景禁用过渡动画,避免批量重排卡顿
-        style: nodes.length >= ANIMATION_DISABLE_THRESHOLD ? undefined : { transition: 'transform 300ms ease, opacity 300ms ease' },
+        // M6(J-M6b): 修复 M4 引入的 TDZ——map 回调内引用未初始化的 nodes，
+        //            改用 filteredNodes.length（与 nodes.length 等价）
+        style: filteredNodes.length >= ANIMATION_DISABLE_THRESHOLD ? undefined : { transition: 'transform 300ms ease, opacity 300ms ease' },
         zIndex: 10,
       }
     })
@@ -1160,22 +1180,22 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
           <div className="relative">
             <button onClick={() => setShowFilter(!showFilter)}
               className={`flex items-center gap-1 px-2 py-1 text-2xs rounded border transition-colors ${
-                filter !== '全部'
+                filter !== 'all'
                   ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                   : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'
               }`}>
-              <Filter size={11} />{filter}
+              <Filter size={11} />{FILTER_LABELS[filter]}
             </button>
             {showFilter && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowFilter(false)} />
                 <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded shadow-lg py-1 min-w-[120px]">
                   {FILTER_OPTIONS.map((opt) => (
-                    <button key={opt} onClick={() => { setFilter(opt); setShowFilter(false) }}
+                    <button key={opt.value} onClick={() => { setFilter(opt.value); setShowFilter(false) }}
                       className={`block w-full text-left px-3 py-1.5 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover ${
-                        filter === opt ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
+                        filter === opt.value ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
                       }`}>
-                      {opt}
+                      {opt.label}
                     </button>
                   ))}
                 </div>

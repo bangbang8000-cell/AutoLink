@@ -263,3 +263,48 @@ describe('i18n key 完整性(以 zh-CN 为基准)', () => {
     expect(suspicious).toEqual([])
   })
 })
+
+/**
+ * J-M6a / D-6：Glossary v1.0 术语一致性门禁（交付前 error）
+ * 校验《Glossary_v1.0》登记的导航/动作术语 key 在各语言存在。
+ * zh-CN 为术语基准；其余语言的完整 key 集合已由上方「i18n key 完整性」门禁兜底。
+ */
+describe('Glossary 术语一致性 (J-M6a / D-6)', () => {
+  /** 递归展开对象为扁平 key 列表（本地副本，避免跨 describe 依赖） */
+  function flatten(obj: unknown, prefix = ''): string[] {
+    if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return []
+    return Object.entries(obj as Record<string, unknown>).flatMap(([key, value]) => {
+      const full = prefix ? `${prefix}.${key}` : key
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return flatten(value, full)
+      }
+      return [full]
+    })
+  }
+
+  const GLOSSARY_KEYS = [
+    // 一级导航 nav:*
+    'nav.search', 'nav.cloud', 'nav.ai', 'nav.project', 'nav.workbench',
+    'nav.output', 'nav.device_library', 'nav.settings',
+    // 工作台子视图 workbench:subview.*
+    'workbench.subview.aidc', 'workbench.subview.design', 'workbench.subview.rack',
+    'workbench.subview.main', 'workbench.subview.visualization',
+    'workbench.subview.results', 'workbench.subview.export',
+    // 动作/菜单 common:menu.*
+    'common.menu.topLevel.file', 'common.menu.topLevel.edit', 'common.menu.topLevel.view',
+    'common.menu.topLevel.project', 'common.menu.topLevel.help',
+    'common.menu.file.newProject', 'common.menu.file.saveConfig', 'common.menu.file.exit',
+    'common.menu.edit.undo', 'common.menu.edit.redo', 'common.menu.edit.preferences',
+    'common.menu.view.fileBrowser', 'common.menu.view.logPanel',
+    'common.menu.project.projectSettings', 'common.menu.project.renderOutput',
+    'common.menu.help.userGuide', 'common.menu.help.about',
+  ]
+
+  for (const { code, resources } of LANGUAGES) {
+    it(`${code} 应包含 Glossary 全部术语 key`, () => {
+      const langKeys = new Set(flatten(resources as unknown as Record<string, unknown>))
+      const missing = GLOSSARY_KEYS.filter((k) => !langKeys.has(k))
+      expect(missing, `${code} Glossary 术语缺失: ${missing.join(', ')}`).toEqual([])
+    })
+  }
+})

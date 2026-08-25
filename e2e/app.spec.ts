@@ -9,9 +9,17 @@ import { test, expect, _electron as electron, type ElectronApplication, type Pag
 /** 主窗口：应用先显示 splash（加载 splash.html），关闭后主窗口成为唯一窗口 */
 async function openMainWindow(app: ElectronApplication): Promise<Page> {
   const first = await app.firstWindow()
-  // 等待 splash 关闭；若 first 即主窗口（splash 过快消失）则超时容忍
-  await first.waitForEvent('close', { timeout: 8000 }).catch(() => {})
-  const main = app.windows()[0]
+  // M6(J-M6b)：首个用例常遇 vite 冷启动，splash 关闭可能超过 8s；
+  // 改为轮询等待「非 splash」主窗口出现，避免拿到 splash 残留窗口
+  const deadline = Date.now() + 40_000
+  let main: Page | undefined
+  while (Date.now() < deadline) {
+    const pages = app.windows().filter((p) => !p.isClosed())
+    main = pages.find((p) => !String(p.url() ?? '').includes('splash.html'))
+    if (main) break
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  if (!main) main = app.windows()[0]
   // 关闭首次启动引导弹窗（CI 全新 userData 必现）：ESC 触发 closeOnEsc，
   // 否则 fixed 全屏遮罩会拦截设置按钮点击导致测试失败
   const dialog = main.locator('[role="dialog"]')
