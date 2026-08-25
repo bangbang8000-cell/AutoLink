@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [3.6.1] - 2026-08-25
+
+### 导出收敛 + 拓扑子视图视口修复
+
+- **导出收敛**：AIDC 规划视图移除导出按钮（plan.json / 规划 Excel / 交付包 / 拓扑 PNG），导出统一到工作台「导出」视图
+- **导出视图收敛为 2 个主按钮**：
+  - ① **导出 MC 交付包**：读项目已保存 plan.json → `plan:aidc:export`(zip)，含 plan.json / README / 拓扑图，供 MagicCommander 导入；项目未生成 AIDC 规划时给出引导提示
+  - ② **导出渲染结果（ZIP）**：保留既有渲染输出批次打包
+- 新增 `utils/aidcDelivery.ts`（`macroToInput` 提升 + `exportDeliveryZip` 公共工具）
+- **拓扑子视图视口修复**：`fitWithRetry` 改为「测量推进即重 fit」（不再 2s 超时停在部分测量偏移位置），keep-alive 隐藏→显示补一次自适应——拓扑全量可见，不再只看到局部
+- e2e 新增「拓扑全量节点中心点在画布内」断言；端到端验证 AL 交付包 → MC 导入成功（22 台设备）
+
 ## [3.6.0] - 2026-08-25
 
 ### 打磨优化 M1–M6：安全 / i18n / 性能 / 便捷 / 联合回归
