@@ -30,14 +30,14 @@ function StepLabel({ n, text }: { n: string; text: string }) {
 }
 
 /** 打磨轮（v1.6 / AL-T1b）：工作台二级页签标签（对齐 v1.6 命名） */
-const SUBVIEW_LABELS: Record<string, string> = {
-  aidc: 'AIDC 规划',
-  design: '组网设计',
-  rack: '机柜设计',
-  main: '组网渲染',
-  visualization: '拓扑',
-  results: '本项目输出',
-  export: '导出',
+const SUBVIEW_KEYS: Record<string, string> = {
+  aidc: 'workbench:subview.aidc',
+  design: 'workbench:subview.design',
+  rack: 'workbench:subview.rack',
+  main: 'workbench:subview.main',
+  visualization: 'workbench:subview.visualization',
+  results: 'workbench:subview.results',
+  export: 'workbench:subview.export',
 }
 
 /** 打磨轮（v1.4）：机柜子视图——平面矩阵一览（DataCenterLayout）+ 逐柜微调（RackTab），双向联动 */
@@ -159,7 +159,7 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
         </div>
         {matrix ? (
           <>
-            <span className="text-2xs text-gray-400">矩阵 {matrix.rows.length}排×{matrix.cols.length}列</span>
+            <span className="text-2xs text-gray-400">{t('rack:matrixSummary', { rows: matrix.rows.length, cols: matrix.cols.length, defaultValue: '矩阵 {{rows}}排×{{cols}}列' })}</span>
             <button type="button" onClick={autoCompose}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
               <Download size={11} /> {t('rack:autoCompose')}
@@ -200,7 +200,7 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
             <DataCenterLayout />
           ) : (
             <div className="h-full flex items-center justify-center text-xs text-gray-400 p-6">
-              请先在上方定义机柜矩阵（排/列）→「自动布点默认配比」→ 布局/标记/拖拽上架
+              {t('workbench:rackMatrixEmpty')}
             </div>
           )}
         </div>
@@ -218,6 +218,7 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
 
 /** 打磨轮（v1.3）：归档/导出子视图（导出给 MC + 渲染结果） */
 function ExportView({ projectName }: { projectName: string }) {
+  const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const [busy, setBusy] = useState(false)
   const exportBatch = async (batch?: string) => {
@@ -225,9 +226,9 @@ function ExportView({ projectName }: { projectName: string }) {
     try {
       const res = await window.electron.render.exportOutput(projectName, batch)
       if (res?.canceled) return
-      if (res?.ok) addToast('success', `已导出 → ${res.path}`)
+      if (res?.ok) addToast('success', t('workbench:output.exported', { path: res.path }))
     } catch (e) {
-      addToast('error', `导出失败: ${(e as Error).message}`)
+      addToast('error', t('workbench:exportView.exportFailed', { err: (e as Error).message, defaultValue: '导出失败: {{err}}' }))
     } finally {
       setBusy(false)
     }
@@ -236,21 +237,21 @@ function ExportView({ projectName }: { projectName: string }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Download size={14} className="text-success-500" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">归档 / 导出 — {projectName}</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('workbench:exportView.title', { name: projectName })}</span>
       </div>
       <div className="border rounded p-3 space-y-1.5">
-        <p className="text-2xs text-gray-500">导出给 MagicCommander（AIDC 交付包）</p>
-        <p className="text-2xs text-gray-400">请在「AIDC 规划」视图导出 plan.json / 交付包 ZIP / 规划 Excel / 拓扑 PNG（含项目编号与版本）。</p>
+        <p className="text-2xs text-gray-500">{t('workbench:exportView.toMc')}</p>
+        <p className="text-2xs text-gray-400">{t('workbench:exportView.toMcHint')}</p>
       </div>
       <div className="border rounded p-3 space-y-2">
-        <p className="text-2xs text-gray-500">导出渲染结果（output 批次）</p>
+        <p className="text-2xs text-gray-500">{t('workbench:exportView.renderResults')}</p>
         <div className="flex gap-2">
           <button type="button" onClick={() => exportBatch(undefined)} disabled={busy}
             className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
-            <Download size={12} /> 导出全部渲染结果（ZIP）
+            <Download size={12} /> {t('workbench:exportView.exportAllZip')}
           </button>
         </div>
-        <p className="text-2xs text-gray-400">在「渲染结果」视图可单独导出某个批次。</p>
+        <p className="text-2xs text-gray-400">{t('workbench:exportView.exportBatchHint')}</p>
       </div>
     </div>
   )
@@ -295,14 +296,14 @@ export function WorkbenchTab() {
   // AL-A5：工作台内新建 AIDC 项目（默认 64 台参数，后续向导版见 P-B）
   const createAidcProject = useCallback(async () => {
     const name = newAidcName.trim()
-    if (!name) { addToast('warning', '请输入项目名'); return }
+    if (!name) { addToast('warning', t('workbench:aidcCreate.pleaseEnterName')); return }
     setCreating(true)
     try {
       const res = await window.electron.aidc.project.create(name, {
         gpu_count: 64, site: 'BJ01', pfc_queue: 3, cnp_queue: 6,
       })
-      if (res?.error) { addToast('error', `新建失败: ${res.error}`); return }
-      addToast('success', `已新建 AIDC 项目 ${name}（v1）`)
+      if (res?.error) { addToast('error', t('workbench:aidcCreate.failed', { err: res.error })); return }
+      addToast('success', t('workbench:aidcCreate.created', { name }))
       setNewAidcName('')
       await window.electron.project.list().then((list) => {
         const item = (list as Array<{ id: number; name: string; index: number }>)?.find((p) => p.name === name)
@@ -310,11 +311,11 @@ export function WorkbenchTab() {
       })
       setAidcProjects((prev) => (prev.includes(name) ? prev : [...prev, name]))
     } catch (e) {
-      addToast('error', `新建失败: ${String(e)}`)
+      addToast('error', t('workbench:aidcCreate.failed', { err: String(e) }))
     } finally {
       setCreating(false)
     }
-  }, [newAidcName, addToast, selectProject])
+  }, [newAidcName, addToast, selectProject, t])
 
   if (!selectedProjectName) {
     // 打磨轮（v1.6 / AL-N1a）：无项目 → 项目引导面板（选择默认项目 / 引导到项目面板新建导入）
@@ -323,12 +324,12 @@ export function WorkbenchTab() {
         <div className="max-w-md mx-auto mt-10">
           <div className="flex flex-col items-center text-center mb-6">
             <Zap size={40} className="text-primary-400 mb-2" />
-            <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">欢迎使用 AutoLink</p>
-            <p className="text-xs text-gray-400 mt-1">选择一个项目开始组网设计；或到「项目」面板新建/导入模板。</p>
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('workbench:empty.welcome')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('workbench:empty.hint')}</p>
           </div>
           {projects.length > 0 && (
             <div className="mb-4">
-              <p className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">选择一个项目作为当前项目：</p>
+              <p className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('workbench:empty.selectProject')}</p>
               <div className="space-y-1">
                 {projects.map((p) => (
                   <button
@@ -350,11 +351,11 @@ export function WorkbenchTab() {
               onClick={() => setActiveActivity('project')}
               className="px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
             >
-              前往项目面板（新建 / 导入）
+              {t('workbench:empty.gotoProjects')}
             </button>
           </div>
           {projects.length === 0 && (
-            <p className="text-center text-2xs text-gray-400 mt-3">暂无项目，请在「项目」面板新建或从模板导入。</p>
+            <p className="text-center text-2xs text-gray-400 mt-3">{t('workbench:empty.noProjects')}</p>
           )}
         </div>
       </div>
@@ -385,7 +386,7 @@ export function WorkbenchTab() {
               className={`flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-2xs rounded-t border-t border-x transition-colors shrink-0 ${active ? 'bg-white dark:bg-app border-gray-200 dark:border-edge-subtle text-primary-600 dark:text-primary-400 font-medium' : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'}`}
             >
               <button type="button" onClick={() => setWorkbenchSubview(sv)} className="shrink-0">
-                {SUBVIEW_LABELS[sv] ?? sv}
+                {t(SUBVIEW_KEYS[sv] ?? `workbench:subview.${sv}`, sv)}
               </button>
               {openedSubviews.length > 1 && (
                 <button
@@ -396,7 +397,7 @@ export function WorkbenchTab() {
                     if (active) setWorkbenchSubview(next[next.length - 1] ?? 'main')
                   }}
                   className="shrink-0 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  title="关闭"
+                  title={t('workbench:closeTab')}
                 >
                   <X size={10} />
                 </button>
@@ -460,19 +461,19 @@ export function WorkbenchTab() {
           <div>
             {!isAidc && (
               <div className="mb-3 p-3 border rounded bg-warning-50/60 dark:bg-warning-900/20 text-xs text-gray-600 dark:text-gray-300">
-                当前项目不是 AIDC 规划类项目。可在下方新建，或在「项目浏览器」新建项目时选择「包含 AIDC 规划参数」。
+                {t('workbench:aidcCreate.notAidcProject')}
               </div>
             )}
             <div className="flex items-center gap-2 mb-3">
               <input
                 value={newAidcName}
                 onChange={(e) => setNewAidcName(e.target.value)}
-                placeholder="新 AIDC 项目名（默认 64 台·BJ01）"
+                placeholder={t('workbench:aidcCreate.placeholder')}
                 className="text-xs rounded border bg-white dark:bg-app px-2 py-1 flex-1 max-w-[280px]"
               />
               <button type="button" onClick={createAidcProject} disabled={creating}
                 className="flex items-center gap-1 px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50">
-                <Plus size={12} /> 新建 AIDC 项目
+                <Plus size={12} /> {t('workbench:aidcCreate.create')}
               </button>
             </div>
             <AidcPlannerPanel boundProjectName={project} />

@@ -54,6 +54,17 @@ function stripPathParams(params?: Record<string, unknown>): Record<string, unkno
   return out
 }
 
+/** AL-I18-4: 导出文件名 ASCII 安全——中文项目名在文件系统层面乱码，回退为 project_<id>_<ts>（中文仅显示层） */
+function asciiSafeBase(name: string, id8: string): string {
+  const ascii = String(name || '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/^[\s._-]+|[\s._-]+$/g, '')
+    .trim()
+  if (ascii) return ascii
+  const ts = Date.now().toString(36)
+  return `project_${id8 || '0'}_${ts}`
+}
+
 /**
  * AL-M1e: shell:openPath / shell:showItemInFolder 允许的基础目录白名单。
  * 渲染层只应定位"程序自己产出的路径"（workspace、品牌资源、内置文档、导出临时文件、
@@ -912,7 +923,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const projName = String(p.projectName ?? p.project_name ?? '')
     const projId = String(p.projectId ?? p.project_id ?? '')
     const id8 = projId.replace(/-/g, '').slice(0, 8)
-    const base = projName || 'aidc_plan'
+    const base = asciiSafeBase(projName, id8) || 'aidc_plan'
     const defaultPath = id8 ? `${base}_${id8}.${ext}` : `${base}.${ext}`
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '导出 AIDC 规划',
@@ -954,9 +965,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // P1（V-AL4）：保存拓扑 PNG（base64 → 保存对话框 → 写盘）
   ipcMain.handle('aidc:savePng', wrapHandler(async (_event, base64: string, defaultName: string) => {
+    const safeName = asciiSafeBase(String(defaultName || '').replace(/\.png$/i, ''), '')
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '导出拓扑 PNG',
-      defaultPath: defaultName || '拓扑.png',
+      defaultPath: `${safeName}.png`,
       filters: [{ name: 'PNG 图片', extensions: ['png'] }],
     })
     if (result.canceled || !result.filePath) {
