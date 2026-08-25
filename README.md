@@ -231,9 +231,9 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.6.1-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.6.1-mac-x64.dmg` / `AutoLink-3.6.1-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.6.1-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.6.2-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.6.2-mac-x64.dmg` / `AutoLink-3.6.2-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.6.2-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 

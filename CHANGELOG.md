@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [3.6.2] - 2026-08-25
+
+### 设备库 400G/800G 接口形态修正
+
+- **400G 接口默认形态修正**：QSFP56 → OSFP（默认），端口可选 QSFP112
+- **800G 接口统一为 OSFP**（原 QSFP-DD 修正）
+- 覆盖 gpu_servers / storage_servers / switches 下共 18 处设备库 JSON + 前端默认接口模型
+- 设备库表单 placeholder 同步更新为「如 OSFP/QSFP112」
+
 ## [3.6.1] - 2026-08-25
 
 ### 导出收敛 + 拓扑子视图视口修复
