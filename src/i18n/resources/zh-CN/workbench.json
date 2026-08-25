@@ -75,6 +75,7 @@
   "output.selectToPreview": "选择左侧文件进行预览",
   "output.xlsxFail": "表格解析失败（可能为空或损坏）",
   "output.xlsxRows": "{{sheet}}（前 500 行）",
+  "output.rowsTruncated": "大表预览仅显示前 500 行，完整数据见导出的 Excel/Cache 文件",
   "output.undecodable": "（无法解码为文本）",
   "output.unsupported": "（{{ext}} 暂不支持文本预览）",
   "output.exported": "已导出 → {{path}}",
@@ -113,5 +114,6 @@
   "aidcCreate.failed": "新建失败: {{err}}",
   "aidcCreate.notAidcProject": "当前项目不是 AIDC 规划类项目。可在下方新建，或在「项目浏览器」新建项目时选择「包含 AIDC 规划参数」。",
   "aidcCreate.placeholder": "新 AIDC 项目名（默认 64 台·BJ01）",
-  "aidcCreate.create": "新建 AIDC 项目"
+  "aidcCreate.create": "新建 AIDC 项目",
+  "aidcCreate.hint": "通过项目创建向导新建，可自定义网络/拓扑/AIDC 规划参数"
 }

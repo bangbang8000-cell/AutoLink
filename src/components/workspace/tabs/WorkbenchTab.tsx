@@ -18,6 +18,7 @@ import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
+import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
 
 /** 打磨轮（v1.6 收尾）：工作台步骤分组标签（5 卡→三步） */
 /* AL-M4j：升级为水平步骤条——数字徽章 + 连接线延伸贯穿卡片分组宽度,串联三步视觉 */
@@ -269,14 +270,14 @@ export function WorkbenchTab() {
   const projects = useProjectStore((s) => s.projects)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const selectProject = useProjectStore((s) => s.selectProject)
-  const addToast = useToastStore((s) => s.addToast)
   const subview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
+  const setActivityHint = useUIStore((s) => s.setActivityHint)
 
   const [aidcProjects, setAidcProjects] = useState<string[]>([])
-  const [newAidcName, setNewAidcName] = useState('')
-  const [creating, setCreating] = useState(false)
+  // AL-M5a：AIDC 新建并入 CreateProjectWizardModal（移除固定 64 台内联表单）
+  const [showAidcWizard, setShowAidcWizard] = useState(false)
   // 打磨轮（v1.6 / AL-T1a）：工作台二级页签——访问过的子视图保留（keep-alive 保留状态）
   const [openedSubviews, setOpenedSubviews] = useState<WorkbenchSubview[]>(['main'])
 
@@ -347,29 +348,15 @@ export function WorkbenchTab() {
     }
   }, [selectedProjectName, setWorkbenchSubview])
 
-  // AL-A5：工作台内新建 AIDC 项目（默认 64 台参数，后续向导版见 P-B）
-  const createAidcProject = useCallback(async () => {
-    const name = newAidcName.trim()
-    if (!name) { addToast('warning', t('workbench:aidcCreate.pleaseEnterName')); return }
-    setCreating(true)
-    try {
-      const res = await window.electron.aidc.project.create(name, {
-        gpu_count: 64, site: 'BJ01', pfc_queue: 3, cnp_queue: 6,
+  // AL-M5a：AIDC 项目由 CreateProjectWizardModal 创建完成后刷新列表并选中
+  const handleAidcWizardCreated = useCallback(() => {
+    window.electron.aidc.project.list()
+      .then((res) => {
+        const list = (res as { ok?: boolean; projects?: Array<{ name: string }> })?.projects ?? []
+        setAidcProjects(list.map((p) => p.name))
       })
-      if (res?.error) { addToast('error', t('workbench:aidcCreate.failed', { err: res.error })); return }
-      addToast('success', t('workbench:aidcCreate.created', { name }))
-      setNewAidcName('')
-      await window.electron.project.list().then((list) => {
-        const item = (list as Array<{ id: number; name: string; index: number }>)?.find((p) => p.name === name)
-        if (item) selectProject(item)
-      })
-      setAidcProjects((prev) => (prev.includes(name) ? prev : [...prev, name]))
-    } catch (e) {
-      addToast('error', t('workbench:aidcCreate.failed', { err: String(e) }))
-    } finally {
-      setCreating(false)
-    }
-  }, [newAidcName, addToast, selectProject, t])
+      .catch(() => {})
+  }, [])
 
   if (!selectedProjectName) {
     // 打磨轮（v1.6 / AL-N1a）：无项目 → 项目引导面板（选择默认项目 / 引导到项目面板新建导入）
@@ -402,7 +389,7 @@ export function WorkbenchTab() {
           <div className="flex gap-2 justify-center">
             <button
               type="button"
-              onClick={() => setActiveActivity('project')}
+              onClick={() => { setActiveActivity('project'); setActivityHint('project') }}
               className="px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
             >
               {t('workbench:empty.gotoProjects')}
@@ -553,18 +540,20 @@ export function WorkbenchTab() {
                 {t('workbench:aidcCreate.notAidcProject')}
               </div>
             )}
-            <div className="flex items-center gap-2 mb-3">
-              <input
-                value={newAidcName}
-                onChange={(e) => setNewAidcName(e.target.value)}
-                placeholder={t('workbench:aidcCreate.placeholder')}
-                className="text-xs rounded border bg-white dark:bg-app px-2 py-1 flex-1 max-w-[280px]"
-              />
-              <button type="button" onClick={createAidcProject} disabled={creating}
-                className="flex items-center gap-1 px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50">
+            <div className="flex items-center gap-3 mb-3">
+              <button type="button" onClick={() => setShowAidcWizard(true)}
+                className="flex items-center gap-1 px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white">
                 <Plus size={12} /> {t('workbench:aidcCreate.create')}
               </button>
+              <span className="text-2xs text-gray-500 dark:text-gray-400">{t('workbench:aidcCreate.hint')}</span>
             </div>
+            {/* AL-M5a：AIDC 新建并入 CreateProjectWizardModal */}
+            {showAidcWizard && (
+              <CreateProjectWizardModal
+                defaultAidc
+                onClose={() => { setShowAidcWizard(false); handleAidcWizardCreated() }}
+              />
+            )}
             <AidcPlannerPanel boundProjectName={project} />
           </div>
         )

@@ -83,14 +83,27 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
   const selectedCell = selectedPosition ? cellMap.get(selectedPosition) : undefined
   const selectedHasCabinet = selectedCell?.cabinetId != null
 
+  // AL-M5c：拖拽预览——记录正在拖拽的机柜与当前悬停落点，无效落点红高亮
+  const [dragCabinetId, setDragCabinetId] = useState<number | null>(null)
+  const [dropPos, setDropPos] = useState<string | null>(null)
+  const clearDragState = () => { setDragCabinetId(null); setDropPos(null) }
+  const isDropValid = (pos: string) => {
+    const cell = cellMap.get(pos)
+    if (!cell) return false
+    // 占位（空调/立柱）与已上架机柜的格子不可放置
+    return cell.placeholder == null && cell.cabinetId == null
+  }
+
   const startDrag = (e: React.DragEvent, cabinetId: number) => {
     e.dataTransfer.setData('text/plain', String(cabinetId))
     e.dataTransfer.effectAllowed = 'move'
+    setDragCabinetId(cabinetId)
   }
   const dropCabinet = (e: React.DragEvent, pos: string) => {
     e.preventDefault()
+    clearDragState()
     const id = Number(e.dataTransfer.getData('text/plain'))
-    if (id) mountCabinet(pos, id)
+    if (id && isDropValid(pos)) mountCabinet(pos, id)
   }
 
   const canvas = {
@@ -103,7 +116,7 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
   const mountedCount = matrix.cells.filter((c) => c.cabinetId != null).length
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col" onDragEnd={clearDragState}>
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-app">
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 mr-1">
@@ -282,7 +295,9 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
                   transform={`translate(${LABEL_W + ci * (CELL_W + CELL_GAP)}, ${LABEL_H + ri * (CELL_H + CELL_GAP)})`}
                   className="cursor-pointer"
                   onClick={() => markCell(pos)}
-                  onDragOver={(e) => e.preventDefault()}
+                  // AL-M5c：悬停落点预览（仅拖拽机柜时生效）
+                  onMouseEnter={() => { if (dragCabinetId != null) setDropPos(pos) }}
+                  onDragOver={(e) => { e.preventDefault(); if (dragCabinetId != null) setDropPos(pos) }}
                   onDrop={(e) => dropCabinet(e, pos)}
                 >
                   <rect
@@ -293,6 +308,19 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
                     stroke={stroke}
                     strokeWidth={isSelected ? 2 : 1}
                   />
+                  {/* AL-M5c：拖拽落点预览高亮（绿=有效可放置 / 红=无效） */}
+                  {dragCabinetId != null && dropPos === pos && (
+                    <rect
+                      width={CELL_W}
+                      height={CELL_H}
+                      rx={3}
+                      fill={isDropValid(pos) ? 'rgba(34,197,94,0.30)' : 'rgba(239,68,68,0.30)'}
+                      stroke={isDropValid(pos) ? '#16a34a' : '#dc2626'}
+                      strokeWidth={2}
+                      strokeDasharray="4 2"
+                      pointerEvents="none"
+                    />
+                  )}
                   {/* 占位斜纹 */}
                   {isPlaceholder && (
                     <>

@@ -9,12 +9,14 @@ import { useToastStore } from '@/stores/toast.store'
 
 interface Props {
   templateName?: string | null
+  /** AL-M5a：预置开启 AIDC 规划参数（工作台新建 AIDC 项目入口直达） */
+  defaultAidc?: boolean
   onClose: () => void
 }
 
-export function CreateProjectWizardModal({ templateName, onClose }: Props) {
+export function CreateProjectWizardModal({ templateName, defaultAidc, onClose }: Props) {
   const { t } = useTranslation()
-  const { openWizard, closeWizard, config, loadTemplateConfig, aidcEnabled, aidcMacro } = useWizardStore()
+  const { openWizard, closeWizard, config, loadTemplateConfig, setAidcEnabled, aidcEnabled, aidcMacro } = useWizardStore()
   const { createProjectWithConfig } = useProjectStore()
   const { loadLibrary } = useDeviceLibraryStore()
   const addToast = useToastStore((s) => s.addToast)
@@ -22,6 +24,8 @@ export function CreateProjectWizardModal({ templateName, onClose }: Props) {
   // V2.9.5-T3: 基于模板创建时预填向导配置（networks/topology/device_refs/rack_config/scale_up）
   useEffect(() => {
     openWizard(templateName)
+    // AL-M5a：AIDC 入口预置开启规划参数（openWizard 会复位为 false,此处再打开）
+    if (defaultAidc) setAidcEnabled(true)
     loadLibrary()
     if (templateName) {
       window.electron?.template?.getConfig(templateName)

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { X, Search, Zap, HardDrive, Server, Package, Filter } from 'lucide-react'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import type { LibraryDevice } from '@/types/device-profile'
+import { ALL_VENDORS } from '@/constants/labels'
 import clsx from 'clsx'
 
 interface Props {
@@ -21,7 +22,8 @@ const CATEGORY_TABS = [
   { id: 'switches', label: '交换机' },
 ] as const
 
-const VENDORS = ['全部', 'NVIDIA', '华为', 'H3C', '浪潮', '锐捷', '通用']
+// 厂商筛选下拉：单源自 @/constants/labels，保留「全部/通用」特殊筛选项
+const VENDORS = ['全部', ...ALL_VENDORS, '通用']
 
 const DEVICE_TYPES = [
   { id: 'all', label: '全部' },

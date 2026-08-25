@@ -75,6 +75,7 @@
   "output.selectToPreview": "왼쪽 파일을 선택하여 미리보기",
   "output.xlsxFail": "테이블 분석 실패(비었거나 손상됨)",
   "output.xlsxRows": "{{sheet}}(처음 500행)",
+  "output.rowsTruncated": "대형 테이블 미리보기는 처음 500행만 표시합니다. 전체 데이터는 내보낸 Excel/Cache 파일을 참조하세요",
   "output.undecodable": "(텍스트로 디코딩 불가)",
   "output.unsupported": "{{ext}} 텍스트 미리보기 미지원",
   "output.exported": "내보냄 → {{path}}",
@@ -113,5 +114,6 @@
   "aidcCreate.failed": "생성 실패: {{err}}",
   "aidcCreate.notAidcProject": "현재 프로젝트는 AIDC 계획 유형이 아닙니다. 아래에서 새로 만들거나 프로젝트 탐색기에서 「AIDC 계획 매개변수 포함」을 선택하세요.",
   "aidcCreate.placeholder": "새 AIDC 프로젝트 이름(기본 64대·BJ01)",
-  "aidcCreate.create": "AIDC 프로젝트 만들기"
+  "aidcCreate.create": "AIDC 프로젝트 만들기",
+  "aidcCreate.hint": "프로젝트 생성 마법사로 생성하며 네트워크/토폴로지/AIDC 계획 파라미터를 직접 설정할 수 있습니다"
 }

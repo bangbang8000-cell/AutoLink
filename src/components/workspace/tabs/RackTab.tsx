@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useRackStore, CABINET_TYPE_LABELS, type CabinetType, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -60,6 +61,8 @@ export function RackTab({ cabinetId }: Props) {
   const [showUnplaced, setShowUnplaced] = useState(true)
   const [cabinetDropdownOpen, setCabinetDropdownOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('basic')
+  // AL-M5b：项目 Modal 确认体系（替代 window.confirm）
+  const [confirmState, setConfirmState] = useState<{ message: string; fn: () => void } | null>(null)
 
   // V2.9.2-T4: 上架/移除设备标记 dirty(关闭需确认)
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
@@ -168,6 +171,7 @@ export function RackTab({ cabinetId }: Props) {
   }
 
   return (
+    <>
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
@@ -227,10 +231,15 @@ export function RackTab({ cabinetId }: Props) {
                 addToast('warning', '无同类机柜可应用', 4000)
                 return
               }
-              if (!window.confirm(`将当前柜的 U 位布局/功率上限应用到 ${sameType} 个同类柜？`)) return
-              const r = applyCabinetTemplate(cabinet.id)
-              markDirty()
-              addToast('success', `已应用到同类柜：对齐 ${r.applied} 处，跳过 ${r.skipped} 处`, 4000)
+              // AL-M5b：window.confirm → 项目 Modal 确认体系
+              setConfirmState({
+                message: `将当前柜的 U 位布局/功率上限应用到 ${sameType} 个同类柜？`,
+                fn: () => {
+                  const r = applyCabinetTemplate(cabinet.id)
+                  markDirty()
+                  addToast('success', `已应用到同类柜：对齐 ${r.applied} 处，跳过 ${r.skipped} 处`, 4000)
+                },
+              })
             }}
             className="px-1.5 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 shrink-0"
             title={t('rack:applyToSameType', '应用到所有同类柜（U 位布局/功率上限）')}
@@ -482,5 +491,15 @@ export function RackTab({ cabinetId }: Props) {
         )}
       </div>
     </div>
+
+    {/* AL-M5b：项目 Modal 确认体系（替代 window.confirm） */}
+    <ConfirmDialog
+      open={!!confirmState}
+      message={confirmState?.message ?? ''}
+      danger
+      onConfirm={() => { confirmState?.fn(); setConfirmState(null) }}
+      onCancel={() => setConfirmState(null)}
+    />
+    </>
   )
 }

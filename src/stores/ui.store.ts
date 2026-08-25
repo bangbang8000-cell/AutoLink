@@ -66,6 +66,8 @@ interface UIState {
   workbenchSubview: WorkbenchSubview
   /** 打磨轮（v1.2 / M2）：云平台总体开关（默认关；关时隐藏云一级菜单/云入口） */
   cloudEnabled: boolean
+  /** AL-M5g：一级导航临时高亮提示（空态引导跳转时的视觉反馈；瞬态、不持久化） */
+  activityHint: ActivityType | null
 
   setActiveActivity: (activity: ActivityType) => void
   /** 打磨轮（P-A）：切换工作台子视图 */
@@ -89,6 +91,8 @@ interface UIState {
   setAIConfig: (updates: Partial<AIConfig>) => void
   /** V3.1.1-T5-5: 更新单个 Provider 配置 */
   setProviderConfig: (key: string, cfg: AIProviderConfig) => void
+  /** AL-M5g：设置一级导航临时高亮提示 */
+  setActivityHint: (hint: ActivityType | null) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -115,6 +119,7 @@ export const useUIStore = create<UIState>()(
       aiKeyConfigured: {},
       workbenchSubview: 'main',
       cloudEnabled: false,
+      activityHint: null,
 
       setActiveActivity: (activity) => set({ activeActivity: activity }),
       setWorkbenchSubview: (view) => set({ workbenchSubview: view }),
@@ -183,6 +188,8 @@ export const useUIStore = create<UIState>()(
           // AL-S3: 记录该 Provider 是否已配置密钥（仅布尔标记）
           aiKeyConfigured: { ...s.aiKeyConfigured, [key]: Boolean(cfg.apiKey) },
         })),
+
+      setActivityHint: (hint) => set({ activityHint: hint }),
     }),
     {
       name: 'autolink-ui-state',

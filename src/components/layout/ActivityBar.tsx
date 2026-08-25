@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useEffect, useRef } from 'react'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
   FolderOpen, Zap, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search, Files,
@@ -56,7 +57,22 @@ export function ActivityBar({ onActivityClick }: Props) {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   // 打磨轮（v1.2 / M2）：云平台开关关闭时隐藏云一级菜单
   const cloudEnabled = useUIStore((s) => s.cloudEnabled)
+  // AL-M5g：一级导航临时高亮提示（空态引导跳转）
+  const activityHint = useUIStore((s) => s.activityHint)
+  const setActivityHint = useUIStore((s) => s.setActivityHint)
   const activities = ACTIVITIES.filter((a) => a.id !== 'cloud' || cloudEnabled)
+
+  // AL-M5g：高亮提示瞬态，0.9s 后自动清除
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (activityHint) {
+      if (hintTimer.current) clearTimeout(hintTimer.current)
+      hintTimer.current = setTimeout(() => setActivityHint(null), 900)
+    }
+    return () => {
+      if (hintTimer.current) clearTimeout(hintTimer.current)
+    }
+  }, [activityHint, setActivityHint])
 
   const handleClick = (item: ActivityItem) => {
     if (onActivityClick) {
@@ -67,6 +83,8 @@ export function ActivityBar({ onActivityClick }: Props) {
   const renderItem = (item: ActivityItem) => {
     const active = activeActivity === item.id
     const colors = ACTIVITY_COLORS[item.id]
+    // AL-M5g：空态引导跳转到该入口时，临时加深高亮闪烁一次
+    const hinted = activityHint === item.id
     return (
       <button
         key={item.id}
@@ -77,12 +95,13 @@ export function ActivityBar({ onActivityClick }: Props) {
           active
             ? `${colors.icon} bg-gray-200 dark:bg-app-hover`
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-app-hover',
+          hinted && 'bg-gray-200 dark:bg-app-hover animate-pulse',
         )}
       >
         {active && (
           <div className={clsx('absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r', colors.bar)} />
         )}
-        {item.icon}
+        <span className={clsx(hinted && colors.icon)}>{item.icon}</span>
       </button>
     )
   }

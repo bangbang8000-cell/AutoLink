@@ -75,6 +75,7 @@
   "output.selectToPreview": "選擇左側檔案進行預覽",
   "output.xlsxFail": "表格解析失敗（可能為空或損壞）",
   "output.xlsxRows": "{{sheet}}（前 500 行）",
+  "output.rowsTruncated": "大表預覽僅顯示前 500 行，完整資料見匯出的 Excel/Cache 檔案",
   "output.undecodable": "（無法解碼為文字）",
   "output.unsupported": "（{{ext}} 暫不支援文字預覽）",
   "output.exported": "已匯出 → {{path}}",
@@ -113,5 +114,6 @@
   "aidcCreate.failed": "新建失敗: {{err}}",
   "aidcCreate.notAidcProject": "目前專案不是 AIDC 規劃類專案。可在下方新建，或在「專案瀏覽器」新建專案時選擇「包含 AIDC 規劃參數」。",
   "aidcCreate.placeholder": "新 AIDC 專案名（預設 64 台·BJ01）",
-  "aidcCreate.create": "新建 AIDC 專案"
+  "aidcCreate.create": "新建 AIDC 專案",
+  "aidcCreate.hint": "透過專案建立精靈建立，可自訂網路/拓撲/AIDC 規劃參數"
 }

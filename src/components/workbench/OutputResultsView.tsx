@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
   RefreshCw, Download, Trash2, ChevronRight, ChevronDown,
   FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2,
@@ -33,14 +34,16 @@ const FILE_ICON = (name: string) => {
 const fmtSize = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)}MB` : n > 1024 ? `${(n / 1024).toFixed(1)}KB` : `${n}B`)
 
 /** xlsx base64 → 二维表格（首 sheet） */
-function xlsxToTable(base64: string): { name: string; rows: (string | number)[][] } | null {
+function xlsxToTable(base64: string): { name: string; rows: (string | number)[][]; truncated: boolean } | null {
   try {
     const wb = XLSX.read(base64, { type: 'base64' })
     const name = wb.SheetNames[0] ?? ''
     const ws = wb.Sheets[name]
     if (!ws) return null
     const rows = XLSX.utils.sheet_to_json<(string | number)[]>(ws, { header: 1, raw: true, defval: '' }) as (string | number)[][]
-    return { name, rows: rows.slice(0, 500) }
+    // AL-M5d：大表仅渲染前 500 行并标记截断提示
+    const truncated = rows.length > 500
+    return { name, rows: rows.slice(0, 500), truncated }
   } catch {
     return null
   }
@@ -57,9 +60,21 @@ function base64ToText(base64: string): string {
 }
 
 /** 预览面板：按扩展名选择 文本 / 表格 / 图形 */
-function PreviewPanel({ preview, fileName }: { preview: PreviewData | null; fileName: string }) {
+function PreviewPanel({ preview, fileName, loading }: { preview: PreviewData | null; fileName: string; loading: boolean }) {
   const { t } = useTranslation()
   const ext = preview?.ext ?? ''
+  // AL-M5d：加载中展示骨架屏
+  if (loading) {
+    return (
+      <div className="flex-1 p-4 space-y-2 animate-pulse">
+        <div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-2.5 w-2/3 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-2.5 w-1/2 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-2.5 w-3/5 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-2.5 w-2/5 bg-gray-200 dark:bg-gray-700 rounded" />
+      </div>
+    )
+  }
   if (!preview) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 text-xs">
@@ -87,6 +102,12 @@ function PreviewPanel({ preview, fileName }: { preview: PreviewData | null; file
     return (
       <div className="flex-1 overflow-auto">
         <div className="px-3 py-1.5 text-2xs text-gray-400 bg-gray-50 dark:bg-app border-b">{t('workbench:output.xlsxRows', { sheet: table.name })}</div>
+        {/* AL-M5d：大表仅前 500 行提示（避免海量数据卡顿） */}
+        {table.truncated && (
+          <div className="px-3 py-1.5 text-2xs bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-b">
+            {t('workbench:output.rowsTruncated', '大表预览仅显示前 500 行，完整数据见导出的 Excel/Cache 文件')}
+          </div>
+        )}
         <table className="w-full text-xs border-collapse">
           <tbody>
             {table.rows.map((r, i) => (
@@ -119,6 +140,10 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [selectedFile, setSelectedFile] = useState<BatchFile | null>(null)
   const [preview, setPreview] = useState<PreviewData | null>(null)
+  // AL-M5d：预览加载态（骨架屏）
+  const [previewLoading, setPreviewLoading] = useState(false)
+  // AL-M5b：项目 Modal 确认体系（替代 window.confirm）
+  const [confirmState, setConfirmState] = useState<{ message: string; danger: boolean; fn: () => void } | null>(null)
   const [busy, setBusy] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -146,12 +171,15 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   const loadPreview = useCallback(async (file: BatchFile) => {
     setSelectedFile(file)
     setPreview(null)
+    setPreviewLoading(true)
     try {
       const d = await window.electron.render.readOutputFile(activeProject, file.path)
       setPreview(d)
     } catch (err) {
       setPreview(null)
       addToast('error', t('workbench:output.previewFailed', { err: (err as Error).message }), 4000)
+    } finally {
+      setPreviewLoading(false)
     }
   }, [activeProject, addToast])
 
@@ -169,52 +197,76 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     const target = file ?? selectedFile
     if (!target) return
     const rel = target.path.replace(/^output\//, '')
-    if (!window.confirm(t('workbench:output.confirmDeleteFile', { name: target.name }))) return
-    try {
-      await window.electron.project.deleteOutputFile(activeProject, rel)
-      addToast('success', t('workbench:output.deleted', '已删除'), 3000)
-      setSelectedFile(null)
-      setPreview(null)
-      refresh()
-    } catch (err) {
-      addToast('error', `删除失败: ${(err as Error).message}`, 4000)
-    }
-  }, [selectedFile, activeProject, addToast, refresh])
+    // AL-M5b：window.confirm → 项目 Modal 确认体系
+    setConfirmState({
+      message: t('workbench:output.confirmDeleteFile', { name: target.name }),
+      danger: true,
+      fn: async () => {
+        try {
+          await window.electron.project.deleteOutputFile(activeProject, rel)
+          addToast('success', t('workbench:output.deleted', '已删除'), 3000)
+          setSelectedFile(null)
+          setPreview(null)
+          refresh()
+        } catch (err) {
+          addToast('error', `删除失败: ${(err as Error).message}`, 4000)
+        }
+      },
+    })
+  }, [selectedFile, activeProject, addToast, refresh, t])
 
   const handleDeleteBatch = useCallback(async (batch: Batch) => {
-    if (!window.confirm(t('workbench:output.confirmDeleteBatch', { batch: batch.name, count: batch.files.length }))) return
-    try {
-      await window.electron.project.deleteOutputBatch(activeProject, batch.name)
-      addToast('success', t('workbench:output.batchDeleted', '批次已删除'), 3000)
-      refresh()
-    } catch (err) {
-      addToast('error', `删除失败: ${(err as Error).message}`, 4000)
-    }
-  }, [activeProject, addToast, refresh])
+    // AL-M5b：window.confirm → 项目 Modal 确认体系
+    setConfirmState({
+      message: t('workbench:output.confirmDeleteBatch', { batch: batch.name, count: batch.files.length }),
+      danger: true,
+      fn: async () => {
+        try {
+          await window.electron.project.deleteOutputBatch(activeProject, batch.name)
+          addToast('success', t('workbench:output.batchDeleted', '批次已删除'), 3000)
+          refresh()
+        } catch (err) {
+          addToast('error', `删除失败: ${(err as Error).message}`, 4000)
+        }
+      },
+    })
+  }, [activeProject, addToast, refresh, t])
 
   const handleClearProject = useCallback(async () => {
-    if (!window.confirm(t('workbench:output.confirmClearProject', { name: activeProject }))) return
-    try {
-      await window.electron.project.clearOutput(activeProject)
-      addToast('success', t('workbench:output.projectCleared', '项目输出已清空'), 3000)
-      setBatches([])
-      setSelectedFile(null)
-      setPreview(null)
-    } catch (err) {
-      addToast('error', `清空失败: ${(err as Error).message}`, 4000)
-    }
-  }, [activeProject, addToast])
+    // AL-M5b：window.confirm → 项目 Modal 确认体系
+    setConfirmState({
+      message: t('workbench:output.confirmClearProject', { name: activeProject }),
+      danger: true,
+      fn: async () => {
+        try {
+          await window.electron.project.clearOutput(activeProject)
+          addToast('success', t('workbench:output.projectCleared', '项目输出已清空'), 3000)
+          setBatches([])
+          setSelectedFile(null)
+          setPreview(null)
+        } catch (err) {
+          addToast('error', `清空失败: ${(err as Error).message}`, 4000)
+        }
+      },
+    })
+  }, [activeProject, addToast, t])
 
   const handleClearAll = useCallback(async () => {
-    if (!window.confirm(t('workbench:output.confirmClearAll', '清空全部项目的输出？此操作不可恢复。'))) return
-    try {
-      const res = await window.electron.render.clearAllOutput()
-      addToast('success', t('workbench:output.clearedAll', { count: res.deleted }), 3000)
-      refresh()
-    } catch (err) {
-      addToast('error', `清空失败: ${(err as Error).message}`, 4000)
-    }
-  }, [addToast, refresh])
+    // AL-M5b：window.confirm → 项目 Modal 确认体系
+    setConfirmState({
+      message: t('workbench:output.confirmClearAll', '清空全部项目的输出？此操作不可恢复。'),
+      danger: true,
+      fn: async () => {
+        try {
+          const res = await window.electron.render.clearAllOutput()
+          addToast('success', t('workbench:output.clearedAll', { count: res.deleted }), 3000)
+          refresh()
+        } catch (err) {
+          addToast('error', `清空失败: ${(err as Error).message}`, 4000)
+        }
+      },
+    })
+  }, [addToast, refresh, t])
 
   const handleOpenLocation = useCallback(async (file: BatchFile) => {
     try {
@@ -328,9 +380,18 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
               <span className="text-2xs text-gray-400 shrink-0">{fmtSize(preview.size)}</span>
             )}
           </div>
-          <PreviewPanel preview={preview} fileName={selectedFile?.name ?? ''} />
+          <PreviewPanel preview={preview} fileName={selectedFile?.name ?? ''} loading={previewLoading} />
         </div>
       </div>
+
+      {/* AL-M5b：项目 Modal 确认体系（替代 window.confirm） */}
+      <ConfirmDialog
+        open={!!confirmState}
+        message={confirmState?.message ?? ''}
+        danger={confirmState?.danger}
+        onConfirm={() => { confirmState?.fn(); setConfirmState(null) }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

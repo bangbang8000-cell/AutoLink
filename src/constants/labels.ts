@@ -39,3 +39,34 @@ export const NETWORK_TYPE_LABELS: Record<string, string> = {
   biz: '业务网',
   oob: '带外网',
 }
+
+/* ================================================================
+ *  厂商目录（单源） — 网络设备 / 服务器厂商预设及别名、匹配工具
+ * ================================================================ */
+
+/** 网络设备厂商预设（一键选厂商） */
+export const NETWORK_VENDORS = ['NVIDIA', '华为', 'H3C', '锐捷']
+
+/** 服务器厂商预设（一键选厂商） */
+export const SERVER_VENDORS = ['超微', '华为', 'H3C', '中兴', '浪潮', '曙光']
+
+/** 厂商别名表：统一厂商名 → 常见拼写/中文别名 */
+export const VENDOR_ALIASES: Record<string, string[]> = {
+  NVIDIA: ['nvidia', '英伟达'],
+  '华为': ['huawei', '华为'],
+  H3C: ['h3c', '华三'],
+  '锐捷': ['ruijie', '锐捷'],
+  '超微': ['supermicro', '超微'],
+  '中兴': ['zte', '中兴'],
+  '浪潮': ['inspur', '浪潮'],
+  '曙光': ['sugon', '曙光'],
+}
+
+/** 全部厂商（按出现顺序去重，用于设备库筛选下拉） */
+export const ALL_VENDORS = Array.from(new Set([...NETWORK_VENDORS, ...SERVER_VENDORS]))
+
+/** 判定设备厂商是否属于某预设厂商（含别名匹配） */
+export function matchesVendor(deviceVendor: string, preset: string): boolean {
+  return (VENDOR_ALIASES[preset] ?? [preset.toLowerCase()])
+    .some((a) => deviceVendor.toLowerCase().includes(a))
+}

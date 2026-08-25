@@ -75,6 +75,7 @@
   "output.selectToPreview": "Select a file on the left to preview",
   "output.xlsxFail": "Could not parse table (empty or corrupt)",
   "output.xlsxRows": "{{sheet}} (first 500 rows)",
+  "output.rowsTruncated": "Large table preview shows only the first 500 rows; see the exported Excel/Cache file for full data",
   "output.undecodable": "(cannot decode to text)",
   "output.unsupported": "{{ext}} text preview not supported",
   "output.exported": "Exported → {{path}}",
@@ -113,5 +114,6 @@
   "aidcCreate.failed": "Create failed: {{err}}",
   "aidcCreate.notAidcProject": "The current project is not an AIDC planning project. Create one below, or choose \"Include AIDC planning parameters\" when creating in the project explorer.",
   "aidcCreate.placeholder": "New AIDC project name (default 64 servers·BJ01)",
-  "aidcCreate.create": "Create AIDC project"
+  "aidcCreate.create": "Create AIDC project",
+  "aidcCreate.hint": "Create via the project wizard to customize networks/topology/AIDC planning parameters"
 }

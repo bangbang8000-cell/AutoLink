@@ -5,6 +5,7 @@ import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import { DEVICE_REF_KEYS } from '@/types/project-config'
 import type { ProjectNetworks } from '@/types/project-config'
 import type { LibraryDevice, DeviceRef } from '@/types/device-profile'
+import { NETWORK_VENDORS, SERVER_VENDORS, matchesVendor } from '@/constants/labels'
 import {
   getDefaultRefs,
   resolveIBDefaults,
@@ -28,23 +29,7 @@ interface DeviceGroup {
   serverRefKeys: { refKey: string; countKey: string; label: string; category: string }[]
 }
 
-// 打磨轮（AL-B4）：一键选厂商预设（网络设备/服务器双维度）
-const NETWORK_VENDORS = ['NVIDIA', '华为', 'H3C', '锐捷']
-const SERVER_VENDORS = ['超微', '华为', 'H3C', '中兴', '浪潮', '曙光']
-
-const VENDOR_ALIASES: Record<string, string[]> = {
-  NVIDIA: ['nvidia', '英伟达'],
-  '华为': ['huawei', '华为'],
-  H3C: ['h3c', '华三'],
-  '锐捷': ['ruijie', '锐捷'],
-  '超微': ['supermicro', '超微'],
-  '中兴': ['zte', '中兴'],
-  '浪潮': ['inspur', '浪潮'],
-  '曙光': ['sugon', '曙光'],
-}
-
-const matchesVendor = (deviceVendor: string, preset: string): boolean =>
-  (VENDOR_ALIASES[preset] ?? [preset.toLowerCase()]).some((a) => deviceVendor.toLowerCase().includes(a))
+// 打磨轮（AL-B4）：一键选厂商预设（网络设备/服务器双维度），厂商目录单源见 @/constants/labels
 
 const DEVICE_GROUPS: DeviceGroup[] = [
   {

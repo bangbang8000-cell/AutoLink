@@ -75,6 +75,7 @@
   "output.selectToPreview": "左のファイルを選択してプレビュー",
   "output.xlsxFail": "テーブル解析失敗（空または破損）",
   "output.xlsxRows": "{{sheet}}（先頭500行）",
+  "output.rowsTruncated": "大規模テーブルはプレビューで先頭500行のみ表示します。完全なデータはエクスポートした Excel/Cache を参照してください",
   "output.undecodable": "（テキストにデコードできません）",
   "output.unsupported": "{{ext}} テキストプレビュー非対応",
   "output.exported": "出力済み → {{path}}",
@@ -113,5 +114,6 @@
   "aidcCreate.failed": "作成に失敗: {{err}}",
   "aidcCreate.notAidcProject": "現在のプロジェクトは AIDC 計画タイプではありません。下で新規作成するか、プロジェクトエクスプローラーで「AIDC 計画パラメータを含める」を選択してください。",
   "aidcCreate.placeholder": "新しい AIDC プロジェクト名（デフォルト 64 台·BJ01）",
-  "aidcCreate.create": "AIDC プロジェクトを作成"
+  "aidcCreate.create": "AIDC プロジェクトを作成",
+  "aidcCreate.hint": "プロジェクト作成ウィザードで作成。ネットワーク/トポロジー/AIDC プラン変数をカスタマイズできます"
 }
