@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## [3.6.0] - 2026-08-25
+
+### 打磨优化 M1–M6：安全 / i18n / 性能 / 便捷 / 联合回归
+
+v3.6.0 为 AIDC 双产品打磨优化里程碑（AL+MC 联合）：安全加固、国际化收官、性能稳定、便捷美观与跨端收口。
+
+#### 安全加固（M1）
+- `ai:call` 动作白名单：白名单外动作拒绝；`plan:aidc` 相关路径字段 workspace 限界
+- API Key 不再落 localStorage：前端存引用，密钥落后端 safeStorage
+- 审计日志落盘前脱敏（api_key/token/password）；`shell:openPath/showItemInFolder` 调用面收敛
+
+#### 国际化收官（M2）
+- Toast 消息化（`messageKey+params`，ToastContainer 统一翻译）+ 高频路径中文 fallback 补齐
+- 工作台二级页签 SUBVIEW_LABELS 7 项全量 i18n + 新建/空态/导出 18 处硬编码接入
+- i18n 门禁：缺 key 即失败（对新增 key 生效，存量登记豁免）；导出文件名 ASCII fallback
+
+#### 性能与工作台/导航（M4）
+- 撤销快照降内存（位置增量 + 规模阈值降 limit）、hover 局部更新避免全量重建
+- keep-alive 近 N 保活 + 右键批量关闭（其他/右侧/全部），卸载前状态持久化
+- Worker 竞态防护 + 实例复用；千节点动画降频；后端临时 PNG 唯一后缀；记忆引擎写盘节流
+- MenuBar 快捷键从 hotkeyRegistry 单源读取（消除双源漂移）；三步 Stepper 视觉强化；ActivityType 废弃标记 + ActivityBar labelKey 前缀统一 `nav:`
+
+#### 便捷美观（M5）
+- AIDC 新建并入项目创建向导（自定义网络/拓扑/AIDC 规划参数）；移除固定 64 台内联表单
+- `window.confirm` 统一替换为项目 Modal 确认体系（ConfirmDialog）
+- 机柜矩阵拖拽放置预览 + 无效落点红绿高亮；输出预览 loading 骨架 + 大表「仅前 500 行」提示
+- 厂商目录单源化（constants/labels.ts）+ 空态「前往项目面板」联动高亮；Glossary v1.0 术语文档
+
+#### 联合回归收口（M6）
+- 拓扑过滤器 FilterType 收敛为英文枚举 + 标签映射（逻辑与显示分离，兼容多语言）
+- i18n.test.ts 新增 Glossary v1.0 术语一致性门禁（error 级）
+- 修复 M4 引入的 TopologyTab TDZ（map 回调引用未初始化 nodes）；e2e app 冒烟冷启动时序修复
+- 双端全量回归：AL vitest 520 + pytest 1010 + e2e 3 全绿；MC vitest 152 + pytest 197 全绿
+
 ## [3.5.0] - 2026-08-21
 
 ### AIDC 智算中心规划 v1.2–v1.6

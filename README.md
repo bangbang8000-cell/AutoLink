@@ -6,13 +6,13 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.5.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-3.6.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
 [![Templates](https://img.shields.io/badge/templates-19-teal)](#)
 [![Devices](https://img.shields.io/badge/devices-120-purple)](#)
-[![CI](https://img.shields.io/badge/tests-1458%20passed-brightgreen)](#)
+[![CI](https://img.shields.io/badge/tests-1533%20passed-brightgreen)](#)
 
 </div>
 
@@ -192,7 +192,7 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 ### 23. 质量闭环（v3.2.3）
 
-- **全量回归**：前端 467 + 后端 991 用例、E2E 3 条、性能基准、模板/golden 全绿
+- **全量回归**：前端 520 + 后端 1010 用例、E2E 3 条、性能基准、模板/golden 全绿
 - **本地能力矩阵**：用户指南新增章节，核心能力全部离线可用（仅 AIHUB 与自动更新需网络）
 
 ### 24. 用户登录与账号体系（v3.3.0）
@@ -212,6 +212,17 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **ZIP 加密**：加密导出 / 加密导入（ZipCrypto 强校验，密码二次确认）
 - **模板市场增强**：AutoLink 品类体系（GPU/存储/网络/通用）+ 收藏星标与「我的收藏」过滤 + 权限管理（所有者 / 可编辑 / 只读，共享成员授权与撤销）
 
+### 27. 打磨优化里程碑（v3.6.0）
+
+与 MagicCommander 联合推进的 M1–M6 打磨（安全 / i18n / 性能 / 便捷 / 收口）：
+
+- **安全加固**：`ai:call` 动作白名单、`plan:aidc` 路径 workspace 限界、API Key 不落 localStorage（safeStorage 落盘）、审计日志脱敏、shell 调用面收敛
+- **国际化收官**：Toast 消息化 + 高频中文 fallback、工作台二级页签 SUBVIEW_LABELS 7 项全量 i18n、i18n 门禁防缺 key、导出文件名 ASCII fallback
+- **性能稳定**：撤销快照降内存、hover 局部更新、keep-alive 保活上限 + 右键批量关闭、Worker 竞态防护、千节点动画降频、记忆引擎写盘节流
+- **工作台/导航**：MenuBar 快捷键单源（hotkeyRegistry）、三步 Stepper 视觉强化、ActivityBar 语义色统一、ActivityType 废弃标记
+- **便捷美观**：AIDC 新建并入创建向导、`window.confirm` → 项目 Modal 确认体系、机柜矩阵拖拽预览/无效落点高亮、输出预览 loading 骨架 + 大表前 500 行提示、厂商目录单源化、空态「前往项目面板」联动高亮
+- **联合收口**：拓扑过滤器 FilterType 英文枚举收敛、Glossary v1.0 术语一致性门禁、修复 M4 引入的 TopologyTab TDZ、双端全量回归全绿
+
 ---
 
 ## 📦 快速开始
@@ -220,9 +231,9 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.5.0-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.5.0-mac-x64.dmg` / `AutoLink-3.5.0-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.5.0-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-3.6.0-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-3.6.0-mac-x64.dmg` / `AutoLink-3.6.0-mac-arm64.dmg`
+- **Linux**：`AutoLink-3.6.0-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
 
@@ -253,9 +264,9 @@ npm run dist:linux  # Linux (AppImage + DEB)
 ### 运行测试
 
 ```bash
-npm test              # 前端测试（Vitest 467 cases）
-npm run test:backend  # 后端测试（pytest 991 cases）
-npm run test:all      # 全量测试（1458 cases）
+npm test              # 前端测试（Vitest 520 cases）
+npm run test:backend  # 后端测试（pytest 1010 cases）
+npm run test:all      # 全量测试（1533 cases，含 e2e 3 条）
 npm run typecheck     # TypeScript 类型检查（含 preload）
 npm run lint          # ESLint 代码检查（0 error）
 python scripts/validate_templates.py  # 19 模板验证
@@ -292,7 +303,7 @@ python scripts/gen_golden.py --check  # golden 基线比对
 - **前端**：React 18 + TypeScript + Zustand + Tailwind CSS + @xyflow/react + ECharts + Vite
 - **桌面**：Electron + contextBridge（安全隔离）+ electron-updater（双通道更新）
 - **后端**：Python（pandas + openpyxl + reportlab），JSON-RPC 子进程桥接，PyInstaller 免 Python 打包
-- **测试**：Vitest（467）+ pytest（991）
+- **测试**：Vitest（520）+ pytest（1010）+ E2E（Playwright 3）
 - **i18n**：react-i18next（5 种语言）
 - **CI/CD**：GitHub Actions 三平台矩阵构建（win / mac / linux）+ 模板/golden 门禁
 
