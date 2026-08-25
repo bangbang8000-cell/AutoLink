@@ -46,7 +46,7 @@ function buildSavedLayout(nodes: TopologyNode[]): TopologyLayout {
   nodes.forEach((n, i) => {
     nodePositions[n.id] = { x: 1000 + i, y: 2000 + i }
   })
-  return { nodePositions }
+  return { version: 1, savedAt: '2026-08-25T00:00:00Z', nodePositions }
 }
 
 describe('exportTopologyView（2026-08-24：真实渲染截图导出）', () => {
