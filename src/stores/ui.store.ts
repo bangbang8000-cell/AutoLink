@@ -57,6 +57,8 @@ interface UIState {
   showShortcutsDialog: boolean
   /** V3.1.1-T5-5: AI 配置（默认厂商/自主模式/各厂商 BYO-Key） */
   aiConfig: AIConfig
+  /** AL-S3: 各 Provider 是否已配置密钥（只存布尔，不落明文 key；密钥本体归后端 ai_secrets.json） */
+  aiKeyConfigured: Record<string, boolean>
   /** 打磨轮（P-A）：工作台当前子视图 */
   workbenchSubview: WorkbenchSubview
   /** 打磨轮（v1.2 / M2）：云平台总体开关（默认关；关时隐藏云一级菜单/云入口） */
@@ -107,6 +109,7 @@ export const useUIStore = create<UIState>()(
         autonomyMode: 'semi_auto',
         providers: {},
       },
+      aiKeyConfigured: {},
       workbenchSubview: 'main',
       cloudEnabled: false,
 
@@ -156,7 +159,17 @@ export const useUIStore = create<UIState>()(
       setShowShortcutsDialog: (show) => set({ showShortcutsDialog: show }),
 
       setAIConfig: (updates) =>
-        set((s) => ({ aiConfig: { ...s.aiConfig, ...updates } })),
+        set((s) => {
+          const aiConfig = { ...s.aiConfig, ...updates }
+          // AL-S3: providers 变化时同步 key 配置标记
+          const aiKeyConfigured = { ...s.aiKeyConfigured }
+          if (updates.providers) {
+            for (const [k, cfg] of Object.entries(updates.providers)) {
+              aiKeyConfigured[k] = Boolean(cfg?.apiKey)
+            }
+          }
+          return { aiConfig, aiKeyConfigured }
+        }),
 
       setProviderConfig: (key, cfg) =>
         set((s) => ({
@@ -164,6 +177,8 @@ export const useUIStore = create<UIState>()(
             ...s.aiConfig,
             providers: { ...s.aiConfig.providers, [key]: cfg },
           },
+          // AL-S3: 记录该 Provider 是否已配置密钥（仅布尔标记）
+          aiKeyConfigured: { ...s.aiKeyConfigured, [key]: Boolean(cfg.apiKey) },
         })),
     }),
     {
@@ -176,7 +191,14 @@ export const useUIStore = create<UIState>()(
         panelVisible: state.panelVisible,
         explorerProjectListHeight: state.explorerProjectListHeight,
         explorerGroupMode: state.explorerGroupMode,
-        aiConfig: state.aiConfig,
+        // AL-S3: 只持久化 aiConfig（剥离 apiKey 明文）与 aiKeyConfigured 布尔标记
+        aiConfig: {
+          ...state.aiConfig,
+          providers: Object.fromEntries(
+            Object.entries(state.aiConfig.providers).map(([k, cfg]) => [k, { ...cfg, apiKey: '' }]),
+          ),
+        },
+        aiKeyConfigured: state.aiKeyConfigured,
         cloudEnabled: state.cloudEnabled,
       }),
     },

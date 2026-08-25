@@ -616,7 +616,8 @@
         "setDefault": "设为默认",
         "fetchModels": "获取模型列表",
         "saved": "AI 配置已保存",
-        "defaultSet": "已设为默认模型服务"
+        "defaultSet": "已设为默认模型服务",
+        "keyStoredPlaceholder": "密钥已保存在本机，重新输入以更换"
       },
       "diagnostics": {
         "title": "诊断",

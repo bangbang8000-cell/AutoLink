@@ -616,7 +616,8 @@
         "setDefault": "デフォルトに設定",
         "fetchModels": "モデル一覧を取得",
         "saved": "AI 設定を保存しました",
-        "defaultSet": "デフォルトプロバイダーに設定しました"
+        "defaultSet": "デフォルトプロバイダーに設定しました",
+        "keyStoredPlaceholder": "キーはローカルに保存済みです。変更するには再入力してください"
       },
       "diagnostics": {
         "title": "診断",

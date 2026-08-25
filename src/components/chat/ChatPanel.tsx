@@ -18,6 +18,7 @@ export function ChatPanel() {
   const activeSessionId = useChatStore((s) => s.activeSessionId)
   const isSending = useChatStore((s) => s.isSending)
   const aiConfig = useUIStore((s) => s.aiConfig)
+  const aiKeyConfigured = useUIStore((s) => s.aiKeyConfigured)
   const scrollRef = useRef<HTMLDivElement>(null)
   // V3.2.0-T9-3: 批量优化面板
   const [optimizeOpen, setOptimizeOpen] = useState(false)
@@ -43,7 +44,11 @@ export function ChatPanel() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [activeSession?.messages.length, activeSession?.messages[activeSession.messages.length - 1]?.content])
 
-  const hasProvider = Boolean(aiConfig.defaultProvider && aiConfig.providers[aiConfig.defaultProvider]?.apiKey)
+  // AL-S3: 会话可用性 = 内存 key 或后端已配置标记（重启后 localStorage 不再存明文 key）
+  const hasProvider = Boolean(
+    aiConfig.defaultProvider &&
+      (aiConfig.providers[aiConfig.defaultProvider]?.apiKey || aiKeyConfigured[aiConfig.defaultProvider]),
+  )
 
   const handleSend = (content: string) => {
     const store = useChatStore.getState()

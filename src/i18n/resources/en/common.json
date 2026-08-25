@@ -616,7 +616,8 @@
         "setDefault": "Set as Default",
         "fetchModels": "Fetch Models",
         "saved": "AI config saved",
-        "defaultSet": "Set as default provider"
+        "defaultSet": "Set as default provider",
+        "keyStoredPlaceholder": "Key saved locally; enter a new one to replace"
       },
       "diagnostics": {
         "title": "Diagnostics",

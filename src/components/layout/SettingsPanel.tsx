@@ -522,6 +522,7 @@ const AI_PROVIDER_CATALOG: Record<string, { name: string; baseUrl: string; model
 function AISettings() {
   const { t } = useTranslation()
   const aiConfig = useUIStore((s) => s.aiConfig)
+  const aiKeyConfigured = useUIStore((s) => s.aiKeyConfigured)
   const setProviderConfig = useUIStore((s) => s.setProviderConfig)
   const setAIConfig = useUIStore((s) => s.setAIConfig)
   const toast = useToastStore((s) => s.addToast)
@@ -533,6 +534,8 @@ function AISettings() {
 
   const cfg = aiConfig.providers[selected] || { apiKey: '', model: '', baseUrl: '' }
   const catalog = AI_PROVIDER_CATALOG[selected] || AI_PROVIDER_CATALOG.custom
+  // AL-S3: 后端已保存过密钥但本地（重启后）不再持有明文
+  const keyConfigured = Boolean(cfg.apiKey) || Boolean(aiKeyConfigured[selected])
 
   const syncToHub = async (provider: string) => {
     const c = aiConfig.providers[provider]
@@ -629,7 +632,7 @@ function AISettings() {
             value={cfg.apiKey}
             onChange={(e) => setProviderConfig(selected, { ...cfg, apiKey: e.target.value })}
             className={INPUT_CLASS + ' flex-1'}
-            placeholder="sk-..."
+            placeholder={keyConfigured && !cfg.apiKey ? t('common:explorer.settings.ai.keyStoredPlaceholder') : 'sk-...'}
           />
           <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" onClick={() => setShowKey(!showKey)}>
             {showKey ? <EyeOff size={13} /> : <Eye size={13} />}

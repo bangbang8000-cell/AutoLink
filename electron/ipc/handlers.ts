@@ -32,6 +32,63 @@ const DEVICE_CATEGORY_PATH_MAP: Record<string, string> = {
 function resolveCategoryDir(cat: { id: string; directory?: string }): string {
   return cat.directory || DEVICE_CATEGORY_PATH_MAP[cat.id] || path.basename(cat.id)
 }
+
+/**
+ * AL-S2: 剥离 params 中的路径类字段。
+ * plan:aidc / plan:aidc:export 是纯宏观参数（或 filepath 由本进程 dialog 内部生成）的 action，
+ * 前端不应能注入任意文件路径；此处做 IPC 层路径字段剥离（白名单思维，防绕过 workspace 限界）。
+ */
+const PATH_BEARING_KEYS = new Set([
+  'configFile', 'configPath', 'config_path',
+  'filepath', 'filePath',
+  'workspaceDir', 'workspace', 'outputDir', 'output',
+  'projectDir', 'project_path', 'project_dir',
+])
+function stripPathParams(params?: Record<string, unknown>): Record<string, unknown> {
+  if (!params || typeof params !== 'object') return {}
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(params)) {
+    if (PATH_BEARING_KEYS.has(k)) continue
+    out[k] = v
+  }
+  return out
+}
+
+/**
+ * AL-M1e: shell:openPath / shell:showItemInFolder 允许的基础目录白名单。
+ * 渲染层只应定位"程序自己产出的路径"（workspace、品牌资源、内置文档、导出临时文件、
+ * 下载/桌面），不允许对系统任意路径发起"在资源管理器定位"。仍保留 `..` 穿越防御。
+ */
+function isPathInShellWhitelist(filePath: string): boolean {
+  if (!filePath) return false
+  const normalized = path.normalize(filePath)
+  // 渲染层传入的必须是绝对路径（相对路径一律拒绝，防绕过白名单）
+  if (!path.isAbsolute(normalized)) return false
+  const bases: string[] = [
+    getWorkspacePath(),
+    getBrandingAssetPath(''),
+    getDocPath(''),
+    path.dirname(getBrandingAssetPath('logo.svg') || ''),
+    path.dirname(getDocPath('x') || ''),
+    os.tmpdir(),
+  ]
+  try {
+    bases.push(app.getPath('downloads'))
+    bases.push(app.getPath('desktop'))
+  } catch {
+    /* 忽略路径获取失败 */
+  }
+  for (const base of bases) {
+    if (!base) continue
+    try {
+      const rel = path.relative(path.normalize(base), normalized)
+      if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) return true
+    } catch {
+      /* 忽略异常路径 */
+    }
+  }
+  return false
+}
 import { updateService } from '../services/update.service.js'
 import { redactSensitive } from '../utils/redact.js'
 import { registerCloudIpcHandlers } from './cloud.handlers.js'
@@ -40,6 +97,7 @@ import { registerSearchIpcHandlers } from './search.handlers.js'
 // V3.4.1-L7: app:getStackVersions 进程级缓存（Python 探测 execSync 阻塞主进程，只跑一次）
 let cachedStackVersions: Record<string, string> | null = null
 import {
+  AI_ACTION_WHITELIST,
   actionSchema,
   aiChatSchema,
   assertParsed,
@@ -807,6 +865,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     // V3.2.2-R11.1: action 形状 + params 普通对象校验（动态 action 派发最高风险通道）
     assertParsed(actionSchema, action, 'ai:call.action')
     assertParsed(paramsObjectSchema, params ?? {}, 'ai:call.params')
+    // AL-S1: ai:call 动作白名单——仅放行 ai:* 动作，其余拒绝（防泛化后门触达任意后端 action）
+    if (!(AI_ACTION_WHITELIST as readonly string[]).includes(action)) {
+      throw new Error(`ai:call 拒绝白名单外的 action: ${action}，请走专用通道`)
+    }
     const win = BrowserWindow.fromWebContents(event.sender)
     return pythonService.callWithEvents(
       action,
@@ -838,7 +900,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
   // P1.3: AIDC 规划（宏观参数 → plan:table，AL→MC 接口契约）——大 GPU 规模耗时长，放宽到 5 分钟
   ipcMain.handle('plan:aidc', wrapHandler(async (_event, params?: Record<string, unknown>) => {
-    return pythonService.call('plan:aidc', params ?? {}, 300000)
+    // AL-S2: 剥离路径类字段——plan:aidc 是纯宏观参数 action，不应携带任何路径
+    return pythonService.call('plan:aidc', stripPathParams(params), 300000)
   }))
 
   // G2（REQ-A3）+ 契约 v1.2（A-2）：AIDC 规划导出（JSON / Excel / ZIP 交付包）
@@ -863,7 +926,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (result.canceled || !result.filePath) {
       return { canceled: true, path: '' }
     }
-    return pythonService.call('plan:aidc:export', { ...(params ?? {}), format, filepath: result.filePath })
+    // AL-S2: filepath 由上方 showSaveDialog 内部生成；透传前剥离前端可注入的其他路径字段
+    return pythonService.call('plan:aidc:export', { ...stripPathParams(params), format, filepath: result.filePath })
   }))
 
   // P1（A-3/A-5/A-7）：AIDC 项目化——新建/保存/打开/列表（workspace/<name>/ 落盘 + 版本快照）
@@ -1314,14 +1378,15 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // 注:openPath/showItemInFolder 需支持打开 workspace 外的路径
   // (导出 ZIP、branding 资产、guide 文档、用户自选目录),仅做 `..` 防御
   ipcMain.handle('shell:showItemInFolder', wrapHandler(async (_event, filePath: string) => {
-    if (!filePath || filePath.includes('..')) {
+    // AL-M1e: 白名单基础目录收敛（workspace/品牌资源/内置文档/临时/下载/桌面），防对系统任意路径定位
+    if (!filePath || filePath.includes('..') || !isPathInShellWhitelist(filePath)) {
       throw new Error(`无效路径: ${filePath}`)
     }
     shell.showItemInFolder(filePath)
   }))
 
   ipcMain.handle('shell:openPath', wrapHandler(async (_event, filePath: string) => {
-    if (!filePath || filePath.includes('..')) {
+    if (!filePath || filePath.includes('..') || !isPathInShellWhitelist(filePath)) {
       throw new Error(`无效路径: ${filePath}`)
     }
     return shell.openPath(filePath)

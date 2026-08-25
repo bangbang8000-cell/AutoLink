@@ -378,6 +378,41 @@ def _redact(params: Dict[str, Any]) -> Dict[str, Any]:
     return redacted
 
 
+def _redact_argv(argv: Optional[List[str]]) -> List[str]:
+    """AL-S4: 审计脱敏 argv——CLI 可能以 `--api-key=sk-xxx` / `--json '{"api_key": "..."}'` 传密钥，需在落盘前脱敏"""
+    if not argv:
+        return list(argv or [])
+    result: List[str] = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        # --key=value 内联形式
+        m = re.match(r'(?i)^(--[a-z0-9_-]*(?:key|token|secret|password)[a-z0-9_-]*)=(.*)$', arg)
+        if m:
+            result.append(f'{m.group(1)}=***')
+            i += 1
+            continue
+        # --key value 分离形式（下一项为值）
+        if re.match(r'(?i)^--[a-z0-9_-]*(?:key|token|secret|password)[a-z0-9_-]*$', arg) and i + 1 < len(argv):
+            result.append(arg)
+            result.append('***')
+            i += 2
+            continue
+        # JSON 对象字面量（含敏感键 → 值全部脱敏）
+        if arg.startswith('{') and any(s in arg.lower() for s in _SENSITIVE_KEYS):
+            try:
+                obj = json.loads(arg)
+                if isinstance(obj, dict):
+                    result.append(json.dumps(_redact(obj), ensure_ascii=False))
+                    i += 1
+                    continue
+            except Exception:
+                pass
+        result.append(arg)
+        i += 1
+    return result
+
+
 def audit_log(action: str, params: Dict[str, Any], argv: Optional[List[str]], ok: bool,
               error: Optional[str] = None) -> None:
     """写审计日志（失败不阻塞执行）"""
@@ -395,7 +430,7 @@ def audit_log(action: str, params: Dict[str, Any], argv: Optional[List[str]], ok
         record = {
             'ts': datetime.datetime.now().isoformat(),
             'action': action,
-            'argv': list(argv or []),
+            'argv': _redact_argv(argv),
             'params': _redact(dict(params or {})),
             'ok': bool(ok),
         }

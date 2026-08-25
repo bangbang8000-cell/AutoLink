@@ -22,6 +22,23 @@ export const actionSchema = z
   .max(64, 'action 过长')
   .regex(/^[a-z0-9][a-z0-9:_-]*$/, '非法 action 字符')
 
+/**
+ * V3.2.2-R11.1 增强（AL-S1）：ai:call 允许的 action 白名单
+ * 与 backend/engine.py 中 @register_action('ai:*') 的注册表严格对齐；
+ * 白名单之外的 action（design/export/plan:aidc/file:* 等）一律走各自专用通道，
+ * 防止经 ai:call 泛化后门携带任意 configFile/path 触达后端任意 action。
+ */
+export const AI_ACTION_WHITELIST = [
+  'ai:chat',
+  'ai:providers',
+  'ai:config',
+  'ai:config-default',
+  'ai:test',
+  'ai:models',
+  'ai:clear',
+] as const
+export type AIAction = (typeof AI_ACTION_WHITELIST)[number]
+
 /** ai:call / ai:chat 的 params 必须是普通对象 */
 export const paramsObjectSchema = z
   .record(z.string(), z.unknown())
