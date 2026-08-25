@@ -15,7 +15,7 @@
       "network_type": "param",
       "port_count": 8,
       "port_speed": "400G",
-      "port_type": "QSFP56",
+      "port_type": "OSFP",
       "cable_type": "MPO-16",
       "downlink_prefix": "NIC",
       "uplink_prefix": "NIC",

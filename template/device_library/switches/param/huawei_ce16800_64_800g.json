@@ -13,7 +13,7 @@
   "name_prefix": "Param-CE16800",
   "port_count": 64,
   "port_speed": "800G",
-  "port_type": "QSFP-DD",
+  "port_type": "OSFP",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
   "rail_compatible": true,

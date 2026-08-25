@@ -292,7 +292,7 @@ export function SwitchProfileForm() {
                     'w-full px-2 py-1.5 text-xs rounded border bg-white dark:bg-app',
                     errors.port_type ? 'border-error-400' : 'border-gray-200 dark:border-gray-600',
                   )}
-                  placeholder="如 QSFP56"
+                  placeholder="如 OSFP/QSFP112"
                 />
                 {errors.port_type && <div className="text-2xs text-error-500 mt-0.5">{errors.port_type}</div>}
               </div>

@@ -145,7 +145,8 @@ export function createDefaultInterfaceModel(networkType: NetworkType): Interface
       network_type: 'param',
       port_count: 8,
       port_speed: '400G',
-      port_type: 'QSFP56',
+      // 打磨轮：400G 接口形态为 OSFP（可改 QSFP112），QSFP56 仅用于 200G
+      port_type: 'OSFP',
       cable_type: 'MPO-16',
       downlink_prefix: 'NIC',
       uplink_prefix: 'NIC',

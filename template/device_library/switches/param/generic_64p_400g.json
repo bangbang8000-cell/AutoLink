@@ -12,7 +12,7 @@
   "name_prefix": "Param-Generic",
   "port_count": 64,
   "port_speed": "400G",
-  "port_type": "QSFP56",
+  "port_type": "OSFP",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
   "tags": ["交换机", "通用", "400G", "RoCEv2", "参数面"],
