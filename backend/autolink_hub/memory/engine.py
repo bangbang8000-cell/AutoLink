@@ -5,11 +5,15 @@ JSON 文件持久化：<user_data>/memory/{user_profile.json, habits.json, proje
 """
 import json
 import logging
+import threading
 from pathlib import Path
 
 from autolink_hub.memory.schemas import UserProfile, ProjectHistory, OperationHabit, now_iso
 
 logger = logging.getLogger(__name__)
+
+# AL-M4g: 写盘去抖窗口（秒）——高频 collect 合并为一次落盘，降低磁盘 IO
+_SAVE_DEBOUNCE = 0.8
 
 
 class MemoryEngine:
@@ -19,6 +23,10 @@ class MemoryEngine:
         self.project_histories: dict[str, ProjectHistory] = {}
         self.habits = OperationHabit()
         self._loaded = False
+        # AL-M4g: 去抖写盘状态（pending 数据 + 每文件定时器 + 锁）
+        self._pending_saves: dict[str, dict] = {}
+        self._save_timers: dict[str, threading.Timer] = {}
+        self._save_lock = threading.Lock()
 
     def init_dir(self, base_dir: str) -> None:
         self.memory_dir = Path(base_dir) / "memory"
@@ -65,7 +73,40 @@ class MemoryEngine:
         if len(ph.last_operations) > 20:
             ph.last_operations = ph.last_operations[-20:]
         ph.updated_at = now_iso()
-        self._save_json(f"project_history/{project_name}.json", ph.__dict__)
+        # AL-M4g: 去抖写盘（高频操作合并为一次落盘）
+        self._schedule_save(f"project_history/{project_name}.json", ph.__dict__)
+
+    # AL-M4g: 去抖调度写盘
+    def _schedule_save(self, rel_path: str, data: dict) -> None:
+        self._pending_saves[rel_path] = data
+        with self._save_lock:
+            timer = self._save_timers.get(rel_path)
+            if timer and timer.is_alive():
+                timer.cancel()
+            new_timer = threading.Timer(_SAVE_DEBOUNCE, self._flush_saves)
+            new_timer.daemon = True
+            self._save_timers[rel_path] = new_timer
+            new_timer.start()
+
+    # AL-M4g: 落盘所有 pending 数据
+    def _flush_saves(self) -> None:
+        with self._save_lock:
+            pending = dict(self._pending_saves)
+            self._pending_saves.clear()
+        for rel_path, data in pending.items():
+            self._save_json(rel_path, data)
+        with self._save_lock:
+            self._save_timers = {k: t for k, t in self._save_timers.items() if t.is_alive()}
+
+    # AL-M4g: 程序退出前调用，确保去抖待写数据全部落盘（不丢失）
+    def flush(self) -> None:
+        with self._save_lock:
+            for t in self._save_timers.values():
+                try:
+                    t.cancel()
+                except Exception:
+                    pass
+        self._flush_saves()
 
     def get_memory_prompt(self, project_name: str = "") -> str:
         parts = []

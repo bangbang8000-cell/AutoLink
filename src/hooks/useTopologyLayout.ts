@@ -9,7 +9,7 @@
  *   - layout: 当前布局结果(首次为 null)
  *   - computing: 是否正在计算(仅 Worker 模式下为 true)
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { computeTopologyLayout, type LayoutResult } from '@/components/workspace/tabs/topology/topologyLayout'
 import type { TopologyNode, TopologyEdge } from '@/stores/design.store'
 
@@ -19,6 +19,19 @@ const WORKER_THRESHOLD = 500
 export function useTopologyLayout(nodes: TopologyNode[], edges: TopologyEdge[]) {
   const [layout, setLayout] = useState<LayoutResult | null>(null)
   const [computing, setComputing] = useState(false)
+  // AL-M4d: 实例复用——同一次挂载周期内复用同一 Worker,避免每次 effect 变更新建/销毁
+  const workerRef = useRef<Worker | null>(null)
+  // AL-M4d: 竞态防护——请求 token,丢弃 Worker 回传的过时结果
+  const seqRef = useRef(0)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      seqRef.current++
+    }
+  }, [])
 
   useEffect(() => {
     if (nodes.length === 0) {
@@ -28,28 +41,31 @@ export function useTopologyLayout(nodes: TopologyNode[], edges: TopologyEdge[]) 
 
     // 大规模走 Worker,否则同步
     if (nodes.length > WORKER_THRESHOLD) {
+      const seq = ++seqRef.current
       setComputing(true)
-      const worker = new Worker(
-        new URL('../workers/topologyLayout.worker.ts', import.meta.url),
-        { type: 'module' },
-      )
-      worker.postMessage({ nodes, edges })
-      worker.onmessage = (e: MessageEvent<LayoutResult>) => {
-        setLayout(e.data)
-        setComputing(false)
-        worker.terminate()
+      let worker = workerRef.current
+      if (!worker) {
+        worker = new Worker(
+          new URL('../workers/topologyLayout.worker.ts', import.meta.url),
+          { type: 'module' },
+        )
+        worker.onmessage = (e: MessageEvent<{ result: LayoutResult; token: number }>) => {
+          // 仅接受最新请求的结果；卸载后也忽略
+          if (!mountedRef.current || e.data.token !== seqRef.current) return
+          setLayout(e.data.result)
+          setComputing(false)
+        }
+        worker.onerror = (err) => {
+          console.error('[topologyLayout.worker]', err)
+          if (!mountedRef.current) return
+          // 出错回退到同步
+          setLayout(computeTopologyLayout(nodes, edges))
+          setComputing(false)
+        }
+        workerRef.current = worker
       }
-      worker.onerror = (err) => {
-        console.error('[topologyLayout.worker]', err)
-        // 出错回退到同步
-        setLayout(computeTopologyLayout(nodes, edges))
-        setComputing(false)
-        worker.terminate()
-      }
-      return () => {
-        worker.terminate()
-        setComputing(false)
-      }
+      worker.postMessage({ nodes, edges, token: seq })
+      return
     }
 
     setLayout(computeTopologyLayout(nodes, edges))

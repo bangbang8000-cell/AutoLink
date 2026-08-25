@@ -9,10 +9,13 @@ import { useToastStore } from '@/stores/toast.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { AboutDialog } from './AboutDialog'
 import { ShortcutsDialog } from './ShortcutsDialog'
+import { shortcutKeys, type ShortcutAction } from '@/utils/shortcuts'
 
 interface MenuItem {
   label?: string
   shortcut?: string
+  // AL-M4l: 若指定 action,显示按键串优先从 shortcuts.ts 单源读取,消除与 ShortcutsDialog 双源漂移
+  shortcutAction?: ShortcutAction
   action?: () => void
   separator?: boolean
 }
@@ -210,10 +213,10 @@ export function MenuBar() {
   // P3: 全部菜单项 i18n 化;P4: 删除重复的「打开项目目录」
   const MENUS: Record<string, MenuItem[]> = {
     [t('menu.topLevel.file')]: [
-      { label: t('menu.file.newProject'), shortcut: 'Ctrl+N', action: handleNewProject },
+      { label: t('menu.file.newProject'), shortcutAction: 'newProject', action: handleNewProject },
       { label: t('menu.file.showInExplorer'), action: handleShowInExplorer },
       { separator: true },
-      { label: t('menu.file.saveConfig'), shortcut: 'Ctrl+S', action: handleSaveConfig },
+      { label: t('menu.file.saveConfig'), shortcutAction: 'saveConfig', action: handleSaveConfig },
       { label: t('menu.file.exit'), action: handleExit },
     ],
     [t('menu.topLevel.edit')]: [
@@ -227,11 +230,11 @@ export function MenuBar() {
       { label: t('menu.edit.selectAll'), shortcut: 'Ctrl+A', action: handleSelectAll },
       { label: t('menu.edit.find'), shortcut: 'Ctrl+F', action: handleFind },
       { separator: true },
-      { label: t('menu.edit.preferences'), shortcut: 'Ctrl+,', action: handlePreferences },
+      { label: t('menu.edit.preferences'), shortcutAction: 'preferences', action: handlePreferences },
     ],
     [t('menu.topLevel.view')]: [
-      { label: t('menu.view.fileBrowser'), shortcut: 'Ctrl+B', action: handleToggleSidebar },
-      { label: t('menu.view.logPanel'), shortcut: 'Ctrl+J', action: handleTogglePanel },
+      { label: t('menu.view.fileBrowser'), shortcutAction: 'toggleSidebar', action: handleToggleSidebar },
+      { label: t('menu.view.logPanel'), shortcutAction: 'togglePanel', action: handleTogglePanel },
       { separator: true },
       { label: t('menu.view.zoomIn'), shortcut: 'Ctrl+=', action: handleZoomIn },
       { label: t('menu.view.zoomOut'), shortcut: 'Ctrl+-', action: handleZoomOut },
@@ -248,7 +251,7 @@ export function MenuBar() {
     ],
     [t('menu.topLevel.help')]: [
       { label: t('menu.help.userGuide'), action: handleUserGuide },
-      { label: t('menu.help.keyboardShortcuts'), shortcut: 'Ctrl+K', action: handleKeyboardShortcuts },
+      { label: t('menu.help.keyboardShortcuts'), shortcutAction: 'showShortcuts', action: handleKeyboardShortcuts },
       { separator: true },
       { label: t('menu.help.about'), action: handleAbout },
     ],
@@ -298,9 +301,11 @@ export function MenuBar() {
                     className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
                   >
                     <span>{item.label}</span>
-                    {item.shortcut && (
-                      <span className="text-2xs text-gray-400 ml-6">{item.shortcut}</span>
-                    )}
+                    {item.shortcut || (item.shortcutAction !== undefined && (shortcutKeys(item.shortcutAction) ?? item.shortcut)) ? (
+                      <span className="text-2xs text-gray-400 ml-6">
+                        {item.shortcutAction !== undefined ? (shortcutKeys(item.shortcutAction) ?? item.shortcut) : item.shortcut}
+                      </span>
+                    ) : null}
                   </button>
                 )
               })}

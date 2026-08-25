@@ -4,10 +4,13 @@ import { persist } from 'zustand/middleware'
 export type ActivityType =
   | 'search'
   | 'project'
-  | 'design'          // 废弃保留：拓扑设计已并入工作台子视图（无一级入口，留作向后兼容）
-  | 'aidc_plan'       // 废弃保留：AIDC 规划已并入工作台子视图
+  /** @deprecated 拓扑设计已并入工作台子视图（无一级入口，仅向后兼容，勿再新增使用） */
+  | 'design'
+  /** @deprecated AIDC 规划已并入工作台子视图（无一级入口，仅向后兼容，勿再新增使用） */
+  | 'aidc_plan'
   | 'workbench'
-  | 'visualization'   // 废弃保留：可视化已并入工作台子视图
+  /** @deprecated 可视化已并入工作台子视图（无一级入口，仅向后兼容，勿再新增使用） */
+  | 'visualization'
   | 'device_library'
   | 'ai'
   | 'cloud'

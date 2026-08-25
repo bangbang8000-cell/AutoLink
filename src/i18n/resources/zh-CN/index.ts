@@ -7,4 +7,5 @@ import workbench from './workbench.json'
 import device from './device.json'
 import chat from './chat.json'
 import cloud from './cloud.json'
-export default { common, design, project, rack, topology, workbench, device, chat, cloud }
+import nav from './nav.json'
+export default { common, design, project, rack, topology, workbench, device, chat, cloud, nav }

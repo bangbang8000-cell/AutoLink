@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
@@ -20,11 +20,15 @@ import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
 
 /** 打磨轮（v1.6 收尾）：工作台步骤分组标签（5 卡→三步） */
+/* AL-M4j：升级为水平步骤条——数字徽章 + 连接线延伸贯穿卡片分组宽度,串联三步视觉 */
 function StepLabel({ n, text }: { n: string; text: string }) {
   return (
-    <div className="flex items-center gap-1.5 mb-2">
-      <span className="px-1.5 py-0.5 text-2xs rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-semibold">{n}</span>
-      <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{text}</span>
+    <div className="flex items-center gap-2 mb-2">
+      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-semibold shadow-sm shrink-0">
+        {n}
+      </span>
+      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{text}</span>
+      <span className="flex-1 h-px bg-gradient-to-r from-primary-200 dark:from-primary-700 to-transparent" />
     </div>
   )
 }
@@ -39,6 +43,9 @@ const SUBVIEW_KEYS: Record<string, string> = {
   results: 'workbench:subview.results',
   export: 'workbench:subview.export',
 }
+
+// AL-M4c: 工作台二级页签保活上限——最多同时保持 N 个非激活子视图挂载,超限卸载释放内存
+const KEEP_ALIVE_LIMIT = 5
 
 /** 打磨轮（v1.4）：机柜子视图——平面矩阵一览（DataCenterLayout）+ 逐柜微调（RackTab），双向联动 */
 function RackWorkbenchView({ projectName }: { projectName: string }) {
@@ -278,6 +285,49 @@ export function WorkbenchTab() {
     setOpenedSubviews((prev) => (prev.includes(subview) ? prev : [...prev, subview]))
   }, [subview])
 
+  // AL-M4h：二级页签右键菜单（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）
+  const [subviewCtx, setSubviewCtx] = useState<{ sv: WorkbenchSubview; x: number; y: number } | null>(null)
+  // AL-M4c：保活集合 = 激活页签 + 最近 (N-1) 个非激活页签;超限非激活卸载释放内存
+  const mountedSubviews = useMemo(() => {
+    const activeIdx = openedSubviews.indexOf(subview)
+    const kept: WorkbenchSubview[] = [subview]
+    for (let i = openedSubviews.length - 1; i >= 0 && kept.length < KEEP_ALIVE_LIMIT; i--) {
+      if (i !== activeIdx) kept.push(openedSubviews[i])
+    }
+    return new Set(kept)
+  }, [openedSubviews, subview])
+
+  // AL-M4h：批量关闭子视图
+  const batchCloseSubviews = useCallback((mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchSubview) => {
+    setOpenedSubviews((prev) => {
+      const idx = prev.indexOf(sv)
+      let next: WorkbenchSubview[]
+      if (mode === 'all') next = ['main']
+      else if (mode === 'this') next = prev.filter((x) => x !== sv)
+      else if (mode === 'others') next = prev.filter((x) => x === sv)
+      else next = idx === -1 ? prev : prev.slice(0, idx + 1) // 关闭右侧 → 保留到 sv（含 sv）
+      if (sv === subview && next.length > 0 && !next.includes(subview)) {
+        setWorkbenchSubview(next[next.length - 1] ?? 'main')
+      } else if (sv === subview && next.length === 0) {
+        setWorkbenchSubview('main')
+      }
+      return next
+    })
+  }, [subview, setOpenedSubviews, setWorkbenchSubview])
+
+  // AL-M4h：点击/滚动关闭右键菜单
+  useEffect(() => {
+    if (!subviewCtx) return
+    const closeMenu = () => setSubviewCtx(null)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSubviewCtx(null) }
+    window.addEventListener('click', closeMenu)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', closeMenu)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [subviewCtx])
+
   // 加载 AIDC 项目名（判断当前项目类型）
   useEffect(() => {
     window.electron.aidc.project.list()
@@ -289,8 +339,12 @@ export function WorkbenchTab() {
   }, [selectedProjectName])
 
   // 打磨轮（v1.2 复核）：切换项目回到「常规渲染」——AIDC 按钮保持白色，点选才变蓝（避免"已选中"误解）
+  // AL-M4i：切换项目同时清空二级页签历史，避免跨项目页签残留误导
   useEffect(() => {
-    if (selectedProjectName) setWorkbenchSubview('main')
+    if (selectedProjectName) {
+      setWorkbenchSubview('main')
+      setOpenedSubviews(['main'])
+    }
   }, [selectedProjectName, setWorkbenchSubview])
 
   // AL-A5：工作台内新建 AIDC 项目（默认 64 台参数，后续向导版见 P-B）
@@ -383,6 +437,10 @@ export function WorkbenchTab() {
           return (
             <div
               key={sv}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setSubviewCtx({ sv, x: e.clientX, y: e.clientY })
+              }}
               className={`flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-2xs rounded-t border-t border-x transition-colors shrink-0 ${active ? 'bg-white dark:bg-app border-gray-200 dark:border-edge-subtle text-primary-600 dark:text-primary-400 font-medium' : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'}`}
             >
               <button type="button" onClick={() => setWorkbenchSubview(sv)} className="shrink-0">
@@ -407,13 +465,44 @@ export function WorkbenchTab() {
         })}
       </div>
 
-      {/* 内容区（keep-alive：隐藏非激活页签，保留各子视图状态） */}
+      {/* AL-M4h：二级页签右键菜单 */}
+      {subviewCtx && (
+        <div
+          className="fixed z-[9999] bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 min-w-[140px]"
+          style={{ left: subviewCtx.x, top: subviewCtx.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={() => { batchCloseSubviews('this', subviewCtx.sv); setSubviewCtx(null) }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+            {t('welcome.closeTab')}
+          </button>
+          <button onClick={() => { batchCloseSubviews('others', subviewCtx.sv); setSubviewCtx(null) }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+            {t('welcome.closeOthers')}
+          </button>
+          <button onClick={() => { batchCloseSubviews('right', subviewCtx.sv); setSubviewCtx(null) }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+            {t('welcome.closeRight')}
+          </button>
+          <div className="my-1 border-t border-gray-200 dark:border-edge-subtle" />
+          <button onClick={() => { batchCloseSubviews('all', subviewCtx.sv); setSubviewCtx(null) }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+            {t('welcome.closeAll')}
+          </button>
+        </div>
+      )}
+
+      {/* 内容区（AL-M4c keep-alive：激活页签 + 最近 N 挂载,超限非激活卸载释放内存） */}
       <div className="flex-1 overflow-auto p-4">
-        {openedSubviews.map((sv) => (
-          <div key={sv} className={sv === subview ? '' : 'hidden'}>
-            {renderSubview(sv)}
-          </div>
-        ))}
+        {openedSubviews.map((sv) => {
+          const mounted = mountedSubviews.has(sv)
+          if (!mounted) return null
+          return (
+            <div key={sv} className={sv === subview ? '' : 'hidden'}>
+              {renderSubview(sv)}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -441,17 +530,17 @@ export function WorkbenchTab() {
             </div>
             {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
             <StepLabel n="①" text={t('workbench:stepConfig', '配置与就绪')} />
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3 grid grid-cols-2 gap-3 mb-4">
               <WorkbenchScopeCard />
               <WorkbenchReadinessCard />
             </div>
             <StepLabel n="②" text={t('workbench:stepRender', '渲染材料与操作')} />
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3 grid grid-cols-2 gap-3 mb-4">
               <WorkbenchOutputCard />
               <WorkbenchActionCard />
             </div>
             <StepLabel n="③" text={t('workbench:stepResult', '渲染结果')} />
-            <div>
+            <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3">
               <WorkbenchResultCard />
             </div>
           </>

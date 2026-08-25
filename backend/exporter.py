@@ -5,6 +5,7 @@ AutoLink V2.1 - Excel导出与格式化
 """
 
 import re
+from uuid import uuid4
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
@@ -1674,7 +1675,7 @@ def _generate_module_cost_chart(modules_data, font_name='Helvetica'):
     ax.set_title('光模块成本占比', fontsize=12)
     fig.tight_layout()
 
-    tmp_path = _os.path.join(tempfile.gettempdir(), 'autolink_module_cost_chart.png')
+    tmp_path = _os.path.join(tempfile.gettempdir(), f"autolink_module_cost_chart_{uuid4().hex[:8]}.png")
     fig.savefig(tmp_path, dpi=150)
     plt.close(fig)
     return tmp_path

@@ -213,6 +213,12 @@ function TopologyFlowInner() {
   const [spacePressed, setSpacePressed] = useState(false)
   // V3.2.0-T9-2: ATOP 自动拓扑优化弹窗
   const [atopOpen, setAtopOpen] = useState(false)
+  // AL-M4e: 抽样简化横幅关闭——关闭后本次拓扑不再提示,切换拓扑(节点/边规模变化)恢复提示
+  const [simplifyDismissedKey, setSimplifyDismissedKey] = useState<string | null>(null)
+  const simplifyFingerprint = useMemo(
+    () => `${topology?.nodes?.length ?? 0}:${topology?.edges?.length ?? 0}`,
+    [topology?.nodes?.length, topology?.edges?.length],
+  )
 
   /* ---------- V2.4.7: 撤销/重做 ---------- */
   // 历史栈存储完整拓扑快照（位置 + 节点/链路数据，v2.8.2-T6 扩展）
@@ -221,6 +227,12 @@ function TopologyFlowInner() {
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
   const HISTORY_LIMIT = 50
+  // AL-M4a: 大规模拓扑降低撤销深度，控制撤销快照内存占用
+  const NODE_HISTORY_THRESHOLD = 800
+  const REDUCED_HISTORY_LIMIT = 12
+  const undoHistoryLimit = (topology?.nodes?.length ?? 0) > NODE_HISTORY_THRESHOLD
+    ? REDUCED_HISTORY_LIMIT
+    : HISTORY_LIMIT
 
   /** v2.8.2-T6: 完整拓扑快照(位置 + 节点/链路数据),覆盖删除等拓扑变更 */
   interface TopologySnapshot {
@@ -229,6 +241,13 @@ function TopologyFlowInner() {
     edges: TopologyEdge[] | null
   }
 
+  // AL-M4a: 拓扑数据（节点/链路数组引用）自上次快照后是否未发生结构变更
+  // 位置拖动不重建 store 数组 → 复用旧快照的数据引用，不重复拷贝；删除/新增会重建数组 → 重新记录
+  const topologyDataUnchanged = useCallback(() => {
+    const last = pastRef.current[pastRef.current.length - 1]
+    return !!last && last.nodes === topology?.nodes && last.edges === topology?.edges
+  }, [topology?.nodes, topology?.edges])
+
   /** 记录当前节点位置 + 拓扑数据快照到历史栈 */
   const pushHistory = useCallback(() => {
     const positions = new Map<string, { x: number; y: number }>()
@@ -236,16 +255,17 @@ function TopologyFlowInner() {
       if (n.id.startsWith('pod-group-')) continue
       positions.set(n.id, { x: n.position.x, y: n.position.y })
     }
+    const unchanged = topologyDataUnchanged()
     pastRef.current.push({
       positions,
-      nodes: topology?.nodes ? [...topology.nodes] : null,
-      edges: topology?.edges ? [...topology.edges] : null,
+      nodes: unchanged ? null : topology?.nodes ? [...topology.nodes] : null,
+      edges: unchanged ? null : topology?.edges ? [...topology.edges] : null,
     })
-    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift()
+    while (pastRef.current.length > undoHistoryLimit) pastRef.current.shift()
     futureRef.current = []  // 新操作清空 future
     setCanUndo(pastRef.current.length > 0)
     setCanRedo(false)
-  }, [rfNodes, topology])
+  }, [rfNodes, topology, topologyDataUnchanged, undoHistoryLimit])
 
   /** 从当前 rfNodes + store 生成快照 */
   const currentSnapshot = useCallback((): TopologySnapshot => {
@@ -408,6 +428,8 @@ function TopologyFlowInner() {
 const EDGE_LIMIT = 30000
 // 打磨轮（v1.2 复核）：折叠后仍超此边数 → 按步长抽样，防止 react-flow 卡死（"渲染拓扑一直转圈"根因）
 const MAX_DISPLAY_EDGES = 5000
+// AL-M4f: 超大拓扑（节点 ≥ 该阈值）关闭节点变换/透明度过渡动画,降低千节点场景下的重排卡顿
+const ANIMATION_DISABLE_THRESHOLD = 1000
 
 function collectAllPods(topology: { nodes: TopologyNode[] } | null): Set<string> {
   const pods = new Set<string>()
@@ -565,7 +587,8 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         },
         data: data as unknown as Record<string, unknown>,
         // V3.2.1-T10-2: 网络过滤/折叠切换时节点平滑移动与淡入过渡
-        style: { transition: 'transform 300ms ease, opacity 300ms ease' },
+        // AL-M4f: 千节点场景禁用过渡动画,避免批量重排卡顿
+        style: nodes.length >= ANIMATION_DISABLE_THRESHOLD ? undefined : { transition: 'transform 300ms ease, opacity 300ms ease' },
         zIndex: 10,
       }
     })
@@ -665,41 +688,36 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         }
       }
 
-      // v2.8.2-T1: hover 标记(仅目标节点新建对象,其余复用引用,避免全量重渲染)
-      const prevData = n.data as unknown as { hovered?: boolean }
-      const isHovered = n.id === hoverNodeId
-      const baseNode = prevData?.hovered === isHovered ? n : { ...n, data: { ...n.data, hovered: isHovered } }
-
       // 折叠 POD 内的设备节点：隐藏
-      if (collapsedNodeIds.has(baseNode.id)) {
-        if (baseNode.hidden === true) return baseNode
-        return { ...baseNode, hidden: true }
+      if (collapsedNodeIds.has(n.id)) {
+        if (n.hidden === true) return n
+        return { ...n, hidden: true }
       }
 
       // 搜索高亮
       if (hasSearch) {
-        const matches = baseNode.id.toLowerCase().includes(q) ||
-          (baseNode.data?.label as string)?.toLowerCase().includes(q) ||
-          (baseNode.data?.nodeType as string)?.toLowerCase().includes(q)
+        const matches = n.id.toLowerCase().includes(q) ||
+          (n.data?.label as string)?.toLowerCase().includes(q) ||
+          (n.data?.nodeType as string)?.toLowerCase().includes(q)
         const targetOpacity = matches ? 1 : 0.12
         const targetBoxShadow = matches ? '0 0 0 2px #3b82f6' : undefined
-        const prevStyle = baseNode.style as { opacity?: number; boxShadow?: string } | undefined
-        if (baseNode.hidden === false && prevStyle?.opacity === targetOpacity && prevStyle?.boxShadow === targetBoxShadow) {
-          return baseNode
+        const prevStyle = n.style as { opacity?: number; boxShadow?: string } | undefined
+        if (n.hidden === false && prevStyle?.opacity === targetOpacity && prevStyle?.boxShadow === targetBoxShadow) {
+          return n
         }
-        const newStyle: Record<string, unknown> = { ...baseNode.style, opacity: targetOpacity }
+        const newStyle: Record<string, unknown> = { ...n.style, opacity: targetOpacity }
         if (targetBoxShadow) newStyle.boxShadow = targetBoxShadow
-        return { ...baseNode, hidden: false, style: newStyle }
+        return { ...n, hidden: false, style: newStyle }
       }
 
       // 普通节点:清除可能的搜索/折叠残留样式
-      const prevStyle = baseNode.style as { opacity?: number; boxShadow?: string } | undefined
-      if (baseNode.hidden === false && prevStyle?.opacity === undefined && prevStyle?.boxShadow === undefined) {
-        return baseNode
+      const prevStyle = n.style as { opacity?: number; boxShadow?: string } | undefined
+      if (n.hidden === false && prevStyle?.opacity === undefined && prevStyle?.boxShadow === undefined) {
+        return n
       }
-      return { ...baseNode, hidden: false }
+      return { ...n, hidden: false }
     })
-  }, [rfNodes, searchQuery, effectiveCollapsed, togglePodCollapse, hoverNodeId])
+  }, [rfNodes, searchQuery, effectiveCollapsed, togglePodCollapse])
 
   const displayEdges = useMemo(() => {
     // 构建折叠 POD 内设备节点 ID 集合
@@ -784,6 +802,20 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     setHoverNodeId(node.id)
   }, [])
   const onNodeMouseLeave = useCallback(() => setHoverNodeId(null), [])
+
+  // AL-M4b: hover 局部更新——直接更新 rfNodes 中目标节点的 hover 标记,
+  // 不再进入 displayNodes 全量重算,拖拽/搜索等场景下更省。
+  useEffect(() => {
+    setRfNodes((prev) =>
+      prev.map((n) => {
+        if (n.id.startsWith('pod-group-')) return n
+        const isHovered = n.id === hoverNodeId
+        const data = n.data as unknown as { hovered?: boolean }
+        if (data?.hovered === isHovered) return n
+        return { ...n, data: { ...n.data, hovered: isHovered } }
+      }),
+    )
+  }, [hoverNodeId, setRfNodes])
 
   // v2.8.2-T2/T7: 链路 hover / 点击
   const onEdgeMouseEnter = useCallback((_: unknown, edge: Edge) => setHoverEdgeId(edge.id), [])
@@ -1151,9 +1183,17 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
             )}
           </div>
           {/* 打磨轮（v1.2 复核）：超大拓扑简化提示 */}
-          {simplified && (
+          {simplified && simplifyDismissedKey !== simplifyFingerprint && (
             <span className="flex items-center gap-1 text-2xs text-warning-500">
               <AlertTriangle size={11} /> 超大拓扑已简化（边数过多，抽样显示）
+              <button
+                type="button"
+                onClick={() => setSimplifyDismissedKey(simplifyFingerprint)}
+                className="p-0.5 rounded hover:bg-warning-100 dark:hover:bg-warning-900/40 text-warning-500"
+                title="不再提示"
+              >
+                <X size={10} />
+              </button>
             </span>
           )}
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5" />

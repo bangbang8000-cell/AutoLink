@@ -15,15 +15,15 @@ interface ActivityItem {
 // 打磨轮（P-A）：一级菜单重排 —— 搜索/云平台/AI助手/项目浏览器/工作台/设备库/设置
 // （拓扑设计、AIDC 规划、可视化已并入工作台子视图）
 const ACTIVITIES: ActivityItem[] = [
-  { id: 'search', icon: <Search size={20} />, labelKey: 'menu.search', shortcut: 'Ctrl+Shift+F' },
-  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'menu.cloud', shortcut: 'Ctrl+Shift+C' },
-  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'menu.ai', shortcut: 'Ctrl+Shift+A' },
-  { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'menu.projectExplorer', shortcut: 'Ctrl+Shift+E' },
-  { id: 'workbench', icon: <Zap size={20} />, labelKey: 'menu.workbench', shortcut: 'Ctrl+Shift+W' },
+  { id: 'search', icon: <Search size={20} />, labelKey: 'nav:search', shortcut: 'Ctrl+Shift+F' },
+  { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'nav:cloud', shortcut: 'Ctrl+Shift+C' },
+  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'nav:ai', shortcut: 'Ctrl+Shift+A' },
+  { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'nav:project', shortcut: 'Ctrl+Shift+E' },
+  { id: 'workbench', icon: <Zap size={20} />, labelKey: 'nav:workbench', shortcut: 'Ctrl+Shift+W' },
   // 打磨轮（v1.6 / AL-O2a）：输出结果一级入口（全部项目）
-  { id: 'output', icon: <Files size={20} />, labelKey: 'menu.output', shortcut: 'Ctrl+Shift+O' },
-  { id: 'device_library', icon: <Server size={20} />, labelKey: 'menu.deviceLibrary', shortcut: 'Ctrl+Shift+L' },
-  { id: 'settings', icon: <Settings size={20} />, labelKey: 'menu.settings', shortcut: 'Ctrl+,' },
+  { id: 'output', icon: <Files size={20} />, labelKey: 'nav:output', shortcut: 'Ctrl+Shift+O' },
+  { id: 'device_library', icon: <Server size={20} />, labelKey: 'nav:device_library', shortcut: 'Ctrl+Shift+L' },
+  { id: 'settings', icon: <Settings size={20} />, labelKey: 'nav:settings', shortcut: 'Ctrl+,' },
 ]
 
 // v2.6.8: ActivityBar 入口语义色
@@ -71,7 +71,7 @@ export function ActivityBar({ onActivityClick }: Props) {
       <button
         key={item.id}
         onClick={() => handleClick(item)}
-        title={`${t(`common:${item.labelKey}`)} (${item.shortcut})`}
+        title={`${t(item.labelKey)} (${item.shortcut})`}
         className={clsx(
           'w-12 h-12 flex items-center justify-center relative transition-colors',
           active

@@ -92,6 +92,11 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
 /** 所有快捷键的扁平列表 */
 export const ALL_SHORTCUTS: ShortcutDef[] = SHORTCUT_GROUPS.flatMap((g) => g.items)
 
+/** AL-M4l: 按 action 取显示按键串（MenuBar/ActivityBar 与 ShortcutsDialog 单源化,消除双源漂移） */
+export function shortcutKeys(action: ShortcutAction): string | undefined {
+  return ALL_SHORTCUTS.find((s) => s.action === action)?.keys
+}
+
 /**
  * 匹配键盘事件,返回对应的快捷键定义
  * 不匹配时返回 null
