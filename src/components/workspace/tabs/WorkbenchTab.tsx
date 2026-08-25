@@ -19,6 +19,7 @@ import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
 import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
+import { exportDeliveryZip } from '@/utils/aidcDelivery'
 
 /** 打磨轮（v1.6 收尾）：工作台步骤分组标签（5 卡→三步） */
 /* AL-M4j：升级为水平步骤条——数字徽章 + 连接线延伸贯穿卡片分组宽度,串联三步视觉 */
@@ -224,14 +225,12 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
   )
 }
 
-/** 打磨轮（v1.3）：归档/导出子视图（导出给 MC + 渲染结果） */
+/** 打磨轮（v1.3）：归档/导出子视图（导出 MC 交付包 + 渲染结果） */
 function ExportView({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
-  // MC 交付包导出入口在「AIDC 规划」子视图（AidcPlannerPanel「导出交付包」）：
-  // 此处提供直达跳转按钮，避免用户误把「导出渲染结果 ZIP」当交付包（不含 plan.json，MC 无法导入）
-  const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
   const [busy, setBusy] = useState(false)
+  const [deliveryBusy, setDeliveryBusy] = useState(false)
   const exportBatch = async (batch?: string) => {
     setBusy(true)
     try {
@@ -244,20 +243,45 @@ function ExportView({ projectName }: { projectName: string }) {
       setBusy(false)
     }
   }
+
+  // 导出 MC 交付包：读项目已保存 plan.json → plan:aidc:export(zip)，无 plan 时引导去 AIDC 规划
+  const exportDelivery = async () => {
+    setDeliveryBusy(true)
+    try {
+      const res = await exportDeliveryZip(projectName)
+      if (res?.canceled) return
+      if (res?.noPlan) {
+        addToast('warning', t('workbench:exportView.noPlan', '当前项目未生成 AIDC 规划，请先在「AIDC 规划」视图生成规划'), 5000)
+        return
+      }
+      if (res?.error) {
+        addToast('error', t('workbench:exportView.deliveryFailed', { err: res.error }), 5000)
+      } else {
+        addToast('success', t('workbench:exportView.deliveryExported', { path: res.path ?? '' }), 5000)
+      }
+    } catch (e) {
+      addToast('error', t('workbench:exportView.deliveryFailed', { err: (e as Error).message }), 5000)
+    } finally {
+      setDeliveryBusy(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Download size={14} className="text-success-500" />
         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('workbench:exportView.title', { name: projectName })}</span>
       </div>
-      <div className="border rounded p-3 space-y-1.5">
+      {/* ① 导出 MC 交付包（读项目 plan.json，含 plan.json/README/拓扑图，供 MagicCommander 导入） */}
+      <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.toMc')}</p>
         <p className="text-2xs text-gray-400">{t('workbench:exportView.toMcHint')}</p>
-        <button type="button" onClick={() => setWorkbenchSubview('aidc')}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-success-500 hover:bg-success-600 text-white">
-          <Zap size={12} /> {t('workbench:exportView.gotoAidc')}
+        <button type="button" onClick={exportDelivery} disabled={deliveryBusy}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-success-500 hover:bg-success-600 text-white disabled:opacity-40 disabled:cursor-wait">
+          <Download size={12} /> {deliveryBusy ? t('workbench:exportView.exporting', '导出中…') : t('workbench:exportView.exportDelivery')}
         </button>
       </div>
+      {/* ② 导出渲染结果（output 批次） */}
       <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.renderResults')}</p>
         <div className="flex gap-2">

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
+import { macroToInput } from '@/utils/aidcDelivery'
 import {
   ROLE_LABEL, macroNum,
   type PlanConnection, type PlanDevice, type PlanMacro, type PlanSummary, type PlanTerminal,
@@ -27,27 +28,6 @@ import {
 // ---- 辅助：camelCase 优先读取宏观数值 ----
 const mnum = (p: PlanSummary, camel: string, snake: string, fb: number) =>
   macroNum(p.macro, camel, snake) ?? fb
-
-/** 契约 v1.2（P1 A-4）：plan.macro(camelCase) → 输入 snake_case（重开回填完整宏观，含高级参数）。 */
-function macroToInput(m: Partial<PlanMacro> | Record<string, unknown>): Record<string, unknown> {
-  const M = (m ?? {}) as Record<string, unknown>
-  const naming = M.naming as PlanMacro['naming'] | undefined
-  return {
-    site: M.site,
-    gpu_count: M.gpuCount,
-    pfc_queue: M.pfcQueue,
-    cnp_queue: M.cnpQueue,
-    bgp_max_paths: M.bgpMaxPaths,
-    convergence: M.convergence,
-    rails: M.rails,
-    naming_format: naming?.format,
-    ip_segments: M.ipSegments,
-    vlan_ranges: M.vlanRanges,
-    as_range: M.asRange,
-    ospf: M.ospf,
-    device_models: M.deviceModels,
-  }
-}
 
 /** 高级（面板未暴露编辑）宏观参数：随项目持久化并在重开时透传，避免丢参数。 */
 function extractAdv(input: Record<string, unknown>): Record<string, unknown> {
@@ -247,7 +227,6 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
   const [plan, setPlan] = useState<PlanSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [exporting, setExporting] = useState(false)
   const [exportMsg, setExportMsg] = useState('')
 
   const buildParams = () => ({
@@ -325,31 +304,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
     }
   }
 
-  const doExport = async (format: 'json' | 'excel' | 'zip') => {
-    setExporting(true)
-    setExportMsg('')
-    try {
-      // 打磨轮（AL-B3）：交付包 ZIP 附带拓扑 PNG（AL 生成拓扑图作为导出文件之一）
-      let pngBase64: string | undefined
-      if (format === 'zip' && plan) {
-        try {
-          const { exportPlanTopologyPng } = await import('@/utils/exportPlanTopologyPng')
-          pngBase64 = await exportPlanTopologyPng(plan)
-        } catch { /* 拓扑图生成失败不阻塞交付包 */ }
-      }
-      const res = await window.electron.aidc.exportPlan(
-        { ...buildParams(), ...(pngBase64 ? { pngBase64 } : {}) }, format)
-      if (res?.canceled) setExportMsg('已取消')
-      else if (res?.error) setExportMsg(`导出失败: ${res.error}`)
-      else setExportMsg(`已导出 → ${res?.path ?? ''}${pngBase64 ? '（含拓扑图）' : ''}`)
-    } catch (e) {
-      setExportMsg(`导出失败: ${String(e)}`)
-    } finally {
-      setExporting(false)
-    }
-  }
-
-  // P1（A-4）：项目打开/保存/另存为 + PNG 评审导出
+  // P1（A-4）：项目打开/保存/另存为
   const openProject = async (name: string) => {
     if (!name) return
     setProjectLoading(true); setError(''); setExportMsg('')
@@ -448,27 +403,6 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       setError(`另存失败: ${String(e)}`)
     } finally {
       setProjectLoading(false)
-    }
-  }
-
-  const doExportPng = async () => {
-    if (!plan) { setError('请先生成规划'); return }
-    setExporting(true); setExportMsg('')
-    try {
-      const { exportPlanTopologyPng } = await import('@/utils/exportPlanTopologyPng')
-      const base64 = await exportPlanTopologyPng(plan)
-      const base = plan.meta.projectName || plan.meta.project || 'aidc_plan'
-      const id8 = String(plan.meta.projectId || '').replace(/-/g, '').slice(0, 8)
-      const res = (await window.electron.aidc.savePng(
-        base64, `${base}${id8 ? `_${id8}` : ''}_拓扑.png`,
-      )) as { canceled?: boolean; error?: string; path?: string }
-      if (res?.canceled) setExportMsg('已取消')
-      else if (res?.error) setExportMsg(`导出失败: ${res.error}`)
-      else setExportMsg(`拓扑 PNG 已导出 → ${res.path}`)
-    } catch (e) {
-      setExportMsg(`导出失败: ${String(e)}`)
-    } finally {
-      setExporting(false)
     }
   }
 
@@ -598,22 +532,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         <Wrench size={12} className="inline mr-1" /> 应用到设计
       </Button>
 
-      <div className="flex items-center gap-2 mt-2">
-        <Button variant="secondary" size="sm" onClick={() => doExport('json')} disabled={exporting}>
-          {exporting ? '导出中…' : '导出 plan.json'}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => doExport('excel')} disabled={exporting}>
-          {exporting ? '导出中…' : '导出规划 Excel'}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => doExport('zip')} disabled={exporting}>
-          {exporting ? '导出中…' : '导出交付包'}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={doExportPng}
-          disabled={exporting || !plan}>
-          {exporting ? '导出中…' : '导出拓扑PNG'}
-        </Button>
-        {exportMsg && <span className="text-xs text-gray-500">{exportMsg}</span>}
-      </div>
+      {exportMsg && <p className="text-xs text-gray-500 mt-2">{exportMsg}</p>}
 
       {error && <p className="text-red-500 mt-3 text-sm">{error}</p>}
 

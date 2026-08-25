@@ -961,21 +961,28 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     return true
   }, [computeFitViewport, reactFlow])
 
-  /** 等待节点测量完成后应用自适应（最多 ~2s，超时用估算尺寸兜底） */
+  /** 等待节点测量完成应用自适应（T4 修复：测量推进即重 fit，避免 2s 超时停在部分测量偏移位置） */
   const fitWithRetry = useCallback(async () => {
     const el = topologyContainerRef.current
     if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) {
       fitPendingRef.current = true
       return
     }
-    const deadline = Date.now() + 2000
+    const deadline = Date.now() + 4000
+    let lastMeasured = -1
     for (;;) {
       const nodes = reactFlow.getNodes()
       const visible = nodes.filter((n) => !n.hidden)
-      const allMeasured =
-        visible.length > 0 && visible.every((n) => (n.measured?.width ?? 0) > 0)
-      if (allMeasured || Date.now() >= deadline) {
+      const measured = visible.filter((n) => (n.measured?.width ?? 0) > 0)
+      const allMeasured = visible.length > 0 && measured.length === visible.length
+      // 测量推进（新增已测量节点）即应用一次自适应，逐步校正包围盒
+      if (measured.length > 0 && measured.length !== lastMeasured) {
         applyFit()
+        lastMeasured = measured.length
+        if (allMeasured) { fitPendingRef.current = false; return }
+      } else if (Date.now() >= deadline) {
+        // 超时兜底：有节点就 fit 一次（估算尺寸），不再阻塞
+        if (visible.length > 0) applyFit()
         fitPendingRef.current = false
         return
       }
@@ -997,19 +1004,24 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     if (fitTimerRef.current) window.clearTimeout(fitTimerRef.current)
   }, [])
 
-  // keep-alive 隐藏→显示：容器尺寸恢复后补一次挂起的自适应
+  // keep-alive 隐藏→显示：容器尺寸从 0 恢复后补一次自适应（T4：无论之前是否挂起，显示即重 fit）
   useEffect(() => {
     const el = topologyContainerRef.current
     if (!el) return
+    let lastW = el.clientWidth
+    let lastH = el.clientHeight
     const ro = new ResizeObserver(() => {
-      if (fitPendingRef.current && el.clientWidth > 0 && el.clientHeight > 0) {
-        fitPendingRef.current = false
+      const w = el.clientWidth
+      const h = el.clientHeight
+      if (w > 0 && h > 0 && (lastW === 0 || lastH === 0) && reactFlow.getNodes().length > 0) {
         void fitWithRetry()
       }
+      lastW = w
+      lastH = h
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [fitWithRetry])
+  }, [fitWithRetry, reactFlow])
 
   const handleExportPng = useCallback(async () => {
     if (!topology || !selectedProjectName) {

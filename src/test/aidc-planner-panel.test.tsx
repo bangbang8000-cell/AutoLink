@@ -6,8 +6,14 @@
  */
 import '@/i18n'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
+import { exportDeliveryZip } from '@/utils/aidcDelivery'
+
+// exportDeliveryZip 附带拓扑 PNG：mock 避免 jsdom 无 ResizeObserver 触发 react-flow 渲染
+vi.mock('@/utils/exportPlanTopologyPng', () => ({
+  exportPlanTopologyPng: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
+}))
 
 const samplePlan = {
   meta: {
@@ -92,19 +98,29 @@ describe('AidcPlannerPanel', () => {
     expect(await screen.findByText(/GPU 规模 96 不在支持档位/)).toBeInTheDocument()
   })
 
-  it('导出 plan.json / Excel 调用 exportPlan（REQ-A3）', async () => {
-    mockAidcPlan(samplePlan)
-    const exportPlan = vi.fn().mockResolvedValue({ ok: true, path: 'C:/plans/p.json' })
-    ;(window as unknown as { electron: { aidc: { plan: unknown; exportPlan: typeof exportPlan } } }).electron.aidc.exportPlan = exportPlan
+  it('exportDeliveryZip：读项目 plan → exportPlan zip 交付包（导出收敛 T1）', async () => {
+    const exportPlan = vi.fn().mockResolvedValue({ ok: true, path: 'C:/delivery.zip' })
+    const load = vi.fn().mockResolvedValue({ ok: true, name: 'aidc_64', plan: samplePlan })
+    const win = window as unknown as { electron: { aidc: { plan: unknown; exportPlan: typeof exportPlan; project: { load: typeof load } } } }
+    win.electron.aidc.exportPlan = exportPlan
+    win.electron.aidc.project = { load }
 
-    render(<AidcPlannerPanel />)
-    fireEvent.click(screen.getByRole('button', { name: '导出 plan.json' }))
-    await waitFor(() => expect(exportPlan).toHaveBeenCalledTimes(1))
+    const res = await exportDeliveryZip('aidc_64')
+    expect(res.path).toBe('C:/delivery.zip')
+    expect(exportPlan).toHaveBeenCalledTimes(1)
+    expect(exportPlan.mock.calls[0][1]).toBe('zip')
     expect(exportPlan.mock.calls[0][0]).toEqual(expect.objectContaining({ gpu_count: 64 }))
-    expect(exportPlan.mock.calls[0][1]).toBe('json')
+  })
 
-    fireEvent.click(screen.getByRole('button', { name: '导出规划 Excel' }))
-    await waitFor(() => expect(exportPlan).toHaveBeenCalledTimes(2))
-    expect(exportPlan.mock.calls[1][1]).toBe('excel')
+  it('exportDeliveryZip：项目无 AIDC 规划时返回 noPlan', async () => {
+    const exportPlan = vi.fn()
+    const load = vi.fn().mockResolvedValue({ ok: true, name: 'aidc_64', plan: null })
+    const win = window as unknown as { electron: { aidc: { plan: unknown; exportPlan: typeof exportPlan; project: { load: typeof load } } } }
+    win.electron.aidc.exportPlan = exportPlan
+    win.electron.aidc.project = { load }
+
+    const res = await exportDeliveryZip('aidc_64')
+    expect(res.noPlan).toBe(true)
+    expect(exportPlan).not.toHaveBeenCalled()
   })
 })

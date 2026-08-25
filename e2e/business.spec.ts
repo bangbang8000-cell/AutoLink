@@ -80,6 +80,22 @@ test('业务链路：新建项目 → 生成拓扑 → 一键渲染 → 机房�
     await expect(window.getByText(`拓扑视图 - ${projectName}`, { exact: true })).toBeVisible({ timeout: 90_000 })
     const rf = window.locator('.react-flow')
     await expect(rf.locator('.react-flow__node').first()).toBeVisible({ timeout: 30_000 })
+    // T4（视口修复）：全部节点中心点落在画布容器内（验证 fit 自适应定位正确，不再"只能看到底部一点点"）
+    const allNodes = rf.locator('.react-flow__node')
+    await expect.poll(async () => {
+      const box = await rf.boundingBox()
+      if (!box) return false
+      const n = await allNodes.count()
+      if (n === 0) return false
+      for (let i = 0; i < n; i++) {
+        const b = await allNodes.nth(i).boundingBox()
+        if (!b) return false
+        const cx = b.x + b.width / 2
+        const cy = b.y + b.height / 2
+        if (cx < box.x - 2 || cx > box.x + box.width + 2 || cy < box.y - 2 || cy > box.y + box.height + 2) return false
+      }
+      return true
+    }, { timeout: 20_000 }).toBe(true)
 
     // ── 3. 一键渲染（导出连接关系表/上机表/拓扑图/设备清单等 9 类材料）──
     await window.keyboard.press('Control+Shift+W')
