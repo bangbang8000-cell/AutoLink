@@ -1,0 +1,31 @@
+# ================================================================
+# D-18：统一行尾规范（按文件类型固定 LF；Windows 脚本保留 CRLF）
+# ================================================================
+* text=auto
+
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.cjs   text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.ini   text eol=lf
+*.py    text eol=lf
+*.sh    text eol=lf
+
+# Windows 脚本保留 CRLF（避免 cmd/PowerShell 执行异常）
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+*.png   binary
+*.ico   binary
+*.icns  binary
+*.xlsx  binary
+*.zip   binary
+*.pdf   binary
