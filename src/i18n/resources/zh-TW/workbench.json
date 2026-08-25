@@ -100,6 +100,7 @@
   "exportView.title": "封存 / 匯出 — {{name}}",
   "exportView.toMc": "匯出給 MagicCommander（AIDC 交付包）",
   "exportView.toMcHint": "請在「AIDC 規劃」視圖匯出 plan.json / 交付包 ZIP / 規劃 Excel / 拓撲 PNG（含專案編號與版本）。",
+  "exportView.gotoAidc": "前往 AIDC 規劃 → 匯出交付包",
   "exportView.renderResults": "匯出渲染結果（output 批次）",
   "exportView.exportAllZip": "匯出全部渲染結果（ZIP）",
   "exportView.exportFailed": "匯出失敗: {{err}}",

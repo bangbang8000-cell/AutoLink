@@ -228,6 +228,9 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
 function ExportView({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
+  // MC 交付包导出入口在「AIDC 规划」子视图（AidcPlannerPanel「导出交付包」）：
+  // 此处提供直达跳转按钮，避免用户误把「导出渲染结果 ZIP」当交付包（不含 plan.json，MC 无法导入）
+  const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
   const [busy, setBusy] = useState(false)
   const exportBatch = async (batch?: string) => {
     setBusy(true)
@@ -250,6 +253,10 @@ function ExportView({ projectName }: { projectName: string }) {
       <div className="border rounded p-3 space-y-1.5">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.toMc')}</p>
         <p className="text-2xs text-gray-400">{t('workbench:exportView.toMcHint')}</p>
+        <button type="button" onClick={() => setWorkbenchSubview('aidc')}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-success-500 hover:bg-success-600 text-white">
+          <Zap size={12} /> {t('workbench:exportView.gotoAidc')}
+        </button>
       </div>
       <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.renderResults')}</p>

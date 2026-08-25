@@ -100,6 +100,7 @@
   "exportView.title": "Archive / Export — {{name}}",
   "exportView.toMc": "Export to MagicCommander (AIDC delivery package)",
   "exportView.toMcHint": "Export plan.json / delivery ZIP / planning Excel / topology PNG from the \"AIDC Planning\" view (with project ID & version).",
+  "exportView.gotoAidc": "Go to AIDC Planning → Export Delivery Package",
   "exportView.renderResults": "Export render results (output batches)",
   "exportView.exportAllZip": "Export all render results (ZIP)",
   "exportView.exportFailed": "Export failed: {{err}}",

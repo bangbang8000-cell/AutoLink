@@ -100,6 +100,7 @@
   "exportView.title": "アーカイブ / エクスポート — {{name}}",
   "exportView.toMc": "MagicCommander にエクスポート（AIDC 納品パッケージ）",
   "exportView.toMcHint": "「AIDC 計画」ビューで plan.json / 納品 ZIP / 計画 Excel / トポロジ PNG をエクスポートします（プロジェクト ID とバージョン込み）。",
+  "exportView.gotoAidc": "AIDC 計画へ → 納品パッケージをエクスポート",
   "exportView.renderResults": "描画結果をエクスポート（output バッチ）",
   "exportView.exportAllZip": "すべての描画結果をエクスポート（ZIP）",
   "exportView.exportFailed": "エクスポートに失敗: {{err}}",

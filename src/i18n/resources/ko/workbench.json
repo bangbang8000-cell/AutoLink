@@ -100,6 +100,7 @@
   "exportView.title": "아카이브 / 내보내기 — {{name}}",
   "exportView.toMc": "MagicCommander로 내보내기(AIDC 전달 패키지)",
   "exportView.toMcHint": "「AIDC 계획」보기에서 plan.json / 전달 ZIP / 계획 Excel / 토폴로지 PNG를 내보내세요(프로젝트 ID·버전 포함).",
+  "exportView.gotoAidc": "AIDC 계획으로 → 전달 패키지 내보내기",
   "exportView.renderResults": "렌더 결과 내보내기(output 배치)",
   "exportView.exportAllZip": "모든 렌더 결과 내보내기(ZIP)",
   "exportView.exportFailed": "내보내기 실패: {{err}}",
