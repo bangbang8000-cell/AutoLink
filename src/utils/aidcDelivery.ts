@@ -54,6 +54,8 @@ export async function exportDeliveryZip(projectName: string): Promise<DeliveryEx
     project_id: plan.meta?.projectId,
     ...(plan.meta?.projectName ? { project_name: plan.meta.projectName } : {}),
     ...macroToInput(plan.macro),
+    // M5: 透传 plan_version——交付包版本戳与项目一致（不再恒为 1）
+    plan_version: plan.meta?.planVersion,
   }
 
   // 交付包附带拓扑 PNG（失败不阻塞）
@@ -63,8 +65,17 @@ export async function exportDeliveryZip(projectName: string): Promise<DeliveryEx
     pngBase64 = await exportPlanTopologyPng(plan)
   } catch { /* 拓扑图生成失败不阻塞交付包 */ }
 
+  // M5: 设计级交付包——附带 topology.json / rack_layout.json（MC 可还原完整 AL 设计）
+  const extraFiles: Record<string, string> = {}
+  try {
+    const topology = await window.electron.project.getFile(projectName, 'topology.json')
+    if (topology) extraFiles['topology.json'] = topology
+    const rackLayout = await window.electron.project.getFile(projectName, 'rack_layout.json')
+    if (rackLayout) extraFiles['rack_layout.json'] = rackLayout
+  } catch { /* 设计文件缺失不阻塞交付包 */ }
+
   const res = await window.electron.aidc.exportPlan(
-    { ...params, ...(pngBase64 ? { pngBase64 } : {}) },
+    { ...params, ...(pngBase64 ? { pngBase64 } : {}), extraFiles },
     'zip',
   )
   return res

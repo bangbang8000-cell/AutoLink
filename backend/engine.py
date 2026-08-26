@@ -548,10 +548,12 @@ def handle_plan_aidc_export(params):
     filepath = p.pop('filepath', None)
     fmt = str(p.pop('format', 'json')).lower()
     png_base64 = p.pop('pngBase64', None) or p.pop('png_base64', None)
+    # M5: 设计级交付包额外文件（topology.json / rack_layout.json 等）
+    extra_files = p.pop('extraFiles', None) or p.pop('extra_files', None)
     if not filepath:
         return {'error': '缺 filepath'}
     try:
-        path = export_plan(p, filepath, fmt, png_base64=png_base64)
+        path = export_plan(p, filepath, fmt, png_base64=png_base64, extra_files=extra_files)
         return {'ok': True, 'path': path}
     except Exception as e:  # noqa: BLE001
         return {'error': f'导出失败: {e}'}

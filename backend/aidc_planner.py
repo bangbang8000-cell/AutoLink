@@ -340,10 +340,13 @@ def _delivery_readme(plan: dict) -> str:
 
 
 def export_plan(macro: dict, filepath: str, fmt: str = 'json',
-                png_base64: str | None = None) -> str:
+                png_base64: str | None = None,
+                extra_files: dict | None = None) -> str:
     """G2 + 打磨轮（AL-B3）：plan:table → 文件（json | excel | zip 交付包），返回落盘路径。
 
     png_base64：可选——zip 交付包额外写入「拓扑图.png」（AL 生成拓扑图作为导出文件之一）。
+    extra_files：M5——设计级交付包额外文件 {文件名: 内容}（如 topology.json / rack_layout.json），
+                 使 MC 可还原完整 AL 设计（plan 层 + 组网拓扑 + 机柜布局）。
     """
     import base64
     import zipfile
@@ -361,6 +364,9 @@ def export_plan(macro: dict, filepath: str, fmt: str = 'json',
                     z.writestr('拓扑图.png', base64.b64decode(png_base64))
                 except (ValueError, TypeError):  # noqa: BLE001
                     pass  # 拓扑图失败不阻塞交付包
+            for name, content in (extra_files or {}).items():
+                if content:
+                    z.writestr(name, content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, indent=2))
     elif fmt == 'excel':
         if not filepath.lower().endswith('.xlsx'):
             filepath += '.xlsx'

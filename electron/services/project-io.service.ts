@@ -16,6 +16,8 @@ const ALLOWED_TOP_LEVEL = new Set([
   'rack_layout.json',
   // P1（A-6）：AIDC 规划文件随项目导入/导出往返
   'plan.json',
+  // M5：AIDC 规划版本历史快照目录随项目往返（导入后历史不丢失）
+  'plan_history',
   'output',
 ])
 
@@ -97,8 +99,8 @@ function archiveDirectory(sourceDir: string, zipPath: string, allowOutputDir: bo
         const relPath = relBase ? `${relBase}/${fullName}` : fullName
 
         if (entry.isDirectory()) {
-          // 顶层目录只允许 output（项目）或全部允许（模板场景由调用方控制）
-          if (relBase === '' && allowOutputDir && fullName !== 'output') continue
+          // 顶层目录只允许 output / plan_history（项目）或全部允许（模板场景由调用方控制）
+          if (relBase === '' && allowOutputDir && fullName !== 'output' && fullName !== 'plan_history') continue
           archive.directory(fullPath, relPath)
         } else if (entry.isFile()) {
           archive.file(fullPath, { name: relPath })
@@ -195,12 +197,14 @@ class ProjectIOService {
       }
     }
 
-    // 校验 ZIP 中必须包含配置文件
+    // 校验 ZIP 中必须包含配置文件（M5: 兼容仅含 plan.json 的 MC 交付包，导入为 AIDC 项目）
     const hasConfig = entries.some(
-      (e) => !e.isDirectory && (e.entryName === 'network_config.ini' || e.entryName === 'project_config.json'),
+      (e) =>
+        !e.isDirectory &&
+        (e.entryName === 'network_config.ini' || e.entryName === 'project_config.json' || e.entryName === 'plan.json'),
     )
     if (!hasConfig) {
-      throw new Error(`ZIP 中未找到 network_config.ini 或 project_config.json，不是有效的${kind}包`)
+      throw new Error(`ZIP 中未找到 network_config.ini / project_config.json / plan.json，不是有效的${kind}包`)
     }
 
     let finalName = baseName?.trim() || path.basename(zipPath, '.zip')
