@@ -340,4 +340,81 @@ def init_tools() -> None:
         _make_cli_handler("repair:apply"),
     )
 
+    # ---- 项目/模板操作（M6：AI 对话内实现项目/模板 CRUD + 基于模板创建 + 文件读写 + 模板推荐）----
+    register_tool(
+        "template_create", "保存用户模板：把 ProjectConfig JSON 保存为可复用模板（template.json + project_config.json）。写操作（NOTIFY）",
+        _schema({
+            "templateName": _str_param("templateName", "新模板名", True),
+            "config": _str_param("config", "模板 ProjectConfig JSON 对象（从 project_info 或 generate_project 结果取）", True),
+            "description": _str_param("description", "模板描述"),
+            "scenario": _str_param("scenario", "适用场景"),
+            "overwrite": _str_param("overwrite", "同名覆盖（默认 false）"),
+        }, required=["templateName", "config"]),
+        _make_cli_handler("template:create"),
+    )
+    register_tool(
+        "template_update", "更新用户模板的 ProjectConfig（内置模板只读不可改）。写操作（NOTIFY）",
+        _schema({
+            "templateName": _str_param("templateName", "用户模板名", True),
+            "config": _str_param("config", "新 ProjectConfig JSON 对象", True),
+        }, required=["templateName", "config"]),
+        _make_cli_handler("template:update"),
+    )
+    register_tool(
+        "template_delete", "删除用户模板（内置模板只读不可删，需向用户说明）。写操作（NOTIFY）",
+        _schema({
+            "templateName": _str_param("templateName", "用户模板名", True),
+        }, required=["templateName"]),
+        _make_cli_handler("template:delete"),
+    )
+    register_tool(
+        "template_recommend", "模板推荐：按参数网协议（IB/RoCE/UEC）/GPU 型号/规模（GPU 服务器数）对模板清单打分排序。回答\"用什么模板/从哪个模板开始\"时优先调用（只读 AUTO）",
+        _schema({
+            "protocol": _str_param("protocol", "参数网协议：IB/RoCE/UEC"),
+            "gpuModel": _str_param("gpuModel", "GPU 型号关键词（如 H100/B300）"),
+            "scale": _str_param("scale", "规模（GPU 服务器数量）"),
+        }, required=[]),
+        _make_cli_handler("template:recommend"),
+    )
+    register_tool(
+        "project_create", "基于模板（或默认配置）创建工作区项目，并自动转 AIDC 项目（mint projectId + plan.json）。回答\"帮我建一个 XX 项目\"时优先调用。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "新项目名", True),
+            "description": _str_param("description", "项目描述"),
+            "templateName": _str_param("templateName", "基于的模板名（可先用 template_recommend 选择）"),
+        }, required=["projectName"]),
+        _make_cli_handler("project:create"),
+    )
+    register_tool(
+        "project_delete", "删除工作区项目（不可恢复，需用户明确确认后调用）。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+        }, required=["projectName"]),
+        _make_cli_handler("project:delete"),
+    )
+    register_tool(
+        "project_list_files", "列出项目目录下所有文件（路径 + 大小）。回答\"项目里有哪些文件/结构\"时调用（只读 AUTO）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+        }, required=["projectName"]),
+        _make_cli_handler("project:list-files"),
+    )
+    register_tool(
+        "project_read_file", "读取项目内文本文件内容（如 project_config.json/plan.json/README 等，防目录穿越）。回答\"XX 文件内容/当前配置\"时调用（只读 AUTO）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+            "filePath": _str_param("filePath", "项目内相对路径", True),
+        }, required=["projectName", "filePath"]),
+        _make_cli_handler("project:read-file"),
+    )
+    register_tool(
+        "project_write_file", "写入项目内文本文件（覆盖已存在文件，防目录穿越）。用于修改项目配置/补充设计文档。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+            "filePath": _str_param("filePath", "项目内相对路径", True),
+            "content": _str_param("content", "文件内容", True),
+        }, required=["projectName", "filePath", "content"]),
+        _make_cli_handler("project:write-file"),
+    )
+
     logger.info(f"AutoLink AI Hub: registered {len(_tools)} tools")

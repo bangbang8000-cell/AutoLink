@@ -240,6 +240,103 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
              'required': True, 'help': 'LLM 抽取的项目配置 JSON 文件路径', 'file_json': True},
         ],
     },
+    # M6: 项目/模板写操作（AI 对话内 CRUD + 基于模板创建 + 文件读写 + 模板推荐）
+    'template:create': {
+        'sub': 'create',
+        'domain': 'template',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '新模板名'},
+            {'name': 'config', 'flags': ['--config'], 'type': str,
+             'required': True, 'help': '模板 ProjectConfig JSON 文件路径', 'file_json': True},
+            {'name': 'description', 'flags': ['--description'], 'type': str,
+             'required': False, 'help': '模板描述'},
+            {'name': 'scenario', 'flags': ['--scenario'], 'type': str,
+             'required': False, 'help': '场景'},
+            {'name': 'overwrite', 'flags': ['--overwrite'], 'type': bool,
+             'required': False, 'help': '同名覆盖（默认 False）'},
+        ],
+    },
+    'template:update': {
+        'sub': 'update',
+        'domain': 'template',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '用户模板名'},
+            {'name': 'config', 'flags': ['--config'], 'type': str,
+             'required': True, 'help': '新 ProjectConfig JSON 文件路径', 'file_json': True},
+        ],
+    },
+    'template:delete': {
+        'sub': 'delete',
+        'domain': 'template',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '用户模板名（内置只读）'},
+        ],
+    },
+    'template:recommend': {
+        'sub': 'recommend',
+        'domain': 'template',
+        'params': [
+            {'name': 'protocol', 'flags': ['--protocol'], 'type': str,
+             'required': False, 'help': '参数网协议（IB/RoCE/UEC）'},
+            {'name': 'gpuModel', 'flags': ['--gpu-model'], 'type': str,
+             'required': False, 'help': 'GPU 型号关键词'},
+            {'name': 'scale', 'flags': ['--scale'], 'type': str,
+             'required': False, 'help': '规模（GPU 服务器数）'},
+        ],
+    },
+    'project:create': {
+        'sub': 'create',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '新项目名'},
+            {'name': 'description', 'flags': ['--description'], 'type': str,
+             'required': False, 'help': '项目描述'},
+            {'name': 'template', 'flags': ['--template'], 'type': str,
+             'required': False, 'help': '基于的模板名（缺省默认配置）'},
+        ],
+    },
+    'project:delete': {
+        'sub': 'delete',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '项目名（不可恢复）'},
+        ],
+    },
+    'project:list-files': {
+        'sub': 'list-files',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '项目名'},
+        ],
+    },
+    'project:read-file': {
+        'sub': 'read-file',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '项目名'},
+            {'name': 'filePath', 'flags': ['--file-path'], 'type': str,
+             'required': True, 'help': '项目内相对路径'},
+        ],
+    },
+    'project:write-file': {
+        'sub': 'write-file',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '项目名'},
+            {'name': 'filePath', 'flags': ['--file-path'], 'type': str,
+             'required': True, 'help': '项目内相对路径'},
+            {'name': 'content', 'flags': ['--content'], 'type': str,
+             'required': True, 'help': '文件内容'},
+        ],
+    },
     # V3.1.3-T7-3: 示例文件解析（Excel/JSON/CSV/文本 → 结构化数据）
     'file:parse': {
         'sub': 'parse',

@@ -207,6 +207,69 @@ class TestTools:
 # 权限分级
 # ============================================================
 
+class TestM6ProjectTemplateTools:
+    """M6: AI 对话内项目/模板 CRUD + 文件读写 + 模板推荐（工具互灌）"""
+
+    @pytest.fixture
+    def userdata(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        return tmp_path
+
+    def test_tools_registered(self):
+        init_tools()
+        names = {d['function']['name'] for d in get_tool_definitions()}
+        for expected in ('template_create', 'template_update', 'template_delete',
+                         'template_recommend', 'project_create', 'project_delete',
+                         'project_list_files', 'project_read_file', 'project_write_file'):
+            assert expected in names
+
+    def test_template_crud_via_tools(self, userdata):
+        init_tools()
+        cfg = {'topology': {'num_gpu_servers': 8, 'param_protocol': 'IB'}}
+        r = asyncio.run(execute_tool('template_create', {'templateName': '工具模板', 'config': cfg}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('template_view', {'name': '工具模板'}))
+        assert r['result']['success'] is True and r['result']['template']['source'] == 'user'
+        r = asyncio.run(execute_tool('template_update',
+                                     {'templateName': '工具模板',
+                                      'config': {'topology': {'num_gpu_servers': 16}}}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('template_recommend', {'protocol': 'IB'}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('template_delete', {'templateName': '工具模板'}))
+        assert r['success'] is True and r['result']['success'] is True
+
+    def test_project_crud_via_tools(self, userdata):
+        init_tools()
+        r = asyncio.run(execute_tool('project_create', {'projectName': '工具项目', 'description': 'd'}))
+        assert r['success'] is True and r['result']['success'] is True
+        assert r['result']['projectId']
+        r = asyncio.run(execute_tool('project_read_file',
+                                     {'projectName': '工具项目', 'filePath': 'project_config.json'}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('project_write_file',
+                                     {'projectName': '工具项目', 'filePath': 'a.txt', 'content': 'hi'}))
+        assert r['success'] is True and r['result']['success'] is True
+        r = asyncio.run(execute_tool('project_list_files', {'projectName': '工具项目'}))
+        assert r['success'] is True and any(f['path'] == 'a.txt' for f in r['result']['files'])
+        # 别名参数：name → projectName 归一后仍可命中
+        r = asyncio.run(execute_tool('project_delete', {'name': '工具项目'}))
+        assert r['success'] is True and r['result']['success'] is True
+
+    def test_tool_permissions_m6(self):
+        assert get_tool_permission('template_recommend') == ToolPermission.AUTO
+        assert get_tool_permission('project_read_file') == ToolPermission.AUTO
+        assert get_tool_permission('project_list_files') == ToolPermission.AUTO
+        assert get_tool_permission('template_create') == ToolPermission.NOTIFY
+        assert get_tool_permission('project_create') == ToolPermission.NOTIFY
+        assert get_tool_permission('project_delete') == ToolPermission.CONFIRM
+
+    def test_tool_alias_resolution_m6(self):
+        assert resolve_tool_name('create_template')[0] == 'template_create'
+        assert resolve_tool_name('delete_project')[0] == 'project_delete'
+        assert resolve_tool_name('recommend_template')[0] == 'template_recommend'
+
+
 class TestPermissions:
     def test_permission_levels(self):
         assert get_tool_permission('validate_design') == ToolPermission.AUTO

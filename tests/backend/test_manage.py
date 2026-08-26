@@ -11,6 +11,9 @@ import pytest
 from manage import (
     list_devices, list_templates, view_template,
     list_projects, project_info, generate_project,
+    save_template, update_template, delete_template, recommend_template,
+    create_project, delete_project, project_list_files,
+    project_read_file, project_write_file,
 )
 
 
@@ -175,3 +178,148 @@ class TestGenerateProject:
         result = generate_project(name='X', config={'topology': {'param_protocol': 'FOO'}})
         assert result['success'] is True
         assert any(i['severity'] == 'error' for i in result['validationIssues'])
+
+
+# ============================================================
+# 项目/模板写操作（M6：AI 对话内 CRUD + 基于模板创建 + 文件读写 + 模板推荐）
+# ============================================================
+
+class TestTemplateCrud:
+    @pytest.fixture
+    def userdata(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        return tmp_path
+
+    def _cfg(self, name):
+        return {'meta': {'name': name},
+                'topology': {'num_gpu_servers': 8, 'param_protocol': 'IB', 'param_speed': '400G'}}
+
+    def test_save_template_ok(self, userdata):
+        r = save_template('M6测试模板', self._cfg('M6测试模板'), description='测试')
+        assert r['success'] is True
+        vt = view_template('M6测试模板')
+        assert vt['success'] is True and vt['template']['source'] == 'user'
+        assert vt['template']['config']['topology']['num_gpu_servers'] == 8
+
+    def test_save_template_duplicate(self, userdata):
+        save_template('T1', self._cfg('T1'))
+        r = save_template('T1', self._cfg('T1'))
+        assert r['success'] is False and '已存在' in r['error']
+        r2 = save_template('T1', self._cfg('T1'), overwrite=True)
+        assert r2['success'] is True
+
+    def test_save_template_invalid_name(self, userdata):
+        r = save_template('../evil', self._cfg('x'))
+        assert r['success'] is False
+        r2 = save_template('', self._cfg('x'))
+        assert r2['success'] is False
+        r3 = save_template('device_library', self._cfg('x'))
+        assert r3['success'] is False
+
+    def test_update_template_user_only(self, userdata):
+        save_template('TU', self._cfg('TU'))
+        r = update_template('TU', {'topology': {'num_gpu_servers': 16}})
+        assert r['success'] is True
+        assert view_template('TU')['template']['config']['topology']['num_gpu_servers'] == 16
+        # 内置模板只读
+        r2 = update_template('DP3Tier-1024', {'topology': {}})
+        assert r2['success'] is False
+
+    def test_delete_template(self, userdata):
+        save_template('TD', self._cfg('TD'))
+        r = delete_template('TD')
+        assert r['success'] is True
+        assert view_template('TD')['success'] is False
+        # 内置模板不可删
+        r2 = delete_template('DP3Tier-1024')
+        assert r2['success'] is False and '只读' in r2['error']
+
+    def test_recommend_template(self, userdata):
+        r = recommend_template(protocol='IB')
+        assert r['success'] is True
+        assert len(r['recommendations']) >= 1
+        # 协议打分：IB 模板排前
+        top = r['recommendations'][0]
+        assert 'score' in top and top['score'] >= 3
+
+
+class TestProjectCrud:
+    @pytest.fixture
+    def userdata(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        return tmp_path
+
+    def test_create_project_default(self, userdata):
+        r = create_project('AI新建项目', description='desc')
+        assert r['success'] is True
+        assert r['projectId']
+        info = project_info('AI新建项目')
+        assert info['success'] is True
+        assert info['project']['has_config'] is True
+        # AIDC 初始化：plan.json 存在
+        import os
+        assert os.path.exists(os.path.join(str(userdata), 'workspace', 'AI新建项目', 'plan.json'))
+
+    def test_create_project_from_template(self, userdata):
+        save_template('源模板', {'meta': {'name': '源模板'},
+                                'topology': {'num_gpu_servers': 32, 'param_protocol': 'RoCE'}})
+        r = create_project('模板派生项目', template='源模板')
+        assert r['success'] is True
+        cfg = project_info('模板派生项目')['project']['config']
+        assert cfg['topology']['num_gpu_servers'] == 32
+
+    def test_create_project_duplicate(self, userdata):
+        create_project('重复项目')
+        r = create_project('重复项目')
+        assert r['success'] is False and '已存在' in r['error']
+
+    def test_create_project_bad_template(self, userdata):
+        r = create_project('坏模板项目', template='__no_such__')
+        assert r['success'] is False
+
+    def test_delete_project(self, userdata):
+        create_project('待删除项目')
+        r = delete_project('待删除项目')
+        assert r['success'] is True
+        assert project_info('待删除项目')['success'] is False
+        r2 = delete_project('不存在项目')
+        assert r2['success'] is False
+
+
+class TestProjectFileTools:
+    @pytest.fixture
+    def userdata(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        create_project('文件项目')
+        return tmp_path
+
+    def test_list_files(self, userdata):
+        r = project_list_files('文件项目')
+        assert r['success'] is True
+        paths = [f['path'] for f in r['files']]
+        assert 'project_config.json' in paths
+        assert 'plan.json' in paths
+
+    def test_read_file_ok(self, userdata):
+        r = project_read_file('文件项目', 'project_config.json')
+        assert r['success'] is True and 'meta' in r['content']
+
+    def test_read_file_missing(self, userdata):
+        r = project_read_file('文件项目', 'no/such.txt')
+        assert r['success'] is False
+
+    def test_write_file_roundtrip(self, userdata):
+        r = project_write_file('文件项目', 'notes/README.md', '# 说明')
+        assert r['success'] is True
+        r2 = project_read_file('文件项目', 'notes/README.md')
+        assert r2['success'] is True and r2['content'] == '# 说明'
+
+    def test_write_file_traversal_guarded(self, userdata):
+        r = project_write_file('文件项目', '../escape.txt', 'x')
+        assert r['success'] is False
+        r2 = project_read_file('文件项目', '../../etc/passwd')
+        assert r2['success'] is False
+
+    def test_project_not_exists(self, userdata):
+        r = project_list_files('__no_such__')
+        assert r['success'] is False

@@ -1829,6 +1829,86 @@ def handle_project_generate(params):
     return generate_project(name=params.get('name', ''), config=params.get('config') or {})
 
 
+# ---- M6: 项目/模板写操作（AI 对话内实现项目/模板 CRUD + 基于模板创建 + 文件读写 + 模板推荐）----
+
+@register_action('template:create')
+def handle_template_create(params):
+    """M6: 保存用户模板（template.json + project_config.json，写操作 NOTIFY）。"""
+    from manage import save_template
+    p = dict(params or {})
+    name = p.get('name') or p.get('templateName') or ''
+    return save_template(name, p.get('config') or {},
+                         p.get('description', ''), p.get('scenario', ''),
+                         p.get('tags'), bool(p.get('overwrite')))
+
+
+@register_action('template:update')
+def handle_template_update(params):
+    """M6: 更新用户模板 project_config.json（写操作 NOTIFY）。"""
+    from manage import update_template
+    p = dict(params or {})
+    return update_template(p.get('name') or p.get('templateName') or '', p.get('config') or {})
+
+
+@register_action('template:delete')
+def handle_template_delete(params):
+    """M6: 删除用户模板（写操作 NOTIFY；内置模板只读）。"""
+    from manage import delete_template
+    p = dict(params or {})
+    return delete_template(p.get('name') or p.get('templateName') or '')
+
+
+@register_action('template:recommend')
+def handle_template_recommend(params):
+    """M6: 模板推荐（从 MC 互灌）——按协议/GPU 型号/规模打分排序（只读 AUTO）。"""
+    from manage import recommend_template
+    p = dict(params or {})
+    return recommend_template(p.get('protocol', ''), p.get('gpuModel', ''), p.get('scale', ''))
+
+
+@register_action('project:create')
+def handle_project_create(params):
+    """M6: 基于模板（或默认配置）创建工作区项目并转 AIDC（写操作 NOTIFY）。"""
+    from manage import create_project
+    p = dict(params or {})
+    name = p.get('name') or p.get('projectName') or ''
+    template = p.get('template') or p.get('templateName') or ''
+    return create_project(name, p.get('description', ''), template)
+
+
+@register_action('project:delete')
+def handle_project_delete(params):
+    """M6: 删除工作区项目（写操作 NOTIFY，不可恢复）。"""
+    from manage import delete_project
+    p = dict(params or {})
+    return delete_project(p.get('name') or p.get('projectName') or '')
+
+
+@register_action('project:list-files')
+def handle_project_list_files(params):
+    """M6: 列出项目目录文件树（只读 AUTO）。"""
+    from manage import project_list_files
+    p = dict(params or {})
+    return project_list_files(p.get('name') or p.get('projectName') or '')
+
+
+@register_action('project:read-file')
+def handle_project_read_file(params):
+    """M6: 读取项目内文本文件（只读 AUTO；防目录穿越）。"""
+    from manage import project_read_file
+    p = dict(params or {})
+    return project_read_file(p.get('name') or p.get('projectName') or '', p.get('filePath', ''))
+
+
+@register_action('project:write-file')
+def handle_project_write_file(params):
+    """M6: 写入项目内文本文件（写操作 NOTIFY；防目录穿越）。"""
+    from manage import project_write_file
+    p = dict(params or {})
+    return project_write_file(p.get('name') or p.get('projectName') or '',
+                              p.get('filePath', ''), p.get('content', ''))
+
+
 @register_action('file:parse')
 def handle_file_parse(params):
     """V3.1.3-T7-3: 示例文件解析（Excel/JSON/CSV/文本 → 结构化数据，只读）"""

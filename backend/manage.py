@@ -321,3 +321,238 @@ def generate_project(name: str = '', config: dict | None = None) -> dict:
         'validationIssues': issues,
         'annotations': annotations,
     }
+
+
+# ============================================================
+# 模板写操作（template:create / template:update / template:delete，M6）
+# ============================================================
+
+_TEMPLATE_RESERVED = {'device_library'}
+_INVALID_NAME_CHARS = ('/', '\\', '..', ':', '*', '?', '"', '<', '>', '|')
+
+
+def _now() -> str:
+    import datetime
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+
+
+def _write_json(path, data):
+    """写 JSON（自动建目录）"""
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _safe_component_name(name: str, kind: str = '名称', max_len: int = 64) -> tuple:
+    """校验模板/项目名：非空、无路径分隔/穿越、非保留名。返回 (name, error)"""
+    name = (name or '').strip()
+    if not name:
+        return None, f'{kind}不能为空'
+    if len(name) > max_len:
+        return None, f'{kind}过长（> {max_len} 字符）'
+    if any(c in name for c in _INVALID_NAME_CHARS):
+        return None, f'{kind}含非法字符（不能包含路径分隔符等）'
+    if name in _TEMPLATE_RESERVED:
+        return None, f'{kind}是保留名'
+    return name, None
+
+
+def save_template(name: str, config: dict, description: str = '', scenario: str = '',
+                  tags: list | None = None, overwrite: bool = False) -> dict:
+    """保存用户模板：user_template_dir/<name>/template.json + project_config.json（M6 写操作）。
+    config 必须是非空 ProjectConfig dict；overwrite=False 时同名已存在则报错。"""
+    name, err = _safe_component_name(name, '模板名')
+    if err:
+        return {'success': False, 'error': err}
+    if not isinstance(config, dict) or not config:
+        return {'success': False, 'error': '缺少模板配置（config 必须是非空 JSON 对象）'}
+    root = Path(user_template_dir()) / name
+    if root.exists() and not overwrite:
+        return {'success': False, 'error': f'模板已存在: {name}（可传 overwrite=true 覆盖）'}
+    from project_config import create_default_config
+    cfg = _deep_merge(create_default_config(name), json.loads(json.dumps(config)))
+    cfg.setdefault('meta', {})['name'] = name
+    _write_json(root / 'template.json', {
+        'id': name, 'name': name, 'description': description or '',
+        'scenario': scenario or '', 'tags': tags or [], 'source': 'user',
+    })
+    _write_json(root / 'project_config.json', cfg)
+    return {'success': True, 'template': name, 'path': str(root)}
+
+
+def update_template(name: str, config: dict) -> dict:
+    """更新用户模板 project_config.json（M6 写操作）。内置模板只读不可改。"""
+    name, err = _safe_component_name(name, '模板名')
+    if err:
+        return {'success': False, 'error': err}
+    if not isinstance(config, dict) or not config:
+        return {'success': False, 'error': '缺少模板配置（config 必须是非空 JSON 对象）'}
+    root = Path(user_template_dir()) / name
+    if not (root / 'template.json').exists():
+        return {'success': False, 'error': f'用户模板不存在: {name}（内置模板只读）'}
+    from project_config import create_default_config
+    cfg = _deep_merge(create_default_config(name), json.loads(json.dumps(config)))
+    cfg.setdefault('meta', {})['name'] = name
+    _write_json(root / 'project_config.json', cfg)
+    return {'success': True, 'template': name, 'path': str(root)}
+
+
+def delete_template(name: str) -> dict:
+    """删除用户模板（M6 写操作）。内置模板只读不可删。"""
+    name, err = _safe_component_name(name, '模板名')
+    if err:
+        return {'success': False, 'error': err}
+    builtin = Path(template_dir()) / name
+    if builtin.is_dir():
+        return {'success': False, 'error': f'内置模板只读不可删除: {name}'}
+    root = Path(user_template_dir()) / name
+    if not root.is_dir():
+        return {'success': False, 'error': f'用户模板不存在: {name}'}
+    import shutil
+    shutil.rmtree(str(root), ignore_errors=True)
+    return {'success': True, 'template': name}
+
+
+def recommend_template(protocol: str = '', gpu_model: str = '', scale: str = '') -> dict:
+    """模板推荐（M6，从 MC 互灌）：按参数网协议/GPU 型号/规模关键词对模板清单打分排序。"""
+    data = list_templates()
+    protocol_key = (protocol or '').strip().upper()
+    scale_key = (scale or '').strip()
+    gpu_key = (gpu_model or '').strip().lower()
+
+    scored = []
+    for tpl in data.get('templates', []):
+        summary = tpl.get('summary') or {}
+        s = 0
+        if protocol_key and (summary.get('param_protocol') or '').upper() == protocol_key:
+            s += 3
+        elif protocol_key:
+            s -= 1
+        cfg = None
+        if gpu_key or scale_key:
+            view = view_template(tpl.get('name') or tpl.get('id'))
+            if view.get('success'):
+                cfg = view['template']['config']
+        if gpu_key and cfg:
+            name = ' '.join([cfg.get('meta', {}).get('name', ''), json.dumps(cfg, ensure_ascii=False)]).lower()
+            if gpu_key in name:
+                s += 2
+        if scale_key and cfg and str((cfg.get('topology') or {}).get('num_gpu_servers', '')) == scale_key:
+            s += 2
+        scored.append({'template': tpl, 'score': s, 'summary': summary})
+
+    scored.sort(key=lambda x: -x['score'])
+    top = [{'name': t['template'].get('name') or t['template'].get('id'),
+            'id': t['template'].get('id'), 'source': t['template'].get('source'),
+            'score': t['score'], 'summary': t['summary']} for t in scored[:5]]
+    return {'success': True, 'recommendations': top,
+            'totalAvailable': len(scored), 'total': len(top)}
+
+
+# ============================================================
+# 项目写操作（project:create / project:delete / 文件读写，M6）
+# ============================================================
+
+def create_project(name: str, description: str = '', template: str = '') -> dict:
+    """基于模板（或默认配置）创建工作区项目，并转 AIDC 项目（mint projectId + plan.json，幂等）。"""
+    name, err = _safe_component_name(name, '项目名')
+    if err:
+        return {'success': False, 'error': err}
+    d = Path(workspace_dir()) / name
+    if d.exists():
+        return {'success': False, 'error': f'项目已存在: {name}'}
+    cfg = None
+    if template:
+        vt = view_template(template)
+        if not vt.get('success'):
+            return {'success': False, 'error': vt.get('error', f'模板不存在: {template}')}
+        cfg = vt['template']['config']
+    if cfg is None:
+        from project_config import create_default_config
+        cfg = create_default_config(name)
+    cfg = json.loads(json.dumps(cfg))
+    cfg.setdefault('meta', {})['name'] = name
+    d.mkdir(parents=True, exist_ok=True)
+    _write_json(d / 'project_config.json', cfg)
+    _write_json(d / 'project.json', {
+        'name': name, 'description': description or '',
+        'createdAt': _now(), 'updatedAt': _now(), 'version': 1,
+    })
+    from aidc_project import init_aidc_project
+    result = init_aidc_project(str(d), cfg.get('aidc_macro'))
+    if isinstance(result, dict) and result.get('error'):
+        return {'success': False, 'error': result['error']}
+    return {'success': True, 'project': name, 'path': str(d),
+            'projectId': result.get('projectId', ''), 'planVersion': result.get('planVersion', 1)}
+
+
+def delete_project(name: str) -> dict:
+    """删除工作区项目（M6 写操作，不可恢复）。"""
+    name, err = _safe_component_name(name, '项目名')
+    if err:
+        return {'success': False, 'error': err}
+    d = Path(workspace_dir()) / name
+    if not d.is_dir():
+        return {'success': False, 'error': f'项目不存在: {name}'}
+    import shutil
+    shutil.rmtree(str(d), ignore_errors=True)
+    return {'success': True, 'project': name}
+
+
+def _resolve_project_path(name: str, rel_path: str) -> str | None:
+    """解析项目内文件绝对路径（防目录穿越）；非法返回 None"""
+    root = Path(workspace_dir()) / name
+    if not root.is_dir():
+        return None
+    target = (root / (rel_path or '')).resolve()
+    root_res = root.resolve()
+    if target != root_res and root_res not in target.parents:
+        return None
+    return str(target)
+
+
+def project_list_files(name: str) -> dict:
+    """列出项目目录文件树（跳过隐藏目录，不含二进制内容）"""
+    root = Path(workspace_dir()) / name
+    if not root.is_dir():
+        return {'success': False, 'error': f'项目不存在: {name}'}
+    files = []
+    for p in sorted(root.rglob('*')):
+        if p.is_dir():
+            continue
+        rel = p.relative_to(root)
+        if any(part.startswith('.') for part in rel.parts):
+            continue
+        try:
+            files.append({'path': rel.as_posix(), 'size': p.stat().st_size})
+        except OSError:
+            pass
+    return {'success': True, 'project': name, 'files': files, 'total': len(files)}
+
+
+def project_read_file(name: str, file_path: str) -> dict:
+    """读取项目内文本文件（M6，从 MC 互灌 read_file）。"""
+    path = _resolve_project_path(name, file_path)
+    if not path:
+        return {'success': False, 'error': '项目不存在或路径非法（不允许越出项目目录）'}
+    if not os.path.isfile(path):
+        return {'success': False, 'error': f'文件不存在: {file_path}'}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return {'success': True, 'project': name, 'path': file_path, 'content': f.read()}
+    except UnicodeDecodeError:
+        return {'success': False, 'error': f'文件不是文本（二进制）: {file_path}'}
+
+
+def project_write_file(name: str, file_path: str, content: str) -> dict:
+    """写入项目内文本文件（M6，从 MC 互灌 write_file；覆盖已存在文件）。"""
+    path = _resolve_project_path(name, file_path)
+    if not path:
+        return {'success': False, 'error': '项目不存在或路径非法（不允许越出项目目录）'}
+    try:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content or '')
+        return {'success': True, 'project': name, 'path': file_path}
+    except OSError as e:
+        return {'success': False, 'error': f'写入失败: {e}'}

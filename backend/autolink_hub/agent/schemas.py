@@ -59,6 +59,16 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "room_optimize": ToolPermission.NOTIFY,
     "room_set_type": ToolPermission.NOTIFY,
     "room_place": ToolPermission.NOTIFY,
+    # 项目/模板操作（M6：AUTO 只读 / NOTIFY 写 / CONFIRM 删除）
+    "template_recommend": ToolPermission.AUTO,
+    "project_list_files": ToolPermission.AUTO,
+    "project_read_file": ToolPermission.AUTO,
+    "template_create": ToolPermission.NOTIFY,
+    "template_update": ToolPermission.NOTIFY,
+    "template_delete": ToolPermission.NOTIFY,
+    "project_create": ToolPermission.NOTIFY,
+    "project_write_file": ToolPermission.NOTIFY,
+    "project_delete": ToolPermission.CONFIRM,
     # 高风险（CONFIRM）
     "delete_project": ToolPermission.CONFIRM,
 }
@@ -112,6 +122,27 @@ TOOL_NAME_ALIASES: dict[str, str] = {
     "fix_design": "repair_plan",
     "apply_repairs": "repair_apply",
     "apply_fix": "repair_apply",
+    # 项目/模板操作（M6）
+    "create_template": "template_create",
+    "save_template": "template_create",
+    "new_template": "template_create",
+    "update_template": "template_update",
+    "edit_template": "template_update",
+    "delete_template": "template_delete",
+    "remove_template": "template_delete",
+    "recommend": "template_recommend",
+    "recommend_template": "template_recommend",
+    "create_project": "project_create",
+    "new_project": "project_create",
+    "create_project_from_template": "project_create",
+    "delete_project": "project_delete",
+    "remove_project": "project_delete",
+    "list_files": "project_list_files",
+    "project_files": "project_list_files",
+    "read_project_file": "project_read_file",
+    "read_file": "project_read_file",
+    "write_project_file": "project_write_file",
+    "write_file": "project_write_file",
 }
 
 PARAM_ALIASES: dict[str, str] = {
