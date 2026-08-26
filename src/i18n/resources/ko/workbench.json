@@ -56,7 +56,7 @@
   "rackImagesDesc": "랙 내부 장비 배치도",
   "stepConfig": "구성 및 준비",
   "stepRender": "렌더링 재료 및 작업",
-  "stepResult": "렌더링 출력",
+  "stepResult": "검토 및 출력",
   "output.title": "출력 결과",
   "output.projectLabel": "프로젝트 선택",
   "output.batches": "{{count}} 배치 · {{files}} 파일",

@@ -56,7 +56,7 @@
   "rackImagesDesc": "每个机柜内设备上架图",
   "stepConfig": "配置与就绪",
   "stepRender": "渲染材料与操作",
-  "stepResult": "渲染输出",
+  "stepResult": "校对与输出",
   "output.title": "输出结果",
   "output.projectLabel": "选择项目",
   "output.batches": "{{count}} 批次 · {{files}} 文件",
