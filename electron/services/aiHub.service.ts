@@ -12,7 +12,7 @@ import * as net from 'net'
 import crypto from 'crypto'
 import { EventEmitter } from 'events'
 import { app } from 'electron'
-import { getBackendPath } from '../config'
+import { getBackendPath } from '../config.js'
 
 /** 本地日志（AL electron 无 logger 工具，与其他 service 一致用 console 前缀） */
 const logger = {
@@ -49,7 +49,7 @@ export class AIHubService extends EventEmitter {
     return this.authToken
   }
 
-  private authHeaders(): Record<string, string> {
+  authHeaders(): Record<string, string> {
     return { 'X-AL-Auth-Token': this.ensureAuthToken() }
   }
 
@@ -95,14 +95,14 @@ export class AIHubService extends EventEmitter {
   }
 
   /** M2 同构：确保 AI Hub 已运行（所有 /api/chat/* 调用前调用） */
-  private async ensureRunning(): Promise<void> {
+  async ensureRunning(): Promise<void> {
     if (this.status.running) return
     await this.reclaimPort()
     await this.start()
   }
 
   /** M2 同构：401/连接失败 → 重启 hub 重试一次 */
-  private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  async withRetry<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn()
     } catch (err) {
@@ -369,7 +369,7 @@ export class AIHubService extends EventEmitter {
   async getProviders(): Promise<Array<{ name: string; model: string; enabled: boolean; is_default: boolean }>> {
     await this.ensureRunning()
     const response = await fetch(`${this.baseUrl}/api/chat/providers`, { headers: this.authHeaders() })
-    const data = await response.json()
+    const data = (await response.json()) as { providers?: Array<{ name: string; model: string; enabled: boolean; is_default: boolean }> }
     return data.providers || []
   }
 
@@ -406,7 +406,7 @@ export class AIHubService extends EventEmitter {
       headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
       body: JSON.stringify({ provider, api_key: apiKey, base_url: baseUrl, model }),
     })
-    return await response.json()
+    return (await response.json()) as { status: string; message: string }
   }
 
   /** 同步 Provider 配置到 AI Hub（批量） */
@@ -432,7 +432,7 @@ export class AIHubService extends EventEmitter {
       headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
       body: JSON.stringify({ name, content }),
     })
-    return await response.json()
+    return (await response.json()) as { status: string; name: string }
   }
 
   /** 获取可用模型列表 */
@@ -444,7 +444,7 @@ export class AIHubService extends EventEmitter {
         headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
         body: JSON.stringify({ base_url: baseUrl, api_key: apiKey }),
       })
-      return await response.json()
+      return (await response.json()) as { status: string; models: string[]; message?: string }
     })
   }
 }

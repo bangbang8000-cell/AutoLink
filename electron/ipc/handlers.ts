@@ -889,9 +889,10 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       case 'ai:chat': {
         const sessionId = String(p.sessionId ?? 'default')
         const reply = await aiHubService.sendChatMessage(
-          sessionId, String(p.message ?? ''), p.mode ?? 'general', p.provider,
+          sessionId, String(p.message ?? ''), String(p.mode ?? 'general'),
+          p.provider as string | undefined,
           p.attachments as Array<{ id: string; name: string; type: string; path: string; size: number }> | undefined,
-          p.autonomyMode ?? 'semi_auto', p.projectName,
+          String(p.autonomyMode ?? 'semi_auto'), p.projectName as string | undefined,
         )
         return { sessionId, status: 'completed', reply }
       }

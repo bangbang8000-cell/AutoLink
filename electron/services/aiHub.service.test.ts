@@ -12,14 +12,13 @@ vi.mock('electron', () => ({
   app: { isPackaged: false, getPath: () => '/tmp' },
 }))
 
-import { AIHubService } from './aiHub.service'
+import { AIHubService } from './aiHub.service.js'
 
 // 私有方法访问
 type PrivateHub = AIHubService & {
   authHeaders(): Record<string, string>
   ensureRunning(): Promise<void>
   withRetry<T>(fn: () => Promise<T>): Promise<T>
-  status: { running: boolean; port: number }
 }
 
 describe('AL AIHubService', () => {
