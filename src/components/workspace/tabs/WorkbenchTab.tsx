@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { useRoomStore } from '@/stores/room.store'
@@ -60,6 +60,7 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
   const selectedPosition = useRoomStore((s) => s.selectedPosition)
   const selectPosition = useRoomStore((s) => s.selectPosition)
   const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
+  const setFinalized = useRoomStore((s) => s.setFinalized)
   const cabinets = useRackStore((s) => s.cabinets)
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
   const selectCabinet = useRackStore((s) => s.selectCabinet)
@@ -150,6 +151,19 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
     }
   }
 
+  // M4：切到柜内规划段的门槛——先完成机房机柜布局并定稿
+  const switchToRacks = () => {
+    if (!matrix) {
+      addToast('warning', t('rack:needMatrixFirst', '请先创建机房机柜矩阵'), 4000)
+      return
+    }
+    if (!matrix.finalized) {
+      addToast('warning', t('rack:needFinalizeFirst', '请先完成机房机柜布局并「定稿」，再进入柜内规划'), 5000)
+      return
+    }
+    setSegment('racks')
+  }
+
   return (
     <div className="h-full flex flex-col gap-3">
       {/* 工具行 */}
@@ -161,11 +175,24 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
             className={`px-2.5 py-1 text-xs transition-colors ${segment === 'layout' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
             {t('rack:segmentLayout')}
           </button>
-          <button type="button" onClick={() => setSegment('racks')}
+          <button type="button" onClick={switchToRacks}
             className={`px-2.5 py-1 text-xs transition-colors ${segment === 'racks' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
             {t('rack:segmentRacks')}
           </button>
         </div>
+        {/* M4：机房布局定稿 / 撤销定稿 */}
+        {matrix && !matrix.finalized && (
+          <button type="button" onClick={() => setFinalized(true)}
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
+            <Lock size={11} /> {t('rack:finalizeLayout', '定稿布局')}
+          </button>
+        )}
+        {matrix?.finalized && (
+          <button type="button" onClick={() => setFinalized(false)}
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+            <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
+          </button>
+        )}
         {matrix ? (
           <>
             <span className="text-2xs text-gray-400">{t('rack:matrixSummary', { rows: matrix.rows.length, cols: matrix.cols.length, defaultValue: '矩阵 {{rows}}排×{{cols}}列' })}</span>

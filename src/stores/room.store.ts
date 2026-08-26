@@ -39,6 +39,8 @@ export interface RoomMatrixData {
   rows: string[]
   cols: number[]
   cells: RoomCellData[]
+  /** M4: 机房机柜布局是否已定稿（定稿后才进入柜内规划；可撤销） */
+  finalized?: boolean
 }
 
 // ================================================================
@@ -126,6 +128,8 @@ interface RoomState {
   loadMatrix: (projectName: string) => Promise<void>
   createMatrix: (projectName: string, rows: string[], cols: number[], name?: string) => Promise<boolean>
   saveMatrix: (projectName: string) => Promise<boolean>
+  /** M4: 机房布局定稿/撤销定稿（定稿后才进入柜内规划） */
+  setFinalized: (finalized: boolean) => void
   setMarkTool: (tool: RoomMarkTool) => void
   markCell: (position: string) => void
   selectPosition: (position: string | null) => void
@@ -266,6 +270,12 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       useToastStore.getState().addToast('error', '机房矩阵保存失败', 5000)
       return false
     }
+  },
+
+  setFinalized: (finalized) => {
+    const { matrix } = get()
+    if (!matrix) return
+    set({ matrix: { ...matrix, finalized } })
   },
 
   setMarkTool: (tool) => set({ markTool: tool }),
