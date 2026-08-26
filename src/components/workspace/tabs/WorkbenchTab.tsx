@@ -510,13 +510,14 @@ export function WorkbenchTab() {
         </div>
       )}
 
-      {/* 内容区（AL-M4c keep-alive：激活页签 + 最近 N 挂载,超限非激活卸载释放内存） */}
+      {/* 内容区（AL-M4c keep-alive：激活页签 + 最近 N 挂载,超限非激活卸载释放内存）
+          M1 修复：激活子视图补 h-full，恢复 TopologyTab 高度链（否则画布高度坍缩为 0、fit 失效） */}
       <div className="flex-1 overflow-auto p-4">
         {openedSubviews.map((sv) => {
           const mounted = mountedSubviews.has(sv)
           if (!mounted) return null
           return (
-            <div key={sv} className={sv === subview ? '' : 'hidden'}>
+            <div key={sv} className={sv === subview ? 'h-full' : 'hidden'}>
               {renderSubview(sv)}
             </div>
           )

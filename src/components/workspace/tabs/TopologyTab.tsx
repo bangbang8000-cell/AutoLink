@@ -599,9 +599,16 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
       return {
         id: node.id,
         type: isGpu ? 'gpu' : (isSwitch ? 'switch' : 'server'),
+        // M1 修复：saved layout 极端坐标清洗（NaN/Infinity/超 200000 → 回退默认布局，避免整图缩小/偏移）
         position: {
-          x: saved?.[node.id]?.x ?? pos?.x ?? 0,
-          y: saved?.[node.id]?.y ?? pos?.y ?? 260,
+          x: (() => {
+            const v = saved?.[node.id]?.x
+            return typeof v === 'number' && isFinite(v) && Math.abs(v) <= 200000 ? v : (pos?.x ?? 0)
+          })(),
+          y: (() => {
+            const v = saved?.[node.id]?.y
+            return typeof v === 'number' && isFinite(v) && Math.abs(v) <= 200000 ? v : (pos?.y ?? 260)
+          })(),
         },
         data: data as unknown as Record<string, unknown>,
         // V3.2.1-T10-2: 网络过滤/折叠切换时节点平滑移动与淡入过渡
@@ -927,11 +934,14 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     if (visible.length === 0) return null
 
     const useMeasured = visible.some((n) => (n.measured?.width ?? 0) > 0)
+    // M1 修复：未测量节点用估算尺寸（拓扑节点典型 160×40），避免按 0 尺寸低估包围盒导致 zoom 偏大裁切
+    const EST_W = 160
+    const EST_H = 40
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
     for (const n of visible) {
       // 拓扑节点均为顶级节点（无父节点），position 即绝对坐标
-      const w = useMeasured ? (n.measured?.width ?? 0) : 0
-      const h = useMeasured ? (n.measured?.height ?? 0) : 0
+      const w = useMeasured ? (n.measured?.width ?? EST_W) : EST_W
+      const h = useMeasured ? (n.measured?.height ?? EST_H) : EST_H
       minX = Math.min(minX, n.position.x)
       minY = Math.min(minY, n.position.y)
       maxX = Math.max(maxX, n.position.x + w)
