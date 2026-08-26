@@ -2,7 +2,7 @@ import { useUIStore } from '@/stores/ui.store'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Monitor, Moon, Sun, Globe, X, Minus, Square, Maximize2 } from 'lucide-react'
+import { Monitor, Moon, Sun, X, Minus, Square, Maximize2 } from 'lucide-react'
 import type { ThemeMode } from '@/stores/ui.store'
 import { UpdatePopover } from '@/components/layout/UpdatePopover'
 import { MenuBar } from '@/components/layout/MenuBar'
@@ -11,11 +11,11 @@ import { UserProfileView } from '@/components/cloud/UserProfileView'
 import clsx from 'clsx'
 
 const languages = [
-  { code: 'zh-CN', label: '简体中文' },
-  { code: 'en', label: 'English' },
-  { code: 'ja', label: '日本語' },
-  { code: 'ko', label: '한국어' },
-  { code: 'zh-TW', label: '繁體中文' },
+  { code: 'zh-CN', label: '简体中文', char: '文' },
+  { code: 'en', label: 'English', char: 'A' },
+  { code: 'ja', label: '日本語', char: 'あ' },
+  { code: 'ko', label: '한국어', char: '한' },
+  { code: 'zh-TW', label: '繁體中文', char: '繁' },
 ]
 
 export function Header() {
@@ -71,6 +71,31 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-1 px-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        {/* Language（M7: 以 MC 为准——顺序 Language→Theme→…→Update，文字徽章） */}
+        <div className="relative">
+          <button
+            onClick={() => { setLangOpen(!langOpen); setThemeOpen(false) }}
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
+            title={t('common:language')}
+          >
+            <span className="text-xs font-semibold leading-none">{languages.find((l) => l.code === language)?.char ?? '文'}</span>
+          </button>
+          {langOpen && (
+            <div className="absolute top-8 right-0 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 z-50 w-36 animate-dropdown-in">
+              {languages.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => { setLanguage(l.code); i18n.changeLanguage(l.code); setLangOpen(false) }}
+                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
+                >
+                  {l.label}
+                  {language === l.code && <span className="ml-auto text-gray-500">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Theme */}
         <div className="relative">
           <button
@@ -90,30 +115,6 @@ export function Header() {
                   {t.icon}
                   {t.label}
                   {theme === t.mode && <span className="ml-auto text-gray-500">✓</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Language */}
-        <div className="relative">
-          <button
-            onClick={() => { setLangOpen(!langOpen); setThemeOpen(false) }}
-            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
-          >
-            <Globe size={16} />
-          </button>
-          {langOpen && (
-            <div className="absolute top-8 right-0 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 z-50 w-36 animate-dropdown-in">
-              {languages.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => { setLanguage(l.code); i18n.changeLanguage(l.code); setLangOpen(false) }}
-                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
-                >
-                  {l.label}
-                  {language === l.code && <span className="ml-auto text-gray-500">✓</span>}
                 </button>
               ))}
             </div>
