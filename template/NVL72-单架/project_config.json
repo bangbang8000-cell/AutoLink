@@ -85,7 +85,9 @@
     "power_limit_per_rack": 18000,
     "naming_prefix": "机柜",
     "cooling_method": "air",
-    "gpu_dedicated": true
+    "gpu_dedicated": true,
+    "top_reserved_u": 2,
+    "gpu_per_cabinet": 1
   },
   "scale_up": {
     "protocol": "NVLink",
