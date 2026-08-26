@@ -35,16 +35,16 @@
       "library_id": "nvidia_dgx_gb300_nvl72"
     },
     "param_leaf_switch": {
-      "library_id": "h3c_s12500r_48_800g"
+      "library_id": "nvidia_sn5240_64_800g"
     },
     "param_spine_switch": {
-      "library_id": "h3c_s12500r_48_800g"
+      "library_id": "nvidia_sn5240_64_800g"
     },
     "param_core_switch": {
-      "library_id": "h3c_s12500r_48_800g"
+      "library_id": "nvidia_sn5240_64_800g"
     },
     "param_switch": {
-      "library_id": "h3c_s12500r_48_800g"
+      "library_id": "nvidia_sn5240_64_800g"
     },
     "storage_leaf_switch": {
       "library_id": "huawei_ce6881_48s6cq"

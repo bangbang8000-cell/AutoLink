@@ -95,7 +95,7 @@ npm run dist:linux
 3. **macOS**：将 `.app` 拖入 Applications 文件夹
 4. **Linux**：`chmod +x AutoLink-*.AppImage && ./AutoLink-*.AppImage` 或 `sudo dpkg -i AutoLink-*.deb`
 
-安装后首次启动会自动创建 3 个示例项目（H100-100台/H100-128台/L20-推理-64），内置 19 套场景模板和 120 款设备库。
+安装后首次启动会自动创建 3 个示例项目（H100-100台/H100-128台/L20-推理-64），内置 19 套场景模板和 126 款设备库。
 
 ### 方式二：从源码运行
 
@@ -133,7 +133,7 @@ V3.0.0 安装包内置以下资源（通过 `extraResources` 打包）：
 | 后端引擎 | `resourcesPath/backend-dist` | PyInstaller 打包产物（V3.0.0+，免 Python 运行） |
 | 后端源码 | `resourcesPath/backend` | Python 引擎与算法（开发模式回退） |
 | 模板 | `resourcesPath/template` | 19 套场景模板 |
-| 设备库 | `resourcesPath/template/device_library` | 120 款设备 JSON |
+| 设备库 | `resourcesPath/template/device_library` | 126 款设备 JSON |
 | 光模块库 | `resourcesPath/template/device_library/optical_modules` | 35 款光模块（含 1 分 2 分裂线缆） |
 | 用户指南 | `resourcesPath/docs` | Markdown 格式离线用户指南 |
 | 品牌资源 | `resourcesPath/branding` | Logo SVG 与设计规范 |

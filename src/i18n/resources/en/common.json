@@ -328,7 +328,7 @@
     "featuresTitle": "Key Features",
     "features": [
       "Network Planning - Scale-Up (NVLink/UALink/UB) + Scale-Out (IB/RoCE/UEC) dual-stack topology",
-      "Device Selection & Validation - 120-device library + 22 hard validation rules",
+      "Device Selection & Validation - 126-device library + 22 hard validation rules",
       "Rack & Converged Fabric - rack mounting, converged storage/biz/OOB, room layout",
       "AIDC Plan & MC Integration - export plan to MagicCommander for config rendering",
       "Delivery Reports - connections / BOM / device list / rack tables + PDF",

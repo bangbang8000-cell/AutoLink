@@ -35,16 +35,16 @@
       "library_id": "nvidia_dgx_b200"
     },
     "param_leaf_switch": {
-      "library_id": "ruijie_s6910_32oc2vs_1_6t"
+      "library_id": "ruijie_rg_s6980_64qc"
     },
     "param_spine_switch": {
-      "library_id": "ruijie_s6910_32oc2vs_1_6t"
+      "library_id": "ruijie_rg_s6980_64qc"
     },
     "param_core_switch": {
-      "library_id": "ruijie_s6910_32oc2vs_1_6t"
+      "library_id": "ruijie_rg_s6980_64qc"
     },
     "param_switch": {
-      "library_id": "ruijie_s6910_32oc2vs_1_6t"
+      "library_id": "ruijie_rg_s6980_64qc"
     },
     "storage_leaf_switch": {
       "library_id": "huawei_ce6881_48s6cq"

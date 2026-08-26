@@ -35,16 +35,16 @@
       "library_id": "nvidia_l20_8u"
     },
     "param_leaf_switch": {
-      "library_id": "h3c_s9820_64h"
+      "library_id": "h3c_s9825_64d"
     },
     "param_spine_switch": {
-      "library_id": "h3c_s9820_64h"
+      "library_id": "h3c_s9827"
     },
     "param_core_switch": {
-      "library_id": "h3c_s9820_64h"
+      "library_id": "h3c_s9827"
     },
     "param_switch": {
-      "library_id": "h3c_s9820_64h"
+      "library_id": "h3c_s9825_64d"
     },
     "storage_leaf_switch": {
       "library_id": "huawei_ce6881_48s6cq"

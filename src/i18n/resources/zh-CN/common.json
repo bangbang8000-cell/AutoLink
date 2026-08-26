@@ -328,7 +328,7 @@
     "featuresTitle": "主要功能",
     "features": [
       "网络规划 - Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）双栈拓扑",
-      "设备选型与校验 - 120 款设备库 + 22 条硬校验规则",
+      "设备选型与校验 - 126 款设备库 + 22 条硬校验规则",
       "机柜与融合网 - 机柜上架、存储/业务/带外融合、机房落位",
       "AIDC 规划与 MC 对接 - 导出 plan 给 MagicCommander 渲染配置",
       "交付报告 - 连接表 / BOM / 设备清单 / 机柜表 + PDF 报告",

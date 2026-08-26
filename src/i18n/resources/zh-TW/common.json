@@ -328,7 +328,7 @@
     "featuresTitle": "主要功能",
     "features": [
       "網路規劃 - Scale-Up（NVLink/UALink/UB）+ Scale-Out（IB/RoCE/UEC）雙棧拓撲",
-      "設備選型與驗證 - 120 款設備庫 + 22 條硬驗證規則",
+      "設備選型與驗證 - 126 款設備庫 + 22 條硬驗證規則",
       "機櫃與融合網路 - 機櫃上架、儲存/業務/帶外融合、機房落位",
       "AIDC 規劃與 MC 整合 - 匯出 plan 給 MagicCommander 渲染設定",
       "交付報告 - 連接表 / BOM / 設備清單 / 機櫃表 + PDF 報告",

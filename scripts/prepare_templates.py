@@ -38,6 +38,9 @@ GPU_SERVER_BY_TEMPLATE = {
     '液冷-H100-256': 'nvidia_dgx_h100',
     '超大-2048': 'nvidia_dgx_h100',
     '空项目': 'nvidia_dgx_h100',
+    'DP3Tier-1024': 'nvidia_dgx_b300',
+    'GB300-NVL72-三合一': 'nvidia_dgx_gb300_nvl72',
+    'cloudmatrix_512': 'huawei_atlas_800t_a2',
 }
 
 

@@ -35,25 +35,25 @@
       "library_id": "huawei_atlas_800t_a2"
     },
     "param_leaf_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce9860_4c_ei"
     },
     "param_spine_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce9860_4c_ei"
     },
     "param_core_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce9860_4c_ei"
     },
     "param_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce9860_4c_ei"
     },
     "storage_leaf_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce6881_48s6cq"
     },
     "storage_spine_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce6881_48s6cq"
     },
     "storage_switch": {
-      "library_id": "huawei_ce8850_64cq_ei"
+      "library_id": "huawei_ce6881_48s6cq"
     },
     "all_flash_storage_server": {
       "library_id": "huawei_oceanstor_dorado_8000"

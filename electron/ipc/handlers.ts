@@ -1835,14 +1835,20 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         issues.push({ type: 'invalid_config', detail: `配置校验失败: ${checkResult?.error || '未知错误'}` })
       }
 
-      // 选型引用失效：device_refs.library_id 必须在设备库中存在
+      // 选型引用失效：device_refs.library_id 必须在设备库中存在（兼容旧 id 别名，与 backend LEGACY_ALIASES 对齐）
+      const legacyAliases: Record<string, string> = {
+        h3c_s9850_64h: 'h3c_s9850_32h',
+        h3c_s6805_48p: 'h3c_s6805_56hf_g',
+        h3c_s5820v2_24p: 'h3c_s5820v2_52qf',
+        ruijie_s6910_32oc2vs_1_6t: 'ruijie_rg_s6910_32oc2vs_1_6t',
+      }
       const refs = (cfg.device_refs || {}) as Record<string, { library_id?: string }>
       for (const [key, ref] of Object.entries(refs)) {
-        const libId = ref?.library_id
-        if (!libId) {
+        const rawLibId = ref?.library_id
+        if (!rawLibId) {
           issues.push({ type: 'bad_ref', detail: `device_refs.${key} 缺少 library_id` })
-        } else if (!deviceIds.has(libId)) {
-          issues.push({ type: 'unresolved_ref', detail: `device_refs.${key} 引用的设备不存在: ${libId}` })
+        } else if (!deviceIds.has(legacyAliases[rawLibId] || rawLibId)) {
+          issues.push({ type: 'unresolved_ref', detail: `device_refs.${key} 引用的设备不存在: ${rawLibId}` })
         }
       }
       return issues

@@ -12,7 +12,7 @@
   "name_prefix": "Param-S9825-64D",
   "port_count": 64,
   "port_speed": "400G",
-  "port_type": "QSFP-DD",
+  "port_type": "OSFP",
   "downlink_prefix": "FourHundredGigE",
   "uplink_prefix": "FourHundredGigE",
   "tags": [
@@ -30,5 +30,5 @@
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-08-14",
-  "updated_at": "2026-08-14"
+  "updated_at": "2026-08-25"
 }

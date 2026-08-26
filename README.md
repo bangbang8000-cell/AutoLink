@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
 [![Templates](https://img.shields.io/badge/templates-19-teal)](#)
-[![Devices](https://img.shields.io/badge/devices-120-purple)](#)
+[![Devices](https://img.shields.io/badge/devices-126-purple)](#)
 [![CI](https://img.shields.io/badge/tests-1533%20passed-brightgreen)](#)
 
 </div>
@@ -29,7 +29,7 @@
 | 维度 | 能力 |
 |------|------|
 | **全栈规划** | Scale-Up（卡间互联）+ Scale-Out（网间互联）双栈一体化，支持 IB / RoCE / UEC 三种 Scale-Out 协议 |
-| **真材实料** | 120 款主流设备库（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ 35 款光模块 |
+| **真材实料** | 126 款主流设备库（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ 35 款光模块 |
 | **硬核校验** | 22 条校验规则（V001-V022）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
 | **交付级报告** | 连接表 / 布线表 / BOM / 设备清单 / 机柜表 / 9 章 PDF 报告，收敛比全部按计算值输出 |
 | **开箱即用** | 19 套场景模板 + 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
@@ -235,7 +235,7 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **macOS**：`AutoLink-3.6.2-mac-x64.dmg` / `AutoLink-3.6.2-mac-arm64.dmg`
 - **Linux**：`AutoLink-3.6.2-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **120 款设备库**。
+安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **126 款设备库**。
 
 ### 方式二：从源码运行
 
@@ -335,7 +335,7 @@ AutoLink/
 │   └── autolink_hub/       #   AIHUB（Provider / 工具注册 / 技能 / 对话 Agent）
 ├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
-├── template/               # 设备库（120 款）+ 19 套场景模板
+├── template/               # 设备库（126 款）+ 19 套场景模板
 ├── scripts/                # pyinstaller.spec / validate_templates / gen_golden
 ├── docs/                   # 产品文档 / 用户指南 / PRD
 └── tests/backend/          # Python 后端测试

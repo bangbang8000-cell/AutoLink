@@ -328,7 +328,7 @@
     "featuresTitle": "주요 기능",
     "features": [
       "네트워크 설계 - Scale-Up(NVLink/UALink/UB) + Scale-Out(IB/RoCE/UEC) 이중 스택",
-      "장비 선정 및 검증 - 120종 장비 라이브러리 + 22개 검증 규칙",
+      "장비 선정 및 검증 - 126종 장비 라이브러리 + 22개 검증 규칙",
       "랙 및 통합망 - 랙 실장, 스토리지/업무/대역외 통합, 랙 배치",
       "AIDC 플랜 및 MC 연동 - plan을 MagicCommander로 내보내 구성 렌더링",
       "납품 보고서 - 연결표/BOM/장비 목록/랙 표 + PDF",
