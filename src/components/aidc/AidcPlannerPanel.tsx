@@ -25,6 +25,15 @@ import {
   type PlanConnection, type PlanDevice, type PlanMacro, type PlanSummary, type PlanTerminal,
 } from './aidcTypes'
 
+/** M5: 从设备模型清单推断参数网速率（800G/400G/200G，默认 400G），使设计与规划一致 */
+function inferPlanSpeed(deviceModels: unknown): string {
+  const s = JSON.stringify(deviceModels ?? '').toLowerCase()
+  if (s.includes('800')) return '800G'
+  if (s.includes('400')) return '400G'
+  if (s.includes('200')) return '200G'
+  return '400G'
+}
+
 // ---- 辅助：camelCase 优先读取宏观数值 ----
 const mnum = (p: PlanSummary, camel: string, snake: string, fb: number) =>
   macroNum(p.macro, camel, snake) ?? fb
@@ -284,6 +293,8 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         num_servers: Number(plan.macro.gpuCount ?? 64),
         rail_count: Number(plan.macro.rails ?? 8),
         param_protocol: 'RoCE',
+        // M5: 参数速率从设备模型推断（800G/400G/200G），使设计与规划一致
+        param_speed: inferPlanSpeed(plan.macro.deviceModels),
       }
       ds.updateConfig(patch as DesignConfig)
       await ds.generate(boundProjectName)
