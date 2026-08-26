@@ -4,10 +4,12 @@
 构建:  pyinstaller scripts/pyinstaller.spec
 产出:  dist/backend-dist/
   - engine(.exe)           持久 Agent 入口（stdin/stdout NDJSON）
-  - _internal/             运行时依赖（Python + pandas/matplotlib 等）
+  - al_ai_hub(.exe)        M3b: AI Hub 独立进程入口（FastAPI+SSE，端口 18722）
+  - _internal/             运行时依赖（Python + pandas/matplotlib/fastapi 等）
   - template/              设备库等内置数据（device_library.py 按 __file__ 相对路径定位）
 
 python.service.ts 探测顺序: backend-dist/engine(.exe) → python engine.py
+aiHub.service.ts 探测顺序: backend-dist/al_ai_hub(.exe) → python -m al_ai_hub.main
 """
 import os
 
@@ -62,10 +64,70 @@ exe = EXE(
     disable_windowed_traceback=False,
 )
 
+# ============================================================
+# M3b: AI Hub 独立进程入口（FastAPI+SSE，复用 autolink_hub）
+# ============================================================
+a2 = Analysis(
+    [os.path.join(backend_dir, 'al_ai_hub', 'main.py')],
+    pathex=[backend_dir],
+    binaries=[],
+    datas=[
+        (os.path.join(hub_dir, 'prompts'), 'autolink_hub/prompts'),
+        (os.path.join(hub_dir, 'skills', 'skills'), 'autolink_hub/skills/skills'),
+    ],
+    hiddenimports=[
+        # M3b: HTTP 栈（uvicorn 动态加载各 loop/protocol 实现，需显式声明）
+        'uvicorn',
+        'uvicorn.logging',
+        'uvicorn.loops',
+        'uvicorn.loops.auto',
+        'uvicorn.protocols',
+        'uvicorn.protocols.http',
+        'uvicorn.protocols.http.auto',
+        'uvicorn.protocols.websockets',
+        'uvicorn.protocols.websockets.auto',
+        'uvicorn.lifespan',
+        'uvicorn.lifespan.on',
+        'uvicorn.lifespan.off',
+        'fastapi',
+        'fastapi.routing',
+        'sse_starlette',
+        'sse_starlette.sse',
+        'pydantic',
+        'openai',
+        'openai.resources',
+        'openai.resources.chat',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+)
+
+pyz2 = PYZ(a2.pure)
+
+exe2 = EXE(
+    pyz2,
+    a2.scripts,
+    [],
+    exclude_binaries=True,
+    name='al_ai_hub',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    console=True,   # 就绪信号走 stdout（AL_AI_HUB_READY）
+    disable_windowed_traceback=False,
+)
+
 coll = COLLECT(
     exe,
+    exe2,
     a.binaries,
     a.datas,
+    a2.binaries,
+    a2.datas,
     strip=False,
     upx=False,
     name='backend-dist',

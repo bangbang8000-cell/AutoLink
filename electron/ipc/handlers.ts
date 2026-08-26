@@ -6,6 +6,8 @@ import { execSync } from 'child_process'
 import { getWorkspacePath, getTemplatePath, getUserTemplatePath, getBackendPath, getBrandingAssetPath, getDocPath } from '../config.js'
 import { pythonService } from '../services/python.service.js'
 import { projectIOService } from '../services/project-io.service.js'
+// M3b: AL AI 独立进程服务（ai:* 域 action 改由 HTTP 直连 al_ai_hub）
+import { aiHubService } from '../services/aiHub.service.js'
 
 // Shared category-to-directory mapping for device library
 // V2.7.6-T8: 旧索引向后兼容映射 (新索引应在 category 中声明 "directory" 字段)
@@ -872,6 +874,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }
 
   // V3.0.0-T0-6: 流式调用（engine {type:'event'} 行逐行透传 → webContents.send('ai:stream')）
+  // M3b: ai:* 域 action 改由独立 al_ai_hub 进程承载（HTTP），其余仍走 engine
   ipcMain.handle('ai:call', wrapHandler(async (event, action: string, params?: unknown) => {
     // V3.2.2-R11.1: action 形状 + params 普通对象校验（动态 action 派发最高风险通道）
     assertParsed(actionSchema, action, 'ai:call.action')
@@ -880,33 +883,64 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     if (!(AI_ACTION_WHITELIST as readonly string[]).includes(action)) {
       throw new Error(`ai:call 拒绝白名单外的 action: ${action}，请走专用通道`)
     }
-    const win = BrowserWindow.fromWebContents(event.sender)
-    return pythonService.callWithEvents(
-      action,
-      (params as Record<string, unknown>) ?? {},
-      (ev) => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('ai:stream', ev)
-        }
-      },
-    )
+    const p = (params as Record<string, unknown>) ?? {}
+    // M3b: AI 域 action 全部走独立 al_ai_hub 进程（ai:chat 兜底非流式）
+    switch (action) {
+      case 'ai:chat': {
+        const sessionId = String(p.sessionId ?? 'default')
+        const reply = await aiHubService.sendChatMessage(
+          sessionId, String(p.message ?? ''), p.mode ?? 'general', p.provider,
+          p.attachments as Array<{ id: string; name: string; type: string; path: string; size: number }> | undefined,
+          p.autonomyMode ?? 'semi_auto', p.projectName,
+        )
+        return { sessionId, status: 'completed', reply }
+      }
+      case 'ai:providers':
+        return { providers: await aiHubService.getProviders() }
+      case 'ai:config':
+        return aiHubService.configureProvider(
+          String(p.provider ?? ''), String(p.apiKey ?? ''),
+          p.model != null ? String(p.model) : undefined,
+          p.baseUrl != null ? String(p.baseUrl) : undefined,
+          Array.isArray(p.models) ? p.models.map(String) : undefined,
+        )
+      case 'ai:config-default':
+        return aiHubService.setDefaultProvider(String(p.provider ?? ''))
+      case 'ai:test':
+        return aiHubService.testConnection(
+          String(p.provider ?? ''), String(p.apiKey ?? ''), String(p.baseUrl ?? ''), String(p.model ?? ''),
+        )
+      case 'ai:models':
+        return aiHubService.fetchModels(String(p.baseUrl ?? ''), String(p.apiKey ?? ''))
+      case 'ai:clear':
+        return aiHubService.clearSession(String(p.sessionId ?? 'default'))
+      default:
+        throw new Error(`未知 AI action: ${action}`)
+    }
   }))
 
   // V3.1.1-T5-4: AI 对话专用通道（流式事件带 sessionId → aihub:stream，前端按会话过滤）
+  // M3b: 改由独立 al_ai_hub 进程（SSE）承载，不再经 engine 的 ai:chat action
   ipcMain.handle('ai:chat', wrapHandler(async (event, params?: unknown) => {
     // V3.2.2-R11.1: 对话载荷形状校验
     const p = assertParsed(aiChatSchema, params ?? {}, 'ai:chat')
     const win = BrowserWindow.fromWebContents(event.sender)
     const sessionId = String(p.sessionId ?? 'default')
-    return pythonService.callWithEvents(
-      'ai:chat',
-      (params as Record<string, unknown>) ?? {},
-      (ev) => {
+    const result = await aiHubService.sendChatMessage(
+      sessionId,
+      String(p.message ?? ''),
+      p.mode ?? 'general',
+      p.provider,
+      p.attachments as Array<{ id: string; name: string; type: string; path: string; size: number }> | undefined,
+      p.autonomyMode ?? 'semi_auto',
+      p.projectName,
+      (chunk) => {
         if (win && !win.isDestroyed()) {
-          win.webContents.send('aihub:stream', { sessionId, chunk: ev.chunk })
+          win.webContents.send('aihub:stream', { sessionId, chunk })
         }
       },
     )
+    return { sessionId, status: 'completed', reply: result }
   }))
 
   // P1.3: AIDC 规划（宏观参数 → plan:table，AL→MC 接口契约）——大 GPU 规模耗时长，放宽到 5 分钟

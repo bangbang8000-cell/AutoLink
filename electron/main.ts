@@ -5,6 +5,7 @@ import { isDev, initializeAppDirs, ensureDemoProjects } from './config.js'
 import { setupIpcHandlers } from './ipc/handlers.js'
 import { updateService } from './services/update.service.js'
 import { pythonService } from './services/python.service.js'
+import { aiHubService } from './services/aiHub.service.js'
 import { initCrashReporting, registerProcessGuards, watchRendererCrashes } from './utils/crash.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -225,8 +226,10 @@ class AutoLinkApp {
     })
 
     // V3.0.0-T0-6: 退出时关闭 Python 长驻 Agent 进程
+    // M3b: 同时关闭独立 AI Hub 进程
     app.on('will-quit', () => {
       pythonService.stop()
+      void aiHubService.stop()
     })
 
     // Delayed update check (3s after startup)
