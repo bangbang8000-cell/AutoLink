@@ -155,7 +155,7 @@ export class AIHubService extends EventEmitter {
       cwd = path.dirname(bundled)
       env = { ...process.env, PYTHONUNBUFFERED: '1' }
     } else {
-      const mainPy = path.join(getBackendPath(), 'al_ai_hub', 'main.py')
+      // 开发模式：backend 目录下 `python -m al_ai_hub.main`
       cmd = pythonPath
       spawnArgs = ['-m', 'al_ai_hub.main', ...args]
       cwd = getBackendPath()
