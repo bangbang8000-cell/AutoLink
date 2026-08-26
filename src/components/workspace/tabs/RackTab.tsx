@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useRackStore, CABINET_TYPE_LABELS, type CabinetType, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
+import { useRackStore, CABINET_TYPE_LABELS, DEFAULT_TOP_RESERVED_U, type CabinetType, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useToastStore } from '@/stores/toast.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
@@ -50,6 +50,7 @@ export function RackTab({ cabinetId }: Props) {
   const unplacedDevices = useRackStore((s) => s.unplacedDevices)
   const placeDevice = useRackStore((s) => s.placeDevice)
   const removeDevice = useRackStore((s) => s.removeDevice)
+  const moveDevice = useRackStore((s) => s.moveDevice)
   const updateCabinet = useRackStore((s) => s.updateCabinet)
   const applyCabinetTemplate = useRackStore((s) => s.applyCabinetTemplate)
   const selectCabinet = useRackStore((s) => s.selectCabinet)
@@ -110,6 +111,39 @@ export function RackTab({ cabinetId }: Props) {
     // Space conflict
     return cabinet.devices.some((d) => !(endU < d.startU || startU > d.endU))
   }, [cabinet])
+
+  // M6：柜内拖拽状态（已上架设备 → 拖到目标 U 位）
+  const [dragDevice, setDragDevice] = useState<RackDevice | null>(null)
+  const [dragOverU, setDragOverU] = useState<number | null>(null)
+
+  // M6：拖拽落点冲突（排除设备自身；含顶部预留保护）
+  const dragConflict = useCallback((startU: number, device: RackDevice): boolean => {
+    if (!cabinet) return true
+    const height = device.endU - device.startU + 1
+    const endU = startU + height - 1
+    if (startU < 1 || endU > cabinet.totalU - DEFAULT_TOP_RESERVED_U) return true
+    const currentPower = cabinet.devices
+      .filter((d) => d.id !== device.id)
+      .reduce((s, d) => s + d.power_watts, 0)
+    if (currentPower + device.power_watts > cabinet.power_limit) return true
+    return cabinet.devices.some(
+      (d) => d.id !== device.id && !(endU < d.startU || startU > d.endU),
+    )
+  }, [cabinet])
+
+  // M6：放下 → 同柜移动到新 U 位（复用 moveDevice 校验）
+  const handleDrop = useCallback((targetU: number) => {
+    if (!dragDevice || !cabinet) return
+    const ok = moveDevice(dragDevice.id, cabinet.id, cabinet.id, targetU)
+    if (ok) {
+      addToast('success', `已移动到 U${targetU}`, 3000)
+      markDirty()
+    } else {
+      addToast('error', '无法放置：U 位冲突 / 越界 / 功率超限 / 顶部预留', 4000)
+    }
+    setDragDevice(null)
+    setDragOverU(null)
+  }, [dragDevice, cabinet, moveDevice, addToast, markDirty])
 
   const handleSlotClick = useCallback((uNumber: number) => {
     if (!selectedUnplaced || !cabinet) return
@@ -383,6 +417,8 @@ export function RackTab({ cabinetId }: Props) {
                     <button
                       key={i}
                       onClick={() => handleSlotClick(uNum)}
+                      onDragOver={(e) => { if (dragDevice) { e.preventDefault(); setDragOverU(uNum) } }}
+                      onDrop={(e) => { e.preventDefault(); handleDrop(uNum) }}
                       className={`h-7 flex items-center justify-end pr-1.5 text-2xs border-b border-gray-200 dark:border-edge-subtle/50 last:border-b-0 w-full transition-colors ${
                         isConflictArea
                           ? 'text-error-300 dark:text-error-700 cursor-not-allowed'
@@ -390,7 +426,7 @@ export function RackTab({ cabinetId }: Props) {
                             ? 'text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 cursor-pointer'
                             : 'text-gray-400 dark:text-gray-500'
                       }`}
-                      disabled={isConflictArea}
+                      disabled={isConflictArea && !dragDevice}
                       title={isConflictArea ? t('rackTab.shortage') : selectedUnplaced ? t('rackTab.placeToU', { u: uNum }) : undefined}
                     >
                       {uNum}
@@ -413,31 +449,47 @@ export function RackTab({ cabinetId }: Props) {
                     pendingDevice.height >= uNum
 
                   if (!entry) {
+                    const isDropTarget = dragDevice != null && !dragConflict(uNum, dragDevice)
+                    const isDragOver = dragOverU === uNum
                     return (
                       <button
                         key={i}
                         onClick={() => handleSlotClick(uNum)}
+                        onDragOver={(e) => { if (dragDevice) { e.preventDefault(); setDragOverU(uNum) } }}
+                        onDrop={(e) => { e.preventDefault(); handleDrop(uNum) }}
                         className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 w-full transition-colors block ${
-                          isConflictArea
-                            ? 'bg-error-50 dark:bg-error-900/10 cursor-not-allowed'
-                            : selectedUnplaced && isPendingSlot
-                              ? 'bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 cursor-pointer'
-                              : selectedUnplaced
-                                ? 'bg-white dark:bg-app-elevated hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
-                                : 'bg-white dark:bg-app-elevated'
+                          isDragOver
+                            ? isDropTarget
+                              ? 'bg-success-200 dark:bg-success-900/40'
+                              : 'bg-error-200 dark:bg-error-900/40'
+                            : isConflictArea
+                              ? 'bg-error-50 dark:bg-error-900/10 cursor-not-allowed'
+                              : selectedUnplaced && isPendingSlot
+                                ? 'bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 cursor-pointer'
+                                : selectedUnplaced
+                                  ? 'bg-white dark:bg-app-elevated hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer'
+                                  : 'bg-white dark:bg-app-elevated'
                         }`}
-                        disabled={isConflictArea}
+                        disabled={isConflictArea && !dragDevice}
                       />
                     )
                   }
 
                   const { device, isFirst } = entry
                   const colorClass = getTypeColorClass(device.type)
+                  const isDragging = dragDevice?.id === device.id
 
                   return (
                     <div
                       key={i}
-                      className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group`}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', device.id)
+                        e.dataTransfer.effectAllowed = 'move'
+                        setDragDevice(device)
+                      }}
+                      onDragEnd={() => { setDragDevice(null); setDragOverU(null) }}
+                      className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group ${isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'}`}
                       title={`${device.name} (U${device.startU}-U${device.endU} · ${device.power_watts}W)`}
                     >
                       {isFirst && (
