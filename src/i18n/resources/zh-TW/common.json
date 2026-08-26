@@ -324,7 +324,6 @@
     "electron": "Electron",
     "react": "React",
     "repository": "GitHub 儲存庫",
-    "logoSpec": "Logo 設計規範",
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "主要功能",
     "features": [
@@ -344,20 +343,7 @@
     "downloaded": "下載完成",
     "restart": "立即重啟",
     "updateFailed": "更新失敗",
-    "retry": "重試",
-    "shortcuts": {
-      "title": "鍵盤快捷鍵",
-      "project": "專案瀏覽器",
-      "design": "拓撲設計",
-      "workbench": "工作台",
-      "visualization": "視覺化",
-      "deviceLibrary": "裝置庫",
-      "settings": "設定",
-      "toggleSidebar": "顯示/隱藏側欄",
-      "togglePanel": "顯示/隱藏面板",
-      "closeTab": "關閉當前標籤",
-      "restoreTab": "恢復關閉標籤"
-    }
+    "retry": "重試"
   },
   "explorer": {
     "allProjects": "全部專案",

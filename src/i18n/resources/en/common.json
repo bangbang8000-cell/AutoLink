@@ -324,7 +324,6 @@
     "electron": "Electron",
     "react": "React",
     "repository": "GitHub Repository",
-    "logoSpec": "Logo Design Spec",
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "Key Features",
     "features": [
@@ -344,20 +343,7 @@
     "downloaded": "Downloaded",
     "restart": "Restart Now",
     "updateFailed": "Update failed",
-    "retry": "Retry",
-    "shortcuts": {
-      "title": "Keyboard Shortcuts",
-      "project": "Project Explorer",
-      "design": "Topology Design",
-      "workbench": "Workbench",
-      "visualization": "Visualization",
-      "deviceLibrary": "Device Library",
-      "settings": "Settings",
-      "toggleSidebar": "Toggle Sidebar",
-      "togglePanel": "Toggle Panel",
-      "closeTab": "Close Current Tab",
-      "restoreTab": "Restore Closed Tab"
-    }
+    "retry": "Retry"
   },
   "explorer": {
     "allProjects": "All Projects",

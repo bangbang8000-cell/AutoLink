@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GitBranch, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Download, RotateCw, Loader2, Palette, Keyboard } from 'lucide-react'
+import { GitBranch, ExternalLink, RefreshCw, CheckCircle, AlertCircle, Download, RotateCw, Loader2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
-import { useUIStore } from '@/stores/ui.store'
 
 interface Props {
   onClose: () => void
@@ -41,7 +40,6 @@ export function AboutDialog({ onClose }: Props) {
   const [downloadTransferred, setDownloadTransferred] = useState(0)
   const [downloadTotal, setDownloadTotal] = useState(0)
   const latestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
 
   // 加载版本信息
   useEffect(() => {
@@ -108,40 +106,33 @@ export function AboutDialog({ onClose }: Props) {
     window.electron?.app?.quitAndInstall?.()
   }
 
-  // 在系统文件管理器中定位 Logo 设计规范文档（程序发布的一部分）
-  const handleShowLogoSpec = () => {
-    window.electron?.app?.showBrandingAsset?.('logo_specification.md').catch(() => {})
-  }
-
   const formatBytes = (b: number) => {
     if (!b) return '0 MB'
     if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
     return `${(b / 1024 / 1024).toFixed(1)} MB`
   }
 
-  // 软件栈条目
-  const stackEntries: [string, string][] = stack
+  // 一行技术栈摘要（对齐 MagicCommander About 风格）
+  const stackSummary = stack
     ? [
-        ['AutoLink', stack.app],
         ['Electron', stack.electron],
         ['Chromium', stack.chrome],
         ['Node.js', stack.node],
         ['React', cleanVer(stack.react)],
         ['TypeScript', cleanVer(stack.typescript)],
         ['Vite', cleanVer(stack.vite)],
-        ['ECharts', cleanVer(stack.echarts)],
-        ['@xyflow/react', cleanVer(stack.xyflow)],
-        ['i18next', cleanVer(stack.i18next)],
         ['Python', stack.python],
       ]
-    : []
+        .map(([name, ver]) => (ver ? `${name} ${ver}` : name))
+        .join(' · ')
+    : ''
 
   return (
     <Modal
       open
       onClose={onClose}
       title={t('about.title')}
-      width={520}
+      width={460}
       maxHeight="90vh"
       closeOnEsc
       bodyClassName="p-0"
@@ -251,90 +242,65 @@ export function AboutDialog({ onClose }: Props) {
         </div>
       }
     >
-      {/* 品牌区 - T4: 增大字号和间距 */}
-      <div className="px-6 pt-6 pb-4 text-center shrink-0">
-        <div className="flex justify-center mb-3">
-          <img src="icons/logo.svg" alt="AutoLink" className="w-24 h-24" />
-        </div>
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-          {t('app.title')}
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
-          {t('app.subtitle')}
-        </p>
-        {/* T4: 产品简介字号提升为 text-xs,增加行距和内边距 */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 px-6 leading-relaxed">
-          {t('app.description')}
-        </p>
-        {/* 主要功能 - 参考 MagicCommander 关于格式 */}
-        <div className="mt-4 px-6 text-left">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-            {t('about.featuresTitle')}
+      {/* 横排品牌区：小 Logo + 标题 + 版本（对齐 MagicCommander About 风格） */}
+      <div className="flex items-center gap-3 px-6 pt-5 pb-3">
+        <img src="icons/logo.svg" alt="AutoLink" className="w-12 h-12 rounded-lg shrink-0" />
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-tight">
+            {t('app.title')}
+          </h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+            {t('app.subtitle')}
           </p>
-          <ul className="space-y-1">
-            {(t('about.features', { returnObjects: true }) as string[]).map((f, i) => (
-              <li key={i} className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                · {f}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
 
-      {/* 信息区：软件栈 + 快捷链接 - T4: 优化字号和布局层次 */}
-      <div className="px-6 py-4 border-t border-gray-200 dark:border-edge-subtle overflow-y-auto">
-        {/* T4: 软件栈标题更醒目 */}
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+      {/* 简介 */}
+      <div className="px-6 pb-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          {t('app.description')}
+        </p>
+      </div>
+
+      {/* 主要功能 */}
+      <div className="px-6 pb-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+          {t('about.featuresTitle')}
+        </p>
+        <ul className="space-y-1.5">
+          {(t('about.features', { returnObjects: true }) as string[]).map((f, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 shrink-0" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* 技术栈一行 + 链接/版权 */}
+      <div className="px-6 py-3 border-t border-gray-200 dark:border-edge-subtle">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
           {t('about.version')}
         </p>
-        {/* T4: 软件栈条目字号提升为 text-xs,增加行距 */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
-          {stackEntries.length === 0 ? (
-            <div className="col-span-2 text-gray-400">{appVersion}</div>
-          ) : stackEntries.map(([name, ver]) => (
-            <div key={name} className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">{name}</span>
-              <span className="text-gray-700 dark:text-gray-300 font-mono">{ver || '-'}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* 快捷链接 - T4: 字号提升为 text-xs */}
-        <div className="mt-5 flex items-center justify-center gap-4 text-xs flex-wrap">
-          <a
-            href="https://github.com/bangbang8000-cell/AutoLink"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
-          >
-            <GitBranch size={13} />
-            {t('about.repository')}
-            <ExternalLink size={10} />
-          </a>
-          <span className="text-gray-300 dark:text-gray-600">·</span>
-          <button
-            type="button"
-            onClick={() => setShowShortcutsDialog(true)}
-            className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
-          >
-            <Keyboard size={13} />
-            {t('about.shortcuts.title')}
-          </button>
-          <span className="text-gray-300 dark:text-gray-600">·</span>
-          <button
-            type="button"
-            onClick={handleShowLogoSpec}
-            title={t('about.logoSpec')}
-            className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-500"
-          >
-            <Palette size={13} />
-            {t('about.logoSpec')}
-          </button>
-        </div>
-        {/* 版权信息 - T4: 字号提升为 text-xs */}
-        <p className="mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
-          {t('about.copyright')}
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          {stackSummary || appVersion}
         </p>
+      </div>
+
+      <div className="px-6 py-3 flex items-center justify-between gap-3 border-t border-gray-200 dark:border-edge-subtle">
+        <a
+          href="https://github.com/bangbang8000-cell/AutoLink"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-primary-500"
+        >
+          <GitBranch size={12} />
+          {t('about.repository')}
+          <ExternalLink size={10} />
+        </a>
+        <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+          {t('about.copyright')}
+        </span>
       </div>
     </Modal>
   )

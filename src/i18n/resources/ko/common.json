@@ -324,7 +324,6 @@
     "electron": "Electron",
     "react": "React",
     "repository": "GitHub 저장소",
-    "logoSpec": "Logo 디자인 사양",
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "주요 기능",
     "features": [
@@ -344,20 +343,7 @@
     "downloaded": "다운로드 완료",
     "restart": "지금 재시작",
     "updateFailed": "업데이트 실패",
-    "retry": "재시도",
-    "shortcuts": {
-      "title": "키보드 단축키",
-      "project": "프로젝트 탐색기",
-      "design": "토폴로지 설계",
-      "workbench": "작업대",
-      "visualization": "시각화",
-      "deviceLibrary": "장치 라이브러리",
-      "settings": "설정",
-      "toggleSidebar": "사이드바 전환",
-      "togglePanel": "패널 전환",
-      "closeTab": "현재 탭 닫기",
-      "restoreTab": "닫힌 탭 복원"
-    }
+    "retry": "재시도"
   },
   "explorer": {
     "allProjects": "모든 프로젝트",

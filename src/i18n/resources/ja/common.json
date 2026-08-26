@@ -324,7 +324,6 @@
     "electron": "Electron",
     "react": "React",
     "repository": "GitHub リポジトリ",
-    "logoSpec": "Logo 設計仕様",
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "主な機能",
     "features": [
@@ -344,20 +343,7 @@
     "downloaded": "ダウンロード完了",
     "restart": "今すぐ再起動",
     "updateFailed": "更新に失敗",
-    "retry": "再試行",
-    "shortcuts": {
-      "title": "キーボードショートカット",
-      "project": "プロジェクトエクスプローラー",
-      "design": "トポロジー設計",
-      "workbench": "ワークベンチ",
-      "visualization": "可視化",
-      "deviceLibrary": "デバイスライブラリ",
-      "settings": "設定",
-      "toggleSidebar": "サイドバー切替",
-      "togglePanel": "パネル切替",
-      "closeTab": "現在のタブを閉じる",
-      "restoreTab": "閉じたタブを復元"
-    }
+    "retry": "再試行"
   },
   "explorer": {
     "allProjects": "すべてのプロジェクト",

@@ -324,7 +324,6 @@
     "electron": "Electron",
     "react": "React",
     "repository": "GitHub 仓库",
-    "logoSpec": "Logo 设计规范",
     "copyright": "© 2026 AutoLink Team. MIT License.",
     "featuresTitle": "主要功能",
     "features": [
@@ -344,20 +343,7 @@
     "downloaded": "下载完成",
     "restart": "立即重启",
     "updateFailed": "更新失败",
-    "retry": "重试",
-    "shortcuts": {
-      "title": "键盘快捷键",
-      "project": "项目浏览器",
-      "design": "拓扑设计",
-      "workbench": "工作台",
-      "visualization": "可视化",
-      "deviceLibrary": "设备库",
-      "settings": "设置",
-      "toggleSidebar": "显示/隐藏侧栏",
-      "togglePanel": "显示/隐藏面板",
-      "closeTab": "关闭当前标签",
-      "restoreTab": "恢复关闭标签"
-    }
+    "retry": "重试"
   },
   "explorer": {
     "allProjects": "全部项目",
