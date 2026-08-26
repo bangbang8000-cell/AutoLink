@@ -61,7 +61,8 @@ export function ChatMessageBubble({ message }: Props) {
           {isUser ? (
             message.content
           ) : (
-            <div className="markdown-body">
+            /* M7c（对齐 MC）：prose 排版行式 */
+            <div className="prose max-w-none dark:prose-invert prose-pre:rounded-lg prose-pre:text-xs prose-code:text-xs prose-headings:mt-3 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-table:text-xs">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
             </div>
           )}

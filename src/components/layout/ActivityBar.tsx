@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useEffect, useRef } from 'react'
 import { useUIStore, type ActivityType } from '@/stores/ui.store'
 import {
-  FolderOpen, Zap, Settings, PanelLeftClose, PanelLeft, Server, Sparkles, Cloud, Search, Files,
+  FolderOpen, Zap, Settings, PanelLeftClose, PanelLeft, Server, MessageSquare, Cloud, Search, FileCheck,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -15,35 +15,36 @@ interface ActivityItem {
 
 // 打磨轮（P-A）：一级菜单重排 —— 搜索/云平台/AI助手/项目浏览器/工作台/设备库/设置
 // （拓扑设计、AIDC 规划、可视化已并入工作台子视图）
+// M7b（以 MC 为准）：AI 图标 MessageSquare、output 图标 FileCheck
 const ACTIVITIES: ActivityItem[] = [
   { id: 'search', icon: <Search size={20} />, labelKey: 'nav:search', shortcut: 'Ctrl+Shift+F' },
   { id: 'cloud', icon: <Cloud size={20} />, labelKey: 'nav:cloud', shortcut: 'Ctrl+Shift+C' },
-  { id: 'ai', icon: <Sparkles size={20} />, labelKey: 'nav:ai', shortcut: 'Ctrl+Shift+A' },
+  { id: 'ai', icon: <MessageSquare size={20} />, labelKey: 'nav:ai', shortcut: 'Ctrl+Shift+A' },
   { id: 'project', icon: <FolderOpen size={20} />, labelKey: 'nav:project', shortcut: 'Ctrl+Shift+E' },
   { id: 'workbench', icon: <Zap size={20} />, labelKey: 'nav:workbench', shortcut: 'Ctrl+Shift+W' },
   // 打磨轮（v1.6 / AL-O2a）：输出结果一级入口（全部项目）
-  { id: 'output', icon: <Files size={20} />, labelKey: 'nav:output', shortcut: 'Ctrl+Shift+O' },
+  { id: 'output', icon: <FileCheck size={20} />, labelKey: 'nav:output', shortcut: 'Ctrl+Shift+O' },
   { id: 'device_library', icon: <Server size={20} />, labelKey: 'nav:device_library', shortcut: 'Ctrl+Shift+L' },
   { id: 'settings', icon: <Settings size={20} />, labelKey: 'nav:settings', shortcut: 'Ctrl+,' },
 ]
 
-// v2.6.8: ActivityBar 入口语义色
-const ACTIVITY_COLORS: Record<string, { icon: string; bar: string }> = {
+// v2.6.8: ActivityBar 入口语义色；M7b 新增激活条发光色 glow（对齐 MC）
+const ACTIVITY_COLORS: Record<string, { icon: string; bar: string; glow: string }> = {
   // V3.3.1: 全局搜索
-  search: { icon: 'text-teal-500 dark:text-teal-400', bar: 'bg-teal-500' },
-  project: { icon: 'text-primary-500 dark:text-primary-400', bar: 'bg-primary-500' },
-  design: { icon: 'text-warning-500 dark:text-warning-400', bar: 'bg-warning-500' },
-  aidc_plan: { icon: 'text-emerald-500 dark:text-emerald-400', bar: 'bg-emerald-500' },
-  workbench: { icon: 'text-success-500 dark:text-success-400', bar: 'bg-success-500' },
-  visualization: { icon: 'text-info-500 dark:text-info-400', bar: 'bg-info-500' },
-  device_library: { icon: 'text-purple-500 dark:text-purple-400', bar: 'bg-purple-500' },
+  search: { icon: 'text-teal-500 dark:text-teal-400', bar: 'bg-teal-500', glow: 'rgba(20,184,166,0.45)' },
+  project: { icon: 'text-primary-500 dark:text-primary-400', bar: 'bg-primary-500', glow: 'rgba(59,130,246,0.45)' },
+  design: { icon: 'text-warning-500 dark:text-warning-400', bar: 'bg-warning-500', glow: 'rgba(245,158,11,0.45)' },
+  aidc_plan: { icon: 'text-emerald-500 dark:text-emerald-400', bar: 'bg-emerald-500', glow: 'rgba(16,185,129,0.45)' },
+  workbench: { icon: 'text-success-500 dark:text-success-400', bar: 'bg-success-500', glow: 'rgba(34,197,94,0.45)' },
+  visualization: { icon: 'text-info-500 dark:text-info-400', bar: 'bg-info-500', glow: 'rgba(59,130,246,0.45)' },
+  device_library: { icon: 'text-purple-500 dark:text-purple-400', bar: 'bg-purple-500', glow: 'rgba(168,85,247,0.45)' },
   // V3.2.1: 修复 ai 入口缺失语义色导致点击后渲染崩溃白屏
-  ai: { icon: 'text-fuchsia-500 dark:text-fuchsia-400', bar: 'bg-fuchsia-500' },
+  ai: { icon: 'text-fuchsia-500 dark:text-fuchsia-400', bar: 'bg-fuchsia-500', glow: 'rgba(217,70,239,0.45)' },
   // V3.3.0-T13: 云中心
-  cloud: { icon: 'text-cyan-500 dark:text-cyan-400', bar: 'bg-cyan-500' },
+  cloud: { icon: 'text-cyan-500 dark:text-cyan-400', bar: 'bg-cyan-500', glow: 'rgba(6,182,212,0.45)' },
   // 打磨轮（v1.6 / AL-O2a）：输出结果（全部项目）
-  output: { icon: 'text-amber-500 dark:text-amber-400', bar: 'bg-amber-500' },
-  settings: { icon: 'text-gray-500 dark:text-gray-400', bar: 'bg-gray-500' },
+  output: { icon: 'text-amber-500 dark:text-amber-400', bar: 'bg-amber-500', glow: 'rgba(245,158,11,0.45)' },
+  settings: { icon: 'text-gray-500 dark:text-gray-400', bar: 'bg-gray-500', glow: 'rgba(107,114,128,0.45)' },
 }
 
 interface Props {
@@ -99,7 +100,10 @@ export function ActivityBar({ onActivityClick }: Props) {
         )}
       >
         {active && (
-          <div className={clsx('absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r', colors.bar)} />
+          <div
+            className={clsx('absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-r', colors.bar)}
+            style={{ boxShadow: `0 0 8px ${colors.glow}` }}
+          />
         )}
         <span className={clsx(hinted && colors.icon)}>{item.icon}</span>
       </button>
