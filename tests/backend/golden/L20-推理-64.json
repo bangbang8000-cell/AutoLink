@@ -1,5 +1,5 @@
 {
-  "cabinets": 73,
+  "cabinets": 74,
   "connections": 2000,
   "counts": {
     "biz_access": 8,
@@ -29,7 +29,7 @@
   "param_speed": "400G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "8577c2a59b909974",
-  "total_power_w": 216890,
+  "topology_hash": "ccd43df8b1a7849f",
+  "total_power_w": 224090,
   "valid": true
 }
