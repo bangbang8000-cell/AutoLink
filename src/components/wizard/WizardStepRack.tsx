@@ -192,6 +192,26 @@ export function WizardStepRack() {
         </p>
       </div>
 
+      {/* Top reserved U (M5: 方向化上架) */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">
+          顶部预留 U 位
+        </label>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          value={rack.top_reserved_u ?? 2}
+          onChange={(e) =>
+            updateRackConfig({ top_reserved_u: Math.max(0, parseInt(e.target.value) || 0) })
+          }
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
+        />
+        <p className="text-2xs text-gray-400 mt-1">
+          机柜顶部预留空位（默认 2U）：网络设备从顶部向下、GPU/存储/通算服务器从底部向上上架
+        </p>
+      </div>
+
       {/* Naming prefix */}
       <div>
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">

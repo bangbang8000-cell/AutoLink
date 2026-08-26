@@ -243,9 +243,9 @@ class TestEdgeCases:
         assert allocator.cabinets[0].total_power == 12000
 
     def test_u_exactly_at_limit(self):
-        """21×2U 设备 + 42U 柜 (0.5KW) → 1 柜满 U 位"""
+        """21×2U 设备 + 42U 柜 (0.5KW, 无顶部预留) → 1 柜满 U 位"""
         devices = make_servers('通算服务器', 21, 500, 2, DEVICE_TYPE_COMPUTE)
-        allocator = RackAllocator(rack_type=42, power_limit=12000)
+        allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=0)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 1
         assert allocator.cabinets[0].used_u == 42
@@ -350,3 +350,66 @@ class TestMixedAndSeed:
         # 每柜单台独占
         for cab in allocator.cabinets:
             assert cab.device_count == 1
+
+
+class TestDirectionalMounting:
+    """M5 方向化上架：服务器从底部向上、网络从顶部向下、顶部预留 2U（默认可配）"""
+
+    def test_gpu_bottom_up_with_top_reserved(self):
+        """GPU 从底部 U1 向上连续上架，顶部预留 2U 为空（42U 柜 → 最高占用 ≤ 40）"""
+        devices = make_servers('GPU服务器', 4, 10200, 8, DEVICE_TYPE_GPU)
+        allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=2)
+        allocator.allocate(devices)
+        cabs = [c for c in allocator.cabinets if c.devices]
+        for cab in cabs:
+            assert cab.devices[0].start_u == 1
+            assert cab.devices[0].end_u == 8
+            assert cab.used_u_top == 0
+        assert all(d.end_u <= 40 for c in cabs for d in c.devices)
+
+    def test_network_top_down(self):
+        """网络设备从顶部向下：最高位 = usable_u = totalU - top_reserved_u，然后向下"""
+        switches = [DeviceSlot(name=f"参数Leaf_{i}", obj_type='param_leaf', group='参数Leaf组',
+                               power_watts=200, u_height=2, device_type=DEVICE_TYPE_NETWORK, network='param')
+                    for i in range(1, 4)]
+        allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=2)
+        allocator.allocate(switches)
+        cab = allocator.cabinets[0]
+        starts = sorted(d.start_u for d in cab.devices)
+        # 3×2U = 6U，从 40 向下：39-40, 37-38, 35-36
+        assert starts == [35, 37, 39]
+        assert all(d.end_u <= 40 for d in cab.devices)
+        assert cab.used_u_bottom == 0
+
+    def test_servers_bottom_network_top_separate(self):
+        """服务器柜全底部、网络柜全顶部，各自无冲突，预留 2U 保持"""
+        servers = make_servers('通算服务器', 10, 500, 2, DEVICE_TYPE_COMPUTE)
+        switches = [DeviceSlot(name=f"参数Leaf_{i}", obj_type='param_leaf', group='参数Leaf组',
+                               power_watts=200, u_height=1, device_type=DEVICE_TYPE_NETWORK, network='param')
+                    for i in range(1, 3)]
+        allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=2)
+        allocator.allocate(servers + switches)
+        assert_u_no_conflict(allocator.cabinets)
+        assert_u_ok(allocator.cabinets, 42)
+        compute_cab = [c for c in allocator.cabinets if c.type == 'compute'][0]
+        net_cab = [c for c in allocator.cabinets if c.type == 'network'][0]
+        assert all(d.end_u <= 40 for d in compute_cab.devices + net_cab.devices)
+        assert compute_cab.used_u_top == 0
+        assert net_cab.used_u_bottom == 0
+
+    def test_top_reserved_config(self):
+        """top_reserved_u 可配：0/2/4 影响网络设备最高位"""
+        for reserved, expected_top in [(0, 42), (2, 40), (4, 38)]:
+            sw = [DeviceSlot(name="参数Leaf_1", obj_type='param_leaf', group='参数Leaf组',
+                             power_watts=200, u_height=1, device_type=DEVICE_TYPE_NETWORK, network='param')]
+            a = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=reserved)
+            a.allocate(sw)
+            assert sw[0].end_u == expected_top, f'top_reserved_u={reserved} 应占用 U{expected_top}'
+
+    def test_full_bottom_requires_second_cabinet(self):
+        """默认预留 2U：21×2U=42U 超过可用 40U → 需 2 柜，首柜恰好 40U"""
+        devices = make_servers('通算服务器', 21, 500, 2, DEVICE_TYPE_COMPUTE)
+        allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=2)
+        allocator.allocate(devices)
+        assert len(allocator.cabinets) == 2
+        assert allocator.cabinets[0].used_u == 40

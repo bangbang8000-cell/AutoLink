@@ -42,10 +42,10 @@ def test_place_gpu_respect_existing_occupancy():
 
 
 def test_place_switch_packs_by_u():
-    """交换机（1U）打包进网络柜，超容量换柜"""
+    """交换机（1U）打包进网络柜，超容量换柜（top_reserved_u=0 保持 10U 满容量语义）"""
     net_cab = {'id': 1, 'type': 'network', 'totalU': 10, 'power_limit': 6000, 'devices': []}
     sw = [_dev(f'sw-{i}', dtype='Switch', height=1, power=100) for i in range(12)]
-    res = optimize_rack_placements([net_cab], sw)
+    res = optimize_rack_placements([net_cab], sw, top_reserved_u=0)
     # 10U 容量 → 10 台进柜，2 台无位置
     assert len(res['placements']) == 10
     assert len(res['unplaced']) == 2

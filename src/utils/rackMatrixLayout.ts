@@ -16,6 +16,8 @@ export interface RackMatrixLayoutOptions {
   powerLimit?: number
   /** GPU 每柜台数，默认 1（GPU 1柜1台） */
   gpuPerCabinet?: number
+  /** M5: 顶部预留 U 数（默认 2，网络设备从顶部向下、服务器从底部向上） */
+  topReservedU?: number
 }
 
 export interface RackMatrixLayoutStats {
@@ -62,6 +64,9 @@ export function layoutRacksFromMatrix(
   const rackType = opts.rackType ?? 42
   const powerLimit = opts.powerLimit ?? 6000
   const gpuPerCabinet = Math.max(1, opts.gpuPerCabinet ?? 1)
+  // M5: 顶部预留 U（默认 2）→ 可用 U = rackType - topReservedU；网络从顶部向下、服务器从底部向上
+  const topReservedU = Math.max(0, opts.topReservedU ?? 2)
+  const usableU = Math.max(1, rackType - topReservedU)
 
   // 整表重建：清空旧 cabinetId（矩阵权威，可重复应用）
   const cells: RoomCellData[] = matrix.cells.map((c) => ({ ...c, cabinetId: null }))
@@ -123,7 +128,7 @@ export function layoutRacksFromMatrix(
     let powerSum = 0
     while (gi < gpuDevices.length && devices.length < gpuPerCabinet) {
       const d = gpuDevices[gi]
-      if (d.height > rackType) {
+      if (d.height > usableU) {
         unplacedDevices.push({ id: d.id, name: d.name, type: d.type, height: d.height, power_watts: d.power_watts })
         gi++
         continue
@@ -149,27 +154,38 @@ export function layoutRacksFromMatrix(
   }
 
   // 网络/存储/通算：按 U + 功率打包（跨格填充，格子耗尽进池）
+  // M5 方向化：网络柜从顶部向下、存储/通算从底部向上，均不越过顶部预留
   for (const t of ['network', 'storage', 'compute'] as const) {
     const devices = byType[t]
     let di = 0
     for (const cell of candidateCells[t]) {
       if (di >= devices.length) break
       const cabDevices: RackDevice[] = []
-      let nextU = 1
+      const fromTop = t === 'network'
+      let nextU = fromTop ? usableU + 1 : 1
       let powerSum = 0
       while (di < devices.length) {
         const d = devices[di]
-        if (d.height > rackType) {
+        if (d.height > usableU) {
           unplacedDevices.push({ id: d.id, name: d.name, type: d.type, height: d.height, power_watts: d.power_watts })
           di++
           continue
         }
-        const endU = nextU + d.height - 1
-        if (endU > rackType) break // 装不下 → 换下一格
+        let startU: number
+        let endU: number
+        if (fromTop) {
+          startU = nextU - d.height
+          endU = nextU - 1
+          if (startU < 1) break // 顶部空间不足 → 换下一格
+        } else {
+          startU = nextU
+          endU = nextU + d.height - 1
+          if (endU > usableU) break // 装不下 → 换下一格
+        }
         if (powerSum + d.power_watts > powerLimit) break
-        cabDevices.push({ id: d.id, name: d.name, type: d.type, cabinetId: nextId, startU: nextU, endU, power_watts: d.power_watts })
+        cabDevices.push({ id: d.id, name: d.name, type: d.type, cabinetId: nextId, startU, endU, power_watts: d.power_watts })
         powerSum += d.power_watts
-        nextU = endU + 1
+        nextU = fromTop ? startU : endU + 1
         di++
       }
       if (cabDevices.length > 0) {

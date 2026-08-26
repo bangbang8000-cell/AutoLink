@@ -53,6 +53,9 @@ export function toCabinetType(node: { type?: string; group?: string }): CabinetT
   return 'gpu'
 }
 
+// M5: 机柜顶部预留 U 数（业界通用：顶部预留空间，网络设备从顶部向下、服务器从底部向上）
+export const DEFAULT_TOP_RESERVED_U = 2
+
 // V2.9.2: 机柜类型配色（机架视图/机房平面图按类型区分）
 export const RACK_TYPE_COLORS: Record<CabinetType, { bg: string; text: string; border: string }> = {
   gpu: { bg: '#fee2e2', text: '#b91c1c', border: '#f87171' },        // 红
@@ -421,7 +424,8 @@ export const useRackStore = create<RackState>()(
     if (!cabinet) return false
 
     const endU = startU + device.height - 1
-    if (endU > cabinet.totalU) return false
+    // M5: 顶部预留保护（不占用预留 U 位，服务器/网络均不越过可用区）
+    if (startU < 1 || endU > cabinet.totalU - DEFAULT_TOP_RESERVED_U) return false
 
     // Check power limit
     const currentPower = cabinet.devices.reduce((sum, d) => sum + d.power_watts, 0)
@@ -489,7 +493,8 @@ export const useRackStore = create<RackState>()(
 
     const height = device.endU - device.startU + 1
     const newEndU = newStartU + height - 1
-    if (newEndU > toCab.totalU) return false
+    // M5: 顶部预留保护（不占用预留 U 位）
+    if (newStartU < 1 || newEndU > toCab.totalU - DEFAULT_TOP_RESERVED_U) return false
 
     const hasConflict = toCab.devices.some(
       (d) => d.id !== deviceId && !(newEndU < d.startU || newStartU > d.endU),

@@ -1206,6 +1206,7 @@ class NetworkDesignerV2:
             power_limit=self.power_limit_per_rack,
             naming_prefix=self.naming_prefix,
             gpu_dedicated=getattr(self, 'gpu_dedicated', False),
+            top_reserved_u=getattr(self, 'top_reserved_u', 2),
         )
         allocator.seed(getattr(self, '_rack_cabinets', []) or [])
         allocator.allocate([d for _, d in slots])

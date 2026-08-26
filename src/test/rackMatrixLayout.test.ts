@@ -95,8 +95,8 @@ describe('layoutRacksFromMatrix', () => {
     ])
     const switches = Array.from({ length: 50 }, (_, i) =>
       makeNode({ id: `sw-${i}`, type: 'leaf', group: '参数Leaf组1', uHeight: 1, powerWatts: 100 }))
-    const res = layoutRacksFromMatrix(matrix, switches)
-    // 42U 容量：第 1 柜 42 台，第 2 柜 8 台
+    const res = layoutRacksFromMatrix(matrix, switches, { topReservedU: 0 })
+    // 42U 容量（无预留）：第 1 柜 42 台，第 2 柜 8 台
     expect(res.cabinets).toHaveLength(2)
     expect(res.cabinets[0].devices).toHaveLength(42)
     expect(res.cabinets[1].devices).toHaveLength(8)
@@ -174,5 +174,37 @@ describe('layoutRacksFromMatrix', () => {
     )
     expect(res.cabinets).toHaveLength(1)
     expect(res.cabinets[0].devices).toHaveLength(2)
+  })
+
+  it('M5 方向化：网络设备从顶部向下、服务器从底部向上、顶部预留 2U', () => {
+    const matrix = makeMatrix([
+      { row: 'A', col: 1, type: 'network' },
+      { row: 'A', col: 2, type: 'compute' },
+    ])
+    const res = layoutRacksFromMatrix(matrix, [
+      makeNode({ id: 'sw-1', type: 'leaf', group: '参数Leaf组1', uHeight: 2, powerWatts: 300 }),
+      makeNode({ id: 'c-1', group: '通算服务器组', uHeight: 2, powerWatts: 400 }),
+    ])
+    const net = res.cabinets.find((c) => c.type === 'network')!
+    const comp = res.cabinets.find((c) => c.type === 'compute')!
+    // 网络设备：42U 柜预留 2U → 可用 40U，从 40 向下
+    expect(net.devices[0].startU).toBe(39)
+    expect(net.devices[0].endU).toBe(40)
+    // 服务器：从底部 U1 向上
+    expect(comp.devices[0].startU).toBe(1)
+    expect(comp.devices[0].endU).toBe(2)
+    // 均不越过顶部预留
+    for (const cab of res.cabinets) {
+      for (const d of cab.devices) expect(d.endU).toBeLessThanOrEqual(40)
+    }
+  })
+
+  it('M5 topReservedU=0 时网络设备占满顶部（最高位 42）', () => {
+    const res = layoutRacksFromMatrix(
+      makeMatrix([{ row: 'A', col: 1, type: 'network' }]),
+      [makeNode({ id: 'sw-1', type: 'leaf', group: '参数Leaf组1', uHeight: 1, powerWatts: 300 })],
+      { topReservedU: 0 },
+    )
+    expect(res.cabinets[0].devices[0].endU).toBe(42)
   })
 })

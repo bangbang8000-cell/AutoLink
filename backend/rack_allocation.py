@@ -74,8 +74,14 @@ class CabinetAllocation:
     type: str
     power_limit: int
     total_power: int = 0
-    used_u: int = 0
+    used_u_bottom: int = 0  # 底部上架区已用 U（服务器类）
+    used_u_top: int = 0     # 顶部上架区已用 U（网络类，从机柜顶部向下）
     devices: List[DeviceSlot] = field(default_factory=list)
+
+    @property
+    def used_u(self) -> int:
+        """总已用 U（底部 + 顶部）"""
+        return self.used_u_bottom + self.used_u_top
 
     @property
     def device_count(self) -> int:
@@ -120,11 +126,18 @@ class RackAllocator:
     """多约束机柜装箱分配器"""
 
     def __init__(self, rack_type: int = 42, power_limit: int = 6000,
-                 naming_prefix: str = '机柜', gpu_dedicated: bool = False):
+                 naming_prefix: str = '机柜', gpu_dedicated: bool = False,
+                 top_reserved_u: int = 2, server_mount_from: str = 'bottom',
+                 network_mount_from: str = 'top'):
         self.rack_type = max(1, int(rack_type or 42))
         self.power_limit = max(1, int(power_limit or 6000))
         self.naming_prefix = naming_prefix or '机柜'
         self.gpu_dedicated = bool(gpu_dedicated)
+        # M5: 顶部预留 U 数（默认 2U）+ 上架方向（服务器从底部向上、网络从顶部向下）
+        self.top_reserved_u = max(0, int(top_reserved_u or 0))
+        self.server_mount_from = server_mount_from or 'bottom'
+        self.network_mount_from = network_mount_from or 'top'
+        self._usable_u = max(1, self.rack_type - self.top_reserved_u)
         self.cabinets: List[CabinetAllocation] = []
         # v2.9.1-T6: 按机柜类型分桶索引（保持创建顺序），U 位满的柜惰性移除
         self._buckets: dict = {t: [] for t in _CABINET_TYPES}
@@ -275,16 +288,21 @@ class RackAllocator:
         return None
 
     def _place(self, cab: CabinetAllocation, device: DeviceSlot) -> None:
-        """将设备放入柜并回填 U 位"""
+        """将设备放入柜并回填 U 位（M5 方向化：网络设备从顶部向下，其余从底部向上，顶部预留 top_reserved_u）"""
         device.cabinet_id = cab.id
         device.cabinet_name = cab.name
-        device.start_u = cab.used_u + 1
+        from_top = device.device_type == DEVICE_TYPE_NETWORK
+        if from_top:
+            device.start_u = self._usable_u - cab.used_u_top - device.u_height + 1
+            cab.used_u_top += device.u_height
+        else:
+            device.start_u = cab.used_u_bottom + 1
+            cab.used_u_bottom += device.u_height
         device.end_u = device.start_u + device.u_height - 1
-        cab.used_u += device.u_height
         cab.total_power += device.power_watts
         cab.devices.append(device)
-        # v2.9.1-T6: U 位已满 → 从活跃桶移除（任何设备都无法再放入）
-        if cab.used_u >= self.rack_type:
+        # U 位已满 → 从活跃桶移除（任何设备都无法再放入）
+        if cab.used_u >= self._usable_u:
             bucket = self._buckets.get(cab.type)
             if bucket and cab in bucket:
                 bucket.remove(cab)

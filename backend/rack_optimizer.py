@@ -26,12 +26,15 @@ def _device_cab_type(dtype: str) -> str:
     return 'gpu'
 
 
-def _find_slot(cab: Dict[str, Any], height: int, power: int, gpu_count: int, gpu_per_cabinet: int) -> Optional[int]:
-    """在柜内找最低可用 U 位（height 起，U 不冲突 + 功率不超 + GPU 台数上限）"""
+def _find_slot(cab: Dict[str, Any], height: int, power: int, gpu_count: int, gpu_per_cabinet: int,
+               from_top: bool = False, top_reserved_u: int = 2) -> Optional[int]:
+    """在柜内找可用 U 位（height 起，U 不冲突 + 功率不超 + GPU 台数上限）
+    M5 方向化：from_top=True 时从最高可用位向下找（网络设备），否则从底部向上找（服务器类）；顶部预留 top_reserved_u"""
     total_u = int(cab.get('totalU') or 42)
+    usable_u = max(1, total_u - top_reserved_u)
     power_limit = int(cab.get('power_limit') or 6000)
     devices = list(cab.get('devices') or [])
-    if height <= 0 or height > total_u:
+    if height <= 0 or height > usable_u:
         return None
     if gpu_count >= gpu_per_cabinet:
         return None
@@ -40,10 +43,16 @@ def _find_slot(cab: Dict[str, Any], height: int, power: int, gpu_count: int, gpu
         return None
     ranges = [(int(d['startU']), int(d['endU'])) for d in devices
               if d.get('startU') is not None and d.get('endU') is not None]
-    for start in range(1, total_u - height + 2):
-        end = start + height - 1
-        if all(end < s or start > e for s, e in ranges):
-            return start
+    if from_top:
+        for start in range(usable_u - height + 1, 0, -1):
+            end = start + height - 1
+            if all(end < s or start > e for s, e in ranges):
+                return start
+    else:
+        for start in range(1, usable_u - height + 2):
+            end = start + height - 1
+            if all(end < s or start > e for s, e in ranges):
+                return start
     return None
 
 
@@ -51,6 +60,7 @@ def optimize_rack_placements(
     cabinets: List[Dict[str, Any]],
     unplaced_devices: List[Dict[str, Any]],
     gpu_per_cabinet: int = 1,
+    top_reserved_u: int = 2,
 ) -> Dict[str, Any]:
     """柜内智能落位主函数"""
     # 工作副本（就地更新以反映放置结果）
@@ -82,11 +92,12 @@ def optimize_rack_placements(
         preferred = [c for c in work if c['type'] == pref]
         others = [c for c in work if c['type'] != pref]
         placed = False
+        from_top = pref == 'network'
         for cab in preferred + others:
             gc = gpu_in(cab)
             # 仅 GPU 设备受每柜台数上限约束；网络/存储/通算不受
             cap = gpu_per_cabinet if pref == 'gpu' and cab['type'] == 'gpu' else 10 ** 9
-            start = _find_slot(cab, height, power, gc, cap)
+            start = _find_slot(cab, height, power, gc, cap, from_top=from_top, top_reserved_u=top_reserved_u)
             if start is not None:
                 end = start + height - 1
                 cab['devices'].append({
