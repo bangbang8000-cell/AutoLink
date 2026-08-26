@@ -256,6 +256,21 @@ export function RackTab({ cabinetId }: Props) {
           <span className="text-2xs text-gray-400 dark:text-gray-500">
             {cabinet.totalU}U · {t('rackTab.devices', { count: cabinet.devices.length })}
           </span>
+          {/* M4: 逐柜功率编辑 */}
+          <label className="flex items-center gap-1 text-2xs text-gray-500 dark:text-gray-400" title="单柜功率上限(W)">
+            功率
+            <input
+              type="number"
+              min={0}
+              step={100}
+              value={cabinet.power_limit}
+              onChange={(e) => {
+                updateCabinet(cabinet.id, { power_limit: Math.max(0, parseInt(e.target.value) || 0) })
+                markDirty()
+              }}
+              className="w-20 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-700 dark:text-gray-200"
+            />
+          </label>
           {/* 打磨轮（v1.5 / AL-R1d）：把当前柜 U 位布局/功率应用到所有同类柜 */}
           <button
             type="button"

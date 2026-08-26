@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
+import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -222,6 +223,14 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
             <button type="button" onClick={applyMatrix}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
               <Download size={11} /> {t('rack:applyMatrix')}
+            </button>
+            {/* M4: 导出机柜设计 Excel（平面图 + 每柜设计 + 上机表） */}
+            <button type="button" onClick={async () => {
+              const path = await exportRackDesignExcel(projectName, cabinets, matrix)
+              if (path) addToast('success', t('rack:rackDesignExported', `机柜设计已导出: ${path}`), 6000)
+            }}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
+              <Download size={11} /> {t('rack:exportRackDesign', '导出机柜设计')}
             </button>
             <button type="button" onClick={runRackOptimize}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
