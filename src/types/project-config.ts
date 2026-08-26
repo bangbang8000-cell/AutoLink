@@ -66,6 +66,8 @@ export interface ProjectRackConfig {
   power_preset?: string
   /** M5: 机柜顶部预留 U 数（默认 2；网络设备从顶部向下、服务器从底部向上） */
   top_reserved_u?: number
+  /** M4: 每柜 GPU 数量（非超节点方案，默认 1） */
+  gpu_per_cabinet?: number
   cabinet_list?: string  // CSV file path or inline data
 }
 

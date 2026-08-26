@@ -192,6 +192,26 @@ export function WizardStepRack() {
         </p>
       </div>
 
+      {/* M4：每柜 GPU 数量（非超节点方案默认 1；超节点方案由模板指定） */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">
+          每柜 GPU 数量
+        </label>
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={rack.gpu_per_cabinet ?? 1}
+          onChange={(e) =>
+            updateRackConfig({ gpu_per_cabinet: Math.max(1, parseInt(e.target.value) || 1) })
+          }
+          className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
+        />
+        <p className="text-2xs text-gray-400 mt-1">
+          普通方案每柜 GPU 台数（默认 1）；超节点方案（如 NVL72）由对应模板的上架布局决定
+        </p>
+      </div>
+
       {/* Top reserved U (M5: 方向化上架) */}
       <div>
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">

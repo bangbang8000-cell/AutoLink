@@ -109,6 +109,10 @@ interface RackState {
   removeCabinet: (id: number) => void
   selectCabinet: (id: number | null) => void
   updateCabinet: (id: number, updates: Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>) => void
+  /** M4/M5: 项目机柜配置（顶部预留 U / 每柜 GPU 数量），上架校验与优化按此生效 */
+  topReservedU: number
+  gpuPerCabinet: number
+  setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number }) => void
   placeDevice: (cabinetId: number, device: UnplacedDevice, startU: number) => boolean
   removeDevice: (cabinetId: number, deviceId: string) => void
   moveDevice: (deviceId: string, fromCabinet: number, toCabinet: number, newStartU: number) => boolean
@@ -130,6 +134,14 @@ export const useRackStore = create<RackState>()(
   selectedDevice: null,
   addDeviceMode: false,
   editingDevice: null,
+  // M4/M5: 项目机柜配置默认值（由 setRackConfig 覆盖）
+  topReservedU: DEFAULT_TOP_RESERVED_U,
+  gpuPerCabinet: 1,
+  setRackConfig: (cfg) =>
+    set((s) => ({
+      topReservedU: cfg.topReservedU ?? s.topReservedU,
+      gpuPerCabinet: cfg.gpuPerCabinet ?? s.gpuPerCabinet,
+    })),
 
   initDefault: (serverCount, rackType = 42, powerLimit = 6000) => {
     // V2.9.2: 按真实 GPU 服务器参数生成 (8U 高, 功率≈上限85%), GPU 独占机柜 1 台/柜
@@ -424,8 +436,8 @@ export const useRackStore = create<RackState>()(
     if (!cabinet) return false
 
     const endU = startU + device.height - 1
-    // M5: 顶部预留保护（不占用预留 U 位，服务器/网络均不越过可用区）
-    if (startU < 1 || endU > cabinet.totalU - DEFAULT_TOP_RESERVED_U) return false
+    // M5: 顶部预留保护（读取项目配置 topReservedU，不占用预留 U 位）
+    if (startU < 1 || endU > cabinet.totalU - get().topReservedU) return false
 
     // Check power limit
     const currentPower = cabinet.devices.reduce((sum, d) => sum + d.power_watts, 0)
@@ -493,8 +505,8 @@ export const useRackStore = create<RackState>()(
 
     const height = device.endU - device.startU + 1
     const newEndU = newStartU + height - 1
-    // M5: 顶部预留保护（不占用预留 U 位）
-    if (newStartU < 1 || newEndU > toCab.totalU - DEFAULT_TOP_RESERVED_U) return false
+    // M5: 顶部预留保护（读取项目配置 topReservedU）
+    if (newStartU < 1 || newEndU > toCab.totalU - get().topReservedU) return false
 
     const hasConflict = toCab.devices.some(
       (d) => d.id !== deviceId && !(newEndU < d.startU || newStartU > d.endU),

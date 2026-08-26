@@ -76,6 +76,24 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
     loadMatrix(projectName).catch(() => {})
   }, [projectName, loadMatrix])
 
+  // M4/M5: 读取项目机柜配置 → 注入 rack.store（topReservedU/gpuPerCabinet 生效）
+  useEffect(() => {
+    window.electron.project
+      .getFile(projectName, 'project_config.json')
+      .then((raw: string | null) => {
+        if (!raw) return
+        const cfg = JSON.parse(raw)
+        const rack = cfg?.rack_config || {}
+        if (rack.top_reserved_u != null || rack.gpu_per_cabinet != null) {
+          useRackStore.getState().setRackConfig({
+            topReservedU: rack.top_reserved_u,
+            gpuPerCabinet: rack.gpu_per_cabinet,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [projectName])
+
   // 打磨轮（v1.4 / AL-R2b 联动 A，v1.5 增强）：矩阵选中格（有已上架机柜）→ RackTab 选中对应机柜
   // 并自动切到「②柜内设备布放」段呈现（等值守卫防死循环）
   useEffect(() => {
@@ -145,7 +163,8 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
 
   // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（待上架池 → 现有柜 U 位）
   const runRackOptimize = async () => {
-    const res = await optimizeRacks(1)
+    // M4: 用项目每柜 GPU 数量（默认 1），不再硬编码
+    const res = await optimizeRacks(useRackStore.getState().gpuPerCabinet)
     if (res && (res.stats?.placed ?? 0) > 0) {
       await useRackStore.getState().saveRackLayout(projectName)
     }
