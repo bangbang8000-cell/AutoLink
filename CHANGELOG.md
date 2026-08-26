@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [3.7.0] - 2026-08-26
+
+### AIDC 双产品打磨优化 v3.0（机柜规划流程 / 拓扑展示 / 项目输出保真 / AI 能力扩展与独立进程 / 双端一致性）
+
+- **机柜规划清晰操作逻辑（M4）**：① 机房布局定稿状态机——定稿后进入柜内规划，可撤销；② 柜内默认参数——每柜 GPU 数量可配置（非超节点默认 1）、默认上架 U 位（`top_reserved_u` 项目配置联动）、逐柜功率可编辑；③ 改布局处理——一键清空柜内设计 / 归档并清空（机柜设计导出到 项目名-版本-时间 版本目录）；④ 导出机柜设计 Excel（机柜平面图 + 每机柜设计 + 上机表 三 sheet）；⑤ NVL72 超节点上架调研（top_reserved_u=2 + gpu_per_cabinet=1 并入模板中心）
+- **工作台拓扑展示修复（M1）**：子视图包装层补 h-full 恢复高度链（画布不再坍缩 0）、fit 包围盒未测量节点用估算尺寸、saved layout 极端坐标清洗
+- **项目输出保真（M5）**：`plan_history` 版本历史入项目包往返；交付包扩大为设计级（plan.json + README + 拓扑图 + topology.json + rack_layout.json + plan_version 透传）；交付包可导入 AL（兼容仅 plan.json）；plan→设计映射增强（参数速率从设备模型推断 800G/400G/200G）
+- **AI 助手修复与能力扩展（M3a/M3b/M6）**：Provider 显式超时 + max_retries=0（聊天无反馈根因）；**AI 改独立进程**——`al_ai_hub` FastAPI+SSE（端口 18722 + 本地鉴权 + 端口回收/运行守卫/401 重启重试，对齐 MC）；AI 对话内实现项目/模板 CRUD（创建/删除/更新/基于模板创建/文件读写/模板推荐 9 新工具 + 权限分级 + 别名）；完整工具清单提示词
+- **双端一致性（M7）**：顶部图标顺序 Language→Theme→…→Update + 语言文字徽章；侧边栏 AI/output 图标对齐 MC（MessageSquare/FileCheck）+ 激活条 glow；AI 对话 markdown 改 prose 排版
+- 后端新增 fastapi/uvicorn/sse-starlette/pydantic 依赖；PyInstaller 第二入口 `al_ai_hub`；测试新增 al_ai_hub 服务器/SSE Chat/aiHub.service 单测
+
 ## [3.6.3] - 2026-08-25
 
 ### 发布后体验打磨（v2.0）
