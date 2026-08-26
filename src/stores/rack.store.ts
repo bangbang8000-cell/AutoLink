@@ -113,6 +113,8 @@ interface RackState {
   topReservedU: number
   gpuPerCabinet: number
   setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number }) => void
+  /** M4: 清空柜内设计（设备回待上架池），用于改布局后重新规划 */
+  clearCabinets: () => void
   placeDevice: (cabinetId: number, device: UnplacedDevice, startU: number) => boolean
   removeDevice: (cabinetId: number, deviceId: string) => void
   moveDevice: (deviceId: string, fromCabinet: number, toCabinet: number, newStartU: number) => boolean
@@ -142,6 +144,27 @@ export const useRackStore = create<RackState>()(
       topReservedU: cfg.topReservedU ?? s.topReservedU,
       gpuPerCabinet: cfg.gpuPerCabinet ?? s.gpuPerCabinet,
     })),
+
+  clearCabinets: () => {
+    const { cabinets } = get()
+    const reflow: UnplacedDevice[] = []
+    for (const c of cabinets) {
+      for (const d of c.devices) {
+        reflow.push({
+          id: d.id,
+          name: d.name,
+          type: d.type,
+          height: d.endU - d.startU + 1,
+          power_watts: d.power_watts,
+        })
+      }
+    }
+    set((s) => ({
+      cabinets: [],
+      unplacedDevices: [...s.unplacedDevices, ...reflow],
+      selectedCabinetId: null,
+    }))
+  },
 
   initDefault: (serverCount, rackType = 42, powerLimit = 6000) => {
     // V2.9.2: 按真实 GPU 服务器参数生成 (8U 高, 功率≈上限85%), GPU 独占机柜 1 台/柜

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock, Archive } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
@@ -231,6 +231,23 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
             }}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
               <Download size={11} /> {t('rack:exportRackDesign', '导出机柜设计')}
+            </button>
+            {/* M4b: 改布局处理——清空柜内设计 / 归档并清空（版本归档到 项目名-版本-时间 目录） */}
+            <button type="button" onClick={() => {
+              useRackStore.getState().clearCabinets()
+              addToast('warning', t('rack:cleared', '柜内设计已清空（设备回到待上架池），可重新规划'), 5000)
+            }}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+              <X size={11} /> {t('rack:clearRacks', '清空柜内设计')}
+            </button>
+            <button type="button" onClick={async () => {
+              const batchName = `${projectName}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`
+              const path = await exportRackDesignExcel(projectName, cabinets, matrix, batchName)
+              useRackStore.getState().clearCabinets()
+              if (path) addToast('success', t('rack:archived', `当前设计已归档到 ${batchName}，可重新规划`), 6000)
+            }}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+              <Archive size={11} /> {t('rack:archiveAndClear', '归档并清空')}
             </button>
             <button type="button" onClick={runRackOptimize}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
