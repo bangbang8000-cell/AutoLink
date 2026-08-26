@@ -7,7 +7,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import AsyncIterator, Optional
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, Timeout
 
 from autolink_hub.config import settings, ProviderConfig, PROVIDER_CATALOG
 
@@ -49,9 +49,12 @@ class OpenAICompatibleProvider(LLMProvider):
     def __init__(self, config: ProviderConfig, name: str):
         self._config = config
         self._name = name
+        # M3 修复：显式超时 + 关闭自动重试（openai 库默认 read 超时 600s，模型挂起会长期阻塞引擎线程）
         self._client = AsyncOpenAI(
             api_key=config.api_key,
             base_url=config.base_url,
+            timeout=Timeout(connect=15.0, read=120.0, write=120.0, pool=30.0),
+            max_retries=0,
         )
         self.last_reasoning_content: str = ""
 
