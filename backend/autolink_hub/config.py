@@ -129,7 +129,7 @@ class AutoLinkAISettings:
                 "key": key,
                 "name": catalog["name"],
                 "base_url": catalog["base_url"],
-                "models": catalog["models"],
+                "models": get_provider_persisted_models(key) or catalog["models"],
                 "current_model": config.model,
                 "enabled": config.enabled,
                 "is_default": key == self.default_provider,
@@ -178,3 +178,19 @@ def apply_secrets() -> None:
     settings.provider_configs = {k: v for k, v in secrets.items() if k != "default_provider"}
     if "default_provider" in secrets:
         settings.default_provider = secrets["default_provider"]
+
+
+def get_provider_persisted_models(provider: str) -> list:
+    """AI-3：读取某 provider 已持久化的模型列表（/config 回写 ai_secrets 的 models，供前端水合下拉）
+
+    直接读 secrets 文件（内存 provider_configs 在 save_secrets 后不会自动刷新）。
+    未持久化或格式异常时返回空列表（调用方回退静态 PROVIDER_CATALOG）。
+    """
+    secrets = load_secrets()
+    entry = secrets.get(provider, {})
+    if not isinstance(entry, dict):
+        return []
+    models = entry.get("models", [])
+    if not isinstance(models, list):
+        return []
+    return [m for m in models if isinstance(m, str) and m]

@@ -30,8 +30,10 @@ class ChatRequest(BaseModel):
 
 
 class ProviderInfo(BaseModel):
+    key: str
     name: str
     model: str
+    models: list[str] = []
     enabled: bool
     is_default: bool
 
@@ -47,21 +49,42 @@ class HealthResponse(BaseModel):
     providers: list[ProviderInfo]
 
 
+def _provider_summaries() -> list[dict]:
+    """AI-3：Provider 摘要（含 key 与已持久化 models，供前端水合下拉）"""
+    from autolink_hub.config import PROVIDER_CATALOG, get_provider_persisted_models
+
+    result = []
+    for p in registry.list_providers():
+        key = p["key"]
+        catalog = PROVIDER_CATALOG.get(key, {})
+        persisted = get_provider_persisted_models(key)
+        models = persisted if persisted else (p.get("models") or catalog.get("models", []))
+        result.append({
+            "key": key,
+            "name": p["name"],
+            "model": p["model"],
+            "models": models,
+            "enabled": p["enabled"],
+            "is_default": p["is_default"],
+        })
+    return result
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """健康检查接口"""
     return HealthResponse(
         status="ok",
         version="1.0.0",
-        providers=[ProviderInfo(**p) for p in registry.list_providers()],
+        providers=[ProviderInfo(**p) for p in _provider_summaries()],
     )
 
 
 @router.get("/providers", response_model=ProviderListResponse)
 async def list_providers():
-    """获取可用 Provider 列表"""
+    """获取可用 Provider 列表（含 key 与已持久化 models，供前端水合下拉）"""
     return ProviderListResponse(
-        providers=[ProviderInfo(**p) for p in registry.list_providers()],
+        providers=[ProviderInfo(**p) for p in _provider_summaries()],
         default=settings.default_provider,
     )
 
@@ -153,15 +176,17 @@ class FetchModelsRequest(BaseModel):
 async def configure_provider(req: ConfigProvidersRequest):
     """配置 Provider 的 API Key（复用 autolink_hub.hub.configure_provider，diff 幂等）"""
     from autolink_hub.hub import configure_provider as hub_configure
-    # M2 同构：模型列表持久化回写（保留已拉取的最新模型）
+    # M2 同构：先持久化基础配置，再回写模型列表（AI-3：避免 hub_configure 覆盖时丢失已拉取模型）
+    result = hub_configure(req.provider, req.api_key, req.model or "", req.base_url or "")
     if req.models:
         from autolink_hub.config import load_secrets, save_secrets
         secrets = load_secrets()
         entry = secrets.get(req.provider, {})
+        if not isinstance(entry, dict):
+            entry = {}
         entry["models"] = req.models
         secrets[req.provider] = entry
         save_secrets(secrets)
-    result = hub_configure(req.provider, req.api_key, req.model or "", req.base_url or "")
     return result
 
 

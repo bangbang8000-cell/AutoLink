@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Sun, Moon, Monitor, Globe, Palette,
@@ -519,6 +519,44 @@ const AI_PROVIDER_CATALOG: Record<string, { name: string; baseUrl: string; model
   custom: { name: '自定义', baseUrl: '', models: [] },
 }
 
+/* ================================================== */
+/*  AI-3（AL 侧）：模型自动拉取 + 下拉选项（纯函数）     */
+/* ================================================== */
+
+/** 自动拉取节流窗口：同一 provider 30s 内不重复触发 */
+export const AUTO_FETCH_MODELS_THROTTLE_MS = 30_000
+
+/** AI-3-T1：是否应触发一次模型自动拉取（节流判断 + 是否应拉取） */
+export function shouldAutoFetchModels(opts: {
+  apiKey: string
+  lastAutoFetchAt?: number | null
+  now?: number
+  throttleMs?: number
+}): boolean {
+  const { apiKey, lastAutoFetchAt = null, now = Date.now(), throttleMs = AUTO_FETCH_MODELS_THROTTLE_MS } = opts
+  if (!apiKey || !apiKey.trim()) return false
+  if (lastAutoFetchAt != null && now - lastAutoFetchAt < throttleMs) return false
+  return true
+}
+
+/** AI-3-T2：下拉选项组装——本次拉取 > 已持久化 > 静态目录；并入当前值保证可选中 */
+export function buildModelOptions(opts: {
+  fetched?: string[]
+  persisted?: string[]
+  catalog?: string[]
+  current?: string
+}): string[] {
+  const { fetched = [], persisted = [], catalog = [], current = '' } = opts
+  const merged: string[] = []
+  for (const list of [fetched, persisted, catalog]) {
+    for (const m of list) {
+      if (m && !merged.includes(m)) merged.push(m)
+    }
+  }
+  if (current && !merged.includes(current)) merged.push(current)
+  return merged
+}
+
 function AISettings() {
   const { t } = useTranslation()
   const aiConfig = useUIStore((s) => s.aiConfig)
@@ -531,11 +569,33 @@ function AISettings() {
   const [showKey, setShowKey] = useState(false)
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
+  // AI-3: 自动拉取节流时间戳（按 provider）与会话内已拉取/后端水合的模型列表
+  const lastAutoFetchRef = useRef<Record<string, number>>({})
+  const [fetchedModels, setFetchedModels] = useState<Record<string, string[]>>({})
+  const [persistedModels, setPersistedModels] = useState<Record<string, string[]>>({})
 
   const cfg = aiConfig.providers[selected] || { apiKey: '', model: '', baseUrl: '' }
   const catalog = AI_PROVIDER_CATALOG[selected] || AI_PROVIDER_CATALOG.custom
   // AL-S3: 后端已保存过密钥但本地（重启后）不再持有明文
   const keyConfigured = Boolean(cfg.apiKey) || Boolean(aiKeyConfigured[selected])
+
+  // AI-3: 挂载时从后端水合已持久化模型列表（供下拉选项第二优先级）
+  useEffect(() => {
+    let cancelled = false
+    const aiHub = window.electron?.aihub
+    if (!aiHub) return
+    aiHub.providers()
+      .then((res) => {
+        if (cancelled) return
+        const map: Record<string, string[]> = {}
+        for (const p of res.providers) {
+          if (Array.isArray(p.models) && p.models.length > 0) map[p.key] = p.models
+        }
+        setPersistedModels(map)
+      })
+      .catch(() => { /* 水合失败静默，回退静态目录 */ })
+    return () => { cancelled = true }
+  }, [])
 
   const syncToHub = async (provider: string) => {
     const c = aiConfig.providers[provider]
@@ -553,6 +613,8 @@ function AISettings() {
     try {
       await syncToHub(selected)
       toast('success', t('common:explorer.settings.ai.saved'))
+      // AI-3-T1: 保存成功后节流触发一次模型自动拉取（静默失败，不阻塞保存）
+      void maybeAutoFetchModels()
     } catch (e: unknown) {
       toast('error', e instanceof Error ? e.message : 'save failed')
     }
@@ -576,6 +638,34 @@ function AISettings() {
     }
   }
 
+  // AI-3: 把最新拉取结果回写后端（models 持久化到 ai_secrets，供重启后水合）
+  const persistModels = async (provider: string, models: string[]) => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub || !cfg.apiKey) return
+    try {
+      const payload = { provider, apiKey: cfg.apiKey, model: cfg.model || '', baseUrl: cfg.baseUrl || '', models }
+      await aiHub.config(payload as Parameters<typeof aiHub.config>[0])
+    } catch { /* 回写失败静默，不影响主流程 */ }
+  }
+
+  // AI-3-T1: 保存成功后节流触发一次模型自动拉取（失败静默降级，不阻塞保存）
+  const maybeAutoFetchModels = async () => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub || !cfg.apiKey) return
+    const now = Date.now()
+    const last = lastAutoFetchRef.current[selected] ?? null
+    if (!shouldAutoFetchModels({ apiKey: cfg.apiKey, lastAutoFetchAt: last, now, throttleMs: AUTO_FETCH_MODELS_THROTTLE_MS })) return
+    lastAutoFetchRef.current[selected] = now
+    try {
+      const r = await aiHub.models({ baseUrl: cfg.baseUrl || catalog.baseUrl, apiKey: cfg.apiKey })
+      if (r.status === 'ok' && r.models.length > 0) {
+        setProviderConfig(selected, { ...cfg, baseUrl: cfg.baseUrl || catalog.baseUrl, model: r.models[0] })
+        setFetchedModels((m) => ({ ...m, [selected]: r.models }))
+        void persistModels(selected, r.models)
+      }
+    } catch { /* 自动拉取失败静默：保留静态目录/已有模型 */ }
+  }
+
   const handleFetchModels = async () => {
     const aiHub = window.electron?.aihub
     if (!aiHub) return
@@ -584,6 +674,8 @@ function AISettings() {
       const r = await aiHub.models({ baseUrl: cfg.baseUrl || catalog.baseUrl, apiKey: cfg.apiKey })
       if (r.status === 'ok' && r.models.length > 0) {
         setProviderConfig(selected, { ...cfg, baseUrl: cfg.baseUrl || catalog.baseUrl, model: r.models[0] })
+        setFetchedModels((m) => ({ ...m, [selected]: r.models }))
+        void persistModels(selected, r.models)
         setStatusMsg(`models: ${r.models.join(', ')}`)
       } else {
         setStatusMsg(r.message || 'no models')
@@ -600,6 +692,14 @@ function AISettings() {
       toast('success', t('common:explorer.settings.ai.defaultSet'))
     } catch { /* ignore */ }
   }
+
+  // AI-3-T2: 下拉选项——本次拉取 > 已持久化 > 静态目录；无来源时保留自由输入
+  const modelOptions = buildModelOptions({
+    fetched: fetchedModels[selected] || [],
+    persisted: persistedModels[selected] || [],
+    catalog: catalog.models,
+    current: cfg.model,
+  })
 
   return (
     <SettingsSection title={t('common:explorer.settings.ai.title')}>
@@ -643,12 +743,24 @@ function AISettings() {
       {/* 模型 */}
       <SettingsRow label={t('common:explorer.settings.ai.model')}>
         <div className="flex items-center gap-1 flex-1">
-          <input
-            value={cfg.model}
-            onChange={(e) => setProviderConfig(selected, { ...cfg, model: e.target.value })}
-            className={INPUT_CLASS + ' flex-1'}
-            placeholder={catalog.models[0] || ''}
-          />
+          {modelOptions.length > 0 ? (
+            <select
+              value={cfg.model}
+              onChange={(e) => setProviderConfig(selected, { ...cfg, model: e.target.value })}
+              className={INPUT_CLASS + ' flex-1'}
+            >
+              {modelOptions.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={cfg.model}
+              onChange={(e) => setProviderConfig(selected, { ...cfg, model: e.target.value })}
+              className={INPUT_CLASS + ' flex-1'}
+              placeholder={catalog.models[0] || ''}
+            />
+          )}
           <button
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             onClick={handleFetchModels}
