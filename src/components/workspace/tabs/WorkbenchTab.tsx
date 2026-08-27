@@ -4,6 +4,7 @@ import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock,
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
+import { buildArchiveBatchName, resolveProjectVersion, ARCHIVE_RACK_DESIGN_FILE, ARCHIVE_TOPOLOGY_FILE, ARCHIVE_ROOM_LAYOUT_FILE } from '@/utils/archiveExport'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -162,6 +163,38 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
     addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
   }
 
+  // AL-R2: 归档目录名含版本号——从项目 AIDC 规划 plan.meta.planVersion 解析，取不到回退无版本
+  const resolveArchiveVersion = async (): Promise<string> => {
+    try {
+      const res = (await window.electron.aidc.project.load(projectName)) as {
+        plan?: { meta?: { planVersion?: number } } | null
+      }
+      return resolveProjectVersion({ planMetaPlanVersion: res.plan?.meta?.planVersion })
+    } catch {
+      return ''
+    }
+  }
+
+  // AL-R2: 归档拓扑 PNG（真实渲染）到 output/<batchName>/——无拓扑数据或失败则跳过（尽力而为）
+  const exportArchiveTopologyPng = async (batchName: string): Promise<void> => {
+    const topology = useDesignStore.getState().topology
+    const nodes = topology?.nodes
+    const edges = topology?.edges ?? []
+    if (!nodes || nodes.length === 0) return
+    const { exportTopologyViewPng } = await import('@/utils/exportTopologyView')
+    const base64 = await exportTopologyViewPng(nodes, edges)
+    await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${ARCHIVE_TOPOLOGY_FILE}`, base64)
+  }
+
+  // AL-R2: 归档机房平面图 PNG（矩阵布局渲染）到 output/<batchName>/——无矩阵则跳过（尽力而为）
+  const exportArchiveRoomLayoutPng = async (batchName: string): Promise<void> => {
+    const { roomLayoutArt, svgToPngBase64 } = await import('@/utils/exportGraphics')
+    const art = roomLayoutArt()
+    if (!art) return
+    const base64 = await svgToPngBase64(art.svg, art.width, art.height)
+    await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${ARCHIVE_ROOM_LAYOUT_FILE}`, base64)
+  }
+
   // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（待上架池 → 现有柜 U 位）
   const runRackOptimize = async () => {
     // M4: 用项目每柜 GPU 数量（默认 1），不再硬编码
@@ -241,10 +274,20 @@ function RackWorkbenchView({ projectName }: { projectName: string }) {
               <X size={11} /> {t('rack:clearRacks', '清空柜内设计')}
             </button>
             <button type="button" onClick={async () => {
-              const batchName = `${projectName}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`
-              const path = await exportRackDesignExcel(projectName, cabinets, matrix, batchName)
+              // AL-R2: 归档并清空——目录名含版本号 + 完整设计渲染（机柜设计/拓扑图/机房平面图）
+              const versionTag = await resolveArchiveVersion()
+              const batchName = buildArchiveBatchName(projectName, versionTag)
+              try {
+                await exportRackDesignExcel(projectName, cabinets, matrix, batchName, ARCHIVE_RACK_DESIGN_FILE)
+              } catch { /* 机柜设计导出失败不阻塞其余产物 */ }
+              try {
+                await exportArchiveTopologyPng(batchName)
+              } catch { /* 拓扑 PNG 尽力而为 */ }
+              try {
+                await exportArchiveRoomLayoutPng(batchName)
+              } catch { /* 平面图 PNG 尽力而为 */ }
               useRackStore.getState().clearCabinets()
-              if (path) addToast('success', t('rack:archived', `当前设计已归档到 ${batchName}，可重新规划`), 6000)
+              addToast('success', t('rack:archived', `当前设计已归档到 ${batchName}，可重新规划`), 6000)
             }}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
               <Archive size={11} /> {t('rack:archiveAndClear', '归档并清空')}

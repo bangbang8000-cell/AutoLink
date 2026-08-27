@@ -13,6 +13,7 @@ export async function exportRackDesignExcel(
   cabinets: RackCabinet[],
   matrix: RoomMatrixData | null,
   batchName?: string,
+  fileName?: string,
 ): Promise<string> {
   const wb = XLSX.utils.book_new()
 
@@ -85,10 +86,10 @@ export async function exportRackDesignExcel(
 
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' })
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-  const fileName = `机柜设计_${timestamp}.xlsx`
+  const outName = fileName ?? `机柜设计_${timestamp}.xlsx`
   // M4b: 提供 batchName 时写入版本归档目录 output/<项目名-版本-时间>/（改布局前归档当前设计）
   const filePath = batchName
-    ? await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${fileName}`, wbout)
-    : await window.electron?.export?.saveFile(projectName, fileName, wbout)
+    ? await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${outName}`, wbout)
+    : await window.electron?.export?.saveFile(projectName, outName, wbout)
   return filePath || ''
 }
