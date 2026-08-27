@@ -1909,6 +1909,44 @@ def handle_project_write_file(params):
                               p.get('filePath', ''), p.get('content', ''))
 
 
+@register_action('template:export')
+def handle_template_export(params):
+    """AI-4（M6c）: 导出模板——指定 output_path 打包 zip；否则返回文件清单+内容（写操作 NOTIFY）。"""
+    from manage import export_template
+    p = dict(params or {})
+    return export_template(p.get('name') or p.get('templateName') or '',
+                           p.get('outputPath') or p.get('output_path') or '')
+
+
+@register_action('template:import')
+def handle_template_import(params):
+    """AI-4（M6c）: 导入模板——从 zip/目录导入到用户模板中心，校验 template.json，重名默认拒绝（写操作 NOTIFY）。"""
+    from manage import import_template
+    p = dict(params or {})
+    return import_template(p.get('source', ''),
+                           p.get('name') or p.get('templateName') or '',
+                           bool(p.get('overwrite')))
+
+
+@register_action('project:export')
+def handle_project_export(params):
+    """AI-4（M6c）: 导出项目——指定 output_path 打包项目交付 zip（含 plan.json 等）；否则返回文件清单+内容（写操作 NOTIFY）。"""
+    from manage import export_project
+    p = dict(params or {})
+    return export_project(p.get('name') or p.get('projectName') or '',
+                          p.get('outputPath') or p.get('output_path') or '')
+
+
+@register_action('project:import')
+def handle_project_import(params):
+    """AI-4（M6c）: 导入项目——从 zip 导入到工作区，校验 project.json，重名默认拒绝（写操作 NOTIFY）。
+    AI 对话场景 source 来自用户附件路径；无文件选择上下文，主 UX 仍为 Electron project-io。"""
+    from manage import import_project
+    p = dict(params or {})
+    return import_project(p.get('source', ''),
+                          p.get('name') or p.get('projectName') or '',
+                          bool(p.get('overwrite')))
+
 @register_action('file:parse')
 def handle_file_parse(params):
     """V3.1.3-T7-3: 示例文件解析（Excel/JSON/CSV/文本 → 结构化数据，只读）"""

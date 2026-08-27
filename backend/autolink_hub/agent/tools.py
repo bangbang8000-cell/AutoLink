@@ -417,4 +417,44 @@ def init_tools() -> None:
         _make_cli_handler("project:write-file"),
     )
 
+    # ---- 模板/项目导入导出（AI-4，M6c 补齐：AI 对话内导入导出）----
+    register_tool(
+        "template_export", "导出模板：把指定模板目录打包为 zip 到指定输出路径（outputPath），或返回模板文件清单+内容（缺省）。回答\"导出/备份这个模板\"时调用。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "模板名（内置或用户模板）", True),
+            "outputPath": _str_param("outputPath", "zip 输出路径（缺省返回文件清单+内容）"),
+        }, required=["name"]),
+        _make_cli_handler("template:export"),
+        permission="notify",
+    )
+    register_tool(
+        "template_import", "导入模板：从 zip 或目录把模板导入到用户模板中心，校验 template.json 结构；重名默认拒绝（overwrite=true 覆盖）。回答\"导入这个模板包\"时调用（source 为 zip/目录路径）。写操作（NOTIFY）",
+        _schema({
+            "source": _str_param("source", "模板 zip 或目录路径（来自用户附件或本地路径）", True),
+            "name": _str_param("name", "导入后的模板名（缺省取 template.json 的 name/id）"),
+            "overwrite": _str_param("overwrite", "同名覆盖（默认 false）"),
+        }, required=["source"]),
+        _make_cli_handler("template:import"),
+        permission="notify",
+    )
+    register_tool(
+        "project_export", "导出项目：把当前项目打包为交付包 zip（含 plan.json/project_config.json 等）到指定输出路径（outputPath），或返回项目文件清单+内容（缺省）。回答\"导出/备份这个项目\"时调用。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "项目名", True),
+            "outputPath": _str_param("outputPath", "zip 输出路径（缺省返回文件清单+内容）"),
+        }, required=["name"]),
+        _make_cli_handler("project:export"),
+        permission="notify",
+    )
+    register_tool(
+        "project_import", "导入项目：从 zip 把项目导入到工作区，校验 project.json；重名默认拒绝（overwrite=true 覆盖）。回答\"导入这个项目包\"时调用（source 为 zip 路径，来自用户附件）。写操作（NOTIFY）",
+        _schema({
+            "source": _str_param("source", "项目 zip 路径（来自用户附件或本地路径）", True),
+            "projectName": _str_param("projectName", "导入后的项目名（缺省取 project.json 的 name）"),
+            "overwrite": _str_param("overwrite", "同名覆盖（默认 false）"),
+        }, required=["source"]),
+        _make_cli_handler("project:import"),
+        permission="notify",
+    )
+
     logger.info(f"AutoLink AI Hub: registered {len(_tools)} tools")

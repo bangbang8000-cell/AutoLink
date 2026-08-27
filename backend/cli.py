@@ -337,6 +337,51 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
              'required': True, 'help': '文件内容'},
         ],
     },
+    # AI-4（M6c）: 模板/项目导入导出（对话内，落盘写操作）
+    'template:export': {
+        'sub': 'export',
+        'domain': 'template',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '模板名（内置或用户模板）'},
+            {'name': 'outputPath', 'flags': ['--output-path'], 'type': str,
+             'required': False, 'help': 'zip 输出路径（缺省返回文件清单+内容）'},
+        ],
+    },
+    'template:import': {
+        'sub': 'import',
+        'domain': 'template',
+        'params': [
+            {'name': 'source', 'flags': ['--source'], 'type': str,
+             'required': True, 'help': '模板 zip 或目录路径'},
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': False, 'help': '导入后的模板名（缺省取 template.json）'},
+            {'name': 'overwrite', 'flags': ['--overwrite'], 'type': bool,
+             'required': False, 'help': '同名覆盖（默认 False）'},
+        ],
+    },
+    'project:export': {
+        'sub': 'export',
+        'domain': 'project',
+        'params': [
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': True, 'help': '项目名'},
+            {'name': 'outputPath', 'flags': ['--output-path'], 'type': str,
+             'required': False, 'help': 'zip 输出路径（缺省返回文件清单+内容）'},
+        ],
+    },
+    'project:import': {
+        'sub': 'import',
+        'domain': 'project',
+        'params': [
+            {'name': 'source', 'flags': ['--source'], 'type': str,
+             'required': True, 'help': '项目 zip 路径'},
+            {'name': 'projectName', 'flags': ['--project-name'], 'type': str,
+             'required': False, 'help': '导入后的项目名（缺省取 project.json）'},
+            {'name': 'overwrite', 'flags': ['--overwrite'], 'type': bool,
+             'required': False, 'help': '同名覆盖（默认 False）'},
+        ],
+    },
     # V3.1.3-T7-3: 示例文件解析（Excel/JSON/CSV/文本 → 结构化数据）
     'file:parse': {
         'sub': 'parse',

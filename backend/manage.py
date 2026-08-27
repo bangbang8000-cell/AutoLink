@@ -556,3 +556,224 @@ def project_write_file(name: str, file_path: str, content: str) -> dict:
         return {'success': True, 'project': name, 'path': file_path}
     except OSError as e:
         return {'success': False, 'error': f'写入失败: {e}'}
+
+
+# ============================================================
+# 模板/项目导入导出（AI-4，M6c 补齐：AI 对话内导入导出）
+# ============================================================
+
+def _manifest_files(src_dir: str, with_content: bool = True) -> list:
+    """返回目录文件清单（path/size/content[文本]；隐藏/缓存文件跳过）"""
+    src = Path(src_dir)
+    files = []
+    for p in sorted(src.rglob('*')):
+        if p.is_dir():
+            continue
+        rel = p.relative_to(src).as_posix()
+        if any(part.startswith('.') for part in rel.split('/')):
+            continue
+        try:
+            size = p.stat().st_size
+        except OSError:
+            continue
+        entry = {'path': rel, 'size': size}
+        if with_content and size <= 2 * 1024 * 1024:
+            try:
+                entry['content'] = p.read_text(encoding='utf-8')
+            except (UnicodeDecodeError, OSError):
+                pass
+        files.append(entry)
+    return files
+
+
+def _zip_dir(src_dir: str, out_zip: str) -> int:
+    """把目录内所有文件打包为 zip（隐藏/缓存文件跳过），返回文件数"""
+    import zipfile
+    src = Path(src_dir)
+    Path(out_zip).parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as z:
+        for p in sorted(src.rglob('*')):
+            if p.is_dir():
+                continue
+            rel = p.relative_to(src).as_posix()
+            if any(part.startswith('.') for part in rel.split('/')):
+                continue
+            z.write(str(p), rel)
+            count += 1
+    return count
+
+
+def _extract_zip_safe(zip_path: str, dest_dir: str) -> None:
+    """安全解压 zip 到目录（防 zip-slip 路径穿越）"""
+    import zipfile
+    dest = Path(dest_dir).resolve()
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        for member in z.infolist():
+            target = (dest / member.filename).resolve()
+            if not target.is_relative_to(dest):
+                raise ValueError(f'zip 条目含非法路径: {member.filename}')
+            z.extract(member, str(dest))
+
+
+def _archive_root(extract_dir: str, marker: str) -> str | None:
+    """定位含 marker 文件的根目录（支持外层单层包裹目录）"""
+    base = Path(extract_dir)
+    if (base / marker).is_file():
+        return str(base)
+    subdirs = [p for p in base.iterdir() if p.is_dir()]
+    if len(subdirs) == 1 and (subdirs[0] / marker).is_file():
+        return str(subdirs[0])
+    return None
+
+
+def _copy_tree(src: str, dst: str) -> int:
+    """递归复制目录内所有文件（隐藏/缓存跳过），返回文件数"""
+    import shutil
+    src = Path(src)
+    count = 0
+    for p in src.rglob('*'):
+        if p.is_dir():
+            continue
+        rel = p.relative_to(src)
+        if any(part.startswith('.') for part in rel.parts):
+            continue
+        target = Path(dst) / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(p), str(target))
+        count += 1
+    return count
+
+
+def _resolve_template_dir(name: str) -> str | None:
+    """解析模板目录（用户优先、内置兜底）；不存在返回 None"""
+    for root in (user_template_dir(), template_dir()):
+        d = Path(root) / name
+        if d.is_dir() and (d / 'template.json').exists():
+            return str(d)
+    return None
+
+
+def export_template(name: str, output_path: str = '') -> dict:
+    """导出模板（AI-4）：指定 output_path 打包 zip；否则返回文件清单+内容"""
+    name, err = _safe_component_name(name, '模板名')
+    if err:
+        return {'success': False, 'error': err}
+    src = _resolve_template_dir(name)
+    if src is None:
+        return {'success': False, 'error': f'模板不存在: {name}'}
+    source = 'user' if src.startswith(user_template_dir()) else 'builtin'
+    files = _manifest_files(src)
+    result = {'success': True, 'template': name, 'source': source,
+              'files': files, 'total': len(files)}
+    if output_path:
+        try:
+            result['zipPath'] = output_path
+            result['zipped'] = _zip_dir(src, output_path)
+        except OSError as e:
+            return {'success': False, 'error': f'导出失败: {e}'}
+    return result
+
+
+def import_template(source: str, name: str = '', overwrite: bool = False) -> dict:
+    """导入模板（AI-4）：从 zip 或目录导入到用户模板中心，校验 template.json 结构。
+    重名默认拒绝，overwrite=true 覆盖。"""
+    import shutil
+    import tempfile
+    if not source:
+        return {'success': False, 'error': '缺少导入源（source 必须是非空路径）'}
+    tmp = None
+    try:
+        if os.path.isdir(source):
+            root = _archive_root(source, 'template.json')
+            if root is None:
+                return {'success': False, 'error': '导入源缺少 template.json（非模板包）'}
+            src_root = root
+        elif os.path.isfile(source) and source.lower().endswith('.zip'):
+            tmp = tempfile.mkdtemp(prefix='al_tpl_import_')
+            _extract_zip_safe(source, tmp)
+            root = _archive_root(tmp, 'template.json')
+            if root is None:
+                return {'success': False, 'error': 'zip 缺少 template.json（非模板包）'}
+            src_root = root
+        else:
+            return {'success': False, 'error': f'导入源不存在或不是 zip/目录: {source}'}
+        meta, meta_err = _safe_read_json(str(Path(src_root) / 'template.json'))
+        if meta_err or not meta:
+            return {'success': False, 'error': 'template.json 解析失败或为空'}
+        tpl_name = (name or '').strip() or meta.get('name') or meta.get('id') or ''
+        tpl_name, err = _safe_component_name(tpl_name, '模板名')
+        if err:
+            return {'success': False, 'error': err}
+        target = Path(user_template_dir()) / tpl_name
+        if target.exists() and not overwrite:
+            return {'success': False, 'error': f'模板已存在: {tpl_name}（可传 overwrite=true 覆盖）'}
+        if target.exists():
+            shutil.rmtree(str(target), ignore_errors=True)
+        count = _copy_tree(src_root, str(target))
+        return {'success': True, 'template': tpl_name, 'path': str(target),
+                'source': source, 'files': count}
+    except (ValueError, OSError) as e:
+        return {'success': False, 'error': f'导入失败: {e}'}
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def export_project(name: str, output_path: str = '') -> dict:
+    """导出项目（AI-4）：指定 output_path 打包为项目交付 zip；否则返回文件清单+内容"""
+    name, err = _safe_component_name(name, '项目名')
+    if err:
+        return {'success': False, 'error': err}
+    d = Path(workspace_dir()) / name
+    if not d.is_dir():
+        return {'success': False, 'error': f'项目不存在: {name}'}
+    files = _manifest_files(str(d))
+    result = {'success': True, 'project': name,
+              'files': files, 'total': len(files),
+              'has_plan': (d / 'plan.json').exists()}
+    if output_path:
+        try:
+            result['zipPath'] = output_path
+            result['zipped'] = _zip_dir(str(d), output_path)
+        except OSError as e:
+            return {'success': False, 'error': f'导出失败: {e}'}
+    return result
+
+
+def import_project(source: str, name: str = '', overwrite: bool = False) -> dict:
+    """导入项目（AI-4）：从 zip 导入到工作区，校验 project.json/project_config.json。
+    重名默认拒绝，overwrite=true 覆盖。AI 对话场景 source 来自用户附件路径。"""
+    import shutil
+    import tempfile
+    if not source:
+        return {'success': False, 'error': '缺少导入源（source 必须是非空 zip 路径）'}
+    if not (os.path.isfile(source) and source.lower().endswith('.zip')):
+        return {'success': False, 'error': f'项目导入仅支持 zip 包: {source}'}
+    tmp = None
+    try:
+        tmp = tempfile.mkdtemp(prefix='al_proj_import_')
+        _extract_zip_safe(source, tmp)
+        root = _archive_root(tmp, 'project.json')
+        if root is None:
+            root = _archive_root(tmp, 'project_config.json')
+        if root is None:
+            return {'success': False, 'error': 'zip 缺少 project.json（非项目包）'}
+        meta, _ = _safe_read_json(str(Path(root) / 'project.json'))
+        proj_name = (name or '').strip() or (meta or {}).get('name') or Path(root).name or ''
+        proj_name, err = _safe_component_name(proj_name, '项目名')
+        if err:
+            return {'success': False, 'error': err}
+        target = Path(workspace_dir()) / proj_name
+        if target.exists() and not overwrite:
+            return {'success': False, 'error': f'项目已存在: {proj_name}（可传 overwrite=true 覆盖）'}
+        if target.exists():
+            shutil.rmtree(str(target), ignore_errors=True)
+        count = _copy_tree(root, str(target))
+        return {'success': True, 'project': proj_name, 'path': str(target),
+                'source': source, 'files': count}
+    except (ValueError, OSError) as e:
+        return {'success': False, 'error': f'导入失败: {e}'}
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
