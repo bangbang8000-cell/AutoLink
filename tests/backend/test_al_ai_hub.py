@@ -86,3 +86,43 @@ class TestAlAiHubServer:
         assert client.get('/api/chat/health').status_code == 401
         assert client.get('/api/chat/health', headers={'X-AL-Auth-Token': 'bad'}).status_code == 401
         assert client.get('/api/chat/health', headers={'X-AL-Auth-Token': 'sec-token'}).status_code == 200
+
+class TestAlAiHubModelsExposure:
+    """AI-3（AL 侧）：已持久化 models 透出 + /providers、/health 供前端水合下拉"""
+
+    def test_config_models_persisted_and_exposed(self, tmp_path):
+        from autolink_hub.config import get_provider_persisted_models
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        # 保存 Provider 配置 + 携带最新拉取 models（模拟自动拉取后回写）
+        r = client.post('/api/chat/config', json={
+            'provider': 'deepseek',
+            'api_key': 'sk-test',
+            'model': 'deepseek-chat',
+            'base_url': '',
+            'models': ['deepseek-v4-pro', 'deepseek-r1-0528'],
+        })
+        assert r.status_code == 200
+        assert r.json().get('status') == 'ok'
+        # 持久化读取函数命中
+        assert get_provider_persisted_models('deepseek') == ['deepseek-v4-pro', 'deepseek-r1-0528']
+        # /providers 水合：返回已持久化 models（优先于静态目录），并含 key
+        r2 = client.get('/api/chat/providers')
+        assert r2.status_code == 200
+        info = {p['key']: p for p in r2.json()['providers']}
+        assert info['deepseek']['models'] == ['deepseek-v4-pro', 'deepseek-r1-0528']
+        # /health 同样透出
+        r3 = client.get('/api/chat/health')
+        info3 = {p['key']: p for p in r3.json()['providers']}
+        assert info3['deepseek']['models'] == ['deepseek-v4-pro', 'deepseek-r1-0528']
+
+    def test_providers_fallback_to_catalog_without_persisted_models(self, tmp_path):
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.get('/api/chat/providers')
+        assert r.status_code == 200
+        info = {p['key']: p for p in r.json()['providers']}
+        # 未持久化时回退静态目录，且透出 key
+        assert info['deepseek']['models'] == ['deepseek-v4-pro', 'deepseek-v4', 'deepseek-chat']
+        assert 'key' in info['deepseek']
+        assert 'models' in info['deepseek']
