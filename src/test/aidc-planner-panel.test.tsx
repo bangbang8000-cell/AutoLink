@@ -6,9 +6,12 @@
  */
 import '@/i18n'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { exportDeliveryZip } from '@/utils/aidcDelivery'
+import { useDesignStore, defaultDesignConfig } from '@/stores/design.store'
+import { useRoomStore, type RoomMatrixData } from '@/stores/room.store'
+import { useRackStore } from '@/stores/rack.store'
 
 // exportDeliveryZip 附带拓扑 PNG：mock 避免 jsdom 无 ResizeObserver 触发 react-flow 渲染
 vi.mock('@/utils/exportPlanTopologyPng', () => ({
@@ -122,5 +125,75 @@ describe('AidcPlannerPanel', () => {
     const res = await exportDeliveryZip('aidc_64')
     expect(res.noPlan).toBe(true)
     expect(exportPlan).not.toHaveBeenCalled()
+  })
+})
+
+
+// ================= AL-P4 / AL-R3：应用到设计（映射进设计配置 + 矩阵落位按项目 gpu_per_cabinet 生效）=================
+const makeRoomMatrix = (): RoomMatrixData => ({
+  schemaVersion: 1,
+  name: '机房 A',
+  rows: ['A'],
+  cols: [1],
+  cells: [{ row: 'A', col: 1, type: 'gpu', placeholder: null, cabinetId: null }],
+})
+
+const richPlan = {
+  ...samplePlan,
+  deviceList: [
+    ...samplePlan.deviceList,
+    { role: 'BIZ_AGG', model: 'H3C S6800', name: 'BJ01-R10-AIDC-H3C-BIZ-AGG-01', rack: 10, asn: 65151 },
+    { role: 'OOB_ACCESS', model: 'H3C S5130', name: 'BJ01-R11-AIDC-H3C-OOB-ACC-01', rack: 11, asn: 65171 },
+  ],
+  convergence: { compute: 1, storage: 1, biz: 1 },
+}
+
+function mockAidcProjectLoad() {
+  const load = vi.fn().mockResolvedValue({ ok: true, name: 'P', projectId: 'pid-1', plan: null, macro: samplePlan.macro, history: [] })
+  ;(window as unknown as { electron: { aidc: { project: { load: typeof load } } } }).electron.aidc.project = { load }
+  return load
+}
+
+describe('AidcPlannerPanel 应用到设计（AL-P4/AL-R3）', () => {
+  beforeEach(() => {
+    useDesignStore.setState({
+      config: { ...defaultDesignConfig }, summary: null, topology: null, valid: null,
+      generating: false, error: null,
+    })
+    useRoomStore.setState({ matrix: null })
+    useRackStore.setState({
+      cabinets: [], unplacedDevices: [], selectedCabinetId: null, selectedDevice: null,
+      addDeviceMode: false, editingDevice: null,
+    })
+    window.electron.project.getFile = vi.fn().mockResolvedValue(null)
+    window.electron.project.saveFile = vi.fn().mockResolvedValue(true)
+    window.electron.design.generate = vi.fn().mockResolvedValue({
+      summary: { mode: 'custom', numServers: 64, totalServers: 64, paramLeafCount: 8, paramSpineCount: 2, paramCoreCount: 0, storageLeafCount: 0, storageSpineCount: 0, paramSpeed: '400G', storageSpeed: '200G', paramDownlink: 64, storageDownlink: 20, paramPortsPerServer: 8 },
+      topology: {
+        nodes: [{ id: 'GPU服务器_1', type: 'server', group: 'GPU服务器组1', podid: 'pod-1', uHeight: 8, powerWatts: 1000 }],
+        edges: [],
+      },
+      valid: true,
+      validationIssues: [],
+      estimation: null,
+    })
+    window.electron.room.validateLayout = vi.fn().mockResolvedValue({ valid: true, errors: [] })
+  })
+
+  it('AL-P4：应用到设计把端口数/网络开关/收敛比映射进设计配置', async () => {
+    mockAidcPlan(richPlan)
+    mockAidcProjectLoad()
+    useRoomStore.setState({ matrix: makeRoomMatrix() })
+    render(<AidcPlannerPanel boundProjectName="P" />)
+    fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
+    await screen.findByText(/aidc_64/)
+    fireEvent.click(screen.getByRole('button', { name: /应用到设计/ }))
+    await waitFor(() => {
+      expect(useDesignStore.getState().config.param_switch_ports).toBe(128)
+    })
+    expect(useDesignStore.getState().config.param_downlink_limit).toBe(64)
+    expect(useDesignStore.getState().config.oob_enabled).toBe(true)
+    expect(useDesignStore.getState().config.biz_enabled).toBe(true)
+    expect(useDesignStore.getState().config.param_speed).toBe('400G')
   })
 })

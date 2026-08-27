@@ -19,20 +19,13 @@ import {
 } from 'lucide-react'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
+import { buildPlanDesignPatch } from '@/utils/planToDesign'
 import { macroToInput } from '@/utils/aidcDelivery'
 import {
   ROLE_LABEL, macroNum,
   type PlanConnection, type PlanDevice, type PlanMacro, type PlanSummary, type PlanTerminal,
 } from './aidcTypes'
 
-/** M5: 从设备模型清单推断参数网速率（800G/400G/200G，默认 400G），使设计与规划一致 */
-function inferPlanSpeed(deviceModels: unknown): string {
-  const s = JSON.stringify(deviceModels ?? '').toLowerCase()
-  if (s.includes('800')) return '800G'
-  if (s.includes('400')) return '400G'
-  if (s.includes('200')) return '200G'
-  return '400G'
-}
 
 // ---- 辅助：camelCase 优先读取宏观数值 ----
 const mnum = (p: PlanSummary, camel: string, snake: string, fb: number) =>
@@ -289,14 +282,8 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
     setLoading(true); setError(''); setExportMsg('')
     try {
       const ds = useDesignStore.getState()
-      const patch: Partial<DesignConfig> = {
-        num_servers: Number(plan.macro.gpuCount ?? 64),
-        rail_count: Number(plan.macro.rails ?? 8),
-        param_protocol: 'RoCE',
-        // M5: 参数速率从设备模型推断（800G/400G/200G），使设计与规划一致
-        param_speed: inferPlanSpeed(plan.macro.deviceModels),
-      }
-      ds.updateConfig(patch as DesignConfig)
+      // AL-P4：plan → 设计配置映射（协议/速率/端口数/网络开关/收敛比）；plan 缺字段不覆盖原配置
+      ds.updateConfig(buildPlanDesignPatch(plan) as DesignConfig)
       await ds.generate(boundProjectName)
       // 打磨轮（v1.4 / AL-R2c）：AIDC 机柜 = 矩阵（矩阵权威；无矩阵回退按拓扑生成）
       const topo = useDesignStore.getState().topology
