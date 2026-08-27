@@ -370,3 +370,51 @@ class TestOutputCommands:
                              monkeypatch, capsys, tmp_path / 'audit.jsonl')
         assert rc == 2
         assert '非法' in err
+
+
+# ================================================================
+#  AI-4（M6c 补齐）：模板/项目导入导出 CLI（template export/import、project export/import）
+# ================================================================
+
+class TestImportExportCommands:
+    """AI-4: 模板/项目导入导出 CLI 命令"""
+
+    def test_new_actions_in_domain_map(self):
+        actions = set(list_registered_actions())
+        for a in ('template:export', 'template:import', 'project:export', 'project:import'):
+            assert a in actions
+
+    def test_template_export_cli(self, monkeypatch, capsys, tmp_path):
+        audit = tmp_path / 'audit.jsonl'
+        out_zip = tmp_path / 'tpl.zip'
+        rc, out, _ = run_cli(['template', 'export', '--name', 'DP3Tier-1024',
+                              '--output-path', str(out_zip)],
+                             monkeypatch, capsys, audit)
+        assert rc == 0
+        data = json.loads(out)
+        assert data['success'] is True
+        assert data['zipPath'] == str(out_zip)
+        assert out_zip.exists()
+
+    def test_project_export_cli(self, monkeypatch, capsys, tmp_path):
+        from manage import create_project
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        r = create_project('CLI导出项目')
+        assert r['success'] is True
+        audit = tmp_path / 'audit.jsonl'
+        out_zip = tmp_path / 'proj.zip'
+        rc, out, _ = run_cli(['project', 'export', '--name', 'CLI导出项目',
+                              '--output-path', str(out_zip)],
+                             monkeypatch, capsys, audit)
+        assert rc == 0
+        data = json.loads(out)
+        assert data['success'] is True
+        assert out_zip.exists()
+
+    def test_template_export_missing_template(self, monkeypatch, capsys, tmp_path):
+        """不存在的模板 → success False（命令级仍 0）"""
+        audit = tmp_path / 'audit.jsonl'
+        rc, out, _ = run_cli(['template', 'export', '--name', '__no_such__'],
+                             monkeypatch, capsys, audit)
+        assert rc == 0
+        assert json.loads(out)['success'] is False
