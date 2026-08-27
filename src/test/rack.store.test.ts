@@ -411,35 +411,84 @@ describe('RackStore', () => {
     })
   })
 
-  // ===== 打磨轮（v1.5 / AL-R1d）：批量应用到同类柜 =====
+  // ===== 打磨轮（v1.5 / AL-R1d / PRD AL-R6）：批量应用整柜模板（设备/名称/功率复制 + 冲突明细） =====
 
   describe('applyCabinetTemplate', () => {
-    const gpuCab = (id: number, name: string, device: { startU: number; endU: number }) => ({
-      id, name, totalU: 42, type: 'gpu' as const, power_limit: 6000,
-      devices: [{ id: `gpu-${id}`, name: `GPU服务器_${id}`, type: 'GPU Server', cabinetId: id, ...device, power_watts: 1000 }],
+    const dev = (id: string, name: string, startU: number, endU: number, power = 1000) => ({
+      id, name, type: 'GPU Server', cabinetId: 0, startU, endU, power_watts: power,
+    })
+    const cab = (id: number, name: string, devices: ReturnType<typeof dev>[], type: 'gpu' | 'network' = 'gpu') => ({
+      id, name, totalU: 42, type, power_limit: 6000,
+      devices: devices.map((d) => ({ ...d, cabinetId: id })),
     })
 
-    it('把源柜 U 位布局应用到同类柜（同类型设备对齐）', () => {
+    it('无冲突时整体复制源柜设备（名称/功率/类型）到同类柜', () => {
       useRackStore.setState({
+        topReservedU: 2,
         cabinets: [
-          gpuCab(1, '机柜 A1', { startU: 2, endU: 9 }),
-          gpuCab(2, '机柜 A2', { startU: 20, endU: 27 }),
-          { id: 3, name: '机柜 B1', totalU: 42, type: 'network' as const, power_limit: 6000, devices: [] },
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 2, 9, 5000)]),
+          cab(2, '机柜 A2', [dev('gpu-2', 'GPU服务器_2', 20, 27, 1000)]),
+          cab(3, '机柜 B1', [], 'network'),
         ],
       })
       const r = useRackStore.getState().applyCabinetTemplate(1)
       expect(r.applied).toBe(1)
+      expect(r.skipped).toBe(0)
+      expect(r.conflicts).toEqual([])
       const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
-      expect(target.devices[0].startU).toBe(2)
-      expect(target.devices[0].endU).toBe(9)
+      const copied = target.devices.find((d) => d.name === 'GPU服务器_1')!
+      expect(copied).toBeDefined()
+      expect(copied.power_watts).toBe(5000)
+      expect(copied.type).toBe('GPU Server')
+      expect(copied.startU).toBe(2)
+      expect(copied.endU).toBe(9)
+      expect(copied.cabinetId).toBe(2)
+      // 原有设备保留
+      expect(target.devices.find((d) => d.id === 'gpu-2')).toBeDefined()
       // 网络柜不受影响
       expect(useRackStore.getState().cabinets.find((c) => c.id === 3)!.devices).toHaveLength(0)
     })
 
-    it('目标槽位冲突则跳过', () => {
+    it('无冲突时复制源柜全部设备并同步 totalU/power_limit', () => {
       useRackStore.setState({
+        topReservedU: 2,
         cabinets: [
-          gpuCab(1, '机柜 A1', { startU: 2, endU: 9 }),
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 2, 9), dev('sw-1', '交换机_1', 30, 30, 300)]),
+          { id: 2, name: '机柜 A2', totalU: 42, type: 'gpu' as const, power_limit: 6000, devices: [] },
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(r.applied).toBe(2)
+      expect(r.conflicts).toEqual([])
+      const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
+      expect(target.devices.map((d) => d.name).sort()).toEqual(['GPU服务器_1', '交换机_1'])
+      expect(target.totalU).toBe(42)
+      expect(target.power_limit).toBe(6000)
+    })
+
+    it('U 位被占返回冲突明细且不冲突设备照常复制', () => {
+      useRackStore.setState({
+        topReservedU: 2,
+        cabinets: [
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 2, 9), dev('sw-1', '交换机_1', 30, 30)]),
+          cab(2, '机柜 A2', [dev('gpu-2', 'GPU服务器_2', 3, 10)]),
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(r.applied).toBe(1)
+      expect(r.conflicts).toEqual([
+        { cabinetId: 2, deviceName: 'GPU服务器_1', startU: 2, reason: 'occupied' },
+      ])
+      const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
+      expect(target.devices.find((d) => d.name === '交换机_1')).toBeDefined()
+      expect(target.devices.find((d) => d.name === 'GPU服务器_1')).toBeUndefined()
+    })
+
+    it('目标槽位冲突则跳过（旧行为兼容）', () => {
+      useRackStore.setState({
+        topReservedU: 2,
+        cabinets: [
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 2, 9)]),
           {
             id: 2, name: '机柜 A2', totalU: 42, type: 'gpu' as const, power_limit: 6000,
             devices: [
@@ -452,6 +501,70 @@ describe('RackStore', () => {
       const r = useRackStore.getState().applyCabinetTemplate(1)
       expect(r.applied).toBe(0)
       expect(r.skipped).toBeGreaterThan(0)
+      expect(r.conflicts[0].reason).toBe('occupied')
+    })
+
+    it('柜顶预留区冲突 reason 为 top_reserved', () => {
+      useRackStore.setState({
+        topReservedU: 2,
+        cabinets: [
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 41, 42)]),
+          cab(2, '机柜 A2', []),
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(r.conflicts).toEqual([
+        { cabinetId: 2, deviceName: 'GPU服务器_1', startU: 41, reason: 'top_reserved' },
+      ])
+      expect(r.applied).toBe(0)
+    })
+
+    it('U 位溢出柜高 reason 为 overflow', () => {
+      useRackStore.setState({
+        topReservedU: 2,
+        cabinets: [
+          { id: 1, name: '机柜 A1', totalU: 42, type: 'gpu' as const, power_limit: 6000,
+            devices: [dev('gpu-1', 'GPU服务器_1', 40, 43)] },
+          cab(2, '机柜 A2', []),
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(r.conflicts).toEqual([
+        { cabinetId: 2, deviceName: 'GPU服务器_1', startU: 40, reason: 'overflow' },
+      ])
+      expect(r.applied).toBe(0)
+    })
+
+    it('功率超限冲突 reason 为 power', () => {
+      useRackStore.setState({
+        topReservedU: 2,
+        cabinets: [
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 2, 9, 5000)]),
+          { id: 2, name: '机柜 A2', totalU: 42, type: 'gpu' as const, power_limit: 4000,
+            devices: [dev('gpu-2', 'GPU服务器_2', 20, 27, 1000)] },
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      // 目标柜已有 1000W，源设备 5000W → 1000 + 5000 > 4000 超限
+      expect(r.conflicts).toEqual([
+        { cabinetId: 2, deviceName: 'GPU服务器_1', startU: 2, reason: 'power' },
+      ])
+      expect(r.applied).toBe(0)
+      expect(r.skipped).toBe(1)
+    })
+
+    it('保留旧字段 applied/skipped 兼容', () => {
+      useRackStore.setState({
+        topReservedU: 2,
+        cabinets: [
+          cab(1, '机柜 A1', [dev('gpu-1', 'GPU服务器_1', 2, 9)]),
+          cab(2, '机柜 A2', [dev('gpu-2', 'GPU服务器_2', 3, 10)]),
+        ],
+      })
+      const r = useRackStore.getState().applyCabinetTemplate(1)
+      expect(typeof r.applied).toBe('number')
+      expect(typeof r.skipped).toBe('number')
+      expect(r.skipped).toBe(r.conflicts.length)
     })
   })
 
