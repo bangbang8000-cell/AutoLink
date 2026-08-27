@@ -196,4 +196,21 @@ describe('AidcPlannerPanel 应用到设计（AL-P4/AL-R3）', () => {
     expect(useDesignStore.getState().config.biz_enabled).toBe(true)
     expect(useDesignStore.getState().config.param_speed).toBe('400G')
   })
+
+  it('AL-R3：应用到设计把项目 gpu_per_cabinet 传给矩阵落位', async () => {
+    mockAidcPlan(richPlan)
+    mockAidcProjectLoad()
+    window.electron.project.getFile = vi.fn().mockResolvedValue(
+      JSON.stringify({ rack_config: { gpu_per_cabinet: 2, top_reserved_u: 4, rack_type: 42, power_limit_per_rack: 9000 } }),
+    )
+    const applySpy = vi.fn().mockResolvedValue({ ok: true, errors: [], stats: { gpu: 1, network: 0, storage: 0, compute: 0, mounted: 1, overflow: 0 } })
+    useRoomStore.setState({ matrix: makeRoomMatrix(), applyMatrixRackLayout: applySpy })
+    render(<AidcPlannerPanel boundProjectName="P" />)
+    fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
+    await screen.findByText(/aidc_64/)
+    fireEvent.click(screen.getByRole('button', { name: /应用到设计/ }))
+    await waitFor(() => expect(applySpy).toHaveBeenCalled())
+    const opts = applySpy.mock.calls[0][2]
+    expect(opts).toMatchObject({ gpuPerCabinet: 2, topReservedU: 4, rackType: 42, powerLimit: 9000 })
+  })
 })

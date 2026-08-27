@@ -19,7 +19,8 @@ import {
 } from 'lucide-react'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
-import { buildPlanDesignPatch } from '@/utils/planToDesign'
+import type { RackMatrixLayoutOptions } from '@/utils/rackMatrixLayout'
+import { buildPlanDesignPatch, rackMatrixOptsFromProjectConfig } from '@/utils/planToDesign'
 import { macroToInput } from '@/utils/aidcDelivery'
 import {
   ROLE_LABEL, macroNum,
@@ -288,7 +289,14 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       // 打磨轮（v1.4 / AL-R2c）：AIDC 机柜 = 矩阵（矩阵权威；无矩阵回退按拓扑生成）
       const topo = useDesignStore.getState().topology
       if (topo?.nodes?.length) {
-        const res = await ensureMatrixRacks(boundProjectName, topo.nodes)
+        // AL-R3：矩阵落位按项目 gpu_per_cabinet（及机柜 U/功率/顶部预留）生效；读取失败用默认
+        let rackOpts: RackMatrixLayoutOptions = {}
+        try {
+          rackOpts = rackMatrixOptsFromProjectConfig(
+            (await window.electron.project.getFile(boundProjectName, 'project_config.json')) ?? null,
+          )
+        } catch { /* 读取失败：保持默认落位参数 */ }
+        const res = await ensureMatrixRacks(boundProjectName, topo.nodes, rackOpts)
         setExportMsg(res.usedMatrix
           ? '已应用到设计并生成拓扑（已按机柜矩阵落位，可到「机柜」子视图微调）'
           : '已应用到设计并生成拓扑（未定义机柜矩阵，机柜按拓扑生成）')
