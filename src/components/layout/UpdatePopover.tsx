@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, CheckCircle, AlertTriangle, Loader2, ArrowUpCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { Download, CheckCircle, AlertTriangle, Loader2, RefreshCw, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useToastStore } from '@/stores/toast.store'
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
@@ -121,7 +121,7 @@ export function UpdatePopover() {
         ) : status === 'downloading' ? (
           <Loader2 size={15} className="animate-spin text-gray-400" />
         ) : (
-          <ArrowUpCircle size={15} />
+          <RefreshCw size={15} />
         )}
         {hasUpdate && (
           <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-info-500" />
