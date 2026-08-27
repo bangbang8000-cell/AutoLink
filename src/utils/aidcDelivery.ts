@@ -58,11 +58,21 @@ export async function exportDeliveryZip(projectName: string): Promise<DeliveryEx
     plan_version: plan.meta?.planVersion,
   }
 
-  // 交付包附带拓扑 PNG（失败不阻塞）
+  // 交付包附带拓扑 PNG（失败不阻塞）：设计拓扑优先（topology.json 渲染），缺失/失败回退 plan 渲染
   let pngBase64: string | undefined
   try {
+    const { renderDeliveryTopologyPng, parseProjectTopology } = await import('./deliveryTopologyRenderer')
     const { exportPlanTopologyPng } = await import('./exportPlanTopologyPng')
-    pngBase64 = await exportPlanTopologyPng(plan)
+    const rawTopology = await window.electron.project.getFile(projectName, 'topology.json')
+    const projectTopology = rawTopology ? parseProjectTopology(rawTopology) : null
+    pngBase64 = await renderDeliveryTopologyPng(projectTopology, plan, {
+      // 设计渲染（exportTopologyView 依赖 DOM，惰性加载）；失败时由 renderDeliveryTopologyPng 回退 plan
+      renderDesign: async (pt) => {
+        const { exportTopologyViewPng } = await import('./exportTopologyView')
+        return exportTopologyViewPng(pt.topology?.nodes ?? [], pt.topology?.edges ?? [], pt.layout ?? null)
+      },
+      renderPlan: (p) => exportPlanTopologyPng(p),
+    })
   } catch { /* 拓扑图生成失败不阻塞交付包 */ }
 
   // M5: 设计级交付包——附带 topology.json / rack_layout.json（MC 可还原完整 AL 设计）
