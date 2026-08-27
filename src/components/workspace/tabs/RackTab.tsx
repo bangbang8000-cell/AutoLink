@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useRackStore, CABINET_TYPE_LABELS, DEFAULT_TOP_RESERVED_U, type CabinetType, type RackDevice, type UnplacedDevice } from '@/stores/rack.store'
+import { useRackStore, CABINET_TYPE_LABELS, DEFAULT_TOP_RESERVED_U, type CabinetType, type RackDevice, type UnplacedDevice, type TemplateConflict } from '@/stores/rack.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useToastStore } from '@/stores/toast.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
@@ -37,6 +37,13 @@ const getTypeLabel = (type: string) => {
   return type
 }
 
+const CONFLICT_REASON_LABELS: Record<TemplateConflict['reason'], string> = {
+  occupied: 'U位被占',
+  overflow: 'U位溢出柜高',
+  top_reserved: '柜顶预留区',
+  power: '功率超限',
+}
+
 export function RackTab({ cabinetId }: Props) {
   const { t } = useTranslation()
   // 视图模式（i18n：label 在组件内用 t() 解析，避免模块级常量残留中文）
@@ -64,6 +71,8 @@ export function RackTab({ cabinetId }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('basic')
   // AL-M5b：项目 Modal 确认体系（替代 window.confirm）
   const [confirmState, setConfirmState] = useState<{ message: string; fn: () => void } | null>(null)
+  // PRD AL-R6：整柜模板应用冲突明细（无冲突时置 null 显示成功 toast）
+  const [templateResult, setTemplateResult] = useState<{ applied: number; conflicts: TemplateConflict[] } | null>(null)
 
   // V2.9.2-T4: 上架/移除设备标记 dirty(关闭需确认)
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
@@ -282,11 +291,17 @@ export function RackTab({ cabinetId }: Props) {
               }
               // AL-M5b：window.confirm → 项目 Modal 确认体系
               setConfirmState({
-                message: `将当前柜的 U 位布局/功率上限应用到 ${sameType} 个同类柜？`,
+                message: `将当前柜的 U 位布局/设备/功率上限应用到 ${sameType} 个同类柜？`,
                 fn: () => {
                   const r = applyCabinetTemplate(cabinet.id)
                   markDirty()
-                  addToast('success', `已应用到同类柜：对齐 ${r.applied} 处，跳过 ${r.skipped} 处`, 4000)
+                  if (r.conflicts.length > 0) {
+                    addToast('warning', `整柜模板已应用：复制 ${r.applied} 处，${r.conflicts.length} 处冲突已跳过`, 5000)
+                    setTemplateResult({ applied: r.applied, conflicts: r.conflicts })
+                  } else {
+                    addToast('success', `已应用到同类柜：复制 ${r.applied} 处设备，无冲突`, 4000)
+                    setTemplateResult(null)
+                  }
                 },
               })
             }}
@@ -340,6 +355,30 @@ export function RackTab({ cabinetId }: Props) {
           </div>
         </div>
       </div>
+
+      {/* PRD AL-R6：整柜模板应用冲突明细 */}
+      {templateResult && (
+        <div className="mx-3 mt-2 px-3 py-2 rounded border border-warning-300 dark:border-warning-600 bg-warning-50 dark:bg-warning-900/20 text-warning-700 dark:text-warning-300 text-2xs flex items-start gap-2">
+          <div className="flex-1">
+            <div className="font-medium mb-1">整柜模板应用：成功复制 {templateResult.applied} 处，{templateResult.conflicts.length} 处冲突已跳过</div>
+            {templateResult.conflicts.length > 0 && (
+              <ul className="space-y-0.5">
+                {templateResult.conflicts.map((conf, i) => (
+                  <li key={i} className="flex items-center gap-1.5">
+                    <span className="font-medium">{cabinets.find((c) => c.id === conf.cabinetId)?.name ?? conf.cabinetId}</span>
+                    <span>{conf.deviceName}</span>
+                    <span>{conf.startU}U</span>
+                    <span className="text-warning-600 dark:text-warning-400">[{CONFLICT_REASON_LABELS[conf.reason]}]</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button onClick={() => setTemplateResult(null)} className="p-0.5 rounded hover:bg-warning-100 dark:hover:bg-warning-800 text-warning-500 shrink-0" aria-label="关闭">
+            <X size={12} />
+          </button>
+        </div>
+      )}
 
       {/* Power bar (仅在基础模式显示，避免与其他视图的功率信息重复) */}
       {viewMode === 'basic' && (

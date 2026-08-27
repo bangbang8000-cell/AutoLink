@@ -87,6 +87,21 @@ export interface UnplacedDevice {
   power_watts: number
 }
 
+export type TemplateConflictReason = 'occupied' | 'overflow' | 'top_reserved' | 'power'
+
+export interface TemplateConflict {
+  cabinetId: number
+  deviceName: string
+  startU: number
+  reason: TemplateConflictReason
+}
+
+export interface ApplyCabinetTemplateResult {
+  applied: number
+  skipped: number
+  conflicts: TemplateConflict[]
+}
+
 interface RackState {
   cabinets: RackCabinet[]
   unplacedDevices: UnplacedDevice[]
@@ -101,8 +116,8 @@ interface RackState {
   setRacks: (cabinets: RackCabinet[], unplacedDevices?: UnplacedDevice[], selectedCabinetId?: number | null) => void
   /** 打磨轮（v1.5 / AL-R1b）：柜内智能落位（后端 rack:optimize → 应用 U 位方案） */
   optimizeRacks: (gpuPerCabinet?: number) => Promise<{ stats?: { placed: number; unplaced: number } } | null>
-  /** 打磨轮（v1.5 / AL-R1d）：把源柜的 U 位布局/功率设置批量应用到所有同类柜 */
-  applyCabinetTemplate: (sourceId: number) => { applied: number; skipped: number }
+  /** 打磨轮（v1.5 / AL-R1d / PRD AL-R6）：把源柜（模板柜）的设备对象整体复制到所有同类柜并返回冲突明细 */
+  applyCabinetTemplate: (sourceId: number) => ApplyCabinetTemplateResult
   loadRackLayout: (projectName: string) => Promise<void>
   saveRackLayout: (projectName: string) => Promise<void>
   addCabinet: (totalU?: number, type?: CabinetType, powerLimit?: number) => void
@@ -333,42 +348,46 @@ export const useRackStore = create<RackState>()(
     }
   },
 
-  // 打磨轮（v1.5 / AL-R1d）：批量应用柜模板到同类柜（totalU/power_limit + 同类型设备 U 位对齐）
+  // 打磨轮（v1.5 / AL-R1d / PRD AL-R6）：批量应用整柜设计模板（设备/名称/功率复制 + 冲突明细）
   applyCabinetTemplate: (sourceId) => {
-    const { cabinets } = get()
+    const { cabinets, topReservedU } = get()
     const source = cabinets.find((c) => c.id === sourceId)
-    if (!source) return { applied: 0, skipped: 0 }
+    if (!source) return { applied: 0, skipped: 0, conflicts: [] }
     let applied = 0
-    let skipped = 0
+    const conflicts: TemplateConflict[] = []
     const newCabinets = cabinets.map((c) => {
       if (c.id === sourceId || c.type !== source.type) return c
       const devices = [...c.devices]
       for (const sd of source.devices) {
-        // 已在同 U 位 → 跳过
+        // 冲突判定①：U 位溢出柜高
+        if (sd.startU < 1 || sd.endU > c.totalU) {
+          conflicts.push({ cabinetId: c.id, deviceName: sd.name, startU: sd.startU, reason: 'overflow' })
+          continue
+        }
+        // 冲突判定②：柜顶预留区（顶部预留 U 保护）
+        if (sd.endU > c.totalU - topReservedU) {
+          conflicts.push({ cabinetId: c.id, deviceName: sd.name, startU: sd.startU, reason: 'top_reserved' })
+          continue
+        }
+        // 冲突判定③：U 位被占
         if (devices.some((d) => !(sd.endU < d.startU || sd.startU > d.endU))) {
-          skipped++
+          conflicts.push({ cabinetId: c.id, deviceName: sd.name, startU: sd.startU, reason: 'occupied' })
           continue
         }
-        const targetIdx = devices.findIndex((d) => d.type === sd.type)
-        if (targetIdx < 0) {
-          skipped++
+        // 冲突判定④：功率超限
+        const currentPower = devices.reduce((sum, d) => sum + d.power_watts, 0)
+        if (currentPower + sd.power_watts > c.power_limit) {
+          conflicts.push({ cabinetId: c.id, deviceName: sd.name, startU: sd.startU, reason: 'power' })
           continue
         }
-        const target = devices[targetIdx]
-        const height = target.endU - target.startU + 1
-        const newEnd = sd.startU + height - 1
-        const conflict = devices.some((d, i) => i !== targetIdx && !(newEnd < d.startU || sd.startU > d.endU))
-        if (conflict || newEnd > c.totalU) {
-          skipped++
-          continue
-        }
-        devices[targetIdx] = { ...target, startU: sd.startU, endU: newEnd }
+        // 整柜模板复制：设备对象整体复制（含名称/功率/类型），U 位按源柜布局放置
+        devices.push({ ...sd, cabinetId: c.id })
         applied++
       }
       return { ...c, totalU: source.totalU, power_limit: source.power_limit, devices }
     })
     set({ cabinets: newCabinets })
-    return { applied, skipped }
+    return { applied, skipped: conflicts.length, conflicts }
   },
 
   loadRackLayout: async (projectName) => {
