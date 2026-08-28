@@ -19,6 +19,7 @@ import { useDesignStore } from '@/stores/design.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
+import { exportRoomDesignExcel, buildRoomDesignRackConfig } from '@/utils/exportRoomDesignExcel'
 
 export function RoomDesignTab({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
@@ -77,9 +78,20 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
     addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
   }
 
-  // M7 占位：导出机房设计 Excel（Sheet1 平面图 + Sheet2 机柜类型清单 + Sheet3 汇总）
-  const exportRoomDesign = () => {
-    addToast('info', t('rack:exportRoomDesign', '导出机房设计 Excel（M7 接入）'), 4000)
+  // M7（AL-E1）：导出机房设计 Excel（三 sheet：机房平面图 / 机柜类型清单 / 机房汇总）
+  const exportRoomDesign = async () => {
+    const matrix = useRoomStore.getState().matrix
+    if (!matrix) {
+      addToast('warning', t('rack:needMatrixFirst', '请先定义机柜矩阵（排/列）'), 4000)
+      return
+    }
+    const cabinets = useRackStore.getState().cabinets
+    const filePath = await exportRoomDesignExcel(projectName, matrix, cabinets, buildRoomDesignRackConfig())
+    if (filePath) {
+      addToast('success', `${t('rack:roomDesignExported', '机房设计 Excel 已导出')}: ${filePath}`, 4000)
+    } else {
+      addToast('error', t('rack:exportFailed', '导出失败（Electron 桥接未就绪）'), 4000)
+    }
   }
 
   return (

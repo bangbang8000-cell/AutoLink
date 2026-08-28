@@ -18,6 +18,7 @@ import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
+import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
 
 export function RackDesignTab({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
@@ -116,9 +117,15 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
     addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
   }
 
-  // M7 占位：导出机柜设计 Excel（两 sheet：每机柜设计 + 上机表）
-  const exportRackDesign = () => {
-    addToast('info', t('rack:exportRackDesign', '导出机柜设计 Excel（M7 接入）'), 4000)
+  // M7（AL-E2）：导出机柜设计 Excel（两 sheet：每机柜设计 + 上机表）
+  const exportRackDesign = async () => {
+    const cabinets = useRackStore.getState().cabinets
+    const filePath = await exportRackDesignExcel(projectName, cabinets)
+    if (filePath) {
+      addToast('success', `${t('rack:rackDesignExported', '机柜设计 Excel 已导出')}: ${filePath}`, 4000)
+    } else {
+      addToast('error', t('rack:exportFailed', '导出失败（Electron 桥接未就绪）'), 4000)
+    }
   }
 
   // M7 占位：归档并清空（版本归档到 项目名-版本-时间 目录）
