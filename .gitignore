@@ -48,3 +48,6 @@ design/
 
 # Archived docs (本地保留，不推送)
 docs/_archive/
+
+# Brainstorm 视觉伴侣会话产物（不提交）
+.superpowers/
