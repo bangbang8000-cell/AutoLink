@@ -8,7 +8,6 @@ import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
 import { OutputExplorer } from '@/components/layout/OutputExplorer'
-import { OutputSection } from '@/components/layout/OutputSection'
 import {
   ChevronRight, ChevronDown,
   AlertTriangle,
@@ -251,15 +250,7 @@ function WorkbenchExplorer() {
           </div>
         </div>
 
-        {/* 打磨轮（v1.6 / AL-O2c）：本项目输出——文件列表放中栏，点击在工作区预览 */}
-        {subview === 'results' && (
-          <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
-            <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-app/50 text-2xs font-medium text-gray-500 dark:text-gray-400">
-              本项目输出（点击文件在工作区预览）
-            </div>
-            <OutputSection projects={[{ name: selectedProjectName }]} openTab={openTab} />
-          </div>
-        )}
+        {/* M8（AL-U1）：移除「本项目输出」中栏 OutputSection —— 成果查看经工作台「输出结果」子视图 / 侧栏「输出」活动兜底 */}
 
         {/* Readiness */}
         <div className="border border-gray-200 dark:border-edge-subtle rounded-lg p-2.5 space-y-2">
