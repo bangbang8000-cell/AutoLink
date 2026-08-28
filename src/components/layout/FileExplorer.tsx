@@ -6,7 +6,10 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useRenderStore } from '@/stores/render.store'
+import { useRoomStore } from '@/stores/room.store'
+import { useExplorerStore } from '@/stores/explorer.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
+import { deriveSubviewStatus, type SubviewStatus, type SubviewStatusDeps, type SubviewStatusTone } from '@/utils/subviewStatus'
 import { OutputExplorer } from '@/components/layout/OutputExplorer'
 import {
   ChevronRight, ChevronDown,
@@ -167,31 +170,56 @@ function DesignExplorer() {
 }
 
 // 打磨轮（v1.6 / AL-N1c）：工作台子视图按流程排序——①规划 ②组网设计（含组网设计+机柜设计）③组网渲染 ④校对/输出 ⑤导出
-const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; stage: string; label: string; icon: React.ReactNode }> = [
-  { id: 'aidc', stage: '①规划', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
-  { id: 'design', stage: '②组网设计', label: '组网设计', icon: <Wrench size={13} className="text-warning-500" /> },
+// AL-N2（PRD v3.2）：移除静态 ①-⑤ 徽标，右侧状态标签由 deriveSubviewStatus 按数据就绪度动态推导
+const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; label: string; icon: React.ReactNode }> = [
+  { id: 'aidc', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
+  { id: 'design', label: '组网设计', icon: <Wrench size={13} className="text-warning-500" /> },
   // AL-N1（PRD v3.2）：中栏拆「机房设计」「机柜设计」两个独立入口（替换坏链 rack；均挂组网设计组）
-  { id: 'roomdesign', stage: '②组网设计', label: '机房设计', icon: <Boxes size={13} className="text-primary-500" /> },
-  { id: 'rackdesign', stage: '②组网设计', label: '机柜设计', icon: <Database size={13} className="text-purple-500" /> },
-  { id: 'main', stage: '③组网渲染', label: '组网渲染', icon: <Zap size={13} className="text-gray-400" /> },
-  { id: 'visualization', stage: '④校对', label: '拓扑', icon: <Network size={13} className="text-info-500" /> },
+  { id: 'roomdesign', label: '机房设计', icon: <Boxes size={13} className="text-primary-500" /> },
+  { id: 'rackdesign', label: '机柜设计', icon: <Database size={13} className="text-purple-500" /> },
+  { id: 'main', label: '组网渲染', icon: <Zap size={13} className="text-gray-400" /> },
+  { id: 'visualization', label: '拓扑', icon: <Network size={13} className="text-info-500" /> },
   // 打磨轮（v1.6 / AL-O2c）：本项目输出留在工作台
-  { id: 'results', stage: '④校对', label: '本项目输出', icon: <FileCheck2 size={13} className="text-info-500" /> },
-  { id: 'export', stage: '⑤导出', label: '导出', icon: <Download size={13} className="text-success-500" /> },
+  { id: 'results', label: '本项目输出', icon: <FileCheck2 size={13} className="text-info-500" /> },
+  { id: 'export', label: '导出', icon: <Download size={13} className="text-success-500" /> },
 ]
+
+/** AL-N2：动态状态标签色调（已完成=绿 / 待操作=灰 / 进行中=蓝） */
+const STATUS_TONE_CLASS: Record<SubviewStatusTone, string> = {
+  done: 'text-success-600 dark:text-success-400',
+  pending: 'text-gray-400 dark:text-gray-500',
+  active: 'text-info-500',
+}
 
 function WorkbenchExplorer() {
   const { t } = useTranslation()
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const summary = useDesignStore((s) => s.summary)
   const valid = useDesignStore((s) => s.valid)
+  const generating = useDesignStore((s) => s.generating)
   const cabinets = useRackStore((s) => s.cabinets)
   const unplacedDevices = useRackStore((s) => s.unplacedDevices)
   const selectedOutputTypes = useRenderStore((s) => s.selectedOutputTypes)
+  const renderStatus = useRenderStore((s) => s.progress.status)
+  const roomMatrix = useRoomStore((s) => s.matrix)
+  const outputBatches = useExplorerStore((s) => s.outputBatches)
   const toggleOutputType = useRenderStore((s) => s.toggleOutputType)
   const openTab = useWorkspaceStore((s) => s.openTab)
   const subview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
+
+  // AL-N2：输出批次非空 → results/export「已完成」（复用 explorer.store 缓存，缺失时懒加载）
+  useEffect(() => {
+    if (!selectedProjectName) return
+    const cached = useExplorerStore.getState().outputBatches[selectedProjectName]
+    if (cached) return
+    const fetcher = window.electron?.project?.listOutputBatches
+    if (fetcher) {
+      fetcher(selectedProjectName)
+        .then((batches) => useExplorerStore.getState().setOutputBatches(selectedProjectName, batches))
+        .catch(() => {})
+    }
+  }, [selectedProjectName])
 
   const handleOpenFullWorkbench = () => {
     openTab({ type: 'workbench', title: t('common:explorer.workbench.title'), closable: false })
@@ -209,6 +237,29 @@ function WorkbenchExplorer() {
   const totalDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0) + unplacedDevices.length
   const placedDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0)
   const rackReady = totalDevices > 0 && placedDevices === totalDevices
+  const rackHasCabinets = cabinets.length > 0
+  const roomMatrixFinalized = roomMatrix?.finalized === true
+  const hasOutputBatches = (outputBatches[selectedProjectName] ?? []).length > 0
+
+  // AL-N2：每行动态状态——active 子视图 / 读取中优先「进行中」；否则按数据就绪度「已完成 / 待操作」
+  const subviewStatuses = useMemo(() => {
+    const deps: SubviewStatusDeps = {
+      designValid: valid,
+      rackReady,
+      rackHasCabinets,
+      roomMatrixFinalized,
+      hasOutputBatches,
+      hasSelectedOutputTypes: selectedOutputTypes.length > 0,
+      activeSubview: subview,
+    }
+    const reading = (id: WorkbenchSubview): boolean =>
+      (id === 'design' && generating) || (id === 'main' && renderStatus === 'rendering')
+    const map = {} as Record<WorkbenchSubview, SubviewStatus>
+    for (const s of WORKBENCH_SUBVIEWS) {
+      map[s.id] = deriveSubviewStatus(s.id, { ...deps, reading: reading(s.id) })
+    }
+    return map
+  }, [valid, rackReady, rackHasCabinets, roomMatrixFinalized, hasOutputBatches, selectedOutputTypes.length, subview, generating, renderStatus])
 
   return (
     <div className="h-full flex flex-col">
@@ -237,7 +288,9 @@ function WorkbenchExplorer() {
                 {s.icon}
                 <span className="truncate">{s.label}</span>
                 <span className={clsx('ml-auto text-2xs shrink-0',
-                  subview === s.id ? 'text-white/70' : 'text-gray-400 dark:text-gray-500')}>{s.stage}</span>
+                  subview === s.id ? 'text-white/80' : STATUS_TONE_CLASS[subviewStatuses[s.id].tone])}>
+                  {subviewStatuses[s.id].label}
+                </span>
               </button>
             ))}
           </div>
