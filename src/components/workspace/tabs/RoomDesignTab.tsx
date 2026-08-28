@@ -7,8 +7,8 @@
  *   - rack.store.ts：cabinets / saveRackLayout
  *   - design.store.ts：config.num_servers（自动布点用）/ topology（按矩阵落位用）
  *
- * 工具栏：定稿/撤销定稿、矩阵摘要、自动布点默认配比、按矩阵自动落位、保存、
- *         导出机房设计 Excel（占位按钮，M7 接入真实三 sheet 导出）
+ * 工具栏：定稿/撤销定稿、矩阵摘要、自动布点默认配比、按矩阵自动落位、保存
+ *          （M4/AL-N3：导出机房设计 Excel 按钮已移除，统一到「本项目输出」导出）
  */
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +19,6 @@ import { useDesignStore } from '@/stores/design.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
-import { exportRoomDesignExcel, buildRoomDesignRackConfig } from '@/utils/exportRoomDesignExcel'
 
 export function RoomDesignTab({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
@@ -78,22 +77,6 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
     addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
   }
 
-  // M7（AL-E1）：导出机房设计 Excel（三 sheet：机房平面图 / 机柜类型清单 / 机房汇总）
-  const exportRoomDesign = async () => {
-    const matrix = useRoomStore.getState().matrix
-    if (!matrix) {
-      addToast('warning', t('rack:needMatrixFirst', '请先定义机柜矩阵（排/列）'), 4000)
-      return
-    }
-    const cabinets = useRackStore.getState().cabinets
-    const filePath = await exportRoomDesignExcel(projectName, matrix, cabinets, buildRoomDesignRackConfig())
-    if (filePath) {
-      addToast('success', `${t('rack:roomDesignExported', '机房设计 Excel 已导出')}: ${filePath}`, 4000)
-    } else {
-      addToast('error', t('rack:exportFailed', '导出失败（Electron 桥接未就绪）'), 4000)
-    }
-  }
-
   return (
     <div className="h-full flex flex-col gap-3">
       {/* 工具栏 */}
@@ -130,11 +113,6 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
             <button type="button" onClick={applyMatrix}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
               <Download size={11} /> {t('rack:applyMatrix')}
-            </button>
-            {/* M7：导出机房设计 Excel（占位） */}
-            <button type="button" onClick={exportRoomDesign}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
-              <Download size={11} /> {t('rack:exportRoomDesign', '导出机房设计 Excel')}
             </button>
             <button type="button" onClick={saveAll}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-green-600 hover:bg-green-700 text-white">

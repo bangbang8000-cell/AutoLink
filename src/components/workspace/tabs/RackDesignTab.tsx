@@ -7,8 +7,8 @@
  *   - rack.store.ts：optimizeRacks / clearCabinets / saveRackLayout
  *
  * 定稿门槛（AL-D3a）：未定稿（含无矩阵）→ 显示引导「请先完成机房设计并定稿」，不进入机柜设计；
- * 工具栏：撤销定稿、柜内智能落位、清空柜内设计、保存、
- *         导出机柜设计 Excel / 归档（占位按钮，M7 接入真实导出与归档）。
+ * 工具栏：撤销定稿、归档（占位，M7 接入）、柜内智能落位、清空柜内设计、保存
+ *         （M4/AL-N3：导出机柜设计 Excel 按钮已移除，统一到「本项目输出」导出）。
  */
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +18,6 @@ import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
-import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
 
 export function RackDesignTab({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
@@ -117,17 +116,6 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
     addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
   }
 
-  // M7（AL-E2）：导出机柜设计 Excel（两 sheet：每机柜设计 + 上机表）
-  const exportRackDesign = async () => {
-    const cabinets = useRackStore.getState().cabinets
-    const filePath = await exportRackDesignExcel(projectName, cabinets)
-    if (filePath) {
-      addToast('success', `${t('rack:rackDesignExported', '机柜设计 Excel 已导出')}: ${filePath}`, 4000)
-    } else {
-      addToast('error', t('rack:exportFailed', '导出失败（Electron 桥接未就绪）'), 4000)
-    }
-  }
-
   // M7 占位：归档并清空（版本归档到 项目名-版本-时间 目录）
   const archiveAndClear = () => {
     addToast('info', t('rack:archiveAndClear', '归档并清空（M7 接入）'), 4000)
@@ -155,11 +143,6 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
         }}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
           <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
-        </button>
-        {/* M7：导出机柜设计 Excel（占位） */}
-        <button type="button" onClick={exportRackDesign}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
-          <Download size={11} /> {t('rack:exportRackDesign', '导出机柜设计 Excel')}
         </button>
         {/* M7：归档并清空（占位） */}
         <button type="button" onClick={archiveAndClear}
