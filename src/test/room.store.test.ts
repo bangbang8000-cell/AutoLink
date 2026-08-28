@@ -36,6 +36,7 @@ describe('RoomStore', () => {
       matrix: null,
       markTool: 'select',
       selectedPosition: null,
+      multiSelected: [],
     })
     useToastStore.setState({ toasts: [] })
     vi.clearAllMocks()
@@ -706,6 +707,142 @@ describe('RoomStore', () => {
       const res = await useRoomStore.getState().applyMatrixRackLayout('P', nodes())
       expect(res.ok).toBe(true)
       expect(useRackStore.getState().cabinets.length).toBeGreaterThan(0)
+    })
+  })
+
+  // ===== M4（AL-ED1/ED2/ED3）：机房编辑能力 store action =====
+
+  describe('多选态（toggleMultiSelect / setMultiSelect / clearMultiSelect）', () => {
+    beforeEach(() => {
+      useRoomStore.setState({ matrix: makeMatrix(), multiSelected: [] })
+    })
+
+    it('toggle 选择/取消位置', () => {
+      useRoomStore.getState().toggleMultiSelect('A1')
+      expect(useRoomStore.getState().multiSelected).toEqual(['A1'])
+      useRoomStore.getState().toggleMultiSelect('A1')
+      expect(useRoomStore.getState().multiSelected).toEqual([])
+    })
+
+    it('setMultiSelect 覆盖 / clearMultiSelect 清空', () => {
+      useRoomStore.getState().setMultiSelect(['A1', 'B2'])
+      expect(useRoomStore.getState().multiSelected).toEqual(['A1', 'B2'])
+      useRoomStore.getState().clearMultiSelect()
+      expect(useRoomStore.getState().multiSelected).toEqual([])
+    })
+  })
+
+  describe('selectSameType（M4/AL-ED2 全选同类）', () => {
+    beforeEach(() => {
+      useRackStore.setState({
+        cabinets: [
+          makeCabinet(),
+          makeCabinet({ id: 2, name: '机柜 2' }),
+          makeCabinet({ id: 3, name: '机柜 3', type: 'network' }),
+        ],
+      })
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1 // A1 → 柜1(gpu)
+      m.cells[1].cabinetId = 2 // A2 → 柜2(gpu)
+      m.cells[2].cabinetId = 3 // A3 → 柜3(network)
+      useRoomStore.setState({ matrix: m, multiSelected: [] })
+    })
+
+    it('以格子对应机柜类型全选同类柜位置', () => {
+      useRoomStore.getState().selectSameType('A1')
+      const sel = useRoomStore.getState().multiSelected
+      expect(sel).toContain('A1')
+      expect(sel).toContain('A2')
+      expect(sel).not.toContain('A3')
+    })
+
+    it('无对应机柜时按格子类型匹配', () => {
+      const m = useRoomStore.getState().matrix!
+      m.cells[0].cabinetId = null // A1 移除机柜（避免混入柜类型）
+      m.cells[1].cabinetId = null // A2 移除机柜
+      m.cells[3].type = 'gpu' // B1 类型标记 gpu（无柜）
+      m.cells[4].type = 'gpu' // B2 类型标记 gpu
+      useRoomStore.setState({ matrix: m })
+      useRoomStore.getState().selectSameType('B1')
+      expect(useRoomStore.getState().multiSelected).toEqual(['B1', 'B2'])
+    })
+  })
+
+  describe('updateCellsBulk（M4/AL-ED3 框选批量改格子）', () => {
+    it('批量改类型', () => {
+      useRoomStore.setState({ matrix: makeMatrix() })
+      const r = useRoomStore.getState().updateCellsBulk(['A1', 'B1'], { type: 'gpu' })
+      expect(r.applied).toBe(2)
+      const cells = useRoomStore.getState().matrix!.cells
+      expect(cells[0].type).toBe('gpu')
+      expect(cells[3].type).toBe('gpu')
+    })
+
+    it('带机柜的格子改类型 → 联动更新机柜类型', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      m.cells[0].type = 'gpu'
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'gpu' })] })
+      useRoomStore.getState().updateCellsBulk(['A1'], { type: 'storage' })
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('storage')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.type).toBe('storage')
+    })
+
+    it('域外格子类型（combined/empty）不联动机柜', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      m.cells[0].type = 'gpu'
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'gpu' })] })
+      useRoomStore.getState().updateCellsBulk(['A1'], { type: 'empty' })
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('empty')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.type).toBe('gpu')
+    })
+
+    it('设置占位时清除已挂载机柜', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1 })] })
+      useRoomStore.getState().updateCellsBulk(['A1'], { placeholder: 'ac' })
+      const cell = useRoomStore.getState().matrix!.cells[0]
+      expect(cell.placeholder).toBe('ac')
+      expect(cell.cabinetId).toBeNull()
+    })
+
+    it('未知位置被忽略', () => {
+      useRoomStore.setState({ matrix: makeMatrix() })
+      const r = useRoomStore.getState().updateCellsBulk(['Z99'], { type: 'gpu' })
+      expect(r.applied).toBe(0)
+      expect(useRoomStore.getState().matrix!.cells.every((c) => c.type === 'empty')).toBe(true)
+    })
+  })
+
+  describe('clearCellsBulk / deleteCellsBulk（M4/AL-ED3 清空/删除）', () => {
+    it('clearCellsBulk 清空标记/占位/机柜（机柜保留未上架）', () => {
+      const m = makeMatrix()
+      m.cells[0] = { ...m.cells[0], type: 'gpu', placeholder: 'ac', cabinetId: 1 }
+      m.cells[1] = { ...m.cells[1], type: 'network', cabinetId: 2 }
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1 }), makeCabinet({ id: 2, name: '机柜 2' })] })
+      const r = useRoomStore.getState().clearCellsBulk(['A1', 'A2'])
+      expect(r.applied).toBe(2)
+      const cells = useRoomStore.getState().matrix!.cells
+      expect(cells[0]).toMatchObject({ type: 'empty', placeholder: null, cabinetId: null })
+      expect(cells[1].cabinetId).toBeNull()
+      expect(useRackStore.getState().cabinets.map((c) => c.id)).toEqual([1, 2])
+    })
+
+    it('deleteCellsBulk 清空并删除机柜', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1 })] })
+      const r = useRoomStore.getState().deleteCellsBulk(['A1'])
+      expect(r.applied).toBe(1)
+      expect(useRoomStore.getState().matrix!.cells[0].cabinetId).toBeNull()
+      expect(useRackStore.getState().cabinets).toHaveLength(0)
     })
   })
 })
