@@ -1662,7 +1662,7 @@ def handle_export(params):
     # v1.5：版本号 + 时间戳批次目录（配置变化才递增版本）
     config_hash = _config_hash(config_file)
     version = _next_version(output_dir, config_hash)
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S%f")
     batch_name = f"v{version}_{ts}"
     batch_dir = os.path.join(output_dir, batch_name)
     os.makedirs(batch_dir, exist_ok=True)
