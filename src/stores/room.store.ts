@@ -77,7 +77,7 @@ export interface RoomOptimizeParams {
 }
 
 /** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值；v1.4 加 power 电源柜） */
-const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
+export const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
 
 /** M4（AL-ED3）：rack.store 机柜类型有效集（格子改类型 → 仅此域内联动机柜 type；combined/empty 不写回） */
 const CABINET_TYPE_SET = new Set(['gpu', 'network', 'storage', 'compute', 'security', 'custom', 'scaleup', 'power'])
@@ -155,7 +155,7 @@ interface RoomState {
   /** 打磨轮（v1.4）：默认列配比自动布点——每列 1 电源 + 空调占位 + GPU(1柜1台) + 网络 */
   composeDefaults: (opts?: { gpuCount?: number; networkCount?: number }) => void
   /** 打磨轮（v1.4 / AL-R2b）：机柜类型微调 → 回写矩阵格子类型（仅 ROOM_MARK_TYPES 内；combined 不改） */
-  syncCabinetToCell: (cabinetId: number) => void
+  syncCabinetToCell: (cabinetId: number, recordHistory?: boolean) => void
   /** 打磨轮（v1.4 / AL-R2c）：按矩阵格子构建机柜并落位、持久化（rack_layout.json + room_layout.json） */
   applyMatrixRackLayout: (
     projectName: string,
@@ -170,6 +170,43 @@ interface RoomState {
   optimizeCounts: (counts: Record<string, number>) => Promise<RoomOptimizeResult | null>
   applyOptimize: (result: RoomOptimizeResult) => { ok: boolean; errors: string[] }
   reset: () => void
+
+  // ===== M2（AL-UR1/UR2）：矩阵编辑撤销/重做命令栈 =====
+  /** 编辑快照栈（编辑前矩阵状态，undo 弹出恢复；栈深上限 ROOM_UNDO_LIMIT） */
+  undoStack: RoomHistorySnapshot[]
+  /** 重做快照栈（undo 压入当前态，redo 弹出恢复；新编辑清空） */
+  redoStack: RoomHistorySnapshot[]
+  canUndo: boolean
+  canRedo: boolean
+  /** 显式压入一次编辑快照（跨 store 批量操作前调用，使一次操作仅产生一条历史） */
+  pushHistory: () => void
+  undo: () => void
+  redo: () => void
+}
+
+/** M2（AL-UR1）：矩阵编辑撤销/重做栈深度上限 */
+export const ROOM_UNDO_LIMIT = 50
+
+/** M2（AL-UR1）：room.store 编辑快照（编辑前矩阵 + 选中位，撤销/重做恢复用） */
+export interface RoomHistorySnapshot {
+  matrix: RoomMatrixData | null
+  selectedPosition: string | null
+  multiSelected: string[]
+}
+
+/** M2（AL-UR1）：深拷贝当前 room 状态为编辑快照 */
+function cloneRoomHistory(state: RoomState): RoomHistorySnapshot {
+  return {
+    matrix: state.matrix ? structuredClone(state.matrix) : null,
+    selectedPosition: state.selectedPosition,
+    multiSelected: [...state.multiSelected],
+  }
+}
+
+/** M2（AL-UR1）：编辑前压入快照 → 返回命令栈更新（新编辑清空 redo，栈深封顶） */
+function pushRoomHistory(state: RoomState): Pick<RoomState, 'undoStack' | 'redoStack' | 'canUndo' | 'canRedo'> {
+  const undoStack = [...state.undoStack, cloneRoomHistory(state)].slice(-ROOM_UNDO_LIMIT)
+  return { undoStack, redoStack: [], canUndo: true, canRedo: false }
 }
 
 /** T3-3 落位即时校验：占位阻止 / 机柜类型域 / U 位溢出 / 功率超限 / 功率密度散热警告 */
@@ -223,6 +260,11 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   markTool: 'select',
   selectedPosition: null,
   multiSelected: [],
+  // M2（AL-UR1）：矩阵编辑撤销/重做命令栈（仅内存会话）
+  undoStack: [],
+  redoStack: [],
+  canUndo: false,
+  canRedo: false,
 
   loadMatrix: async (projectName) => {
     try {
@@ -295,7 +337,41 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   setFinalized: (finalized) => {
     const { matrix } = get()
     if (!matrix) return
+    // M2（AL-UR1）：定稿/撤销定稿为流程状态，不压撤销栈
     set({ matrix: { ...matrix, finalized } })
+  },
+
+  // ===== M2（AL-UR1/UR2）：矩阵编辑撤销/重做命令栈 =====
+  pushHistory: () => set((s) => pushRoomHistory(s)),
+
+  undo: () => {
+    const s = get()
+    if (s.undoStack.length === 0) return
+    const prev = s.undoStack[s.undoStack.length - 1]
+    const undoStack = s.undoStack.slice(0, -1)
+    const redoStack = [...s.redoStack, cloneRoomHistory(s)].slice(-ROOM_UNDO_LIMIT)
+    set({
+      ...prev,
+      undoStack,
+      redoStack,
+      canUndo: undoStack.length > 0,
+      canRedo: true,
+    })
+  },
+
+  redo: () => {
+    const s = get()
+    if (s.redoStack.length === 0) return
+    const next = s.redoStack[s.redoStack.length - 1]
+    const redoStack = s.redoStack.slice(0, -1)
+    const undoStack = [...s.undoStack, cloneRoomHistory(s)].slice(-ROOM_UNDO_LIMIT)
+    set({
+      ...next,
+      undoStack,
+      redoStack,
+      canUndo: true,
+      canRedo: redoStack.length > 0,
+    })
   },
 
   setMarkTool: (tool) => set({ markTool: tool }),
@@ -306,7 +382,10 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     const cell = matrix.cells.find((c) => `${c.row}${c.col}` === position)
     if (!cell) return
     const updates = targetFor(markTool, cell)
-    set({
+    // M2（AL-UR1）：select 工具无实际修改 → 仅选中位更新，不压栈
+    const hasChange = Object.keys(updates).length > 0
+    set((s) => ({
+      ...(hasChange ? pushRoomHistory(s) : {}),
       matrix: {
         ...matrix,
         cells: matrix.cells.map((c) =>
@@ -314,7 +393,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
         ),
       },
       selectedPosition: position,
-    })
+    }))
   },
 
   selectPosition: (position) => set({ selectedPosition: position }),
@@ -371,12 +450,23 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       }
       return { ...cell, ...patch }
     })
-    set({ matrix: { ...matrix, cells } })
+    set((s) => ({
+      ...(applied > 0 ? pushRoomHistory(s) : {}),
+      matrix: { ...matrix, cells },
+    }))
     // 联动：格子类型变更 → 同步已上架机柜类型（仅机柜类型域内；combined/empty 不写回）
+    // M2（AL-UR1）：批量机柜类型联动只压一次 rack 快照（撤销后矩阵↔柜内一致）
     if (patch.type != null && CABINET_TYPE_SET.has(patch.type)) {
+      const affectedIds: number[] = []
       for (const cell of cells) {
         if (cell.cabinetId != null && posSet.has(`${cell.row}${cell.col}`)) {
-          useRackStore.getState().updateCabinet(cell.cabinetId, { type: patch.type as RackCabinet['type'] })
+          affectedIds.push(cell.cabinetId)
+        }
+      }
+      if (affectedIds.length > 0) {
+        useRackStore.getState().pushHistory()
+        for (const id of affectedIds) {
+          useRackStore.getState().updateCabinet(id, { type: patch.type as RackCabinet['type'] }, false)
         }
       }
     }
@@ -394,11 +484,12 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       applied++
       return { ...c, type: 'empty', placeholder: null, cabinetId: null }
     })
-    set({
+    set((s) => ({
+      ...(applied > 0 ? pushRoomHistory(s) : {}),
       matrix: { ...matrix, cells },
       // M6（AL-ED8）：清空后无残留——若选中的格被清空则取消选中
       selectedPosition: selectedPosition && posSet.has(selectedPosition) ? null : selectedPosition,
-    })
+    }))
     return { applied }
   },
 
@@ -415,12 +506,18 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       if (c.cabinetId != null) cabinetIds.push(c.cabinetId)
       return { ...c, type: 'empty', placeholder: null, cabinetId: null }
     })
-    cabinetIds.forEach((id) => useRackStore.getState().removeCabinet(id))
-    set({
+    set((s) => ({
+      ...(applied > 0 ? pushRoomHistory(s) : {}),
       matrix: { ...matrix, cells },
       // M6（AL-ED8）：删除后无残留——若选中的格被删除则取消选中
       selectedPosition: selectedPosition && posSet.has(selectedPosition) ? null : selectedPosition,
-    })
+    }))
+    // M2（AL-UR1）：删除机柜为批量跨 store 操作——只压一次 rack 快照再逐个删除，
+    // 撤销（room.undo + rack.undo）后矩阵↔柜内同时恢复（AL-UR2）
+    if (cabinetIds.length > 0) {
+      useRackStore.getState().pushHistory()
+      cabinetIds.forEach((id) => useRackStore.getState().removeCabinet(id, false))
+    }
     return { applied }
   },
 
@@ -463,11 +560,12 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       for (let n = 0; n < gpuPerCol && idx < pool.length; n++, idx++) mark(pool[idx], 'gpu')
     }
 
-    set({ matrix: { ...matrix, cells } })
+    // M2（AL-UR1）：自动布点为批量矩阵编辑 → 可撤销
+    set((s) => ({ ...pushRoomHistory(s), matrix: { ...matrix, cells } }))
   },
 
   // 打磨轮（v1.4 / AL-R2b）：RackTab 改柜类型 → 回写矩阵格子类型（等值守卫防死循环）
-  syncCabinetToCell: (cabinetId) => {
+  syncCabinetToCell: (cabinetId, recordHistory = true) => {
     const { matrix } = get()
     if (!matrix) return
     const cabinet = useRackStore.getState().cabinets.find((c) => c.id === cabinetId)
@@ -475,12 +573,14 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     if (!ROOM_MARK_TYPES.has(cabinet.type)) return // 域外类型（security/custom/scaleup）不可标记，不写回
     const cell = matrix.cells.find((c) => c.cabinetId === cabinetId)
     if (!cell || cell.type === 'combined' || cell.type === cabinet.type) return
-    set({
+    // M2（AL-UR1）：实际回写时压一次 room 快照（撤销后矩阵↔柜内一致）；recordHistory=false 由批量调用方统一压栈
+    set((s) => ({
+      ...(recordHistory ? pushRoomHistory(s) : {}),
       matrix: {
         ...matrix,
         cells: matrix.cells.map((c) => (c.cabinetId === cabinetId ? { ...c, type: cabinet.type } : c)),
       },
-    })
+    }))
   },
 
   // 打磨轮（v1.4 / AL-R2c）：AIDC 机柜 = 矩阵——按矩阵格子构建机柜并落位、持久化
@@ -501,7 +601,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     }
     const { cabinets, unplacedDevices, cells, stats } = layoutRacksFromMatrix(matrix, nodes, opts)
     useRackStore.getState().setRacks(cabinets, unplacedDevices, cabinets.length ? cabinets[0].id : null)
-    set({ matrix: { ...matrix, cells }, selectedPosition: null })
+    // M2（AL-UR1）：按矩阵落位为跨 store 批量操作——room/rack 各压一次快照（撤销后矩阵↔柜内一致）
+    set((s) => ({ ...pushRoomHistory(s), matrix: { ...matrix, cells }, selectedPosition: null }))
     await useRackStore.getState().saveRackLayout(projectName)
     await get().saveMatrix(projectName)
     useToastStore.getState().addToast(
@@ -530,7 +631,13 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       useToastStore.getState().addToast('error', msg, 5000)
       return { ok: false, errors: [msg], warnings: [] }
     }
-    set({
+    // M2（AL-UR1）：机柜已在该格（无移动）→ no-op，仅选中，不压栈
+    if (cell.cabinetId === cabinetId) {
+      set({ selectedPosition: position })
+      return check
+    }
+    set((s) => ({
+      ...pushRoomHistory(s),
       matrix: {
         ...matrix,
         cells: matrix.cells.map((c) => {
@@ -542,7 +649,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
         }),
       },
       selectedPosition: position,
-    })
+    }))
     if (check.warnings.length > 0) {
       check.warnings.forEach((m) => useToastStore.getState().addToast('warning', m, 5000))
     }
@@ -555,7 +662,9 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     const cell = matrix.cells.find((c) => `${c.row}${c.col}` === position)
     if (!cell) return { ok: false, errors: [`矩阵位置不存在: ${position}`], warnings: [] }
     if (cell.cabinetId == null) return { ok: true, errors: [], warnings: [] }
-    set({
+    // M2（AL-UR1）：卸载为矩阵编辑 → 可撤销
+    set((s) => ({
+      ...pushRoomHistory(s),
       matrix: {
         ...matrix,
         cells: matrix.cells.map((c) =>
@@ -563,7 +672,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
         ),
       },
       selectedPosition: position,
-    })
+    }))
     return { ok: true, errors: [], warnings: [] }
   },
 
@@ -668,7 +777,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       }
       return next
     })
-    set({ matrix: { ...matrix, cells }, selectedPosition: null })
+    // M2（AL-UR1）：智能落位应用为批量矩阵编辑 → 可撤销
+    set((s) => ({ ...pushRoomHistory(s), matrix: { ...matrix, cells }, selectedPosition: null }))
     return { ok: errors.length === 0, errors }
   },
 
