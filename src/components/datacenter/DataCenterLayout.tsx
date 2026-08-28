@@ -172,23 +172,12 @@ function CabinetEditModal({ cabinetId, onClose }: { cabinetId: number | null; on
   const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
   const addToast = useToastStore((s) => s.addToast)
   const cabinet = cabinets.find((c) => c.id === cabinetId)
-  const [name, setName] = useState('')
-  const [type, setType] = useState<CabinetType>('gpu')
-  const [totalU, setTotalU] = useState(42)
-  const [powerLimit, setPowerLimit] = useState(6000)
+  const [name, setName] = useState(cabinet?.name ?? '')
+  const [type, setType] = useState<CabinetType>(cabinet?.type ?? 'gpu')
+  const [totalU, setTotalU] = useState(cabinet?.totalU ?? 42)
+  const [powerLimit, setPowerLimit] = useState(cabinet?.power_limit ?? 6000)
   const [topReserved, setTopReserved] = useState(topReservedU)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (cabinet) {
-      setName(cabinet.name)
-      setType(cabinet.type)
-      setTotalU(cabinet.totalU)
-      setPowerLimit(cabinet.power_limit)
-    }
-    setTopReserved(topReservedU)
-    setError('')
-  }, [cabinetId, topReservedU]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
     if (!cabinet) return
@@ -271,14 +260,8 @@ function CellEditModal({ position, onClose }: { position: string | null; onClose
   const updateCellsBulk = useRoomStore((s) => s.updateCellsBulk)
   const addToast = useToastStore((s) => s.addToast)
   const cell = position ? matrix?.cells.find((c) => `${c.row}${c.col}` === position) : undefined
-  const [type, setType] = useState('empty')
-  const [placeholder, setPlaceholder] = useState('')
-  useEffect(() => {
-    if (cell) {
-      setType(cell.type)
-      setPlaceholder(cell.placeholder ?? '')
-    }
-  }, [position, cell])
+  const [type, setType] = useState(cell?.type ?? 'empty')
+  const [placeholder, setPlaceholder] = useState(cell?.placeholder ?? '')
   const save = () => {
     if (!position) return
     updateCellsBulk([position], { type, placeholder: placeholder || null })
@@ -358,20 +341,6 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
   const [placeholder, setPlaceholder] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState('')
-
-  // 每次打开重置表单（'' = 不改该字段）
-  useEffect(() => {
-    if (open) {
-      setType('')
-      setTotalU('')
-      setPowerLimit('')
-      setCellType('')
-      setPlaceholder('')
-      setConfirmDelete(false)
-      setError('')
-    }
-    setTopReserved(topReservedU)
-  }, [open, topReservedU])
 
   const close = () => {
     setConfirmDelete(false)
@@ -1058,14 +1027,17 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
         onClose={() => setInfoTarget(null)}
       />
       <CabinetEditModal
+        key={editCabinetId ?? 'none'}
         cabinetId={editCabinetId}
         onClose={() => setEditCabinetId(null)}
       />
       <CellEditModal
+        key={editCellPos ?? 'none'}
         position={editCellPos}
         onClose={() => setEditCellPos(null)}
       />
       <BulkEditModal
+        key={bulkMode ?? 'none'}
         open={bulkMode != null}
         mode={bulkMode ?? 'cells'}
         onClose={() => setBulkMode(null)}
