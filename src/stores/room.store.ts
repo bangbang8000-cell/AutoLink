@@ -385,7 +385,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
 
   // M4（AL-ED3）：批量清空格子（机柜对象保留，回未上架池）
   clearCellsBulk: (positions) => {
-    const { matrix } = get()
+    const { matrix, selectedPosition } = get()
     if (!matrix) return { applied: 0 }
     const posSet = new Set(positions)
     let applied = 0
@@ -394,13 +394,17 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       applied++
       return { ...c, type: 'empty', placeholder: null, cabinetId: null }
     })
-    set({ matrix: { ...matrix, cells } })
+    set({
+      matrix: { ...matrix, cells },
+      // M6（AL-ED8）：清空后无残留——若选中的格被清空则取消选中
+      selectedPosition: selectedPosition && posSet.has(selectedPosition) ? null : selectedPosition,
+    })
     return { applied }
   },
 
   // M4（AL-ED3）：批量清空格子并删除对应机柜
   deleteCellsBulk: (positions) => {
-    const { matrix } = get()
+    const { matrix, selectedPosition } = get()
     if (!matrix) return { applied: 0 }
     const posSet = new Set(positions)
     let applied = 0
@@ -412,7 +416,11 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       return { ...c, type: 'empty', placeholder: null, cabinetId: null }
     })
     cabinetIds.forEach((id) => useRackStore.getState().removeCabinet(id))
-    set({ matrix: { ...matrix, cells } })
+    set({
+      matrix: { ...matrix, cells },
+      // M6（AL-ED8）：删除后无残留——若选中的格被删除则取消选中
+      selectedPosition: selectedPosition && posSet.has(selectedPosition) ? null : selectedPosition,
+    })
     return { applied }
   },
 

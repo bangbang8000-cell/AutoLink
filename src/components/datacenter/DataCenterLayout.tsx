@@ -12,7 +12,7 @@ import {
   Eye, Pencil, Info, Trash2, Eraser, Copy, Grid3x3, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
 import { useDataCenterStore, getPowerColor } from '@/stores/datacenter.store'
-import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS, validateCabinetPatch, type CabinetType } from '@/stores/rack.store'
+import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS, type CabinetType, type BulkUpdateIssue } from '@/stores/rack.store'
 import { useRoomStore, ROOM_TOOL_LABEL_KEYS, type RoomMatrixData, type RoomMarkTool } from '@/stores/room.store'
 import { RoomOptimizeModal } from '@/components/datacenter/RoomOptimizeModal'
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
@@ -163,10 +163,10 @@ function RoomInfoModal({ open, onClose }: { open: boolean; onClose: () => void }
   )
 }
 
-/** AL-ED1：编辑机柜（名称/类型/总U/功率上限/顶部预留）；保存校验冲突 + 联动矩阵格类型 */
+/** AL-ED1：编辑机柜（名称/类型/总U/功率上限/顶部预留）；保存校验冲突 + 联动矩阵格类型（M6 统一走 updateCabinetSafe） */
 function CabinetEditModal({ cabinetId, onClose }: { cabinetId: number | null; onClose: () => void }) {
   const cabinets = useRackStore((s) => s.cabinets)
-  const updateCabinet = useRackStore((s) => s.updateCabinet)
+  const updateCabinetSafe = useRackStore((s) => s.updateCabinetSafe)
   const topReservedU = useRackStore((s) => s.topReservedU)
   const setRackConfig = useRackStore((s) => s.setRackConfig)
   const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
@@ -188,13 +188,12 @@ function CabinetEditModal({ cabinetId, onClose }: { cabinetId: number | null; on
     const tU = Math.max(1, Math.round(Number(totalU) || 0))
     const pL = Math.max(1, Math.round(Number(powerLimit) || 0))
     const tR = Math.max(0, Math.round(Number(topReserved) || 0))
-    // 冲突校验：改矮/改功率（单柜场景冲突直接阻塞，不落库）
-    const issues = validateCabinetPatch(cabinet, { totalU: tU, power_limit: pL })
-    if (issues.length > 0) {
-      setError(issues.map((i) => i.message).join('；'))
+    // M6（AL-ED7）：统一走 updateCabinetSafe——改矮/改功率冲突直接阻塞不落库
+    const r = updateCabinetSafe(cabinet.id, { name: name.trim(), type, totalU: tU, power_limit: pL })
+    if (r.issues.length > 0) {
+      setError(r.issues.map((i) => i.message).join('；'))
       return
     }
-    updateCabinet(cabinet.id, { name: name.trim(), type, totalU: tU, power_limit: pL })
     if (tR !== topReservedU) setRackConfig({ topReservedU: tR })
     // 联动：机柜类型 → 矩阵格类型回写
     syncCabinetToCell(cabinet.id)
@@ -339,11 +338,17 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
   const [topReserved, setTopReserved] = useState(topReservedU)
   const [cellType, setCellType] = useState('')
   const [placeholder, setPlaceholder] = useState('')
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState('')
+  // M6（AL-ED7）：批量机柜冲突明细（逐条原因，不静默跳过）
+  const [issues, setIssues] = useState<BulkUpdateIssue[]>([])
+  const [lastApplied, setLastApplied] = useState<number | null>(null)
+  // M6（AL-ED7）：批量清空/删除二次确认（统一「再次点击确认」文案）
+  const [pendingAction, setPendingAction] = useState<'clear' | 'delete' | null>(null)
 
   const close = () => {
-    setConfirmDelete(false)
+    setPendingAction(null)
+    setIssues([])
+    setLastApplied(null)
     onClose()
   }
 
@@ -360,8 +365,13 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
     const r = updateCabinetsBulk(cabinetIds, patch as Parameters<typeof updateCabinetsBulk>[1])
     if (Number(topReserved) !== topReservedU) setRackConfig({ topReservedU: Math.max(0, Math.round(Number(topReserved) || 0)) })
     cabinetIds.forEach((id) => syncCabinetToCell(id))
+    // M6（AL-ED7）：冲突逐条展示（弹窗保持打开），合规柜照常落库、冲突柜不落库
+    if (r.issues.length > 0) {
+      setLastApplied(r.applied)
+      setIssues(r.issues)
+      return
+    }
     if (r.applied > 0) addToast('success', `已批量更新 ${r.applied} 个同类机柜`, 4000)
-    if (r.issues.length > 0) r.issues.forEach((i) => addToast('warning', i.message, 5000))
     clearMultiSelect()
     close()
   }
@@ -416,13 +426,25 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
         ) : (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <button type="button" onClick={doClear}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover">
-                <Eraser size={12} /> 清空
+              <button
+                type="button"
+                onClick={() => (pendingAction === 'clear' ? doClear() : setPendingAction('clear'))}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors ${
+                  pendingAction === 'clear'
+                    ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                    : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover'
+                }`}
+              >
+                <Eraser size={12} /> {pendingAction === 'clear' ? '再次点击确认清空' : '清空'}
               </button>
-              <button type="button" onClick={() => (confirmDelete ? doDelete() : setConfirmDelete(true))}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded text-white transition-colors ${confirmDelete ? 'bg-red-600 hover:bg-red-700' : 'bg-error-400/90 hover:bg-error-500'}`}>
-                <Trash2 size={12} /> {confirmDelete ? '再次点击确认删除' : '删除'}
+              <button
+                type="button"
+                onClick={() => (pendingAction === 'delete' ? doDelete() : setPendingAction('delete'))}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded text-white transition-colors ${
+                  pendingAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-error-400/90 hover:bg-error-500'
+                }`}
+              >
+                <Trash2 size={12} /> {pendingAction === 'delete' ? '再次点击确认删除' : '删除'}
               </button>
             </div>
             <div className="flex items-center gap-2">
@@ -442,6 +464,22 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
       {error && (
         <div className="flex items-start gap-1.5 px-2.5 py-2 mb-2 rounded border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 text-xs text-error-600 dark:text-error-400">
           <AlertTriangle size={12} className="shrink-0 mt-0.5" /> <span>{error}</span>
+        </div>
+      )}
+      {/* M6（AL-ED7）：批量机柜冲突明细（逐条原因，不静默跳过） */}
+      {mode === 'cabinets' && issues.length > 0 && (
+        <div className="mb-2 px-3 py-2 rounded border border-warning-300 dark:border-warning-600 bg-warning-50 dark:bg-warning-900/20">
+          <div className="text-xs font-medium text-warning-700 dark:text-warning-300 mb-1">
+            已更新 {lastApplied ?? 0} 台，{issues.length} 台因冲突跳过（不落库）
+          </div>
+          <ul className="space-y-0.5 text-2xs text-warning-700 dark:text-warning-300">
+            {issues.map((issue, idx) => (
+              <li key={idx} className="flex items-start gap-1.5">
+                <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+                <span>{issue.message}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {mode === 'cabinets' ? (
@@ -496,7 +534,7 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
             <Select value={placeholder} options={[{ value: '', label: '（不修改占位）' }, { value: 'none', label: '无（非占位）' }, ...PLACEHOLDER_OPTIONS.slice(1)]} onChange={(e) => setPlaceholder(e.target.value)} />
           </label>
           <p className="text-2xs text-gray-400">
-            「清空」清除所选格子的类型/占位/机柜（机柜保留未上架）；「删除」额外删除对应机柜（二次确认）
+            「清空」清除所选格子的类型/占位/机柜（机柜保留未上架）；「删除」额外删除对应机柜。两者均为批量操作，需「再次点击」二次确认
           </p>
         </div>
       )}
