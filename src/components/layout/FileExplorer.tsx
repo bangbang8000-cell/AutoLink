@@ -225,21 +225,12 @@ function WorkbenchExplorer() {
     openTab({ type: 'workbench', title: t('common:explorer.workbench.title'), closable: false })
   }
 
-  if (!selectedProjectName) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
-        <Zap size={28} className="text-gray-300 dark:text-gray-600 mb-2" />
-        <p className="text-xs text-gray-400">{t('common:explorer.workbench.selectProject')}</p>
-      </div>
-    )
-  }
-
   const totalDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0) + unplacedDevices.length
   const placedDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0)
   const rackReady = totalDevices > 0 && placedDevices === totalDevices
   const rackHasCabinets = cabinets.length > 0
   const roomMatrixFinalized = roomMatrix?.finalized === true
-  const hasOutputBatches = (outputBatches[selectedProjectName] ?? []).length > 0
+  const hasOutputBatches = selectedProjectName ? (outputBatches[selectedProjectName] ?? []).length > 0 : false
 
   // AL-N2：每行动态状态——active 子视图 / 读取中优先「进行中」；否则按数据就绪度「已完成 / 待操作」
   const subviewStatuses = useMemo(() => {
@@ -260,6 +251,15 @@ function WorkbenchExplorer() {
     }
     return map
   }, [valid, rackReady, rackHasCabinets, roomMatrixFinalized, hasOutputBatches, selectedOutputTypes.length, subview, generating, renderStatus])
+
+  if (!selectedProjectName) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+        <Zap size={28} className="text-gray-300 dark:text-gray-600 mb-2" />
+        <p className="text-xs text-gray-400">{t('common:explorer.workbench.selectProject')}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col">
