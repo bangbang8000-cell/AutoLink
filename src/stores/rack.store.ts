@@ -268,9 +268,11 @@ interface RackState {
   loadRackLayout: (projectName: string) => Promise<void>
   saveRackLayout: (projectName: string) => Promise<void>
   addCabinet: (totalU?: number, type?: CabinetType, powerLimit?: number) => void
-  removeCabinet: (id: number) => void
+  /** M2（AL-UR1）：recordHistory=false 时不压撤销栈（跨 store 批量操作由调用方统一压一次快照） */
+  removeCabinet: (id: number, recordHistory?: boolean) => void
   selectCabinet: (id: number | null) => void
-  updateCabinet: (id: number, updates: Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>) => void
+  /** M2（AL-UR1）：recordHistory=false 时不压撤销栈（跨 store 批量操作由调用方统一压一次快照） */
+  updateCabinet: (id: number, updates: Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>, recordHistory?: boolean) => void
   /** M5（AL-ED4）：单柜信息调整——带冲突校验（改矮/功率改小冲突阻塞不落库，复用 validateCabinetPatch） */
   updateCabinetSafe: (id: number, patch: CabinetPatch) => BulkUpdateResult
   /** M4（AL-ED2/ED7）：批量更新机柜属性（冲突柜跳过并返回 issues） */
@@ -297,6 +299,49 @@ interface RackState {
   importCabinetList: (csvData: string) => void
   getPowerUsage: (cabinetId: number) => { used: number; limit: number; percent: number; exceeded: boolean }
   getPowerUsageAll: () => { total: number; limit: number; percent: number }
+
+  // ===== M2（AL-UR1/UR2）：编辑撤销/重做命令栈 =====
+  /** 编辑快照栈（编辑前的状态，undo 时弹出恢复；栈深上限 RACK_UNDO_LIMIT） */
+  undoStack: RackHistorySnapshot[]
+  /** 重做快照栈（undo 时压入当前态，redo 时弹出恢复；新编辑清空） */
+  redoStack: RackHistorySnapshot[]
+  canUndo: boolean
+  canRedo: boolean
+  /** 显式压入一次编辑快照（跨 store 批量操作前调用，使一次操作仅产生一条历史） */
+  pushHistory: () => void
+  undo: () => void
+  redo: () => void
+}
+
+/** M2（AL-UR1）：编辑撤销/重做栈深度上限 */
+export const RACK_UNDO_LIMIT = 50
+
+/** M2（AL-UR1）：rack.store 编辑快照（编辑前状态，用于撤销/重做恢复） */
+export interface RackHistorySnapshot {
+  cabinets: RackCabinet[]
+  unplacedDevices: UnplacedDevice[]
+  selectedCabinetId: number | null
+  selectedDevice: RackDevice | null
+  addDeviceMode: boolean
+  editingDevice: string | null
+}
+
+/** M2（AL-UR1）：深拷贝当前 rack 状态为编辑快照 */
+function cloneRackHistory(state: RackState): RackHistorySnapshot {
+  return {
+    cabinets: structuredClone(state.cabinets),
+    unplacedDevices: structuredClone(state.unplacedDevices),
+    selectedCabinetId: state.selectedCabinetId,
+    selectedDevice: state.selectedDevice ? structuredClone(state.selectedDevice) : null,
+    addDeviceMode: state.addDeviceMode,
+    editingDevice: state.editingDevice,
+  }
+}
+
+/** M2（AL-UR1）：编辑前压入快照 → 返回命令栈更新（新编辑清空 redo，栈深封顶） */
+function pushRackHistory(state: RackState): Pick<RackState, 'undoStack' | 'redoStack' | 'canUndo' | 'canRedo'> {
+  const undoStack = [...state.undoStack, cloneRackHistory(state)].slice(-RACK_UNDO_LIMIT)
+  return { undoStack, redoStack: [], canUndo: true, canRedo: false }
 }
 
 export const useRackStore = create<RackState>()(
@@ -308,6 +353,11 @@ export const useRackStore = create<RackState>()(
   selectedDevice: null,
   addDeviceMode: false,
   editingDevice: null,
+  // M2（AL-UR1）：编辑撤销/重做命令栈（仅内存会话，不持久化）
+  undoStack: [],
+  redoStack: [],
+  canUndo: false,
+  canRedo: false,
   // M4/M5: 项目机柜配置默认值（由 setRackConfig 覆盖）
   topReservedU: DEFAULT_TOP_RESERVED_U,
   gpuPerCabinet: 1,
@@ -317,8 +367,43 @@ export const useRackStore = create<RackState>()(
       gpuPerCabinet: cfg.gpuPerCabinet ?? s.gpuPerCabinet,
     })),
 
+  // ===== M2（AL-UR1/UR2）：编辑撤销/重做命令栈 =====
+  pushHistory: () => set((s) => pushRackHistory(s)),
+
+  undo: () => {
+    const s = get()
+    if (s.undoStack.length === 0) return
+    const prev = s.undoStack[s.undoStack.length - 1]
+    const undoStack = s.undoStack.slice(0, -1)
+    const redoStack = [...s.redoStack, cloneRackHistory(s)].slice(-RACK_UNDO_LIMIT)
+    set({
+      ...prev,
+      undoStack,
+      redoStack,
+      canUndo: undoStack.length > 0,
+      canRedo: true,
+    })
+  },
+
+  redo: () => {
+    const s = get()
+    if (s.redoStack.length === 0) return
+    const next = s.redoStack[s.redoStack.length - 1]
+    const redoStack = s.redoStack.slice(0, -1)
+    const undoStack = [...s.undoStack, cloneRackHistory(s)].slice(-RACK_UNDO_LIMIT)
+    set({
+      ...next,
+      undoStack,
+      redoStack,
+      canUndo: true,
+      canRedo: redoStack.length > 0,
+    })
+  },
+
   clearCabinets: () => {
     const { cabinets } = get()
+    // M2（AL-UR1）：空柜清空为 no-op，不压栈
+    if (cabinets.length === 0) return
     const reflow: UnplacedDevice[] = []
     for (const c of cabinets) {
       for (const d of c.devices) {
@@ -332,9 +417,11 @@ export const useRackStore = create<RackState>()(
       }
     }
     set((s) => ({
+      ...pushRackHistory(s),
       cabinets: [],
       unplacedDevices: [...s.unplacedDevices, ...reflow],
       selectedCabinetId: null,
+      selectedDevice: null,
     }))
   },
 
@@ -364,7 +451,15 @@ export const useRackStore = create<RackState>()(
         power_watts: gpuPower,
       })
     }
-    set({ cabinets, unplacedDevices, selectedCabinetId: cabinets.length > 0 ? 1 : null })
+    set((s) => ({
+      ...pushRackHistory(s),
+      cabinets,
+      unplacedDevices,
+      selectedCabinetId: cabinets.length > 0 ? 1 : null,
+      selectedDevice: null,
+      addDeviceMode: false,
+      editingDevice: null,
+    }))
   },
 
   initFromTopology: (topologyNodes, rackType = 42, powerLimit = 6000) => {
@@ -375,7 +470,15 @@ export const useRackStore = create<RackState>()(
     )
     if (nodes.length === 0) {
       // 无有效节点 → 空状态（不虚构机柜，等待渲染拓扑）
-      set({ cabinets: [], unplacedDevices: [], selectedCabinetId: null, addDeviceMode: false })
+      set((s) => ({
+        ...pushRackHistory(s),
+        cabinets: [],
+        unplacedDevices: [],
+        selectedCabinetId: null,
+        addDeviceMode: false,
+        selectedDevice: null,
+        editingDevice: null,
+      }))
       return
     }
 
@@ -432,22 +535,27 @@ export const useRackStore = create<RackState>()(
       devices: c.devices,
     }))
 
-    set({
+    set((s) => ({
+      ...pushRackHistory(s),
       cabinets,
       unplacedDevices,
       selectedCabinetId: cabinets.length > 0 ? cabinets[0].id : null,
-    })
+      selectedDevice: null,
+      addDeviceMode: false,
+      editingDevice: null,
+    }))
   },
 
   setRacks: (cabinets, unplacedDevices = [], selectedCabinetId = null) =>
-    set({
+    set((s) => ({
+      ...pushRackHistory(s),
       cabinets,
       unplacedDevices,
       selectedCabinetId,
       selectedDevice: null,
       addDeviceMode: false,
       editingDevice: null,
-    }),
+    })),
 
   // 打磨轮（v1.5 / AL-R1b）：柜内智能落位——待上架池 → 现有柜 U 位
   optimizeRacks: async (gpuPerCabinet = 1) => {
@@ -543,7 +651,8 @@ export const useRackStore = create<RackState>()(
       }
       return { ...c, totalU: source.totalU, power_limit: source.power_limit, devices }
     })
-    set({ cabinets: newCabinets })
+    // M2（AL-UR1）：整柜模板应用为可撤销编辑（复制设备/同步属性 → 撤销整体回退）
+    set((s) => ({ ...pushRackHistory(s), cabinets: newCabinets }))
     return { applied, skipped: conflicts.length, conflicts }
   },
 
@@ -566,12 +675,15 @@ export const useRackStore = create<RackState>()(
                 power_watts: d.power_watts || 0,
               })),
             }))
-            set({
+            set((s) => ({
+              ...pushRackHistory(s),
               cabinets,
               unplacedDevices: [],
               selectedCabinetId: cabinets.length > 0 ? cabinets[0].id : null,
               addDeviceMode: false,
-            })
+              selectedDevice: null,
+              editingDevice: null,
+            }))
             return
           }
         }
@@ -581,7 +693,15 @@ export const useRackStore = create<RackState>()(
       useToastStore.getState().addToast('error', '机柜布局加载失败，已重置为空状态', 5000)
     }
     // V2.9.2: 无布局文件 → 空状态（不虚构机柜），渲染拓扑后由 initFromTopology 填充
-    set({ cabinets: [], unplacedDevices: [], selectedCabinetId: null, addDeviceMode: false })
+    set((s) => ({
+      ...pushRackHistory(s),
+      cabinets: [],
+      unplacedDevices: [],
+      selectedCabinetId: null,
+      addDeviceMode: false,
+      selectedDevice: null,
+      editingDevice: null,
+    }))
   },
 
   saveRackLayout: async (projectName) => {
@@ -609,14 +729,16 @@ export const useRackStore = create<RackState>()(
       const newId = s.cabinets.length > 0 ? Math.max(...s.cabinets.map((c) => c.id)) + 1 : 1
       const label = String.fromCharCode(64 + newId)
       return {
+        ...pushRackHistory(s),
         cabinets: [...s.cabinets, { id: newId, name: `机柜 ${label}`, totalU, type, power_limit: powerLimit, devices: [] }],
       }
     })
   },
 
-  removeCabinet: (id) => {
+  removeCabinet: (id, recordHistory = true) => {
     set((s) => {
       return {
+        ...(recordHistory ? pushRackHistory(s) : {}),
         cabinets: s.cabinets.filter((c) => c.id !== id),
         selectedCabinetId: s.selectedCabinetId === id ? null : s.selectedCabinetId,
       }
@@ -625,8 +747,9 @@ export const useRackStore = create<RackState>()(
 
   selectCabinet: (id) => set({ selectedCabinetId: id, addDeviceMode: false, editingDevice: null }),
 
-  updateCabinet: (id, updates) => {
+  updateCabinet: (id, updates, recordHistory = true) => {
     set((s) => ({
+      ...(recordHistory ? pushRackHistory(s) : {}),
       cabinets: s.cabinets.map((c) => (c.id === id ? { ...c, ...updates } : c)),
     }))
   },
@@ -656,7 +779,11 @@ export const useRackStore = create<RackState>()(
       applied++
       return { ...c, ...patch }
     })
-    set({ cabinets })
+    // M2（AL-UR1）：全部冲突跳过 → 不压栈（无实际修改）
+    set((s) => ({
+      ...(applied > 0 ? pushRackHistory(s) : {}),
+      cabinets,
+    }))
     return { applied, skipped: issues.length, issues }
   },
 
@@ -696,6 +823,7 @@ export const useRackStore = create<RackState>()(
     }
 
     set((s) => ({
+      ...pushRackHistory(s),
       cabinets: s.cabinets.map((c) =>
         c.id === cabinetId ? { ...c, devices: [...c.devices, newDevice] } : c,
       ),
@@ -705,29 +833,30 @@ export const useRackStore = create<RackState>()(
   },
 
   removeDevice: (cabinetId, deviceId) => {
-    set((s) => {
-      const cabinet = s.cabinets.find((c) => c.id === cabinetId)
-      const device = cabinet?.devices.find((d) => d.id === deviceId)
-      if (!device) return s
+    const { cabinets } = get()
+    const cabinet = cabinets.find((c) => c.id === cabinetId)
+    const device = cabinet?.devices.find((d) => d.id === deviceId)
+    // M2（AL-UR1）：设备不存在 → no-op，不压栈
+    if (!device) return
 
-      const unplaced: UnplacedDevice = {
-        id: device.id,
-        name: device.name,
-        type: device.type,
-        height: device.endU - device.startU + 1,
-        power_watts: device.power_watts,
-      }
+    const unplaced: UnplacedDevice = {
+      id: device.id,
+      name: device.name,
+      type: device.type,
+      height: device.endU - device.startU + 1,
+      power_watts: device.power_watts,
+    }
 
-      return {
-        cabinets: s.cabinets.map((c) =>
-          c.id === cabinetId
-            ? { ...c, devices: c.devices.filter((d) => d.id !== deviceId) }
-            : c,
-        ),
-        unplacedDevices: [...s.unplacedDevices, unplaced],
-        selectedDevice: s.selectedDevice?.id === deviceId ? null : s.selectedDevice,
-      }
-    })
+    set((s) => ({
+      ...pushRackHistory(s),
+      cabinets: s.cabinets.map((c) =>
+        c.id === cabinetId
+          ? { ...c, devices: c.devices.filter((d) => d.id !== deviceId) }
+          : c,
+      ),
+      unplacedDevices: [...s.unplacedDevices, unplaced],
+      selectedDevice: s.selectedDevice?.id === deviceId ? null : s.selectedDevice,
+    }))
   },
 
   moveDevice: (deviceId, fromCabinet, toCabinet, newStartU) => {
@@ -746,6 +875,7 @@ export const useRackStore = create<RackState>()(
     const moved: RackDevice = { ...device, cabinetId: toCabinet, startU: newStartU, endU: newEndU }
 
     set((s) => ({
+      ...pushRackHistory(s),
       cabinets: s.cabinets.map((c) => {
         if (c.id === fromCabinet) return { ...c, devices: c.devices.filter((d) => d.id !== deviceId) }
         if (c.id === toCabinet) return { ...c, devices: [...c.devices, moved] }
@@ -778,6 +908,7 @@ export const useRackStore = create<RackState>()(
     }
     const devices = cabinet.devices.map((d) => (idSet.has(d.id) ? { ...d, ...patch } : d))
     set((s) => ({
+      ...pushRackHistory(s),
       cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices } : c)),
     }))
     return { applied: target.length, skipped: 0, issues: [] }
@@ -794,6 +925,7 @@ export const useRackStore = create<RackState>()(
       idSet.has(d.id) ? { ...d, startU: d.startU + offset, endU: d.endU + offset } : d,
     )
     set((s) => ({
+      ...pushRackHistory(s),
       cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices } : c)),
     }))
     return { applied: idSet.size, skipped: 0, issues: [] }
@@ -905,7 +1037,8 @@ export const useRackStore = create<RackState>()(
     }
 
     if (cabinets.length > 0) {
-      set({ cabinets, selectedCabinetId: cabinets[0].id })
+      // M2（AL-UR1）：导入机柜列表为整表替换 → 可撤销
+      set((s) => ({ ...pushRackHistory(s), cabinets, selectedCabinetId: cabinets[0].id }))
     }
   },
 
