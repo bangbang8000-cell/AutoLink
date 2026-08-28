@@ -91,6 +91,8 @@
   "subview.aidc": "AIDC 計画",
   "subview.design": "ネットワーク設計",
   "subview.rack": "ラック設計",
+  "subview.roomdesign": "机房設計",
+  "subview.rackdesign": "ラック設計",
   "subview.main": "ネットワーク描画",
   "subview.visualization": "トポロジ",
   "subview.results": "このプロジェクトの出力",

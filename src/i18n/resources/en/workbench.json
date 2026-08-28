@@ -91,6 +91,8 @@
   "subview.aidc": "AIDC Planning",
   "subview.design": "Network Design",
   "subview.rack": "Rack Design",
+  "subview.roomdesign": "Room Design",
+  "subview.rackdesign": "Rack Design",
   "subview.main": "Network Render",
   "subview.visualization": "Topology",
   "subview.results": "This Project Outputs",

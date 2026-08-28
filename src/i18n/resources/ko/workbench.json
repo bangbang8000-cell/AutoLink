@@ -91,6 +91,8 @@
   "subview.aidc": "AIDC 계획",
   "subview.design": "네트워크 설계",
   "subview.rack": "랙 설계",
+  "subview.roomdesign": "기계실 설계",
+  "subview.rackdesign": "랙 설계",
   "subview.main": "네트워크 렌더",
   "subview.visualization": "토폴로지",
   "subview.results": "이 프로젝트 출력",

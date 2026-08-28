@@ -91,6 +91,8 @@
   "subview.aidc": "AIDC 規劃",
   "subview.design": "組網設計",
   "subview.rack": "機櫃設計",
+  "subview.roomdesign": "機房設計",
+  "subview.rackdesign": "機櫃設計",
   "subview.main": "組網渲染",
   "subview.visualization": "拓撲",
   "subview.results": "本專案輸出",

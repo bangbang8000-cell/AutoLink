@@ -91,6 +91,8 @@
   "subview.aidc": "AIDC 规划",
   "subview.design": "组网设计",
   "subview.rack": "机柜设计",
+  "subview.roomdesign": "机房设计",
+  "subview.rackdesign": "机柜设计",
   "subview.main": "组网渲染",
   "subview.visualization": "拓扑",
   "subview.results": "本项目输出",
