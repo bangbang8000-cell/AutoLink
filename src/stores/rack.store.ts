@@ -102,8 +102,8 @@ export interface ApplyCabinetTemplateResult {
   conflicts: TemplateConflict[]
 }
 
-// M4（AL-ED2/ED7）：机柜批量属性更新——冲突校验结果（overflow=改矮高度设备溢出 / power=功率改小超限）
-export type BulkUpdateIssueReason = 'overflow' | 'power'
+// M4/M5（AL-ED2/ED7/ED6）：机柜/设备批量更新冲突原因（overflow=改矮/越界、power=功率改小/超限、top_reserved=柜顶预留区、occupied=U位被占）
+export type BulkUpdateIssueReason = 'overflow' | 'power' | 'top_reserved' | 'occupied'
 
 export interface BulkUpdateIssue {
   cabinetId: number
