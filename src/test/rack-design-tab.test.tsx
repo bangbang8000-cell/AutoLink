@@ -3,6 +3,7 @@
  * - 定稿门槛：未定稿显示引导（"请先完成机房设计并定稿"），不进入机柜设计
  * - 已定稿 → 渲染机柜设计工具栏（导出机柜设计 Excel / 归档 占位，M7 接入）与 RackTab
  * - RackTab 上架/移动/功率/批量模板 + isometric 等距立体保留（视图切换器存在）
+ * - M5（AL-ED4/ED6）：柜内机柜信息调整（Modal 保存/冲突阻塞/右键菜单）与同柜批量更新（多选/属性/偏移）
  */
 import '@/i18n'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -122,5 +123,91 @@ describe('RackDesignTab', () => {
     await waitFor(() => expect(cell()?.type).toBe('gpu'))
     useRackStore.getState().updateCabinet(1, { type: 'network' })
     await waitFor(() => expect(cell()?.type).toBe('network'))
+  })
+
+  // ===== M5（AL-ED4/ED6）：柜内编辑能力（机柜信息调整 + 同柜批量更新） =====
+
+  it('M5 ED-4 机柜信息调整：点击「机柜信息」打开 Modal，改名称保存生效', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({ cabinets: [makeCabinet()], unplacedDevices: [], selectedCabinetId: 1 })
+    render(<RackDesignTab projectName="p1" />)
+    fireEvent.click(await screen.findByText('机柜信息'))
+    const nameInput = await screen.findByLabelText('机柜名称')
+    fireEvent.change(nameInput, { target: { value: '新柜名' } })
+    fireEvent.click(screen.getByLabelText('保存机柜信息'))
+    await waitFor(() => expect(useRackStore.getState().cabinets[0].name).toBe('新柜名'))
+  })
+
+  it('M5 ED-4 机柜信息调整：改矮总U有设备溢出 → 冲突阻塞不落库并提示', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({
+      cabinets: [makeCabinet({ devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 40, power_watts: 1000 }] })],
+      unplacedDevices: [],
+      selectedCabinetId: 1,
+    })
+    render(<RackDesignTab projectName="p1" />)
+    fireEvent.click(await screen.findByText('机柜信息'))
+    const totalUInput = await screen.findByLabelText('总U高度')
+    fireEvent.change(totalUInput, { target: { value: '30' } })
+    fireEvent.click(screen.getByLabelText('保存机柜信息'))
+    await waitFor(() => expect(screen.getByText(/超过新高度/)).toBeInTheDocument())
+    expect(useRackStore.getState().cabinets[0].totalU).toBe(42)
+  })
+
+  it('M5 ED-4 机柜信息调整：Header 右键 → 出现机柜信息调整菜单', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({ cabinets: [makeCabinet()], unplacedDevices: [], selectedCabinetId: 1 })
+    render(<RackDesignTab projectName="p1" />)
+    const header = await screen.findByTitle(/右键/)
+    fireEvent.contextMenu(header, { clientX: 100, clientY: 100 })
+    expect(await screen.findByText('机柜信息调整')).toBeInTheDocument()
+  })
+
+  it('M5 ED-6 同柜批量：进入批量模式多选设备并批量改名生效', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({
+      cabinets: [makeCabinet({ devices: [
+        { id: 'a', name: '设备A', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 1000 },
+        { id: 'b', name: '设备B', type: 'GPU Server', cabinetId: 1, startU: 9, endU: 16, power_watts: 1000 },
+      ] })],
+      unplacedDevices: [],
+      selectedCabinetId: 1,
+    })
+    render(<RackDesignTab projectName="p1" />)
+    fireEvent.click(await screen.findByText('批量编辑'))
+    fireEvent.click(screen.getAllByTitle(/设备A/)[0])
+    fireEvent.click(screen.getAllByTitle(/设备B/)[0])
+    expect(await screen.findByText(/已选 2 台设备/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('批量名称'), { target: { value: '统一名' } })
+    fireEvent.click(screen.getByText('应用属性'))
+    await waitFor(() => {
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.every((d) => d.name === '统一名')).toBe(true)
+    })
+  })
+
+  it('M5 ED-6 同柜批量 U 偏移：越界整批拒绝不落库', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({
+      topReservedU: 2,
+      cabinets: [makeCabinet({ devices: [
+        { id: 'a', name: '设备A', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 1000 },
+        { id: 'b', name: '设备B', type: 'GPU Server', cabinetId: 1, startU: 35, endU: 42, power_watts: 1000 },
+      ] })],
+      unplacedDevices: [],
+      selectedCabinetId: 1,
+    })
+    render(<RackDesignTab projectName="p1" />)
+    fireEvent.click(await screen.findByText('批量编辑'))
+    fireEvent.click(screen.getAllByTitle(/设备A/)[0])
+    fireEvent.click(screen.getAllByTitle(/设备B/)[0])
+    fireEvent.click(screen.getByText('上移1U'))
+    // 整批拒绝：a、b 均未落库，且 toast 含「越界」提示
+    await waitFor(() => {
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.find((d) => d.id === 'a')).toMatchObject({ startU: 1, endU: 8 })
+      expect(ds.find((d) => d.id === 'b')).toMatchObject({ startU: 35, endU: 42 })
+    })
+    expect(useToastStore.getState().toasts.some((t) => t.message.includes('越界'))).toBe(true)
   })
 })
