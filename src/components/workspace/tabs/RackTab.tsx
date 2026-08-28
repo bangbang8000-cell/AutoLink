@@ -81,8 +81,8 @@ export function RackTab({ cabinetId }: Props) {
   const [showUnplaced, setShowUnplaced] = useState(true)
   const [cabinetDropdownOpen, setCabinetDropdownOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('basic')
-  // AL-M5b：项目 Modal 确认体系（替代 window.confirm）
-  const [confirmState, setConfirmState] = useState<{ message: string; fn: () => void } | null>(null)
+  // AL-M5b：项目 Modal 确认体系（替代 window.confirm）；M6（AL-ED7）批量属性/U偏移二次确认复用
+  const [confirmState, setConfirmState] = useState<{ message: string; fn: () => void; danger?: boolean } | null>(null)
   // PRD AL-R6：整柜模板应用冲突明细（无冲突时置 null 显示成功 toast）
   const [templateResult, setTemplateResult] = useState<{ applied: number; conflicts: TemplateConflict[] } | null>(null)
   // M5（AL-ED4）：机柜信息调整 Modal + 右键菜单
@@ -97,6 +97,8 @@ export function RackTab({ cabinetId }: Props) {
   const [batchPower, setBatchPower] = useState('')
   const [batchType, setBatchType] = useState<CabinetType | ''>('')
   const [shiftOffset, setShiftOffset] = useState('')
+  // M6（AL-ED7）：同柜批量冲突明细（逐条原因，不静默跳过）
+  const [batchIssue, setBatchIssue] = useState<string | null>(null)
 
   // V2.9.2-T4: 上架/移除设备标记 dirty(关闭需确认)
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
@@ -247,8 +249,25 @@ export function RackTab({ cabinetId }: Props) {
     })
   }, [])
 
-  // M5（AL-ED6）：批量应用属性（名称/类型/功率；功率超限整批拒绝）
-  const applyBatchAttrs = useCallback(() => {
+  // M5（AL-ED6）：批量应用属性（名称/类型/功率；功率超限整批拒绝）——M6（AL-ED7）先二次确认
+  const doApplyBatchAttrs = useCallback((patch: DevicePatch) => {
+    if (!cabinet) return
+    const r = updateDevicesBulk(cabinet.id, Array.from(selectedDeviceIds), patch)
+    if (r.issues.length > 0) {
+      setBatchIssue(r.issues[0].message)
+      addToast('error', r.issues[0].message, 5000)
+    } else {
+      setBatchIssue(null)
+      addToast('success', `已批量更新 ${r.applied} 台设备`, 3000)
+      markDirty()
+      setSelectedDeviceIds(new Set())
+    }
+    setBatchName('')
+    setBatchPower('')
+    setBatchType('')
+  }, [cabinet, selectedDeviceIds, updateDevicesBulk, addToast, markDirty])
+
+  const requestBatchAttrs = useCallback(() => {
     if (!cabinet || selectedDeviceIds.size === 0) return
     const patch: DevicePatch = {}
     if (batchName.trim()) patch.name = batchName.trim()
@@ -258,27 +277,39 @@ export function RackTab({ cabinetId }: Props) {
       addToast('warning', '请至少填写一项属性（名称/类型/功率）', 3000)
       return
     }
-    const r = updateDevicesBulk(cabinet.id, Array.from(selectedDeviceIds), patch)
-    if (r.issues.length > 0) addToast('error', r.issues[0].message, 5000)
-    else addToast('success', `已批量更新 ${r.applied} 台设备`, 3000)
-    markDirty()
-    setBatchName('')
-    setBatchPower('')
-    setBatchType('')
-    if (r.issues.length === 0) setSelectedDeviceIds(new Set())
-  }, [cabinet, selectedDeviceIds, batchName, batchType, batchPower, updateDevicesBulk, addToast, markDirty])
+    setConfirmState({
+      message: `确认对 ${selectedDeviceIds.size} 台设备批量修改属性？`,
+      danger: false,
+      fn: () => doApplyBatchAttrs(patch),
+    })
+  }, [cabinet, selectedDeviceIds, batchName, batchType, batchPower, addToast, doApplyBatchAttrs])
 
-  // M5（AL-ED6）：批量 U 位偏移（整批原子，越界/冲突拒绝）
-  const applyShift = useCallback((offset: number) => {
-    if (!cabinet || selectedDeviceIds.size === 0) return
+  // M5（AL-ED6）：批量 U 位偏移（整批原子，越界/冲突拒绝）——M6（AL-ED7）先二次确认
+  const doShift = useCallback((offset: number) => {
+    if (!cabinet) return
     const r = shiftDevicesU(cabinet.id, Array.from(selectedDeviceIds), offset)
     if (r.issues.length > 0) {
+      setBatchIssue(r.issues[0].message)
       addToast('error', r.issues[0].message, 5000)
     } else {
+      setBatchIssue(null)
       addToast('success', `已${offset > 0 ? '上移' : '下移'} ${r.applied} 台设备 ${Math.abs(offset)}U`, 3000)
       markDirty()
     }
   }, [cabinet, selectedDeviceIds, shiftDevicesU, addToast, markDirty])
+
+  const requestShift = useCallback((offset: number) => {
+    if (!cabinet || selectedDeviceIds.size === 0) return
+    if (offset === 0) {
+      addToast('warning', '请输入非 0 偏移量', 3000)
+      return
+    }
+    setConfirmState({
+      message: `确认对 ${selectedDeviceIds.size} 台设备执行 U 位偏移（${offset > 0 ? '上移' : '下移'} ${Math.abs(offset)}U）？`,
+      danger: false,
+      fn: () => doShift(offset),
+    })
+  }, [cabinet, selectedDeviceIds, addToast, doShift])
 
   const clearSelection = useCallback(() => {
     setSelectedDeviceIds(new Set())
@@ -286,6 +317,7 @@ export function RackTab({ cabinetId }: Props) {
     setBatchPower('')
     setBatchType('')
     setShiftOffset('')
+    setBatchIssue(null)
   }, [])
 
   const handleSlotClick = useCallback((uNumber: number) => {
@@ -388,11 +420,13 @@ export function RackTab({ cabinetId }: Props) {
               </>
             )}
           </div>
-          {/* 打磨轮（v1.4 / AL-R2b）：柜类型微调 → 由工作台机柜子视图联动 C 回写矩阵格类型 */}
+          {/* 打磨轮（v1.4 / AL-R2b）：柜类型微调 → 由工作台机柜子视图联动 C 回写矩阵格类型（M6：RackTab 独立渲染也直接回写） */}
           <select
             value={cabinet.type}
             onChange={(e) => {
               updateCabinet(cabinet.id, { type: e.target.value as CabinetType })
+              // M6（AL-ED8）：类型变更 → 矩阵格类型 + 配色同步（等值守卫由 syncCabinetToCell 内收敛）
+              syncCabinetToCell(cabinet.id)
               markDirty()
             }}
             className="px-1.5 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-700 dark:text-gray-200"
@@ -661,15 +695,15 @@ export function RackTab({ cabinetId }: Props) {
                   className="!w-28 !py-0.5 !text-2xs"
                   aria-label="批量类型"
                 />
-                <button type="button" onClick={applyBatchAttrs} className="px-2 py-1 rounded bg-primary-500 hover:bg-primary-600 text-white">
+                <button type="button" onClick={requestBatchAttrs} className="px-2 py-1 rounded bg-primary-500 hover:bg-primary-600 text-white" title="批量操作需二次确认">
                   应用属性
                 </button>
                 <span className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-600" />
                 <span className="text-gray-500 dark:text-gray-400">U位偏移</span>
-                <button type="button" onClick={() => applyShift(1)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                <button type="button" onClick={() => requestShift(1)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600" title="批量操作需二次确认">
                   上移1U
                 </button>
-                <button type="button" onClick={() => applyShift(-1)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                <button type="button" onClick={() => requestShift(-1)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600" title="批量操作需二次确认">
                   下移1U
                 </button>
                 <Input
@@ -680,16 +714,19 @@ export function RackTab({ cabinetId }: Props) {
                   className="!w-16 !py-0.5 !text-2xs"
                   aria-label="批量偏移量"
                 />
-                <button type="button" onClick={() => {
-                  const off = parseInt(shiftOffset) || 0
-                  if (off === 0) { addToast('warning', '请输入非 0 偏移量', 3000); return }
-                  applyShift(off)
-                }} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                <button type="button" onClick={() => requestShift(parseInt(shiftOffset) || 0)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600" title="批量操作需二次确认">
                   应用偏移
                 </button>
                 <button type="button" onClick={clearSelection} className="px-2 py-1 rounded text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20">
                   清除选择
                 </button>
+                {/* M6（AL-ED7）：批量冲突明细（逐条原因，不静默跳过） */}
+                {batchIssue && (
+                  <div className="w-full px-2 py-1.5 rounded bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 text-2xs flex items-start gap-1.5">
+                    <Flame size={11} className="shrink-0 mt-0.5" />
+                    <span>{batchIssue}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -868,11 +905,13 @@ export function RackTab({ cabinetId }: Props) {
       </div>
     </div>
 
-    {/* AL-M5b：项目 Modal 确认体系（替代 window.confirm） */}
+    {/* AL-M5b：项目 Modal 确认体系（替代 window.confirm）；M6：批量操作二次确认（danger 由动作类型决定） */}
     <ConfirmDialog
       open={!!confirmState}
       message={confirmState?.message ?? ''}
-      danger
+      danger={confirmState?.danger ?? true}
+      confirmText="确认"
+      cancelText="取消"
       onConfirm={() => { confirmState?.fn(); setConfirmState(null) }}
       onCancel={() => setConfirmState(null)}
     />
