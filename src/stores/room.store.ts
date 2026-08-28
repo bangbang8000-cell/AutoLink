@@ -222,6 +222,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   matrix: null,
   markTool: 'select',
   selectedPosition: null,
+  multiSelected: [],
 
   loadMatrix: async (projectName) => {
     try {
