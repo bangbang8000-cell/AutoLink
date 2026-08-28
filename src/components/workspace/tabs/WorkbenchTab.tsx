@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock, Archive } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock, Archive, Boxes, Server } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
@@ -17,6 +17,8 @@ import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
+import { RoomDesignTab } from '@/components/workspace/tabs/RoomDesignTab'
+import { RackDesignTab } from '@/components/workspace/tabs/RackDesignTab'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
@@ -37,15 +39,28 @@ function StepLabel({ n, text }: { n: string; text: string }) {
   )
 }
 
-/** 打磨轮（v1.6 / AL-T1b）：工作台二级页签标签（对齐 v1.6 命名） */
+/** 打磨轮（v1.6 / AL-T1b）：工作台二级页签标签（对齐 v1.6 命名；M1/M2 增机房/机柜设计独立子视图） */
 const SUBVIEW_KEYS: Record<string, string> = {
   aidc: 'workbench:subview.aidc',
   design: 'workbench:subview.design',
   rack: 'workbench:subview.rack',
+  roomdesign: 'workbench:subview.roomdesign',
+  rackdesign: 'workbench:subview.rackdesign',
   main: 'workbench:subview.main',
   visualization: 'workbench:subview.visualization',
   results: 'workbench:subview.results',
   export: 'workbench:subview.export',
+}
+
+// M1/M2（AL-D1/D2）：设计拆分——机房设计 / 机柜设计 独立子视图。
+// ui.store 的 WorkbenchSubview 暂未扩展，故在本文件局部收敛为联合类型，
+// 打开新子视图时以类型断言写入 store（运行时仅存字符串，persist 不做校验）。
+type WorkbenchDesignSubview = WorkbenchSubview | 'roomdesign' | 'rackdesign'
+
+/** 新子视图标签的中文兜底（i18n 资源暂未新增 workbench:subview.roomdesign/rackdesign，M7 打磨期可并入资源） */
+const SUBVIEW_LABEL_FALLBACK: Record<string, string> = {
+  roomdesign: '机房设计',
+  rackdesign: '机柜设计',
 }
 
 // AL-M4c: 工作台二级页签保活上限——最多同时保持 N 个非激活子视图挂载,超限卸载释放内存
@@ -421,11 +436,16 @@ export function WorkbenchTab() {
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const setActivityHint = useUIStore((s) => s.setActivityHint)
 
+  // M1/M2（AL-D1/D2）：打开子视图（含新键 roomdesign/rackdesign；store 类型未扩展故断言，运行时仅存字符串）
+  const openSubview = useCallback((view: WorkbenchDesignSubview) => {
+    setWorkbenchSubview(view as WorkbenchSubview)
+  }, [setWorkbenchSubview])
+
   const [aidcProjects, setAidcProjects] = useState<string[]>([])
   // AL-M5a：AIDC 新建并入 CreateProjectWizardModal（移除固定 64 台内联表单）
   const [showAidcWizard, setShowAidcWizard] = useState(false)
   // 打磨轮（v1.6 / AL-T1a）：工作台二级页签——访问过的子视图保留（keep-alive 保留状态）
-  const [openedSubviews, setOpenedSubviews] = useState<WorkbenchSubview[]>(['main'])
+  const [openedSubviews, setOpenedSubviews] = useState<WorkbenchDesignSubview[]>(['main'])
 
   // 打开新子视图 → 记入二级页签
   useEffect(() => {
@@ -433,11 +453,11 @@ export function WorkbenchTab() {
   }, [subview])
 
   // AL-M4h：二级页签右键菜单（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）
-  const [subviewCtx, setSubviewCtx] = useState<{ sv: WorkbenchSubview; x: number; y: number } | null>(null)
+  const [subviewCtx, setSubviewCtx] = useState<{ sv: WorkbenchDesignSubview; x: number; y: number } | null>(null)
   // AL-M4c：保活集合 = 激活页签 + 最近 (N-1) 个非激活页签;超限非激活卸载释放内存
   const mountedSubviews = useMemo(() => {
     const activeIdx = openedSubviews.indexOf(subview)
-    const kept: WorkbenchSubview[] = [subview]
+    const kept: WorkbenchDesignSubview[] = [subview]
     for (let i = openedSubviews.length - 1; i >= 0 && kept.length < KEEP_ALIVE_LIMIT; i--) {
       if (i !== activeIdx) kept.push(openedSubviews[i])
     }
@@ -445,22 +465,22 @@ export function WorkbenchTab() {
   }, [openedSubviews, subview])
 
   // AL-M4h：批量关闭子视图
-  const batchCloseSubviews = useCallback((mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchSubview) => {
+  const batchCloseSubviews = useCallback((mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchDesignSubview) => {
     setOpenedSubviews((prev) => {
       const idx = prev.indexOf(sv)
-      let next: WorkbenchSubview[]
+      let next: WorkbenchDesignSubview[]
       if (mode === 'all') next = ['main']
       else if (mode === 'this') next = prev.filter((x) => x !== sv)
       else if (mode === 'others') next = prev.filter((x) => x === sv)
       else next = idx === -1 ? prev : prev.slice(0, idx + 1) // 关闭右侧 → 保留到 sv（含 sv）
       if (sv === subview && next.length > 0 && !next.includes(subview)) {
-        setWorkbenchSubview(next[next.length - 1] ?? 'main')
+        openSubview(next[next.length - 1] ?? 'main')
       } else if (sv === subview && next.length === 0) {
-        setWorkbenchSubview('main')
+        openSubview('main')
       }
       return next
     })
-  }, [subview, setOpenedSubviews, setWorkbenchSubview])
+  }, [subview, setOpenedSubviews, openSubview])
 
   // AL-M4h：点击/滚动关闭右键菜单
   useEffect(() => {
@@ -489,10 +509,10 @@ export function WorkbenchTab() {
   // AL-M4i：切换项目同时清空二级页签历史，避免跨项目页签残留误导
   useEffect(() => {
     if (selectedProjectName) {
-      setWorkbenchSubview('main')
+      openSubview('main')
       setOpenedSubviews(['main'])
     }
-  }, [selectedProjectName, setWorkbenchSubview])
+  }, [selectedProjectName, openSubview])
 
   // AL-M5a：AIDC 项目由 CreateProjectWizardModal 创建完成后刷新列表并选中
   const handleAidcWizardCreated = useCallback(() => {
@@ -576,8 +596,8 @@ export function WorkbenchTab() {
               }}
               className={`flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-2xs rounded-t border-t border-x transition-colors shrink-0 ${active ? 'bg-white dark:bg-app border-gray-200 dark:border-edge-subtle text-primary-600 dark:text-primary-400 font-medium' : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'}`}
             >
-              <button type="button" onClick={() => setWorkbenchSubview(sv)} className="shrink-0">
-                {t(SUBVIEW_KEYS[sv] ?? `workbench:subview.${sv}`, sv)}
+              <button type="button" onClick={() => openSubview(sv)} className="shrink-0">
+                {t(SUBVIEW_KEYS[sv] ?? `workbench:subview.${sv}`, SUBVIEW_LABEL_FALLBACK[sv] ?? sv)}
               </button>
               {openedSubviews.length > 1 && (
                 <button
@@ -585,7 +605,7 @@ export function WorkbenchTab() {
                   onClick={() => {
                     const next = openedSubviews.filter((x) => x !== sv)
                     setOpenedSubviews(next)
-                    if (active) setWorkbenchSubview(next[next.length - 1] ?? 'main')
+                    if (active) openSubview(next[next.length - 1] ?? 'main')
                   }}
                   className="shrink-0 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   title={t('workbench:closeTab')}
@@ -641,7 +661,7 @@ export function WorkbenchTab() {
     </div>
   )
 
-  function renderSubview(sv: WorkbenchSubview): React.ReactNode {
+  function renderSubview(sv: WorkbenchDesignSubview): React.ReactNode {
     // 闭包内 TS 不继承外层 early-return 的收窄；early-return 已保证非空
     const project = selectedProjectName!
     switch (sv) {
@@ -661,6 +681,19 @@ export function WorkbenchTab() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">{t('workbench:status')}:</span>
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">Ready</span>
               </div>
+            </div>
+            {/* M1/M2（AL-D1/D2）：机房设计 / 机柜设计 独立子视图入口（新入口不再进两段式 RackWorkbenchView） */}
+            <div className="rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated p-3 mb-4 flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{t('workbench:designSteps', '设计步骤')}:</span>
+              <button type="button" onClick={() => openSubview('roomdesign')}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white">
+                <Boxes size={12} /> {t('workbench:subview.roomdesign', '机房设计')}
+              </button>
+              <button type="button" onClick={() => openSubview('rackdesign')}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded bg-success-600 hover:bg-success-700 text-white">
+                <Server size={12} /> {t('workbench:subview.rackdesign', '机柜设计')}
+              </button>
+              <span className="text-2xs text-gray-400 ml-auto">{t('workbench:designStepsHint', '机房设计定稿后可进入机柜设计')}</span>
             </div>
             {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
             <StepLabel n="①" text={t('workbench:stepConfig', '配置与就绪')} />
@@ -712,6 +745,10 @@ export function WorkbenchTab() {
         return <TopologyTab />
       case 'rack':
         return <RackWorkbenchView projectName={project} />
+      case 'roomdesign':
+        return <RoomDesignTab projectName={project} />
+      case 'rackdesign':
+        return <RackDesignTab projectName={project} />
       case 'export':
         return <ExportView projectName={project} />
     }
