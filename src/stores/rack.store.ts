@@ -102,6 +102,51 @@ export interface ApplyCabinetTemplateResult {
   conflicts: TemplateConflict[]
 }
 
+// M4（AL-ED2/ED7）：机柜批量属性更新——冲突校验结果（overflow=改矮高度设备溢出 / power=功率改小超限）
+export type BulkUpdateIssueReason = 'overflow' | 'power'
+
+export interface BulkUpdateIssue {
+  cabinetId: number
+  reason: BulkUpdateIssueReason
+  message: string
+}
+
+export interface BulkUpdateResult {
+  applied: number
+  skipped: number
+  issues: BulkUpdateIssue[]
+}
+
+/** 机柜属性补丁（批量/单柜编辑共用；顶部预留为全局 topReservedU，不在此补丁内） */
+export type CabinetPatch = Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>
+
+/**
+ * M4（AL-ED7）：机柜属性补丁冲突校验纯函数（M6 统一校验可在此扩展）
+ * - totalU 改矮：设备最高占用 U 位 > 新高度 → overflow
+ * - power_limit 改小：设备总功率 > 新上限 → power
+ */
+export function validateCabinetPatch(cabinet: RackCabinet, patch: CabinetPatch): BulkUpdateIssue[] {
+  const issues: BulkUpdateIssue[] = []
+  const nextTotalU = patch.totalU ?? cabinet.totalU
+  const maxEndU = cabinet.devices.reduce((m, d) => Math.max(m, d.endU), 0)
+  if (patch.totalU != null && maxEndU > nextTotalU) {
+    issues.push({
+      cabinetId: cabinet.id,
+      reason: 'overflow',
+      message: `机柜 ${cabinet.name} 设备最高占用到 ${maxEndU}U，超过新高度 ${nextTotalU}U`,
+    })
+  }
+  const usedPower = cabinet.devices.reduce((s, d) => s + d.power_watts, 0)
+  if (patch.power_limit != null && usedPower > patch.power_limit) {
+    issues.push({
+      cabinetId: cabinet.id,
+      reason: 'power',
+      message: `机柜 ${cabinet.name} 功率 ${usedPower}W 超过新上限 ${patch.power_limit}W`,
+    })
+  }
+  return issues
+}
+
 interface RackState {
   cabinets: RackCabinet[]
   unplacedDevices: UnplacedDevice[]
@@ -124,6 +169,10 @@ interface RackState {
   removeCabinet: (id: number) => void
   selectCabinet: (id: number | null) => void
   updateCabinet: (id: number, updates: Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>) => void
+  /** M4（AL-ED2/ED7）：批量更新机柜属性（冲突柜跳过并返回 issues） */
+  updateCabinetsBulk: (ids: number[], patch: CabinetPatch) => BulkUpdateResult
+  /** M4（AL-ED2）：按机柜类型批量更新属性（同类型柜全量） */
+  updateCabinetsByType: (type: CabinetType, patch: CabinetPatch) => BulkUpdateResult
   /** M4/M5: 项目机柜配置（顶部预留 U / 每柜 GPU 数量），上架校验与优化按此生效 */
   topReservedU: number
   gpuPerCabinet: number
@@ -470,6 +519,31 @@ export const useRackStore = create<RackState>()(
     set((s) => ({
       cabinets: s.cabinets.map((c) => (c.id === id ? { ...c, ...updates } : c)),
     }))
+  },
+
+  // M4（AL-ED2/ED7）：批量更新机柜属性——逐柜冲突校验，冲突柜跳过不落库
+  updateCabinetsBulk: (ids, patch) => {
+    const idSet = new Set(ids)
+    let applied = 0
+    const issues: BulkUpdateIssue[] = []
+    const cabinets = get().cabinets.map((c) => {
+      if (!idSet.has(c.id)) return c
+      const problems = validateCabinetPatch(c, patch)
+      if (problems.length > 0) {
+        issues.push(...problems)
+        return c
+      }
+      applied++
+      return { ...c, ...patch }
+    })
+    set({ cabinets })
+    return { applied, skipped: issues.length, issues }
+  },
+
+  // M4（AL-ED2）：按类型批量更新（机房同类机柜批量入口）
+  updateCabinetsByType: (type, patch) => {
+    const ids = get().cabinets.filter((c) => c.type === type).map((c) => c.id)
+    return get().updateCabinetsBulk(ids, patch)
   },
 
   placeDevice: (cabinetId, device, startU) => {

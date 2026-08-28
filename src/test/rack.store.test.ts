@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useRackStore, toCabinetType } from '../stores/rack.store'
+import { useRackStore, toCabinetType, validateCabinetPatch } from '../stores/rack.store'
 import type { RackCabinet, RackDevice, CabinetType, UnplacedDevice } from '../stores/rack.store'
 
 // Mock electron API
@@ -596,6 +596,137 @@ describe('RackStore', () => {
       const ok = useRackStore.getState().moveDevice('gpu-1', 1, 2, 1)
       expect(ok).toBe(true)
       expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.devices).toHaveLength(1)
+    })
+  })
+
+  // ===== M4（AL-ED2/ED7）：机柜批量属性更新 action + 冲突校验 =====
+
+  describe('validateCabinetPatch（M4 冲突校验纯函数）', () => {
+    const cab = (over: Partial<RackCabinet> = {}): RackCabinet => ({
+      id: 1, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000,
+      devices: [], ...over,
+    })
+
+    it('无设备时改矮高度无冲突', () => {
+      const issues = validateCabinetPatch(cab({ devices: [] }), { totalU: 30 })
+      expect(issues).toEqual([])
+    })
+
+    it('设备占用超过新高度 → overflow 冲突', () => {
+      const issues = validateCabinetPatch(
+        cab({ devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 40, power_watts: 1000 }] }),
+        { totalU: 30 },
+      )
+      expect(issues).toHaveLength(1)
+      expect(issues[0].reason).toBe('overflow')
+    })
+
+    it('设备功率超过新上限 → power 冲突', () => {
+      const issues = validateCabinetPatch(
+        cab({ devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 5000 }] }),
+        { power_limit: 3000 },
+      )
+      expect(issues).toHaveLength(1)
+      expect(issues[0].reason).toBe('power')
+    })
+
+    it('高度与功率都冲突 → 返回两条', () => {
+      const issues = validateCabinetPatch(
+        cab({ devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 40, power_watts: 5000 }] }),
+        { totalU: 30, power_limit: 3000 },
+      )
+      expect(issues.map((i) => i.reason).sort()).toEqual(['overflow', 'power'])
+    })
+
+    it('改高/提高上限无冲突', () => {
+      const issues = validateCabinetPatch(cab(), { totalU: 48, power_limit: 9000 })
+      expect(issues).toEqual([])
+    })
+  })
+
+  describe('updateCabinetsBulk（M4/AL-ED2 批量属性）', () => {
+    const cab = (id: number, name: string, over: Partial<RackCabinet> = {}): RackCabinet => ({
+      id, name, totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000, devices: [], ...over,
+    })
+
+    beforeEach(() => {
+      useRackStore.setState({ cabinets: [cab(1, '机柜 1'), cab(2, '机柜 2'), cab(3, '机柜 3')] })
+    })
+
+    it('批量改类型：指定 id 全部生效', () => {
+      const r = useRackStore.getState().updateCabinetsBulk([1, 2], { type: 'storage' })
+      expect(r.applied).toBe(2)
+      expect(r.skipped).toBe(0)
+      const s = useRackStore.getState().cabinets
+      expect(s.find((c) => c.id === 1)!.type).toBe('storage')
+      expect(s.find((c) => c.id === 2)!.type).toBe('storage')
+      expect(s.find((c) => c.id === 3)!.type).toBe('gpu')
+    })
+
+    it('批量改名称/功率/高度', () => {
+      const r = useRackStore.getState().updateCabinetsBulk([1, 2], { name: '新柜', power_limit: 8000, totalU: 48 })
+      expect(r.applied).toBe(2)
+      const s = useRackStore.getState().cabinets
+      expect(s.find((c) => c.id === 1)).toMatchObject({ name: '新柜', power_limit: 8000, totalU: 48 })
+      expect(s.find((c) => c.id === 2)).toMatchObject({ name: '新柜', power_limit: 8000, totalU: 48 })
+    })
+
+    it('功率改小超限 → 该柜跳过并返回 power 冲突', () => {
+      useRackStore.setState({ cabinets: [
+        cab(1, '机柜 1', { devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 5000 }] }),
+        cab(2, '机柜 2'),
+      ] })
+      const r = useRackStore.getState().updateCabinetsBulk([1, 2], { power_limit: 3000 })
+      expect(r.applied).toBe(1)
+      expect(r.skipped).toBe(1)
+      expect(r.issues[0].reason).toBe('power')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.power_limit).toBe(6000)
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.power_limit).toBe(3000)
+    })
+
+    it('改矮高度有设备溢出 → 该柜跳过并返回 overflow 冲突', () => {
+      useRackStore.setState({ cabinets: [
+        cab(1, '机柜 1', { devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 40, power_watts: 1000 }] }),
+        cab(2, '机柜 2'),
+      ] })
+      const r = useRackStore.getState().updateCabinetsBulk([1, 2], { totalU: 30 })
+      expect(r.applied).toBe(1)
+      expect(r.issues[0].reason).toBe('overflow')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.totalU).toBe(42)
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.totalU).toBe(30)
+    })
+
+    it('空 id 列表 → applied 0', () => {
+      const r = useRackStore.getState().updateCabinetsBulk([], { type: 'storage' })
+      expect(r.applied).toBe(0)
+      expect(useRackStore.getState().cabinets.every((c) => c.type === 'gpu')).toBe(true)
+    })
+  })
+
+  describe('updateCabinetsByType（M4/AL-ED2 按类型批量）', () => {
+    const cab = (id: number, name: string, type: CabinetType): RackCabinet => ({
+      id, name, totalU: 42, type, power_limit: 6000, devices: [],
+    })
+
+    it('只更新指定类型的机柜', () => {
+      useRackStore.setState({ cabinets: [
+        cab(1, '机柜 1', 'gpu'),
+        cab(2, '机柜 2', 'gpu'),
+        cab(3, '机柜 3', 'network'),
+        cab(4, '机柜 4', 'storage'),
+      ] })
+      const r = useRackStore.getState().updateCabinetsByType('gpu', { power_limit: 9000 })
+      expect(r.applied).toBe(2)
+      const s = useRackStore.getState().cabinets
+      expect(s.filter((c) => c.power_limit === 9000).map((c) => c.id)).toEqual([1, 2])
+      expect(s.find((c) => c.id === 3)!.power_limit).toBe(6000)
+      expect(s.find((c) => c.id === 4)!.power_limit).toBe(6000)
+    })
+
+    it('无该类型机柜 → applied 0', () => {
+      useRackStore.setState({ cabinets: [cab(1, '机柜 1', 'gpu')] })
+      const r = useRackStore.getState().updateCabinetsByType('storage', { power_limit: 9000 })
+      expect(r.applied).toBe(0)
     })
   })
 })
