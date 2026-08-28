@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, X, Boxes, Server } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, X } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { WorkbenchScopeCard } from '@/components/workbench/WorkbenchScopeCard'
@@ -46,12 +46,9 @@ const SUBVIEW_KEYS: Record<string, string> = {
   export: 'workbench:subview.export',
 }
 
-// M1/M2（AL-D1/D2）：设计拆分——机房设计 / 机柜设计 独立子视图。
-// ui.store 的 WorkbenchSubview 暂未扩展，故在本文件局部收敛为联合类型，
-// 打开新子视图时以类型断言写入 store（运行时仅存字符串，persist 不做校验）。
-type WorkbenchDesignSubview = WorkbenchSubview | 'roomdesign' | 'rackdesign'
+// AL-N1（PRD v3.2）：roomdesign/rackdesign 已并入 ui.store 的 WorkbenchSubview，移除本文件局部收敛类型与断言
 
-/** 新子视图标签的中文兜底（i18n 资源暂未新增 workbench:subview.roomdesign/rackdesign，M7 打磨期可并入资源） */
+/** 新子视图标签的中文兜底（AL-N1 后 i18n 已并入 workbench:subview.roomdesign/rackdesign；此处仅作 key 缺失时回退，防编程 ID） */
 const SUBVIEW_LABEL_FALLBACK: Record<string, string> = {
   roomdesign: '机房设计',
   rackdesign: '机柜设计',
@@ -141,16 +138,16 @@ export function WorkbenchTab() {
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const setActivityHint = useUIStore((s) => s.setActivityHint)
 
-  // M1/M2（AL-D1/D2）：打开子视图（含新键 roomdesign/rackdesign；store 类型未扩展故断言，运行时仅存字符串）
-  const openSubview = useCallback((view: WorkbenchDesignSubview) => {
-    setWorkbenchSubview(view as WorkbenchSubview)
+  // AL-N1（PRD v3.2）：打开子视图（roomdesign/rackdesign 已并入 WorkbenchSubview，无需断言）
+  const openSubview = useCallback((view: WorkbenchSubview) => {
+    setWorkbenchSubview(view)
   }, [setWorkbenchSubview])
 
   const [aidcProjects, setAidcProjects] = useState<string[]>([])
   // AL-M5a：AIDC 新建并入 CreateProjectWizardModal（移除固定 64 台内联表单）
   const [showAidcWizard, setShowAidcWizard] = useState(false)
   // 打磨轮（v1.6 / AL-T1a）：工作台二级页签——访问过的子视图保留（keep-alive 保留状态）
-  const [openedSubviews, setOpenedSubviews] = useState<WorkbenchDesignSubview[]>(['main'])
+  const [openedSubviews, setOpenedSubviews] = useState<WorkbenchSubview[]>(['main'])
 
   // 打开新子视图 → 记入二级页签
   useEffect(() => {
@@ -158,11 +155,11 @@ export function WorkbenchTab() {
   }, [subview])
 
   // AL-M4h：二级页签右键菜单（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）
-  const [subviewCtx, setSubviewCtx] = useState<{ sv: WorkbenchDesignSubview; x: number; y: number } | null>(null)
+  const [subviewCtx, setSubviewCtx] = useState<{ sv: WorkbenchSubview; x: number; y: number } | null>(null)
   // AL-M4c：保活集合 = 激活页签 + 最近 (N-1) 个非激活页签;超限非激活卸载释放内存
   const mountedSubviews = useMemo(() => {
     const activeIdx = openedSubviews.indexOf(subview)
-    const kept: WorkbenchDesignSubview[] = [subview]
+    const kept: WorkbenchSubview[] = [subview]
     for (let i = openedSubviews.length - 1; i >= 0 && kept.length < KEEP_ALIVE_LIMIT; i--) {
       if (i !== activeIdx) kept.push(openedSubviews[i])
     }
@@ -170,10 +167,10 @@ export function WorkbenchTab() {
   }, [openedSubviews, subview])
 
   // AL-M4h：批量关闭子视图
-  const batchCloseSubviews = useCallback((mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchDesignSubview) => {
+  const batchCloseSubviews = useCallback((mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchSubview) => {
     setOpenedSubviews((prev) => {
       const idx = prev.indexOf(sv)
-      let next: WorkbenchDesignSubview[]
+      let next: WorkbenchSubview[]
       if (mode === 'all') next = ['main']
       else if (mode === 'this') next = prev.filter((x) => x !== sv)
       else if (mode === 'others') next = prev.filter((x) => x === sv)
@@ -378,7 +375,7 @@ export function WorkbenchTab() {
     </div>
   )
 
-  function renderSubview(sv: WorkbenchDesignSubview): React.ReactNode {
+  function renderSubview(sv: WorkbenchSubview): React.ReactNode {
     // 闭包内 TS 不继承外层 early-return 的收窄；early-return 已保证非空
     const project = selectedProjectName!
     switch (sv) {
@@ -398,19 +395,6 @@ export function WorkbenchTab() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">{t('workbench:status')}:</span>
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">Ready</span>
               </div>
-            </div>
-            {/* M1/M2（AL-D1/D2）+M3（AL-D3c）：机房设计 / 机柜设计 独立子视图入口（旧两段式 RackWorkbenchView 已收敛） */}
-            <div className="rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated p-3 mb-4 flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{t('workbench:designSteps', '设计步骤')}:</span>
-              <button type="button" onClick={() => openSubview('roomdesign')}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white">
-                <Boxes size={12} /> {t('workbench:subview.roomdesign', '机房设计')}
-              </button>
-              <button type="button" onClick={() => openSubview('rackdesign')}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded bg-success-600 hover:bg-success-700 text-white">
-                <Server size={12} /> {t('workbench:subview.rackdesign', '机柜设计')}
-              </button>
-              <span className="text-2xs text-gray-400 ml-auto">{t('workbench:designStepsHint', '机房设计定稿后可进入机柜设计')}</span>
             </div>
             {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
             <StepLabel n="①" text={t('workbench:stepConfig', '配置与就绪')} />
