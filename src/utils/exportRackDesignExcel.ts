@@ -1,93 +1,79 @@
 /**
- * M4: 导出机柜设计 Excel（单文件多 sheet）
- * - Sheet1 机柜平面图：机房矩阵网格（类型/柜号/占用）+ 机柜汇总
- * - Sheet2 每机柜设计：逐柜 U 位视图（U 位/设备/类型/功率，从顶部向下）
- * - Sheet3 上机表：全部设备明细
+ * M7（AL-E2）：导出机柜设计 Excel（单文件两 sheet）
+ * - Sheet1 每机柜设计：逐柜 U 位视图（U 位/设备/类型/功率/占用，从顶部向下）
+ * - Sheet2 上机表：全部设备明细 + 功率汇总
+ *
+ * 原「机柜平面图」sheet 已移至机房设计 Excel（exportRoomDesignExcel Sheet1）。
+ * buildRackDesignWorkbook 为纯函数（内存 workbook，便于单测）；exportRackDesignExcel 负责落盘。
  */
 import * as XLSX from 'xlsx'
 import type { RackCabinet, RackDevice } from '@/stores/rack.store'
-import type { RoomMatrixData } from '@/stores/room.store'
 
-export async function exportRackDesignExcel(
-  projectName: string,
-  cabinets: RackCabinet[],
-  matrix: RoomMatrixData | null,
-  batchName?: string,
-  fileName?: string,
-): Promise<string> {
+/** 纯函数：构建机柜设计工作簿（两 sheet：每机柜设计 / 上机表） */
+export function buildRackDesignWorkbook(cabinets: RackCabinet[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new()
 
-  // ---- Sheet1: 机柜平面图 ----
-  const planRows: (string | number)[][] = [
-    ['机柜平面图', `项目: ${projectName}`, `机柜数: ${cabinets.length}`, `生成时间: ${new Date().toLocaleString()}`],
-    [],
-  ]
-  if (matrix && matrix.rows.length > 0) {
-    planRows.push(['', ...matrix.cols.map((c) => `列${c}`)])
-    for (const row of matrix.rows) {
-      const line: (string | number)[] = [`行${row}`]
-      for (const col of matrix.cols) {
-        const cell = matrix.cells.find((c) => c.row === row && c.col === col)
-        const cab = cell?.cabinetId != null ? cabinets.find((c) => c.id === cell.cabinetId) : null
-        if (cell?.placeholder) {
-          line.push(cell.placeholder === 'ac' ? '空调' : '柱')
-        } else if (cab) {
-          line.push(`${cab.name}(${cab.type})\n${cab.devices.length}台·${cab.power_limit}W`)
-        } else if (cell) {
-          line.push(cell.type)
-        } else {
-          line.push('')
-        }
-      }
-      planRows.push(line)
-    }
-  }
-  planRows.push([], ['机柜汇总'])
-  planRows.push(['机柜', '类型', 'U位', '设备数', '功率上限(W)', '已用功率(W)'])
-  for (const c of cabinets) {
-    const usedPower = c.devices.reduce((s, d) => s + d.power_watts, 0)
-    planRows.push([c.name, c.type, `${c.totalU}U`, c.devices.length, c.power_limit, usedPower])
-  }
-  const ws1 = XLSX.utils.aoa_to_sheet(planRows)
-  ws1['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }]
-  XLSX.utils.book_append_sheet(wb, ws1, '机柜平面图')
-
-  // ---- Sheet2: 每机柜设计（U 位视图，从顶部向下） ----
+  // ---- Sheet1: 每机柜设计（U 位视图，从顶部向下） ----
   const designRows: (string | number)[][] = []
   for (const c of cabinets) {
-    designRows.push([`机柜 ${c.name}`, `类型: ${c.type}`, `${c.totalU}U`, `功率上限 ${c.power_limit}W`])
-    designRows.push(['U位', '设备', '类型', '功率(W)'])
+    const usedPower = c.devices.reduce((s, d) => s + d.power_watts, 0)
+    const occupiedU = c.devices.reduce((s, d) => s + (d.endU - d.startU + 1), 0)
+    designRows.push([`机柜 ${c.name}`, `类型: ${c.type}`, `${c.totalU}U`, `功率上限 ${c.power_limit}W`, `已用功率 ${usedPower}W`, `占用 ${occupiedU}U`])
+    designRows.push(['U位', '设备', '类型', '功率(W)', '占用(U)'])
     const firstU = new Map<number, RackDevice>()
     for (const d of c.devices) firstU.set(d.startU, d)
     for (let u = c.totalU; u >= 1; u--) {
       const d = firstU.get(u)
       if (d) {
-        designRows.push([`${d.startU}-${d.endU}U`, d.name, d.type, d.power_watts])
+        designRows.push([`${d.startU}-${d.endU}U`, d.name, d.type, d.power_watts, d.endU - d.startU + 1])
       } else {
-        designRows.push([`U${u}`, '', '', ''])
+        designRows.push([`U${u}`, '', '', '', ''])
       }
     }
     designRows.push([])
   }
-  const ws2 = XLSX.utils.aoa_to_sheet(designRows)
-  ws2['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 16 }, { wch: 12 }]
-  XLSX.utils.book_append_sheet(wb, ws2, '每机柜设计')
+  const ws1 = XLSX.utils.aoa_to_sheet(designRows)
+  ws1['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 10 }]
+  XLSX.utils.book_append_sheet(wb, ws1, '每机柜设计')
 
-  // ---- Sheet3: 上机表（全部设备明细） ----
-  const mountRows: (string | number)[][] = [['机柜', '机柜类型', '设备', '设备类型', '起始U', '结束U', '功率(W)']]
+  // ---- Sheet2: 上机表（全部设备明细 + 功率汇总） ----
+  const mountRows: (string | number)[][] = [['机柜', '机柜类型', '设备', '设备类型', '起始U', '结束U', '占用(U)', '功率(W)']]
   for (const c of cabinets) {
     for (const d of c.devices) {
-      mountRows.push([c.name, c.type, d.name, d.type, d.startU, d.endU, d.power_watts])
+      mountRows.push([c.name, c.type, d.name, d.type, d.startU, d.endU, d.endU - d.startU + 1, d.power_watts])
     }
   }
-  const ws3 = XLSX.utils.aoa_to_sheet(mountRows)
-  ws3['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 }]
-  XLSX.utils.book_append_sheet(wb, ws3, '上机表')
+  mountRows.push([], ['--- 功率汇总 ---'])
+  mountRows.push(['机柜', '机柜类型', '功率上限(W)', '已用功率(W)', '使用率', '状态'])
+  let totalUsed = 0
+  let totalLimit = 0
+  for (const c of cabinets) {
+    const used = c.devices.reduce((s, d) => s + d.power_watts, 0)
+    const pct = c.power_limit > 0 ? Math.round((used / c.power_limit) * 100) : 0
+    totalUsed += used
+    totalLimit += c.power_limit
+    mountRows.push([c.name, c.type, c.power_limit, used, `${pct}%`, used > c.power_limit ? '超限' : '正常'])
+  }
+  const totalPct = totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0
+  mountRows.push([], ['合计', '', totalLimit, totalUsed, `${totalPct}%`, ''])
+  const ws2 = XLSX.utils.aoa_to_sheet(mountRows)
+  ws2['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }]
+  XLSX.utils.book_append_sheet(wb, ws2, '上机表')
 
+  return wb
+}
+
+export async function exportRackDesignExcel(
+  projectName: string,
+  cabinets: RackCabinet[],
+  batchName?: string,
+  fileName?: string,
+): Promise<string> {
+  const wb = buildRackDesignWorkbook(cabinets)
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' })
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   const outName = fileName ?? `机柜设计_${timestamp}.xlsx`
-  // M4b: 提供 batchName 时写入版本归档目录 output/<项目名-版本-时间>/（改布局前归档当前设计）
+  // batchName 提供时写入版本归档目录 output/<batchName>/（改布局前归档当前设计）
   const filePath = batchName
     ? await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${outName}`, wbout)
     : await window.electron?.export?.saveFile(projectName, outName, wbout)
