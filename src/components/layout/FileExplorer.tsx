@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   Wrench, Play, CheckCircle, XCircle, Loader2, Zap,
   Table2, List, FileSpreadsheet, GitBranch, Package,
-  Cpu, Network, Database, FolderOpen, FileCheck2, Download,
+  Cpu, Network, Database, FolderOpen, FileCheck2, Download, Boxes,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -170,8 +170,9 @@ function DesignExplorer() {
 const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; stage: string; label: string; icon: React.ReactNode }> = [
   { id: 'aidc', stage: '①规划', label: 'AIDC 规划', icon: <Cpu size={13} className="text-emerald-500" /> },
   { id: 'design', stage: '②组网设计', label: '组网设计', icon: <Wrench size={13} className="text-warning-500" /> },
-  // 打磨轮（v1.6 / AL-N1c）：机柜设计挂到组网设计组下
-  { id: 'rack', stage: '②组网设计', label: '机柜设计', icon: <Database size={13} className="text-purple-500" /> },
+  // AL-N1（PRD v3.2）：中栏拆「机房设计」「机柜设计」两个独立入口（替换坏链 rack；均挂组网设计组）
+  { id: 'roomdesign', stage: '②组网设计', label: '机房设计', icon: <Boxes size={13} className="text-primary-500" /> },
+  { id: 'rackdesign', stage: '②组网设计', label: '机柜设计', icon: <Database size={13} className="text-purple-500" /> },
   { id: 'main', stage: '③组网渲染', label: '组网渲染', icon: <Zap size={13} className="text-gray-400" /> },
   { id: 'visualization', stage: '④校对', label: '拓扑', icon: <Network size={13} className="text-info-500" /> },
   // 打磨轮（v1.6 / AL-O2c）：本项目输出留在工作台
