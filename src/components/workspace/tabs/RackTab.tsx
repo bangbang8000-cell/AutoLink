@@ -22,8 +22,9 @@ interface Props {
   cabinetId?: number | null
 }
 
-const getTypeColorClass = (type: string) => {
-  const t = type.toLowerCase()
+// AL-N4：导出给测试；type 为空/undefined 时兜底 'gpu'（旧数据缺 device.type 不再 TypeError）
+export const getTypeColorClass = (type?: string) => {
+  const t = (type ?? 'gpu').toLowerCase()
   if (t.includes('gpu')) return 'bg-info-500 dark:bg-info-600'
   if (t.includes('存储') || t.includes('storage')) return 'bg-success-500 dark:bg-success-600'
   if (t.includes('switch') || t.includes('交换机') || t.includes('leaf') || t.includes('spine') || t.includes('core')) return 'bg-warning-500 dark:bg-warning-600'
@@ -32,14 +33,14 @@ const getTypeColorClass = (type: string) => {
   return 'bg-gray-400 dark:bg-gray-500'
 }
 
-const getTypeLabel = (type: string) => {
-  const t = type.toLowerCase()
+export const getTypeLabel = (type?: string) => {
+  const t = (type ?? 'gpu').toLowerCase()
   if (t.includes('gpu')) return 'GPU'
   if (t.includes('存储') || t.includes('storage')) return '存储'
   if (t.includes('switch') || t.includes('交换机')) return '交换机'
   if (t.includes('通算') || t.includes('compute')) return '通算'
   if (t.includes('安全') || t.includes('security')) return '安全'
-  return type
+  return type && type.trim() ? type : 'GPU'
 }
 
 const CONFLICT_REASON_LABELS: Record<TemplateConflict['reason'], string> = {
