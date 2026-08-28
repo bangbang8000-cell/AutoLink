@@ -1,7 +1,12 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useRackStore, CABINET_TYPE_LABELS, DEFAULT_TOP_RESERVED_U, type CabinetType, type RackDevice, type UnplacedDevice, type TemplateConflict } from '@/stores/rack.store'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { ContextMenu } from '@/components/ui/ContextMenu'
+import { useRackStore, CABINET_TYPE_LABELS, findFirstAvailableU, validateCabinetPatch, checkDeviceMove, type CabinetPatch, type CabinetType, type DevicePatch, type RackDevice, type UnplacedDevice, type TemplateConflict } from '@/stores/rack.store'
+import { useRoomStore } from '@/stores/room.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useToastStore } from '@/stores/toast.store'
 import { RackPowerBar } from '@/components/rack/RackPowerBar'
@@ -9,7 +14,7 @@ import { RackPowerHeatView } from '@/components/rack/RackPowerHeatView'
 import { RackMultiCompareView } from '@/components/rack/RackMultiCompareView'
 import { RackIsometricView } from '@/components/rack/RackIsometricView'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid } from 'lucide-react'
+import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid, Settings, ListChecks } from 'lucide-react'
 
 type ViewMode = 'basic' | 'power-heat' | 'multi-compare' | 'isometric'
 
@@ -64,6 +69,13 @@ export function RackTab({ cabinetId }: Props) {
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
   const getPowerUsage = useRackStore((s) => s.getPowerUsage)
   const addToast = useToastStore((s) => s.addToast)
+  // M5（AL-ED4/ED5/ED6）：柜内编辑能力——单柜信息调整/设备批量/U位偏移/顶部预留/联动
+  const topReservedU = useRackStore((s) => s.topReservedU)
+  const updateCabinetSafe = useRackStore((s) => s.updateCabinetSafe)
+  const updateDevicesBulk = useRackStore((s) => s.updateDevicesBulk)
+  const shiftDevicesU = useRackStore((s) => s.shiftDevicesU)
+  const setRackConfig = useRackStore((s) => s.setRackConfig)
+  const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
 
   const [selectedUnplaced, setSelectedUnplaced] = useState<string | null>(null)
   const [showUnplaced, setShowUnplaced] = useState(true)
@@ -73,6 +85,18 @@ export function RackTab({ cabinetId }: Props) {
   const [confirmState, setConfirmState] = useState<{ message: string; fn: () => void } | null>(null)
   // PRD AL-R6：整柜模板应用冲突明细（无冲突时置 null 显示成功 toast）
   const [templateResult, setTemplateResult] = useState<{ applied: number; conflicts: TemplateConflict[] } | null>(null)
+  // M5（AL-ED4）：机柜信息调整 Modal + 右键菜单
+  const [cabinetEditOpen, setCabinetEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState<{ name: string; totalU: string; type: CabinetType; powerLimit: string; topReservedU: string } | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  // M5（AL-ED6）：同柜批量编辑（多选态 + 批量操作条）
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set())
+  const [batchName, setBatchName] = useState('')
+  const [batchPower, setBatchPower] = useState('')
+  const [batchType, setBatchType] = useState<CabinetType | ''>('')
+  const [shiftOffset, setShiftOffset] = useState('')
 
   // V2.9.2-T4: 上架/移除设备标记 dirty(关闭需确认)
   const activeTabId = useWorkspaceStore((s) => s.activeTabId)
@@ -83,6 +107,9 @@ export function RackTab({ cabinetId }: Props) {
 
   // Find the target cabinet
   const cabinet = cabinetId != null ? cabinets.find((c) => c.id === cabinetId) : cabinets.find((c) => c.id === selectedCabinetId) || cabinets[0]
+
+  // M5（AL-ED5）：跨柜拖拽目标柜列表（除当前柜外）
+  const otherCabinets = useMemo(() => cabinets.filter((c) => c.id !== cabinet?.id), [cabinets, cabinet])
 
   // Build a U-position map with device info per slot
   const uSlots = useMemo(() => {
@@ -125,20 +152,11 @@ export function RackTab({ cabinetId }: Props) {
   const [dragDevice, setDragDevice] = useState<RackDevice | null>(null)
   const [dragOverU, setDragOverU] = useState<number | null>(null)
 
-  // M6：拖拽落点冲突（排除设备自身；含顶部预留保护）
+  // M5（AL-ED5）：拖拽落点冲突预判——复用 checkDeviceMove 与落库校验同源（顶部预留用全局配置）
   const dragConflict = useCallback((startU: number, device: RackDevice): boolean => {
     if (!cabinet) return true
-    const height = device.endU - device.startU + 1
-    const endU = startU + height - 1
-    if (startU < 1 || endU > cabinet.totalU - DEFAULT_TOP_RESERVED_U) return true
-    const currentPower = cabinet.devices
-      .filter((d) => d.id !== device.id)
-      .reduce((s, d) => s + d.power_watts, 0)
-    if (currentPower + device.power_watts > cabinet.power_limit) return true
-    return cabinet.devices.some(
-      (d) => d.id !== device.id && !(endU < d.startU || startU > d.endU),
-    )
-  }, [cabinet])
+    return !checkDeviceMove(cabinet, device, startU, topReservedU).ok
+  }, [cabinet, topReservedU])
 
   // M6：放下 → 同柜移动到新 U 位（复用 moveDevice 校验）
   const handleDrop = useCallback((targetU: number) => {
@@ -153,6 +171,122 @@ export function RackTab({ cabinetId }: Props) {
     setDragDevice(null)
     setDragOverU(null)
   }, [dragDevice, cabinet, moveDevice, addToast, markDirty])
+
+  // M5（AL-ED5）：跨柜拖拽 → 目标柜找首个可用落点（findFirstAvailableU 预判，落库走 moveDevice）
+  const handleCrossDrop = useCallback((targetId: number) => {
+    if (!dragDevice) { setDragDevice(null); setDragOverU(null); return }
+    const target = cabinets.find((c) => c.id === targetId)
+    if (!target || !cabinet) {
+      addToast('error', '无法放置：目标机柜不存在', 4000)
+      setDragDevice(null); setDragOverU(null); return
+    }
+    const height = dragDevice.endU - dragDevice.startU + 1
+    const startU = findFirstAvailableU(target, height, { topReservedU, power_watts: dragDevice.power_watts })
+    if (startU == null) {
+      addToast('error', `无法移动到 ${target.name}：无可用 U 位 / 功率不足`, 4000)
+    } else {
+      const ok = moveDevice(dragDevice.id, cabinet.id, target.id, startU)
+      if (ok) {
+        addToast('success', `已移动到 ${target.name} U${startU}`, 3000)
+        markDirty()
+      } else {
+        addToast('error', '无法放置：U 位冲突 / 越界 / 功率超限 / 顶部预留', 4000)
+      }
+    }
+    setDragDevice(null)
+    setDragOverU(null)
+  }, [dragDevice, cabinet, cabinets, topReservedU, moveDevice, addToast, markDirty])
+
+  // M5（AL-ED4）：打开机柜信息调整 Modal（以当前机柜值初始化表单）
+  const openCabinetEdit = useCallback(() => {
+    if (!cabinet) return
+    setEditError(null)
+    setEditForm({
+      name: cabinet.name,
+      totalU: String(cabinet.totalU),
+      type: cabinet.type,
+      powerLimit: String(cabinet.power_limit),
+      topReservedU: String(topReservedU),
+    })
+    setCabinetEditOpen(true)
+  }, [cabinet, topReservedU])
+
+  // M5（AL-ED4）：保存——冲突（改矮/功率改小）校验阻塞不落库（复用 validateCabinetPatch）
+  const saveCabinetEdit = useCallback(() => {
+    if (!cabinet || !editForm) return
+    const totalU = Math.max(1, parseInt(editForm.totalU) || 1)
+    const powerLimit = Math.max(0, parseInt(editForm.powerLimit) || 0)
+    const reserved = Math.max(0, parseInt(editForm.topReservedU) || 0)
+    const patch: CabinetPatch = {
+      name: editForm.name.trim() || cabinet.name,
+      totalU,
+      type: editForm.type,
+      power_limit: powerLimit,
+    }
+    const r = updateCabinetSafe(cabinet.id, patch)
+    if (r.issues.length > 0) {
+      setEditError(r.issues[0].message)
+      addToast('error', r.issues[0].message, 5000)
+      return
+    }
+    setRackConfig({ topReservedU: reserved })
+    syncCabinetToCell(cabinet.id)
+    markDirty()
+    setCabinetEditOpen(false)
+    setEditForm(null)
+    addToast('success', '机柜信息已更新（顶部预留为全局配置）', 3000)
+  }, [cabinet, editForm, updateCabinetSafe, setRackConfig, syncCabinetToCell, markDirty, addToast])
+
+  // M5（AL-ED6）：设备块点击 → 批量模式多选
+  const toggleDeviceSelect = useCallback((id: string) => {
+    setSelectedDeviceIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  // M5（AL-ED6）：批量应用属性（名称/类型/功率；功率超限整批拒绝）
+  const applyBatchAttrs = useCallback(() => {
+    if (!cabinet || selectedDeviceIds.size === 0) return
+    const patch: DevicePatch = {}
+    if (batchName.trim()) patch.name = batchName.trim()
+    if (batchType) patch.type = batchType
+    if (batchPower !== '' && !Number.isNaN(parseInt(batchPower))) patch.power_watts = Math.max(0, parseInt(batchPower))
+    if (Object.keys(patch).length === 0) {
+      addToast('warning', '请至少填写一项属性（名称/类型/功率）', 3000)
+      return
+    }
+    const r = updateDevicesBulk(cabinet.id, Array.from(selectedDeviceIds), patch)
+    if (r.issues.length > 0) addToast('error', r.issues[0].message, 5000)
+    else addToast('success', `已批量更新 ${r.applied} 台设备`, 3000)
+    markDirty()
+    setBatchName('')
+    setBatchPower('')
+    setBatchType('')
+    if (r.issues.length === 0) setSelectedDeviceIds(new Set())
+  }, [cabinet, selectedDeviceIds, batchName, batchType, batchPower, updateDevicesBulk, addToast, markDirty])
+
+  // M5（AL-ED6）：批量 U 位偏移（整批原子，越界/冲突拒绝）
+  const applyShift = useCallback((offset: number) => {
+    if (!cabinet || selectedDeviceIds.size === 0) return
+    const r = shiftDevicesU(cabinet.id, Array.from(selectedDeviceIds), offset)
+    if (r.issues.length > 0) {
+      addToast('error', r.issues[0].message, 5000)
+    } else {
+      addToast('success', `已${offset > 0 ? '上移' : '下移'} ${r.applied} 台设备 ${Math.abs(offset)}U`, 3000)
+      markDirty()
+    }
+  }, [cabinet, selectedDeviceIds, shiftDevicesU, addToast, markDirty])
+
+  const clearSelection = useCallback(() => {
+    setSelectedDeviceIds(new Set())
+    setBatchName('')
+    setBatchPower('')
+    setBatchType('')
+    setShiftOffset('')
+  }, [])
 
   const handleSlotClick = useCallback((uNumber: number) => {
     if (!selectedUnplaced || !cabinet) return
@@ -216,8 +350,15 @@ export function RackTab({ cabinetId }: Props) {
   return (
     <>
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
+      {/* Header（M5：右键 → 机柜信息调整/批量编辑菜单） */}
+      <div
+        className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50"
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setContextMenu({ x: e.clientX, y: e.clientY })
+        }}
+        title={t('rack:cabinetHeaderCtx', '右键：机柜信息调整 / 批量编辑设备')}
+      >
         <div className="flex items-center gap-2">
           {/* Cabinet selector */}
           <div className="relative">
@@ -265,7 +406,7 @@ export function RackTab({ cabinetId }: Props) {
           <span className="text-2xs text-gray-400 dark:text-gray-500">
             {cabinet.totalU}U · {t('rackTab.devices', { count: cabinet.devices.length })}
           </span>
-          {/* M4: 逐柜功率编辑 */}
+          {/* M4: 逐柜功率编辑（M5：改小超限校验阻塞不落库） */}
           <label className="flex items-center gap-1 text-2xs text-gray-500 dark:text-gray-400" title="单柜功率上限(W)">
             功率
             <input
@@ -274,12 +415,26 @@ export function RackTab({ cabinetId }: Props) {
               step={100}
               value={cabinet.power_limit}
               onChange={(e) => {
-                updateCabinet(cabinet.id, { power_limit: Math.max(0, parseInt(e.target.value) || 0) })
+                const next = Math.max(0, parseInt(e.target.value) || 0)
+                if (validateCabinetPatch(cabinet, { power_limit: next }).length > 0) {
+                  addToast('error', `功率 ${next}W 低于当前柜内已用功率，已阻止修改`, 4000)
+                  return
+                }
+                updateCabinet(cabinet.id, { power_limit: next })
                 markDirty()
               }}
               className="w-20 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-700 dark:text-gray-200"
             />
           </label>
+          {/* M5（AL-ED4）：机柜信息调整入口（Modal：名称/总U/类型/功率/顶部预留） */}
+          <button
+            type="button"
+            onClick={openCabinetEdit}
+            className="flex items-center gap-1 px-1.5 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 shrink-0"
+            title="机柜信息调整（名称/总U/类型/功率/顶部预留）"
+          >
+            <Settings size={11} /> {t('rack:editCabinetInfo', '机柜信息')}
+          </button>
           {/* 打磨轮（v1.5 / AL-R1d）：把当前柜 U 位布局/功率应用到所有同类柜 */}
           <button
             type="button"
@@ -329,6 +484,25 @@ export function RackTab({ cabinetId }: Props) {
                 )
               })}
             </div>
+          )}
+
+          {/* M5（AL-ED6）：批量编辑设备（多选态切换，仅基础视图） */}
+          {viewMode === 'basic' && (
+            <button
+              type="button"
+              onClick={() => {
+                setBatchMode((b) => !b)
+                if (batchMode) setSelectedDeviceIds(new Set())
+              }}
+              className={`flex items-center gap-1 px-2 py-1 text-2xs rounded border transition-colors ${
+                batchMode
+                  ? 'bg-primary-500 text-white border-primary-500'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+              }`}
+              title="批量编辑：多选设备后批量改属性/U位偏移"
+            >
+              <ListChecks size={11} /> {batchMode ? t('rack:batchExit', '退出批量') : t('rack:batchEdit', '批量编辑')}
+            </button>
           )}
 
           {/* 视图模式切换器 */}
@@ -459,6 +633,93 @@ export function RackTab({ cabinetId }: Props) {
               </div>
             )}
 
+            {/* M5（AL-ED6）：同柜批量操作条（批量模式多选后应用） */}
+            {batchMode && (
+              <div className="mb-2 px-3 py-2 rounded border border-primary-200 dark:border-primary-900/40 bg-primary-50/40 dark:bg-primary-900/10 flex flex-wrap items-center gap-2 text-2xs">
+                <span className="font-medium text-primary-700 dark:text-primary-300">已选 {selectedDeviceIds.size} 台设备</span>
+                <Input
+                  value={batchName}
+                  onChange={(e) => setBatchName(e.target.value)}
+                  placeholder="批量名称"
+                  className="!w-28 !py-0.5 !text-2xs"
+                  aria-label="批量名称"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  step={100}
+                  value={batchPower}
+                  onChange={(e) => setBatchPower(e.target.value)}
+                  placeholder="批量功率(W)"
+                  className="!w-24 !py-0.5 !text-2xs"
+                  aria-label="批量功率"
+                />
+                <Select
+                  value={batchType}
+                  onChange={(e) => setBatchType(e.target.value as CabinetType | '')}
+                  options={[{ value: '', label: '批量类型' }, ...Object.entries(CABINET_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))]}
+                  className="!w-28 !py-0.5 !text-2xs"
+                  aria-label="批量类型"
+                />
+                <button type="button" onClick={applyBatchAttrs} className="px-2 py-1 rounded bg-primary-500 hover:bg-primary-600 text-white">
+                  应用属性
+                </button>
+                <span className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                <span className="text-gray-500 dark:text-gray-400">U位偏移</span>
+                <button type="button" onClick={() => applyShift(1)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                  上移1U
+                </button>
+                <button type="button" onClick={() => applyShift(-1)} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                  下移1U
+                </button>
+                <Input
+                  type="number"
+                  value={shiftOffset}
+                  onChange={(e) => setShiftOffset(e.target.value)}
+                  placeholder="偏移U"
+                  className="!w-16 !py-0.5 !text-2xs"
+                  aria-label="批量偏移量"
+                />
+                <button type="button" onClick={() => {
+                  const off = parseInt(shiftOffset) || 0
+                  if (off === 0) { addToast('warning', '请输入非 0 偏移量', 3000); return }
+                  applyShift(off)
+                }} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                  应用偏移
+                </button>
+                <button type="button" onClick={clearSelection} className="px-2 py-1 rounded text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20">
+                  清除选择
+                </button>
+              </div>
+            )}
+
+            {/* M5（AL-ED5）：跨柜拖拽目标 chips（拖到其它柜，预判可落点/无效落点红提示） */}
+            {dragDevice && otherCabinets.length > 0 && (
+              <div className="mb-2 px-2 py-1.5 rounded border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-app/50 flex flex-wrap items-center gap-1.5 text-2xs">
+                <span className="text-gray-400">{t('rack:cabinetDragTo', '拖到其它机柜：')}</span>
+                {otherCabinets.map((oc) => {
+                  const height = dragDevice.endU - dragDevice.startU + 1
+                  const startU = findFirstAvailableU(oc, height, { topReservedU, power_watts: dragDevice.power_watts })
+                  const canDrop = startU != null
+                  return (
+                    <button
+                      key={oc.id}
+                      onDragOver={(e) => { if (dragDevice) e.preventDefault() }}
+                      onDrop={(e) => { e.preventDefault(); handleCrossDrop(oc.id) }}
+                      className={`px-2 py-0.5 rounded border text-2xs transition-colors ${
+                        canDrop
+                          ? 'border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20'
+                          : 'border-error-300 dark:border-error-600 text-error-500 dark:text-error-400 bg-error-50 dark:bg-error-900/20'
+                      }`}
+                      title={canDrop ? `${oc.name} 可落位 U${startU}` : `${oc.name} 无可用位置`}
+                    >
+                      {oc.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             <div className="flex gap-1 min-w-[320px] max-w-xl mx-auto">
               {/* U number ruler */}
               <div className="w-12 shrink-0 bg-gray-100 dark:bg-gray-700/50 rounded-l">
@@ -508,7 +769,10 @@ export function RackTab({ cabinetId }: Props) {
                     return (
                       <button
                         key={i}
-                        onClick={() => handleSlotClick(uNum)}
+                        onClick={() => {
+                          if (batchMode) { clearSelection(); return }
+                          handleSlotClick(uNum)
+                        }}
                         onDragOver={(e) => { if (dragDevice) { e.preventDefault(); setDragOverU(uNum) } }}
                         onDrop={(e) => { e.preventDefault(); handleDrop(uNum) }}
                         className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 w-full transition-colors block ${
@@ -532,6 +796,7 @@ export function RackTab({ cabinetId }: Props) {
                   const { device, isFirst } = entry
                   const colorClass = getTypeColorClass(device.type)
                   const isDragging = dragDevice?.id === device.id
+                  const isSelected = batchMode && selectedDeviceIds.has(device.id)
 
                   return (
                     <div
@@ -543,7 +808,12 @@ export function RackTab({ cabinetId }: Props) {
                         setDragDevice(device)
                       }}
                       onDragEnd={() => { setDragDevice(null); setDragOverU(null) }}
-                      className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group ${isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'}`}
+                      onClick={(e) => {
+                        if (!batchMode) return
+                        e.stopPropagation()
+                        toggleDeviceSelect(device.id)
+                      }}
+                      className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group ${isDragging ? 'opacity-50 cursor-grabbing' : batchMode ? 'cursor-pointer' : 'cursor-grab'} ${isSelected ? 'ring-2 ring-primary-300 dark:ring-primary-400' : ''}`}
                       title={`${device.name} (U${device.startU}-U${device.endU} · ${device.power_watts}W)`}
                     >
                       {isFirst && (
@@ -606,6 +876,65 @@ export function RackTab({ cabinetId }: Props) {
       onConfirm={() => { confirmState?.fn(); setConfirmState(null) }}
       onCancel={() => setConfirmState(null)}
     />
+
+    {/* M5（AL-ED4）：机柜信息调整 Modal（名称/总U/类型/功率/顶部预留，冲突校验阻塞不落库） */}
+    <Modal
+      open={cabinetEditOpen}
+      onClose={() => setCabinetEditOpen(false)}
+      title="机柜信息调整"
+      width={440}
+      footer={(
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => setCabinetEditOpen(false)} className="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+            取消
+          </button>
+          <button type="button" onClick={saveCabinetEdit} aria-label="保存机柜信息" className="px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white">
+            保存
+          </button>
+        </div>
+      )}
+    >
+      {editForm && (
+        <div className="space-y-3">
+          <label className="block text-xs text-gray-600 dark:text-gray-300">机柜名称
+            <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="mt-1" aria-label="机柜名称" />
+          </label>
+          <label className="block text-xs text-gray-600 dark:text-gray-300">总U高度（改矮将校验设备溢出）
+            <Input type="number" min={1} value={editForm.totalU} onChange={(e) => setEditForm({ ...editForm, totalU: e.target.value })} className="mt-1" aria-label="总U高度" />
+          </label>
+          <label className="block text-xs text-gray-600 dark:text-gray-300">机柜类型（变更同步到矩阵格）
+            <Select
+              value={editForm.type}
+              onChange={(e) => setEditForm({ ...editForm, type: e.target.value as CabinetType })}
+              options={Object.entries(CABINET_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))}
+              className="mt-1"
+              aria-label="机柜类型"
+            />
+          </label>
+          <label className="block text-xs text-gray-600 dark:text-gray-300">功率上限(W)（改小将校验超限）
+            <Input type="number" min={0} step={100} value={editForm.powerLimit} onChange={(e) => setEditForm({ ...editForm, powerLimit: e.target.value })} className="mt-1" aria-label="功率上限" />
+          </label>
+          <label className="block text-xs text-gray-600 dark:text-gray-300">顶部预留U（全局配置，作用于所有柜）
+            <Input type="number" min={0} value={editForm.topReservedU} onChange={(e) => setEditForm({ ...editForm, topReservedU: e.target.value })} className="mt-1" aria-label="顶部预留U" />
+          </label>
+          {editError && <p className="text-xs text-error-500 dark:text-error-400">{editError}</p>}
+        </div>
+      )}
+    </Modal>
+
+    {/* M5（AL-ED4）：柜内右键菜单（Header 右键触发） */}
+    {contextMenu && (
+      <ContextMenu
+        items={[
+          { label: '机柜信息调整', icon: Settings, action: openCabinetEdit },
+          { separator: true },
+          { label: '批量编辑设备', icon: ListChecks, action: () => setBatchMode(true) },
+        ]}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        onClose={() => setContextMenu(null)}
+      />
+    )}
     </>
   )
 }
