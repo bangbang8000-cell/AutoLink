@@ -1022,4 +1022,57 @@ describe('RackStore', () => {
       expect(useRackStore.getState().getPowerUsage(1)).toMatchObject({ limit: 6000, used: 1000 })
     })
   })
+
+  // ===== 打磨轮（PRD v3.2 / AL-N4）：GPU 柜旧数据缺字段 → loadRackLayout 补默认，选中不崩 =====
+
+  describe('loadRackLayout（AL-N4 GPU 柜缺 totalU/device.type 补默认）', () => {
+    const layoutJson = (cabinetOver: Record<string, unknown>, deviceOver: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        schema_version: 1,
+        project_name: 'p1',
+        cabinets: [
+          {
+            id: 1,
+            name: '机柜 A1',
+            type: 'gpu',
+            power_limit: 6000,
+            devices: [{ id: 'gpu-1', name: 'GPU服务器_1', startU: 1, endU: 8, power_watts: 10000, ...deviceOver }],
+            ...cabinetOver,
+          },
+        ],
+      })
+
+    const mockLayoutFile = (json: string) => {
+      mockElectron.project.getFile.mockResolvedValue(json)
+    }
+
+    it('G-1 旧数据缺 totalU → 补 42（选中 GPU 柜不再因 Array(totalU) 崩溃）', async () => {
+      mockLayoutFile(layoutJson({})) // totalU 缺失
+      await useRackStore.getState().loadRackLayout('p1')
+      const cab = useRackStore.getState().cabinets[0]
+      expect(cab.totalU).toBe(42)
+      expect(useRackStore.getState().selectedCabinetId).toBe(1)
+    })
+
+    it('G-2 旧数据缺 device.type → 补 gpu（getTypeColorClass/getTypeLabel 不再 TypeError）', async () => {
+      mockLayoutFile(layoutJson({})) // device.type 缺失
+      await useRackStore.getState().loadRackLayout('p1')
+      expect(useRackStore.getState().cabinets[0].devices[0].type).toBe('gpu')
+    })
+
+    it('G-2b 旧数据 device.type 为空串 → 补 gpu', async () => {
+      mockLayoutFile(layoutJson({}, { type: '' }))
+      await useRackStore.getState().loadRackLayout('p1')
+      expect(useRackStore.getState().cabinets[0].devices[0].type).toBe('gpu')
+    })
+
+    it('G-4 正常 GPU 柜（totalU/device.type 齐全）→ 保留原值不覆盖', async () => {
+      mockLayoutFile(layoutJson({ totalU: 49 }, { type: 'GPU Server' }))
+      await useRackStore.getState().loadRackLayout('p1')
+      const cab = useRackStore.getState().cabinets[0]
+      expect(cab.totalU).toBe(49)
+      expect(cab.devices[0].type).toBe('GPU Server')
+      expect(cab.devices[0].power_watts).toBe(10000)
+    })
+  })
 })

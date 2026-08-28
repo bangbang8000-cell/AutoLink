@@ -147,6 +147,27 @@ describe('RoomDesignTab', () => {
     })
   })
 
+  it('AL-N4c 联动校验：矩阵格 cabinetId 在 rack store 不存在 → 仅切到「机柜设计」子视图，不设置选中（避免显示错柜）', async () => {
+    mockGetFile(makeMatrixWithCabinet(false))
+    // rack store 只含柜 2（id=2）；矩阵 A1 指向柜 1、B2 指向柜 2（柜 1 已不在 rack store，模拟旧数据）
+    useRackStore.setState({ cabinets: [makeCabinet(2)], unplacedDevices: [], selectedCabinetId: null })
+    render(
+      <ProjectProvider>
+        <RoomDesignTab projectName="p1" />
+      </ProjectProvider>,
+    )
+    await screen.findByText('机房 A')
+    // 点击指向不存在柜的格 A1（cabinetId=1）→ 不设置选中
+    useRoomStore.getState().selectPosition('A1')
+    await waitFor(() => {
+      expect(useUIStore.getState().workbenchSubview).toBe('rackdesign' as WorkbenchSubview)
+      expect(useRackStore.getState().selectedCabinetId).toBeNull()
+    })
+    // 点击存在柜的格 B2（cabinetId=2）→ 正常选中
+    useRoomStore.getState().selectPosition('B2')
+    await waitFor(() => expect(useRackStore.getState().selectedCabinetId).toBe(2))
+  })
+
   it('M3 已定稿 → 「前往机柜设计」按钮切到 rackdesign 子视图', async () => {
     mockGetFile(makeMatrix(true))
     render(
