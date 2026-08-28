@@ -147,6 +147,108 @@ export function validateCabinetPatch(cabinet: RackCabinet, patch: CabinetPatch):
   return issues
 }
 
+/** M5（AL-ED6）：设备属性补丁（同柜批量改属性用） */
+export type DevicePatch = Partial<Pick<RackDevice, 'name' | 'type' | 'power_watts'>>
+
+export type DeviceMoveReason = 'overflow' | 'top_reserved' | 'occupied' | 'power'
+export interface DeviceMoveCheck {
+  ok: boolean
+  reason: DeviceMoveReason | null
+}
+
+/**
+ * M5（AL-ED5）：设备拖拽落点预判纯函数——与 moveDevice 落库校验同源（M6 统一校验可在此收敛）
+ * - overflow：越界（startU<1 或 endU>totalU）
+ * - top_reserved：进入柜顶预留区
+ * - occupied：与其他设备 U 位重叠（排除自身）
+ * - power：目标柜其余设备功率 + 自身功率超上限
+ */
+export function checkDeviceMove(
+  cabinet: RackCabinet,
+  device: RackDevice,
+  newStartU: number,
+  topReservedU: number,
+): DeviceMoveCheck {
+  const height = device.endU - device.startU + 1
+  const newEndU = newStartU + height - 1
+  if (newStartU < 1 || newEndU > cabinet.totalU) return { ok: false, reason: 'overflow' }
+  if (newEndU > cabinet.totalU - topReservedU) return { ok: false, reason: 'top_reserved' }
+  const occupied = cabinet.devices.some(
+    (d) => d.id !== device.id && !(newEndU < d.startU || newStartU > d.endU),
+  )
+  if (occupied) return { ok: false, reason: 'occupied' }
+  const power = cabinet.devices
+    .filter((d) => d.id !== device.id)
+    .reduce((s, d) => s + d.power_watts, 0)
+  if (power + device.power_watts > cabinet.power_limit) return { ok: false, reason: 'power' }
+  return { ok: true, reason: null }
+}
+
+/**
+ * M5（AL-ED5）：在目标柜寻找设备第一个可用落点（bottom-up，含顶部预留/占用/功率校验）
+ * @param opts.topReservedU 柜顶预留（默认 DEFAULT_TOP_RESERVED_U）
+ * @param opts.power_watts 设备功率（提供时做功率预判）
+ * @param opts.excludeDeviceId 排除设备（同柜重排时排除自身）
+ */
+export function findFirstAvailableU(
+  cabinet: RackCabinet,
+  height: number,
+  opts: { topReservedU?: number; power_watts?: number; excludeDeviceId?: string } = {},
+): number | null {
+  const topReservedU = opts.topReservedU ?? DEFAULT_TOP_RESERVED_U
+  const maxEndU = cabinet.totalU - topReservedU
+  for (let startU = 1; startU + height - 1 <= maxEndU; startU++) {
+    const endU = startU + height - 1
+    const occupied = cabinet.devices.some(
+      (d) => d.id !== opts.excludeDeviceId && !(endU < d.startU || startU > d.endU),
+    )
+    if (occupied) continue
+    if (opts.power_watts != null) {
+      const power = cabinet.devices
+        .filter((d) => d.id !== opts.excludeDeviceId)
+        .reduce((s, d) => s + d.power_watts, 0)
+      if (power + opts.power_watts > cabinet.power_limit) return null
+    }
+    return startU
+  }
+  return null
+}
+
+/**
+ * M5（AL-ED6）：批量 U 位偏移整批校验——任一选中设备越界/入预留区/与其他设备冲突即整批拒绝
+ * （偏移为整体语义，部分应用会造成柜内间隙错乱）
+ */
+export function validateShiftDevices(
+  cabinet: RackCabinet,
+  deviceIds: string[],
+  offset: number,
+  topReservedU: number,
+): BulkUpdateIssue[] {
+  const issues: BulkUpdateIssue[] = []
+  const idSet = new Set(deviceIds)
+  const selected = cabinet.devices.filter((d) => idSet.has(d.id))
+  if (selected.length === 0) return issues
+  const others = cabinet.devices.filter((d) => !idSet.has(d.id))
+  for (const d of selected) {
+    const ns = d.startU + offset
+    const ne = d.endU + offset
+    if (ns < 1 || ne > cabinet.totalU) {
+      issues.push({ cabinetId: cabinet.id, reason: 'overflow', message: `设备 ${d.name} 偏移后 U 位越界（U${ns}-U${ne}）` })
+      return issues
+    }
+    if (ne > cabinet.totalU - topReservedU) {
+      issues.push({ cabinetId: cabinet.id, reason: 'top_reserved', message: `设备 ${d.name} 偏移后进入柜顶预留区（U${ne}U）` })
+      return issues
+    }
+    const occupied = others.some((o) => !(ne < o.startU || ns > o.endU))
+    if (occupied) {
+      issues.push({ cabinetId: cabinet.id, reason: 'occupied', message: `设备 ${d.name} 偏移后与其他设备 U 位冲突` })
+      return issues
+    }
+  }
+  return issues
+}
+
 interface RackState {
   cabinets: RackCabinet[]
   unplacedDevices: UnplacedDevice[]
@@ -169,6 +271,8 @@ interface RackState {
   removeCabinet: (id: number) => void
   selectCabinet: (id: number | null) => void
   updateCabinet: (id: number, updates: Partial<Pick<RackCabinet, 'name' | 'totalU' | 'type' | 'power_limit'>>) => void
+  /** M5（AL-ED4）：单柜信息调整——带冲突校验（改矮/功率改小冲突阻塞不落库，复用 validateCabinetPatch） */
+  updateCabinetSafe: (id: number, patch: CabinetPatch) => BulkUpdateResult
   /** M4（AL-ED2/ED7）：批量更新机柜属性（冲突柜跳过并返回 issues） */
   updateCabinetsBulk: (ids: number[], patch: CabinetPatch) => BulkUpdateResult
   /** M4（AL-ED2）：按机柜类型批量更新属性（同类型柜全量） */
@@ -182,6 +286,10 @@ interface RackState {
   placeDevice: (cabinetId: number, device: UnplacedDevice, startU: number) => boolean
   removeDevice: (cabinetId: number, deviceId: string) => void
   moveDevice: (deviceId: string, fromCabinet: number, toCabinet: number, newStartU: number) => boolean
+  /** M5（AL-ED6）：同柜设备批量改属性（名称/类型/功率；功率改小超限设备跳过并返回 issues） */
+  updateDevicesBulk: (cabinetId: number, deviceIds: string[], patch: DevicePatch) => BulkUpdateResult
+  /** M5（AL-ED6）：同柜设备批量 U 位偏移（整批原子：任一越界/入预留区/冲突即整批拒绝） */
+  shiftDevicesU: (cabinetId: number, deviceIds: string[], offset: number) => BulkUpdateResult
   selectedDeviceInfo: (id: string) => RackDevice | null
   selectDevice: (id: string | null) => void
   /** 打磨轮（v1.5 / AL-O1b）：batchName 提供时写入版本批次目录 output/<batch>/ */
@@ -521,6 +629,16 @@ export const useRackStore = create<RackState>()(
     }))
   },
 
+  // M5（AL-ED4）：单柜信息调整——冲突（改矮/功率改小）校验阻塞不落库（复用 validateCabinetPatch）
+  updateCabinetSafe: (id, patch) => {
+    const cabinet = get().cabinets.find((c) => c.id === id)
+    if (!cabinet) return { applied: 0, skipped: 0, issues: [] }
+    const problems = validateCabinetPatch(cabinet, patch)
+    if (problems.length > 0) return { applied: 0, skipped: problems.length, issues: problems }
+    get().updateCabinet(id, patch)
+    return { applied: 1, skipped: 0, issues: [] }
+  },
+
   // M4（AL-ED2/ED7）：批量更新机柜属性——逐柜冲突校验，冲突柜跳过不落库
   updateCabinetsBulk: (ids, patch) => {
     const idSet = new Set(ids)
@@ -619,22 +737,10 @@ export const useRackStore = create<RackState>()(
     const toCab = cabinets.find((c) => c.id === toCabinet)
     if (!toCab) return false
 
-    const height = device.endU - device.startU + 1
-    const newEndU = newStartU + height - 1
-    // M5: 顶部预留保护（读取项目配置 topReservedU）
-    if (newStartU < 1 || newEndU > toCab.totalU - get().topReservedU) return false
+    // M5（AL-ED5）：复用 checkDeviceMove 统一落点校验（顶部预留/越界/占用/功率，与 UI 预判同源）
+    if (!checkDeviceMove(toCab, device, newStartU, get().topReservedU).ok) return false
 
-    const hasConflict = toCab.devices.some(
-      (d) => d.id !== deviceId && !(newEndU < d.startU || newStartU > d.endU),
-    )
-    if (hasConflict) return false
-
-    // 打磨轮（v1.5 / AL-R1e）：跨柜移动补功率校验（不超目标柜功率上限）
-    const targetPower = toCab.devices
-      .filter((d) => d.id !== deviceId)
-      .reduce((s, d) => s + d.power_watts, 0)
-    if (targetPower + device.power_watts > toCab.power_limit) return false
-
+    const newEndU = newStartU + (device.endU - device.startU)
     const moved: RackDevice = { ...device, cabinetId: toCabinet, startU: newStartU, endU: newEndU }
 
     set((s) => ({
@@ -646,6 +752,49 @@ export const useRackStore = create<RackState>()(
       selectedDevice: s.selectedDevice?.id === deviceId ? moved : s.selectedDevice,
     }))
     return true
+  },
+
+  // M5（AL-ED6）：同柜设备批量改属性——功率整批原子校验（应用后柜总功率超限即整批拒绝，与 shiftDevicesU 一致）
+  updateDevicesBulk: (cabinetId, deviceIds, patch) => {
+    const cabinet = get().cabinets.find((c) => c.id === cabinetId)
+    if (!cabinet) return { applied: 0, skipped: 0, issues: [] }
+    const idSet = new Set(deviceIds)
+    const target = cabinet.devices.filter((d) => idSet.has(d.id))
+    if (target.length === 0) return { applied: 0, skipped: 0, issues: [] }
+    if (patch.power_watts != null) {
+      const othersPower = cabinet.devices
+        .filter((d) => !idSet.has(d.id))
+        .reduce((s, d) => s + d.power_watts, 0)
+      const newTotal = othersPower + target.length * patch.power_watts
+      if (newTotal > cabinet.power_limit) {
+        return {
+          applied: 0,
+          skipped: 1,
+          issues: [{ cabinetId, reason: 'power', message: `批量功率 ${newTotal}W 超过机柜上限 ${cabinet.power_limit}W` }],
+        }
+      }
+    }
+    const devices = cabinet.devices.map((d) => (idSet.has(d.id) ? { ...d, ...patch } : d))
+    set((s) => ({
+      cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices } : c)),
+    }))
+    return { applied: target.length, skipped: 0, issues: [] }
+  },
+
+  // M5（AL-ED6）：同柜设备批量 U 位偏移——整批原子，任一冲突整批拒绝
+  shiftDevicesU: (cabinetId, deviceIds, offset) => {
+    const cabinet = get().cabinets.find((c) => c.id === cabinetId)
+    if (!cabinet) return { applied: 0, skipped: 0, issues: [] }
+    const problems = validateShiftDevices(cabinet, deviceIds, offset, get().topReservedU)
+    if (problems.length > 0) return { applied: 0, skipped: problems.length, issues: problems }
+    const idSet = new Set(deviceIds)
+    const devices = cabinet.devices.map((d) =>
+      idSet.has(d.id) ? { ...d, startU: d.startU + offset, endU: d.endU + offset } : d,
+    )
+    set((s) => ({
+      cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices } : c)),
+    }))
+    return { applied: idSet.size, skipped: 0, issues: [] }
   },
 
   selectedDeviceInfo: (id) => {

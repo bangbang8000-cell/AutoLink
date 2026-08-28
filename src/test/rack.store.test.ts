@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useRackStore, toCabinetType, validateCabinetPatch } from '../stores/rack.store'
+import { useRackStore, toCabinetType, validateCabinetPatch, findFirstAvailableU, checkDeviceMove } from '../stores/rack.store'
 import type { RackCabinet, RackDevice, CabinetType, UnplacedDevice } from '../stores/rack.store'
 
 // Mock electron API
@@ -726,6 +726,222 @@ describe('RackStore', () => {
     it('无该类型机柜 → applied 0', () => {
       useRackStore.setState({ cabinets: [cab(1, '机柜 1', 'gpu')] })
       const r = useRackStore.getState().updateCabinetsByType('storage', { power_limit: 9000 })
+      expect(r.applied).toBe(0)
+    })
+  })
+
+  // ===== M5（AL-ED4/ED5/ED6）：柜内编辑能力 =====
+
+  describe('updateCabinetSafe（AL-ED4 单柜信息调整带冲突校验）', () => {
+    const cab = (id: number, over: Partial<RackCabinet> = {}): RackCabinet => ({
+      id, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000, devices: [], ...over,
+    })
+
+    it('改名称/总U/类型/功率 生效', () => {
+      useRackStore.setState({ cabinets: [cab(1)] })
+      const r = useRackStore.getState().updateCabinetSafe(1, { name: '新柜', totalU: 48, type: 'storage', power_limit: 9000 })
+      expect(r.applied).toBe(1)
+      expect(r.skipped).toBe(0)
+      expect(useRackStore.getState().cabinets[0]).toMatchObject({ name: '新柜', totalU: 48, type: 'storage', power_limit: 9000 })
+    })
+
+    it('改矮总U有设备溢出 → 阻塞不落库', () => {
+      useRackStore.setState({ cabinets: [cab(1, { devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 40, power_watts: 1000 }] })] })
+      const r = useRackStore.getState().updateCabinetSafe(1, { totalU: 30 })
+      expect(r.applied).toBe(0)
+      expect(r.issues[0].reason).toBe('overflow')
+      expect(useRackStore.getState().cabinets[0].totalU).toBe(42)
+    })
+
+    it('功率改小超限 → 阻塞不落库', () => {
+      useRackStore.setState({ cabinets: [cab(1, { devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 5000 }] })] })
+      const r = useRackStore.getState().updateCabinetSafe(1, { power_limit: 3000 })
+      expect(r.applied).toBe(0)
+      expect(r.issues[0].reason).toBe('power')
+      expect(useRackStore.getState().cabinets[0].power_limit).toBe(6000)
+    })
+
+    it('不存在机柜 → applied 0 且无副作用', () => {
+      useRackStore.setState({ cabinets: [cab(1)] })
+      const r = useRackStore.getState().updateCabinetSafe(999, { name: 'x' })
+      expect(r.applied).toBe(0)
+      expect(r.issues).toEqual([])
+      expect(useRackStore.getState().cabinets[0].name).toBe('机柜 1')
+    })
+  })
+
+  describe('findFirstAvailableU（AL-ED5 跨柜落点查找）', () => {
+    const cab = (devices: RackDevice[], totalU = 42): RackCabinet => ({
+      id: 2, name: '机柜 2', totalU, type: 'gpu' as CabinetType, power_limit: 6000, devices,
+    })
+
+    it('空柜 → 返回 U1（bottom-up 首空位）', () => {
+      expect(findFirstAvailableU(cab([]), 8, { topReservedU: 2 })).toBe(1)
+    })
+
+    it('底部被占 → 返回设备上方首个空位', () => {
+      const devices: RackDevice[] = [{ id: 'a', name: 'a', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 8, power_watts: 1000 }]
+      expect(findFirstAvailableU(cab(devices), 8, { topReservedU: 2 })).toBe(9)
+    })
+
+    it('顶部预留保护：预留区不可用（无预留时可放）', () => {
+      const devices: RackDevice[] = [{ id: 'a', name: 'a', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 38, power_watts: 1000 }]
+      expect(findFirstAvailableU(cab(devices), 4, { topReservedU: 2 })).toBeNull()
+      expect(findFirstAvailableU(cab(devices), 4, { topReservedU: 0 })).toBe(39)
+    })
+
+    it('无连续空位 → null', () => {
+      const devices: RackDevice[] = [{ id: 'a', name: 'a', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 40, power_watts: 1000 }]
+      expect(findFirstAvailableU(cab(devices), 4, { topReservedU: 2 })).toBeNull()
+    })
+
+    it('功率超限排除该落点', () => {
+      const devices: RackDevice[] = [{ id: 'a', name: 'a', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 8, power_watts: 5900 }]
+      expect(findFirstAvailableU(cab(devices), 8, { topReservedU: 2, power_watts: 5900 })).toBeNull()
+    })
+
+    it('excludeDeviceId 排除自身（同柜重排可用原槽位上方）', () => {
+      const devices: RackDevice[] = [{ id: 'a', name: 'a', type: 'GPU Server', cabinetId: 2, startU: 1, endU: 8, power_watts: 1000 }]
+      expect(findFirstAvailableU(cab(devices), 4, { topReservedU: 2, excludeDeviceId: 'a' })).toBe(1)
+    })
+  })
+
+  describe('checkDeviceMove（AL-ED5 拖拽冲突预判，与 moveDevice 同源）', () => {
+    const device: RackDevice = { id: 'm', name: 'm', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 2000 }
+    const cab = (devices: RackDevice[]): RackCabinet => ({
+      id: 1, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000, devices,
+    })
+
+    it('合法落点 → ok', () => {
+      expect(checkDeviceMove(cab([]), device, 10, 2).ok).toBe(true)
+    })
+
+    it('越界（startU<1）→ overflow', () => {
+      expect(checkDeviceMove(cab([]), device, 0, 2)).toMatchObject({ ok: false, reason: 'overflow' })
+    })
+
+    it('越界（endU>totalU）→ overflow', () => {
+      expect(checkDeviceMove(cab([]), device, 40, 2)).toMatchObject({ ok: false, reason: 'overflow' })
+    })
+
+    it('进入顶部预留区 → top_reserved', () => {
+      expect(checkDeviceMove(cab([]), device, 34, 2)).toMatchObject({ ok: false, reason: 'top_reserved' })
+    })
+
+    it('与其他设备重叠 → occupied（排除自身）', () => {
+      const other: RackDevice = { id: 'x', name: 'x', type: 'GPU Server', cabinetId: 1, startU: 5, endU: 12, power_watts: 1000 }
+      expect(checkDeviceMove(cab([other]), device, 6, 2)).toMatchObject({ ok: false, reason: 'occupied' })
+      const self = { ...device, startU: 6, endU: 13 }
+      expect(checkDeviceMove(cab([self]), self, 6, 2).ok).toBe(true)
+    })
+
+    it('目标柜功率不足 → power', () => {
+      const other: RackDevice = { id: 'x', name: 'x', type: 'GPU Server', cabinetId: 1, startU: 10, endU: 17, power_watts: 5000 }
+      expect(checkDeviceMove(cab([other]), device, 20, 2)).toMatchObject({ ok: false, reason: 'power' })
+    })
+  })
+
+  describe('updateDevicesBulk（AL-ED6 同柜设备批量属性）', () => {
+    const dev = (id: string, power = 1000): RackDevice => ({ id, name: `设备 ${id}`, type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: power })
+    const cab = (devices: RackDevice[]): RackCabinet => ({
+      id: 1, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000, devices,
+    })
+
+    it('批量改名称/类型/功率 生效', () => {
+      useRackStore.setState({ cabinets: [cab([dev('a'), dev('b')])] })
+      const r = useRackStore.getState().updateDevicesBulk(1, ['a', 'b'], { name: '新名', type: 'Switch', power_watts: 2000 })
+      expect(r.applied).toBe(2)
+      expect(r.skipped).toBe(0)
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.map((d) => ({ name: d.name, type: d.type, power_watts: d.power_watts }))).toEqual([
+        { name: '新名', type: 'Switch', power_watts: 2000 },
+        { name: '新名', type: 'Switch', power_watts: 2000 },
+      ])
+    })
+
+    it('批量改功率导致柜总功率超限 → 整批拒绝不落库', () => {
+      useRackStore.setState({ cabinets: [cab([dev('a', 1000), dev('b', 1000)])] })
+      const r = useRackStore.getState().updateDevicesBulk(1, ['a', 'b'], { power_watts: 5000 })
+      expect(r.applied).toBe(0)
+      expect(r.skipped).toBe(1)
+      expect(r.issues[0].reason).toBe('power')
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.find((d) => d.id === 'a')!.power_watts).toBe(1000)
+      expect(ds.find((d) => d.id === 'b')!.power_watts).toBe(1000)
+    })
+
+    it('不存在设备 id 被忽略', () => {
+      useRackStore.setState({ cabinets: [cab([dev('a')])] })
+      const r = useRackStore.getState().updateDevicesBulk(1, ['a', 'nope'], { name: 'x' })
+      expect(r.applied).toBe(1)
+      expect(r.skipped).toBe(0)
+    })
+
+    it('空 id 列表 → applied 0', () => {
+      useRackStore.setState({ cabinets: [cab([dev('a')])] })
+      const r = useRackStore.getState().updateDevicesBulk(1, [], { name: 'x' })
+      expect(r.applied).toBe(0)
+    })
+  })
+
+  describe('shiftDevicesU（AL-ED6 批量 U 位偏移）', () => {
+    const dev = (id: string, startU: number, endU: number): RackDevice => ({ id, name: id, type: 'GPU Server', cabinetId: 1, startU, endU, power_watts: 1000 })
+    const cab = (devices: RackDevice[]): RackCabinet => ({
+      id: 1, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000, devices,
+    })
+
+    it('正偏移：整批上移', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 1, 8), dev('b', 9, 16)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, ['a', 'b'], 2)
+      expect(r.applied).toBe(2)
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.find((d) => d.id === 'a')).toMatchObject({ startU: 3, endU: 10 })
+      expect(ds.find((d) => d.id === 'b')).toMatchObject({ startU: 11, endU: 18 })
+    })
+
+    it('负偏移：整批下移', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 10, 17), dev('b', 18, 25)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, ['a', 'b'], -2)
+      expect(r.applied).toBe(2)
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.find((d) => d.id === 'a')).toMatchObject({ startU: 8, endU: 15 })
+    })
+
+    it('越界（endU > totalU）→ 整批拒绝', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 1, 8), dev('b', 35, 42)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, ['a', 'b'], 2)
+      expect(r.applied).toBe(0)
+      expect(r.skipped).toBeGreaterThan(0)
+      expect(r.issues[0].reason).toBe('overflow')
+      const ds = useRackStore.getState().cabinets[0].devices
+      expect(ds.find((d) => d.id === 'b')).toMatchObject({ startU: 35, endU: 42 })
+    })
+
+    it('越界（startU < 1）→ 整批拒绝', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 1, 8), dev('b', 9, 16)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, ['a', 'b'], -2)
+      expect(r.applied).toBe(0)
+      expect(r.issues[0].reason).toBe('overflow')
+    })
+
+    it('与其他设备重叠 → 整批拒绝', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 1, 8), dev('c', 9, 16)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, ['a'], 8)
+      expect(r.applied).toBe(0)
+      expect(r.issues[0].reason).toBe('occupied')
+    })
+
+    it('进入顶部预留区 → 整批拒绝', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 1, 8), dev('b', 9, 16)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, ['b'], 26)
+      // b 9-16 + 26 = 35-42，endU=42 > totalU-topReserved(40) → top_reserved
+      expect(r.applied).toBe(0)
+      expect(r.issues[0].reason).toBe('top_reserved')
+    })
+
+    it('不选中任何设备 → applied 0', () => {
+      useRackStore.setState({ topReservedU: 2, cabinets: [cab([dev('a', 1, 8)])] })
+      const r = useRackStore.getState().shiftDevicesU(1, [], 2)
       expect(r.applied).toBe(0)
     })
   })
