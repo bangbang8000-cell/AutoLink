@@ -554,13 +554,15 @@ export const useRackStore = create<RackState>()(
         if (jsonStr) {
           const data = JSON.parse(jsonStr)
           if (data.cabinets && Array.isArray(data.cabinets)) {
-            // Ensure new fields have defaults
+            // Ensure new fields have defaults (AL-N4: 补 totalU/device.type 默认，防 GPU 柜缺字段渲染崩溃)
             const cabinets = (data.cabinets as RackCabinet[]).map((c) => ({
               ...c,
               type: c.type || 'gpu',
+              totalU: c.totalU || 42,
               power_limit: c.power_limit || 6000,
               devices: (c.devices || []).map((d) => ({
                 ...d,
+                type: d.type || 'gpu',
                 power_watts: d.power_watts || 0,
               })),
             }))
