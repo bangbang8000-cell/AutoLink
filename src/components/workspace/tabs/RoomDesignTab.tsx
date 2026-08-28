@@ -12,11 +12,12 @@
  */
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, FileCheck2, Lock, Unlock } from 'lucide-react'
+import { Download, FileCheck2, Lock, Unlock, ArrowRight } from 'lucide-react'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useToastStore } from '@/stores/toast.store'
+import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 
 export function RoomDesignTab({ projectName }: { projectName: string }) {
@@ -26,13 +27,28 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
   const loadMatrix = useRoomStore((s) => s.loadMatrix)
   const composeDefaults = useRoomStore((s) => s.composeDefaults)
   const setFinalized = useRoomStore((s) => s.setFinalized)
+  const selectedPosition = useRoomStore((s) => s.selectedPosition)
   const cabinets = useRackStore((s) => s.cabinets)
+  const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
+  const selectCabinet = useRackStore((s) => s.selectCabinet)
   const gpuCount = useDesignStore((s) => s.config.num_servers)
   const topology = useDesignStore((s) => s.topology)
+  const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   useEffect(() => {
     loadMatrix(projectName).catch(() => {})
   }, [projectName, loadMatrix])
+
+  // M3（AL-D3b 联动 A）：矩阵选中格（有已上架机柜）→ 打开/切到「机柜设计」子视图并选中该柜
+  // （等值守卫防死循环：cabinetId 未变不重复 selectCabinet；setWorkbenchSubview 幂等）
+  useEffect(() => {
+    if (!selectedPosition) return
+    const cell = matrix?.cells.find((c) => `${c.row}${c.col}` === selectedPosition)
+    if (cell?.cabinetId != null) {
+      if (cell.cabinetId !== selectedCabinetId) selectCabinet(cell.cabinetId)
+      setWorkbenchSubview('rackdesign' as WorkbenchSubview)
+    }
+  }, [selectedPosition, matrix, selectedCabinetId, selectCabinet, setWorkbenchSubview])
 
   // 默认列配比自动布点（从 RackWorkbenchView 迁移：每列 1 电源 + 空调占位 + GPU(1柜1台) + 网络）
   const autoCompose = () => {
@@ -81,10 +97,16 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
           </button>
         )}
         {matrix?.finalized && (
-          <button type="button" onClick={() => setFinalized(false)}
-            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-            <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
-          </button>
+          <>
+            <button type="button" onClick={() => setWorkbenchSubview('rackdesign' as WorkbenchSubview)}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+              <ArrowRight size={11} /> {t('rack:gotoRackDesign', '前往机柜设计')}
+            </button>
+            <button type="button" onClick={() => setFinalized(false)}
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+              <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
+            </button>
+          </>
         )}
         {matrix && (
           <>

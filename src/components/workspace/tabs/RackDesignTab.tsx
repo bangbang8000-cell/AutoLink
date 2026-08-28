@@ -25,13 +25,33 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
   const matrix = useRoomStore((s) => s.matrix)
   const loadMatrix = useRoomStore((s) => s.loadMatrix)
   const setFinalized = useRoomStore((s) => s.setFinalized)
+  const selectedPosition = useRoomStore((s) => s.selectedPosition)
+  const selectPosition = useRoomStore((s) => s.selectPosition)
+  const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
   const cabinets = useRackStore((s) => s.cabinets)
+  const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
   const optimizeRacks = useRackStore((s) => s.optimizeRacks)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
 
   useEffect(() => {
     loadMatrix(projectName).catch(() => {})
   }, [projectName, loadMatrix])
+
+  // M3（AL-D3b 联动 B）：机柜设计选中柜 → 机房设计矩阵格高亮（等值守卫防死循环）
+  useEffect(() => {
+    if (selectedCabinetId == null) return
+    const cell = matrix?.cells.find((c) => c.cabinetId === selectedCabinetId)
+    if (cell) {
+      const pos = `${cell.row}${cell.col}`
+      if (pos !== selectedPosition) selectPosition(pos)
+    }
+  }, [selectedCabinetId, matrix, selectedPosition, selectPosition])
+
+  // M3（AL-D3b 联动 C）：改柜类型 → 回写矩阵格类型（syncCabinetToCell 内等值守卫收敛）
+  useEffect(() => {
+    if (!matrix) return
+    for (const cab of cabinets) syncCabinetToCell(cab.id)
+  }, [cabinets, matrix, syncCabinetToCell])
 
   // 读取项目机柜配置 → 注入 rack.store（topReservedU/gpuPerCabinet 生效）
   useEffect(() => {
@@ -117,8 +137,15 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
           {t('rack:matrixSummary', { rows: matrix.rows.length, cols: matrix.cols.length, defaultValue: '矩阵 {{rows}}排×{{cols}}列' })}
           {' · '}{cabinets.length}{t('rack:room.cabinets', '机柜')}
         </span>
-        {/* 撤销定稿 → 回机房设计调整 */}
-        <button type="button" onClick={() => setFinalized(false)}
+        {/* M3（AL-D3c）：返回机房设计 / 撤销定稿 → 回机房设计调整 */}
+        <button type="button" onClick={() => setWorkbenchSubview('roomdesign' as WorkbenchSubview)}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+          <ArrowLeft size={11} /> {t('rack:backToRoomDesign', '返回机房设计')}
+        </button>
+        <button type="button" onClick={() => {
+          setFinalized(false)
+          setWorkbenchSubview('roomdesign' as WorkbenchSubview)
+        }}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
           <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
         </button>
