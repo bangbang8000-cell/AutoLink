@@ -945,4 +945,81 @@ describe('RackStore', () => {
       expect(r.applied).toBe(0)
     })
   })
+
+  // ===== M6（AL-ED7/ED8）：编辑安全与联动一致 =====
+
+  describe('ED-10 功率改小超限拦截不落库（M6/AL-ED7 统一校验收敛）', () => {
+    const dev = (id: string, power = 5000): RackDevice => ({
+      id, name: `设备 ${id}`, type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: power,
+    })
+    const cab = (over: Partial<RackCabinet> = {}): RackCabinet => ({
+      id: 1, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000,
+      devices: [dev('a')], ...over,
+    })
+
+    it('单柜 updateCabinetSafe：功率改小超限 → 拦截不落库', () => {
+      useRackStore.setState({ cabinets: [cab()] })
+      const r = useRackStore.getState().updateCabinetSafe(1, { power_limit: 3000 })
+      expect(r.applied).toBe(0)
+      expect(r.issues[0].reason).toBe('power')
+      expect(useRackStore.getState().cabinets[0].power_limit).toBe(6000)
+    })
+
+    it('同类批量 updateCabinetsBulk：超限柜跳过不落库、合规柜照常更新', () => {
+      useRackStore.setState({ cabinets: [
+        cab(),
+        { id: 2, name: '机柜 2', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000, devices: [] },
+      ] })
+      const r = useRackStore.getState().updateCabinetsBulk([1, 2], { power_limit: 4000 })
+      expect(r.applied).toBe(1)
+      expect(r.skipped).toBe(1)
+      expect(r.issues[0].reason).toBe('power')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.power_limit).toBe(6000)
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.power_limit).toBe(4000)
+    })
+
+    it('同柜设备批量 updateDevicesBulk：改大功率整批超限 → 整批拒绝不落库', () => {
+      useRackStore.setState({ cabinets: [cab({ devices: [dev('a', 1000), dev('b', 1000)] })] })
+      const r = useRackStore.getState().updateDevicesBulk(1, ['a', 'b'], { power_watts: 4000 })
+      expect(r.applied).toBe(0)
+      expect(r.skipped).toBe(1)
+      expect(r.issues[0].reason).toBe('power')
+      expect(useRackStore.getState().cabinets[0].devices.every((d) => d.power_watts === 1000)).toBe(true)
+    })
+  })
+
+  describe('ED-11 高度/功率变更 → 功率汇总同步（M6/AL-ED8）', () => {
+    const dev = (id: string, power = 1000): RackDevice => ({
+      id, name: id, type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: power,
+    })
+    const cab = (over: Partial<RackCabinet> = {}): RackCabinet => ({
+      id: 1, name: '机柜 1', totalU: 42, type: 'gpu' as CabinetType, power_limit: 6000,
+      devices: [dev('a')], ...over,
+    })
+
+    it('功率上限改大 → 每柜功率条与机房汇总重算（getPowerUsage / getPowerUsageAll）', () => {
+      useRackStore.setState({ cabinets: [
+        cab({ power_limit: 4000 }),
+        { id: 2, name: '机柜 2', totalU: 42, type: 'gpu' as CabinetType, power_limit: 4000, devices: [dev('b', 500)] },
+      ] })
+      expect(useRackStore.getState().getPowerUsage(1)).toMatchObject({ used: 1000, limit: 4000, percent: 25 })
+      useRackStore.getState().updateCabinetSafe(1, { power_limit: 8000 })
+      expect(useRackStore.getState().getPowerUsage(1)).toMatchObject({ used: 1000, limit: 8000, percent: 13 })
+      const all = useRackStore.getState().getPowerUsageAll()
+      expect(all).toEqual({ total: 1500, limit: 12000, percent: 13 })
+    })
+
+    it('设备功率变更（updateDevicesBulk）→ 每柜功率汇总同步', () => {
+      useRackStore.setState({ cabinets: [cab()] })
+      useRackStore.getState().updateDevicesBulk(1, ['a'], { power_watts: 3000 })
+      expect(useRackStore.getState().getPowerUsage(1)).toMatchObject({ used: 3000, percent: 50 })
+    })
+
+    it('高度变更（改大/改小合法）→ 不破坏设备与功率汇总', () => {
+      useRackStore.setState({ cabinets: [cab()] })
+      useRackStore.getState().updateCabinetSafe(1, { totalU: 48 })
+      expect(useRackStore.getState().cabinets[0].totalU).toBe(48)
+      expect(useRackStore.getState().getPowerUsage(1)).toMatchObject({ limit: 6000, used: 1000 })
+    })
+  })
 })

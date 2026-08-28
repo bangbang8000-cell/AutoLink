@@ -845,4 +845,75 @@ describe('RoomStore', () => {
       expect(useRackStore.getState().cabinets).toHaveLength(0)
     })
   })
+
+  // ===== M6（AL-ED7/ED8）：编辑安全与联动一致（跨 store） =====
+
+  describe('ED-11 类型/高度/功率变更 → 矩阵↔柜内/配色/功率汇总同步（M6/AL-ED8）', () => {
+    it('机柜类型变更（syncCabinetToCell）→ 格子类型同步，两处配色 key 一致', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu'
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'storage' })] })
+      useRoomStore.getState().syncCabinetToCell(1)
+      const cell = useRoomStore.getState().matrix!.cells.find((c) => c.cabinetId === 1)!
+      expect(cell.type).toBe('storage')
+    })
+
+    it('格子类型变更（updateCellsBulk）→ 机柜类型同步（双向联动）', () => {
+      const m = makeMatrix()
+      m.cells[0].type = 'gpu'
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'gpu' })] })
+      useRoomStore.getState().updateCellsBulk(['A1'], { type: 'network' })
+      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('network')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.type).toBe('network')
+    })
+
+    it('功率/高度变更 → 机房功率汇总（已上架机柜）同步重算', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m })
+      useRackStore.setState({
+        cabinets: [makeCabinet({ id: 1, power_limit: 6000, devices: [{ id: 'd', name: 'd', type: 'x', cabinetId: 1, startU: 1, endU: 8, power_watts: 2000 }] })],
+      })
+      const mountedPower = () => {
+        const mountedIds = new Set(
+          useRoomStore.getState().matrix!.cells.filter((c) => c.cabinetId != null).map((c) => c.cabinetId as number),
+        )
+        return useRackStore.getState().cabinets
+          .filter((c) => mountedIds.has(c.id))
+          .reduce((s, c) => s + c.devices.reduce((x, d) => x + d.power_watts, 0), 0)
+      }
+      expect(mountedPower()).toBe(2000)
+      useRackStore.getState().updateCabinetSafe(1, { power_limit: 10000 })
+      useRackStore.getState().updateDevicesBulk(1, ['d'], { power_watts: 5000 })
+      expect(mountedPower()).toBe(5000)
+    })
+
+    it('删除格子（deleteCellsBulk）→ 矩阵与柜内无残留 + 清理选中位', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m, selectedPosition: 'A1' })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1 })] })
+      useRoomStore.getState().deleteCellsBulk(['A1'])
+      const cell = useRoomStore.getState().matrix!.cells.find((c) => `${c.row}${c.col}` === 'A1')!
+      expect(cell).toMatchObject({ type: 'empty', placeholder: null, cabinetId: null })
+      expect(useRackStore.getState().cabinets).toHaveLength(0)
+      expect(useRoomStore.getState().selectedPosition).toBeNull()
+    })
+
+    it('清空格子（clearCellsBulk）→ 格子清空但机柜保留未上架 + 清理选中位', () => {
+      const m = makeMatrix()
+      m.cells[0].cabinetId = 1
+      useRoomStore.setState({ matrix: m, selectedPosition: 'A1' })
+      useRackStore.setState({ cabinets: [makeCabinet({ id: 1 })] })
+      useRoomStore.getState().clearCellsBulk(['A1'])
+      const cell = useRoomStore.getState().matrix!.cells.find((c) => `${c.row}${c.col}` === 'A1')!
+      expect(cell).toMatchObject({ type: 'empty', placeholder: null, cabinetId: null })
+      expect(useRackStore.getState().cabinets.map((c) => c.id)).toEqual([1])
+      expect(useRoomStore.getState().selectedPosition).toBeNull()
+    })
+  })
 })

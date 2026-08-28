@@ -9,6 +9,7 @@ import '@/i18n'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { RackDesignTab } from '@/components/workspace/tabs/RackDesignTab'
+import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { useRoomStore, type RoomMatrixData } from '@/stores/room.store'
 import { useRackStore, type RackCabinet } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -163,7 +164,7 @@ describe('RackDesignTab', () => {
     expect(await screen.findByText('机柜信息调整')).toBeInTheDocument()
   })
 
-  it('M5 ED-6 同柜批量：进入批量模式多选设备并批量改名生效', async () => {
+  it('M5 ED-6 同柜批量：进入批量模式多选设备并批量改名生效（M6 二次确认）', async () => {
     mockGetFile(makeMatrixWithCabinet(true))
     useRackStore.setState({
       cabinets: [makeCabinet({ devices: [
@@ -180,13 +181,16 @@ describe('RackDesignTab', () => {
     expect(await screen.findByText(/已选 2 台设备/)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('批量名称'), { target: { value: '统一名' } })
     fireEvent.click(screen.getByText('应用属性'))
+    // M6（AL-ED7）：批量操作二次确认
+    expect(await screen.findByText(/确认对 2 台设备批量修改属性/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '确认' }))
     await waitFor(() => {
       const ds = useRackStore.getState().cabinets[0].devices
       expect(ds.every((d) => d.name === '统一名')).toBe(true)
     })
   })
 
-  it('M5 ED-6 同柜批量 U 偏移：越界整批拒绝不落库', async () => {
+  it('M5 ED-6 同柜批量 U 偏移：越界整批拒绝不落库（M6 二次确认）', async () => {
     mockGetFile(makeMatrixWithCabinet(true))
     useRackStore.setState({
       topReservedU: 2,
@@ -202,6 +206,9 @@ describe('RackDesignTab', () => {
     fireEvent.click(screen.getAllByTitle(/设备A/)[0])
     fireEvent.click(screen.getAllByTitle(/设备B/)[0])
     fireEvent.click(screen.getByText('上移1U'))
+    // M6（AL-ED7）：批量操作二次确认
+    expect(await screen.findByText(/确认对 2 台设备执行 U 位偏移/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '确认' }))
     // 整批拒绝：a、b 均未落库，且 toast 含「越界」提示
     await waitFor(() => {
       const ds = useRackStore.getState().cabinets[0].devices
@@ -209,5 +216,20 @@ describe('RackDesignTab', () => {
       expect(ds.find((d) => d.id === 'b')).toMatchObject({ startU: 35, endU: 42 })
     })
     expect(useToastStore.getState().toasts.some((t) => t.message.includes('越界'))).toBe(true)
+  })
+
+  // ===== M6（AL-ED8）：机柜类型变更 → 矩阵格类型/配色同步（RackTab 独立渲染也回写） =====
+
+  it('M6 ED-8 RackTab 类型下拉变更 → 直接回写矩阵格类型（独立于 RackDesignTab 联动 effect）', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRoomStore.setState({ matrix: makeMatrixWithCabinet(true) })
+    useRackStore.setState({ cabinets: [makeCabinet()], unplacedDevices: [], selectedCabinetId: 1 })
+    render(<RackTab cabinetId={1} />)
+    const typeSelect = await screen.findByLabelText('机柜类型')
+    fireEvent.change(typeSelect, { target: { value: 'storage' } })
+    await waitFor(() => {
+      expect(useRackStore.getState().cabinets[0].type).toBe('storage')
+      expect(useRoomStore.getState().matrix?.cells.find((c) => c.cabinetId === 1)?.type).toBe('storage')
+    })
   })
 })

@@ -256,3 +256,71 @@ describe('RoomEditing（M4/AL-ED3 框选批量操作）', () => {
     })
   })
 })
+
+describe('RoomEditing（M6/AL-ED7 批量二次确认 + 冲突明细）', () => {
+  it('ED-7 批量「清空」需二次确认（统一文案：再次点击确认清空）', async () => {
+    const { container } = await renderRoom()
+    fireEvent.click(container.querySelector('g[data-pos="A1"]')!, { ctrlKey: true })
+    fireEvent.click(screen.getByText('批量改格子'))
+    const dialog = await screen.findByRole('dialog')
+    // 第一次点击 → 进入确认态（不落库）
+    fireEvent.click(within(dialog).getByText('清空'))
+    expect(within(dialog).getByText('再次点击确认清空')).toBeInTheDocument()
+    expect(useRackStore.getState().cabinets).toHaveLength(4)
+    // 第二次点击 → 执行清空（机柜保留未上架）
+    fireEvent.click(within(dialog).getByText('再次点击确认清空'))
+    await waitFor(() => {
+      const cell = useRoomStore.getState().matrix!.cells.find((c) => `${c.row}${c.col}` === 'A1')!
+      expect(cell).toMatchObject({ type: 'empty', cabinetId: null })
+      expect(useRackStore.getState().cabinets).toHaveLength(4)
+    })
+  })
+
+  it('ED-7 批量「删除」需二次确认（统一文案：再次点击确认删除）', async () => {
+    const { container } = await renderRoom()
+    fireEvent.click(container.querySelector('g[data-pos="A1"]')!, { ctrlKey: true })
+    fireEvent.click(screen.getByText('批量改格子'))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByText('删除'))
+    expect(within(dialog).getByText('再次点击确认删除')).toBeInTheDocument()
+    expect(useRackStore.getState().cabinets).toHaveLength(4)
+    fireEvent.click(within(dialog).getByText('再次点击确认删除'))
+    await waitFor(() => {
+      const cell = useRoomStore.getState().matrix!.cells.find((c) => `${c.row}${c.col}` === 'A1')!
+      expect(cell.cabinetId).toBeNull()
+      expect(useRackStore.getState().cabinets).toHaveLength(3)
+    })
+  })
+
+  it('ED-7 同类批量改功率：冲突柜逐条展示原因且不静默跳过、合规柜落库', async () => {
+    mockGetFile(makeMatrix())
+    useRackStore.setState({
+      cabinets: [
+        makeCabinet(1, { type: 'gpu', power_limit: 6000, devices: [{ id: 'd1', name: 'd1', type: 'GPU Server', cabinetId: 1, startU: 1, endU: 8, power_watts: 5000 }] }),
+        makeCabinet(2, { type: 'gpu' }),
+        makeCabinet(3, { type: 'network' }),
+        makeCabinet(4, { type: 'gpu' }),
+      ],
+      unplacedDevices: [],
+    })
+    const { container } = render(
+      <ProjectProvider>
+        <RoomDesignTab projectName="p1" />
+      </ProjectProvider>,
+    )
+    await screen.findByText('机房 A')
+    rightClickPos(container, 'A1')
+    fireEvent.click(screen.getByText('全选同类机柜'))
+    const dialog = await screen.findByRole('dialog')
+    const spinbuttons = within(dialog).getAllByRole('spinbutton')
+    fireEvent.change(spinbuttons[1], { target: { value: '3000' } }) // 功率上限 → 3000
+    fireEvent.click(within(dialog).getByText('确认批量更新'))
+    // 冲突明细展示：2 台生效、1 台冲突跳过并逐条原因（不静默跳过）
+    await waitFor(() => expect(within(dialog).getByText(/已更新 2 台/)).toBeInTheDocument())
+    expect(within(dialog).getByText(/机柜 1 功率 5000W 超过新上限 3000W/)).toBeInTheDocument()
+    // 合规柜落库、冲突柜不落库
+    expect(useRackStore.getState().cabinets.find((c) => c.id === 1)!.power_limit).toBe(6000)
+    expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.power_limit).toBe(3000)
+    expect(useRackStore.getState().cabinets.find((c) => c.id === 4)!.power_limit).toBe(3000)
+  })
+})
