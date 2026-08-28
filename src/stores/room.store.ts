@@ -79,6 +79,9 @@ export interface RoomOptimizeParams {
 /** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值；v1.4 加 power 电源柜） */
 const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
 
+/** M4（AL-ED3）：rack.store 机柜类型有效集（格子改类型 → 仅此域内联动机柜 type；combined/empty 不写回） */
+const CABINET_TYPE_SET = new Set(['gpu', 'network', 'storage', 'compute', 'security', 'custom', 'scaleup', 'power'])
+
 /** 标记工具：select 选择；ac/pillar 占位；类型标记；clear 清除标记 */
 export type RoomMarkTool =
   | 'select'
@@ -133,6 +136,22 @@ interface RoomState {
   setMarkTool: (tool: RoomMarkTool) => void
   markCell: (position: string) => void
   selectPosition: (position: string | null) => void
+  /** M4（AL-ED2/ED3）：多选格子位置（同类批量/框选批量共用） */
+  multiSelected: string[]
+  toggleMultiSelect: (position: string) => void
+  setMultiSelect: (positions: string[]) => void
+  clearMultiSelect: () => void
+  /** M4（AL-ED2）：以指定格对应机柜类型全选同类柜位置（无柜时按格子类型匹配） */
+  selectSameType: (position: string) => void
+  /** M4（AL-ED3）：框选/多选批量改格子（类型/占位；带柜格改类型联动机柜；设占位清除机柜） */
+  updateCellsBulk: (
+    positions: string[],
+    patch: Partial<Pick<RoomCellData, 'type' | 'placeholder'>>,
+  ) => { applied: number; skipped: string[] }
+  /** M4（AL-ED3）：批量清空格子（类型/占位/机柜；机柜保留未上架） */
+  clearCellsBulk: (positions: string[]) => { applied: number }
+  /** M4（AL-ED3）：批量清空格子并删除机柜 */
+  deleteCellsBulk: (positions: string[]) => { applied: number }
   /** 打磨轮（v1.4）：默认列配比自动布点——每列 1 电源 + 空调占位 + GPU(1柜1台) + 网络 */
   composeDefaults: (opts?: { gpuCount?: number; networkCount?: number }) => void
   /** 打磨轮（v1.4 / AL-R2b）：机柜类型微调 → 回写矩阵格子类型（仅 ROOM_MARK_TYPES 内；combined 不改） */
@@ -298,6 +317,103 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   },
 
   selectPosition: (position) => set({ selectedPosition: position }),
+
+  // ===== M4（AL-ED2/ED3）：多选与批量格子编辑 =====
+
+  toggleMultiSelect: (position) => {
+    set((s) => ({
+      multiSelected: s.multiSelected.includes(position)
+        ? s.multiSelected.filter((p) => p !== position)
+        : [...s.multiSelected, position],
+    }))
+  },
+
+  setMultiSelect: (positions) => set({ multiSelected: positions }),
+
+  clearMultiSelect: () => set({ multiSelected: [] }),
+
+  // M4（AL-ED2）：全选同类——以目标格对应机柜类型为基准，选中所有同类型柜位置
+  selectSameType: (position) => {
+    const { matrix } = get()
+    if (!matrix) return
+    const cell = matrix.cells.find((c) => `${c.row}${c.col}` === position)
+    if (!cell) return
+    const cabinets = useRackStore.getState().cabinets
+    let type = cell.type
+    if (cell.cabinetId != null) {
+      const cab = cabinets.find((c) => c.id === cell.cabinetId)
+      if (cab) type = cab.type
+    }
+    const positions = matrix.cells
+      .filter((c) => {
+        if (c.placeholder) return false
+        const cab = c.cabinetId != null ? cabinets.find((k) => k.id === c.cabinetId) : null
+        return (cab ? cab.type : c.type) === type
+      })
+      .map((c) => `${c.row}${c.col}`)
+    set({ multiSelected: positions })
+  },
+
+  // M4（AL-ED3）：批量改格子（类型/占位）——带柜格改类型联动 rack.store；设占位清除机柜
+  updateCellsBulk: (positions, patch) => {
+    const { matrix } = get()
+    if (!matrix) return { applied: 0, skipped: [] }
+    const posSet = new Set(positions)
+    const skipped: string[] = []
+    let applied = 0
+    const cells = matrix.cells.map((cell) => {
+      if (!posSet.has(`${cell.row}${cell.col}`)) return cell
+      applied++
+      if (patch.placeholder != null && cell.cabinetId != null) {
+        skipped.push(`${cell.row}${cell.col}`)
+        return { ...cell, ...patch, cabinetId: null }
+      }
+      return { ...cell, ...patch }
+    })
+    set({ matrix: { ...matrix, cells } })
+    // 联动：格子类型变更 → 同步已上架机柜类型（仅机柜类型域内；combined/empty 不写回）
+    if (patch.type != null && CABINET_TYPE_SET.has(patch.type)) {
+      for (const cell of cells) {
+        if (cell.cabinetId != null && posSet.has(`${cell.row}${cell.col}`)) {
+          useRackStore.getState().updateCabinet(cell.cabinetId, { type: patch.type as RackCabinet['type'] })
+        }
+      }
+    }
+    return { applied, skipped }
+  },
+
+  // M4（AL-ED3）：批量清空格子（机柜对象保留，回未上架池）
+  clearCellsBulk: (positions) => {
+    const { matrix } = get()
+    if (!matrix) return { applied: 0 }
+    const posSet = new Set(positions)
+    let applied = 0
+    const cells = matrix.cells.map((c) => {
+      if (!posSet.has(`${c.row}${c.col}`)) return c
+      applied++
+      return { ...c, type: 'empty', placeholder: null, cabinetId: null }
+    })
+    set({ matrix: { ...matrix, cells } })
+    return { applied }
+  },
+
+  // M4（AL-ED3）：批量清空格子并删除对应机柜
+  deleteCellsBulk: (positions) => {
+    const { matrix } = get()
+    if (!matrix) return { applied: 0 }
+    const posSet = new Set(positions)
+    let applied = 0
+    const cabinetIds: number[] = []
+    const cells = matrix.cells.map((c) => {
+      if (!posSet.has(`${c.row}${c.col}`)) return c
+      applied++
+      if (c.cabinetId != null) cabinetIds.push(c.cabinetId)
+      return { ...c, type: 'empty', placeholder: null, cabinetId: null }
+    })
+    cabinetIds.forEach((id) => useRackStore.getState().removeCabinet(id))
+    set({ matrix: { ...matrix, cells } })
+    return { applied }
+  },
 
   // 打磨轮（v1.4）：默认列配比——每列 1 电源 + 1 空调占位，GPU 1柜1台、网络柜按规模均摊
   composeDefaults: (opts) => {
@@ -547,5 +663,5 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     return { ok: errors.length === 0, errors }
   },
 
-  reset: () => set({ matrix: null, selectedPosition: null }),
+  reset: () => set({ matrix: null, selectedPosition: null, multiSelected: [] }),
 }))
