@@ -12,7 +12,7 @@ import { RoomDesignTab } from '@/components/workspace/tabs/RoomDesignTab'
 import { WorkbenchTab } from '@/components/workspace/tabs/WorkbenchTab'
 import { ProjectProvider } from '@/stores/ProjectContext'
 import { useRoomStore, type RoomMatrixData } from '@/stores/room.store'
-import { useRackStore } from '@/stores/rack.store'
+import { useRackStore, type RackCabinet } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
@@ -31,6 +31,26 @@ const makeMatrix = (finalized = false): RoomMatrixData => ({
     { row: 'B', col: 3, type: 'empty', placeholder: null, cabinetId: null },
   ],
   finalized,
+})
+
+/** M3（AL-D3b）：带已上架机柜的矩阵——A1↔柜1、B2↔柜2，供双向联动测试 */
+const makeMatrixWithCabinet = (finalized = false): RoomMatrixData => {
+  const m = makeMatrix(finalized)
+  m.cells = m.cells.map((c) => {
+    if (c.row === 'A' && c.col === 1) return { ...c, type: 'gpu', cabinetId: 1 }
+    if (c.row === 'B' && c.col === 2) return { ...c, type: 'gpu', cabinetId: 2 }
+    return c
+  })
+  return m
+}
+
+const makeCabinet = (id: number, name = `机柜 ${id}`): RackCabinet => ({
+  id,
+  name,
+  totalU: 42,
+  type: 'gpu',
+  power_limit: 6000,
+  devices: [],
 })
 
 const mockGetFile = (matrix: RoomMatrixData | null) => {
@@ -108,6 +128,35 @@ describe('RoomDesignTab', () => {
     fireEvent.click(screen.getByText('撤销定稿'))
     await waitFor(() => expect(useRoomStore.getState().matrix?.finalized).toBe(false))
   })
+
+  it('M3 选中已上架柜格 → 切到「机柜设计」子视图并选中该柜（格→柜联动）', async () => {
+    mockGetFile(makeMatrixWithCabinet(false))
+    useRackStore.setState({ cabinets: [makeCabinet(1), makeCabinet(2)], unplacedDevices: [], selectedCabinetId: null })
+    render(
+      <ProjectProvider>
+        <RoomDesignTab projectName="p1" />
+      </ProjectProvider>,
+    )
+    await screen.findByText('机房 A')
+    // 模拟点击矩阵格 A1（select 工具下 markCell 仅更新选中位）
+    useRoomStore.getState().selectPosition('A1')
+    await waitFor(() => {
+      expect(useRackStore.getState().selectedCabinetId).toBe(1)
+      expect(useUIStore.getState().workbenchSubview).toBe('rackdesign' as WorkbenchSubview)
+    })
+  })
+
+  it('M3 已定稿 → 「前往机柜设计」按钮切到 rackdesign 子视图', async () => {
+    mockGetFile(makeMatrix(true))
+    render(
+      <ProjectProvider>
+        <RoomDesignTab projectName="p1" />
+      </ProjectProvider>,
+    )
+    const btn = await screen.findByText('前往机柜设计')
+    fireEvent.click(btn)
+    await waitFor(() => expect(useUIStore.getState().workbenchSubview).toBe('rackdesign' as WorkbenchSubview))
+  })
 })
 
 describe('WorkbenchTab 子视图路由（M1/M2 集成）', () => {
@@ -126,5 +175,17 @@ describe('WorkbenchTab 子视图路由（M1/M2 集成）', () => {
     await waitFor(() => expect(useUIStore.getState().workbenchSubview).toBe('main'))
     useUIStore.getState().setWorkbenchSubview('rackdesign' as WorkbenchSubview)
     expect(await screen.findByText(/请先完成机房设计并定稿/)).toBeInTheDocument()
+  })
+
+  it('M3 旧 rack 子视图已收敛：不再渲染两段式 RackWorkbenchView', async () => {
+    mockGetFile(makeMatrix(false))
+    render(<WorkbenchTab />)
+    await waitFor(() => expect(useUIStore.getState().workbenchSubview).toBe('main'))
+    useUIStore.getState().setWorkbenchSubview('rack' as WorkbenchSubview)
+    // 旧两段式切换按钮（① 机房-机柜布局 / ② 柜内设备布放）不再渲染
+    expect(screen.queryByText('① 机房-机柜布局')).not.toBeInTheDocument()
+    expect(screen.queryByText('② 柜内设备布放')).not.toBeInTheDocument()
+    // 两个独立子视图入口仍在 main 视图中（设计步骤）
+    expect(screen.getAllByText(/机房设计/).length).toBeGreaterThan(0)
   })
 })

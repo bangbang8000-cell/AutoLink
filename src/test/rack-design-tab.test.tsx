@@ -28,6 +28,17 @@ const makeMatrix = (finalized = false): RoomMatrixData => ({
   finalized,
 })
 
+/** M3（AL-D3b）：带已上架机柜的矩阵——A1↔柜1、B2↔柜2，供双向联动/回写测试 */
+const makeMatrixWithCabinet = (finalized = false): RoomMatrixData => {
+  const m = makeMatrix(finalized)
+  m.cells = m.cells.map((c) => {
+    if (c.row === 'A' && c.col === 1) return { ...c, type: 'gpu', cabinetId: 1 }
+    if (c.row === 'B' && c.col === 2) return { ...c, type: 'gpu', cabinetId: 2 }
+    return c
+  })
+  return m
+}
+
 const makeCabinet = (overrides: Partial<RackCabinet> = {}): RackCabinet => ({
   id: 1,
   name: '机柜 1',
@@ -86,5 +97,30 @@ describe('RackDesignTab', () => {
     fireEvent.click(await screen.findByText(/撤销定稿/))
     await waitFor(() => expect(useRoomStore.getState().matrix?.finalized).toBe(false))
     expect(screen.getByText(/请先完成机房设计并定稿/)).toBeInTheDocument()
+  })
+
+  it('M3 选中柜 → 机房设计矩阵格高亮（selectedPosition 同步，柜→格联动）', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({
+      cabinets: [makeCabinet(), makeCabinet({ id: 2, name: '机柜 2' })],
+      unplacedDevices: [],
+      selectedCabinetId: 1,
+    })
+    render(<RackDesignTab projectName="p1" />)
+    // 初始选中柜 1 → A1 格高亮
+    await waitFor(() => expect(useRoomStore.getState().selectedPosition).toBe('A1'))
+    // 切到柜 2 → B2 格高亮
+    useRackStore.getState().selectCabinet(2)
+    await waitFor(() => expect(useRoomStore.getState().selectedPosition).toBe('B2'))
+  })
+
+  it('M3 改柜类型 → 回写矩阵格类型（改类型回写）', async () => {
+    mockGetFile(makeMatrixWithCabinet(true))
+    useRackStore.setState({ cabinets: [makeCabinet()], unplacedDevices: [], selectedCabinetId: 1 })
+    render(<RackDesignTab projectName="p1" />)
+    const cell = () => useRoomStore.getState().matrix?.cells.find((c) => c.cabinetId === 1)
+    await waitFor(() => expect(cell()?.type).toBe('gpu'))
+    useRackStore.getState().updateCabinet(1, { type: 'network' })
+    await waitFor(() => expect(cell()?.type).toBe('network'))
   })
 })
