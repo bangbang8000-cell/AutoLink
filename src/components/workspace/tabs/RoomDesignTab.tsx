@@ -12,7 +12,7 @@
  */
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, FileCheck2, Lock, Unlock, ArrowRight } from 'lucide-react'
+import { Download, FileCheck2, Lock, Unlock, ArrowRight, Undo2, Redo2 } from 'lucide-react'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -34,6 +34,41 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
   const gpuCount = useDesignStore((s) => s.config.num_servers)
   const topology = useDesignStore((s) => s.topology)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
+
+  // M2（AL-UR1/UR2）：撤销/重做——room 与 rack 独立栈，快捷键/按钮统一触发两者
+  const roomCanUndo = useRoomStore((s) => s.canUndo)
+  const roomCanRedo = useRoomStore((s) => s.canRedo)
+  const rackCanUndo = useRackStore((s) => s.canUndo)
+  const rackCanRedo = useRackStore((s) => s.canRedo)
+  const canUndo = roomCanUndo || rackCanUndo
+  const canRedo = roomCanRedo || rackCanRedo
+  const undoAll = () => {
+    useRoomStore.getState().undo()
+    useRackStore.getState().undo()
+  }
+  const redoAll = () => {
+    useRoomStore.getState().redo()
+    useRackStore.getState().redo()
+  }
+
+  // M2（AL-UR1）：Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 快捷键（聚焦输入框时跳过，不与系统输入冲突）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      const key = e.key.toLowerCase()
+      if (key !== 'z' && key !== 'y') return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
+      e.preventDefault()
+      if (key === 'z' && !e.shiftKey) {
+        undoAll()
+      } else {
+        redoAll()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     loadMatrix(projectName).catch(() => {})
@@ -87,6 +122,17 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
           {t('workbench:subview.roomdesign', '机房设计')}
         </span>
+        {/* M2（AL-UR1）：撤销/重做（room+rack 独立栈统一触发；Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y） */}
+        <button type="button" onClick={undoAll} disabled={!canUndo}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="撤销 (Ctrl+Z)">
+          <Undo2 size={11} /> {t('common:menu.edit.undo', '撤销')}
+        </button>
+        <button type="button" onClick={redoAll} disabled={!canRedo}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="重做 (Ctrl+Shift+Z / Ctrl+Y)">
+          <Redo2 size={11} /> {t('common:menu.edit.redo', '重做')}
+        </button>
         {/* 定稿 / 撤销定稿 */}
         {matrix && !matrix.finalized && (
           <button type="button" onClick={() => setFinalized(true)}

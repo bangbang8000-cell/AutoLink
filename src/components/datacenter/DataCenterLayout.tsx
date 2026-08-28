@@ -364,7 +364,13 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
     }
     const r = updateCabinetsBulk(cabinetIds, patch as Parameters<typeof updateCabinetsBulk>[1])
     if (Number(topReserved) !== topReservedU) setRackConfig({ topReservedU: Math.max(0, Math.round(Number(topReserved) || 0)) })
-    cabinetIds.forEach((id) => syncCabinetToCell(id))
+    // M2（AL-UR1）：批量机柜类型 → 回写矩阵格类型只压一次 room 快照（撤销后矩阵↔柜内一致，AL-UR2）
+    if (patch.type && cabinetIds.length > 0) {
+      useRoomStore.getState().pushHistory()
+      cabinetIds.forEach((id) => syncCabinetToCell(id, false))
+    } else {
+      cabinetIds.forEach((id) => syncCabinetToCell(id))
+    }
     // M6（AL-ED7）：冲突逐条展示（弹窗保持打开），合规柜照常落库、冲突柜不落库
     if (r.issues.length > 0) {
       setLastApplied(r.applied)
