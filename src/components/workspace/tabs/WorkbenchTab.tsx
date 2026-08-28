@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, FileCheck2, X, Lock, Unlock, Archive, Boxes, Server } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, X, Boxes, Server } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
-import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
-import { buildArchiveBatchName, resolveProjectVersion, ARCHIVE_RACK_DESIGN_FILE, ARCHIVE_TOPOLOGY_FILE, ARCHIVE_ROOM_LAYOUT_FILE } from '@/utils/archiveExport'
-import { useRoomStore } from '@/stores/room.store'
-import { useRackStore } from '@/stores/rack.store'
-import { useDesignStore } from '@/stores/design.store'
 import { WorkbenchScopeCard } from '@/components/workbench/WorkbenchScopeCard'
 import { WorkbenchReadinessCard } from '@/components/workbench/WorkbenchReadinessCard'
 import { WorkbenchOutputCard } from '@/components/workbench/WorkbenchOutputCard'
@@ -16,10 +11,8 @@ import { WorkbenchResultCard } from '@/components/workbench/WorkbenchResultCard'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
-import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { RoomDesignTab } from '@/components/workspace/tabs/RoomDesignTab'
 import { RackDesignTab } from '@/components/workspace/tabs/RackDesignTab'
-import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
 import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
@@ -43,7 +36,6 @@ function StepLabel({ n, text }: { n: string; text: string }) {
 const SUBVIEW_KEYS: Record<string, string> = {
   aidc: 'workbench:subview.aidc',
   design: 'workbench:subview.design',
-  rack: 'workbench:subview.rack',
   roomdesign: 'workbench:subview.roomdesign',
   rackdesign: 'workbench:subview.rackdesign',
   main: 'workbench:subview.main',
@@ -65,295 +57,6 @@ const SUBVIEW_LABEL_FALLBACK: Record<string, string> = {
 
 // AL-M4c: 工作台二级页签保活上限——最多同时保持 N 个非激活子视图挂载,超限卸载释放内存
 const KEEP_ALIVE_LIMIT = 5
-
-/** 打磨轮（v1.4）：机柜子视图——平面矩阵一览（DataCenterLayout）+ 逐柜微调（RackTab），双向联动 */
-function RackWorkbenchView({ projectName }: { projectName: string }) {
-  const { t } = useTranslation()
-  const addToast = useToastStore((s) => s.addToast)
-  const matrix = useRoomStore((s) => s.matrix)
-  const loadMatrix = useRoomStore((s) => s.loadMatrix)
-  const createMatrix = useRoomStore((s) => s.createMatrix)
-  const composeDefaults = useRoomStore((s) => s.composeDefaults)
-  const selectedPosition = useRoomStore((s) => s.selectedPosition)
-  const selectPosition = useRoomStore((s) => s.selectPosition)
-  const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
-  const setFinalized = useRoomStore((s) => s.setFinalized)
-  const cabinets = useRackStore((s) => s.cabinets)
-  const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
-  const selectCabinet = useRackStore((s) => s.selectCabinet)
-  const optimizeRacks = useRackStore((s) => s.optimizeRacks)
-  const gpuCount = useDesignStore((s) => s.config.num_servers)
-  const topology = useDesignStore((s) => s.topology)
-  const [rowsInput, setRowsInput] = useState('10')
-  const [colsInput, setColsInput] = useState('15')
-  // 打磨轮（v1.5 / AL-R1a）：两段式——①机房-机柜布局 ②柜内设备布放
-  const [segment, setSegment] = useState<'layout' | 'racks'>('layout')
-
-  useEffect(() => {
-    loadMatrix(projectName).catch(() => {})
-  }, [projectName, loadMatrix])
-
-  // M4/M5: 读取项目机柜配置 → 注入 rack.store（topReservedU/gpuPerCabinet 生效）
-  useEffect(() => {
-    window.electron.project
-      .getFile(projectName, 'project_config.json')
-      .then((raw: string | null) => {
-        if (!raw) return
-        const cfg = JSON.parse(raw)
-        const rack = cfg?.rack_config || {}
-        if (rack.top_reserved_u != null || rack.gpu_per_cabinet != null) {
-          useRackStore.getState().setRackConfig({
-            topReservedU: rack.top_reserved_u,
-            gpuPerCabinet: rack.gpu_per_cabinet,
-          })
-        }
-      })
-      .catch(() => {})
-  }, [projectName])
-
-  // 打磨轮（v1.4 / AL-R2b 联动 A，v1.5 增强）：矩阵选中格（有已上架机柜）→ RackTab 选中对应机柜
-  // 并自动切到「②柜内设备布放」段呈现（等值守卫防死循环）
-  useEffect(() => {
-    if (!selectedPosition) return
-    const cell = matrix?.cells.find((c) => `${c.row}${c.col}` === selectedPosition)
-    if (cell?.cabinetId != null) {
-      if (cell.cabinetId !== selectedCabinetId) selectCabinet(cell.cabinetId)
-      setSegment('racks')
-    }
-  }, [selectedPosition, matrix, selectedCabinetId, selectCabinet])
-
-  // 打磨轮（v1.4 / AL-R2b 联动 B）：RackTab 选中机柜 → 矩阵高亮对应格
-  useEffect(() => {
-    if (selectedCabinetId == null) return
-    const cell = matrix?.cells.find((c) => c.cabinetId === selectedCabinetId)
-    if (cell) {
-      const pos = `${cell.row}${cell.col}`
-      if (pos !== selectedPosition) selectPosition(pos)
-    }
-  }, [selectedCabinetId, matrix, selectedPosition, selectPosition])
-
-  // 打磨轮（v1.4 / AL-R2b 联动 C）：RackTab 改柜类型 → 回写矩阵格类型（syncCabinetToCell 内等值守卫收敛）
-  useEffect(() => {
-    if (!matrix) return
-    for (const cab of cabinets) syncCabinetToCell(cab.id)
-  }, [cabinets, matrix, syncCabinetToCell])
-
-  const createMtx = async () => {
-    const rows: string[] = []
-    const n = Math.max(1, Number(rowsInput) || 1)
-    for (let i = 0; i < n; i++) rows.push(String.fromCharCode(65 + i)) // A, B, C…
-    const cols = Array.from({ length: Math.max(1, Number(colsInput) || 1) }, (_, i) => i + 1)
-    const ok = await createMatrix(projectName, rows, cols)
-    if (ok) {
-      addToast('success', t('rack:matrixCreated', '机柜矩阵已创建，可「自动布点默认配比」'), 5000)
-      await loadMatrix(projectName)
-    } else {
-      addToast('error', t('rack:matrixCreateFailed', '矩阵创建失败'), 5000)
-    }
-  }
-
-  const autoCompose = () => {
-    if (!matrix) {
-      addToast('warning', t('rack:needMatrixFirst', '请先定义机柜矩阵（排/列）'), 4000)
-      return
-    }
-    const net = Math.max(4, cabinets.filter((c) => c.type === 'network').length)
-    composeDefaults({ gpuCount: gpuCount || 64, networkCount: net })
-    addToast('success', t('rack:autoComposed', '已按默认配比布点（每列 1 电源 + 空调 + GPU(1柜1台) + 网络），可微调'), 5000)
-  }
-
-  // 打磨轮（v1.4 / AL-R2c）：按矩阵自动落位（通用入口，用设计拓扑节点；AIDC 应用到设计亦自动触发）
-  const applyMatrix = async () => {
-    const nodes = topology?.nodes
-    if (!nodes || nodes.length === 0) {
-      addToast('warning', t('rack:needTopologyFirst', '请先生成拓扑（「设计」子视图生成，或 AIDC 规划「应用到设计」）'), 4000)
-      return
-    }
-    await useRoomStore.getState().applyMatrixRackLayout(projectName, nodes)
-  }
-
-  const saveAll = async () => {
-    await useRoomStore.getState().saveMatrix(projectName)
-    await useRackStore.getState().saveRackLayout(projectName)
-    addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
-  }
-
-  // AL-R2: 归档目录名含版本号——从项目 AIDC 规划 plan.meta.planVersion 解析，取不到回退无版本
-  const resolveArchiveVersion = async (): Promise<string> => {
-    try {
-      const res = (await window.electron.aidc.project.load(projectName)) as {
-        plan?: { meta?: { planVersion?: number } } | null
-      }
-      return resolveProjectVersion({ planMetaPlanVersion: res.plan?.meta?.planVersion })
-    } catch {
-      return ''
-    }
-  }
-
-  // AL-R2: 归档拓扑 PNG（真实渲染）到 output/<batchName>/——无拓扑数据或失败则跳过（尽力而为）
-  const exportArchiveTopologyPng = async (batchName: string): Promise<void> => {
-    const topology = useDesignStore.getState().topology
-    const nodes = topology?.nodes
-    const edges = topology?.edges ?? []
-    if (!nodes || nodes.length === 0) return
-    const { exportTopologyViewPng } = await import('@/utils/exportTopologyView')
-    const base64 = await exportTopologyViewPng(nodes, edges)
-    await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${ARCHIVE_TOPOLOGY_FILE}`, base64)
-  }
-
-  // AL-R2: 归档机房平面图 PNG（矩阵布局渲染）到 output/<batchName>/——无矩阵则跳过（尽力而为）
-  const exportArchiveRoomLayoutPng = async (batchName: string): Promise<void> => {
-    const { roomLayoutArt, svgToPngBase64 } = await import('@/utils/exportGraphics')
-    const art = roomLayoutArt()
-    if (!art) return
-    const base64 = await svgToPngBase64(art.svg, art.width, art.height)
-    await window.electron?.render?.saveOutputFile(projectName, `output/${batchName}/${ARCHIVE_ROOM_LAYOUT_FILE}`, base64)
-  }
-
-  // 打磨轮（v1.5 / AL-R1b）：柜内智能落位（待上架池 → 现有柜 U 位）
-  const runRackOptimize = async () => {
-    // M4: 用项目每柜 GPU 数量（默认 1），不再硬编码
-    const res = await optimizeRacks(useRackStore.getState().gpuPerCabinet)
-    if (res && (res.stats?.placed ?? 0) > 0) {
-      await useRackStore.getState().saveRackLayout(projectName)
-    }
-  }
-
-  // M4：切到柜内规划段的门槛——先完成机房机柜布局并定稿
-  const switchToRacks = () => {
-    if (!matrix) {
-      addToast('warning', t('rack:needMatrixFirst', '请先创建机房机柜矩阵'), 4000)
-      return
-    }
-    if (!matrix.finalized) {
-      addToast('warning', t('rack:needFinalizeFirst', '请先完成机房机柜布局并「定稿」，再进入柜内规划'), 5000)
-      return
-    }
-    setSegment('racks')
-  }
-
-  return (
-    <div className="h-full flex flex-col gap-3">
-      {/* 工具行 */}
-      <div className="flex items-center gap-2 flex-wrap shrink-0">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('rack:rackDesign')}</span>
-        {/* 两段式切换（v1.5 / AL-R1a） */}
-        <div className="flex items-center bg-white dark:bg-app border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
-          <button type="button" onClick={() => setSegment('layout')}
-            className={`px-2.5 py-1 text-xs transition-colors ${segment === 'layout' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
-            {t('rack:segmentLayout')}
-          </button>
-          <button type="button" onClick={switchToRacks}
-            className={`px-2.5 py-1 text-xs transition-colors ${segment === 'racks' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
-            {t('rack:segmentRacks')}
-          </button>
-        </div>
-        {/* M4：机房布局定稿 / 撤销定稿 */}
-        {matrix && !matrix.finalized && (
-          <button type="button" onClick={() => setFinalized(true)}
-            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
-            <Lock size={11} /> {t('rack:finalizeLayout', '定稿布局')}
-          </button>
-        )}
-        {matrix?.finalized && (
-          <button type="button" onClick={() => setFinalized(false)}
-            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-            <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
-          </button>
-        )}
-        {matrix ? (
-          <>
-            <span className="text-2xs text-gray-400">{t('rack:matrixSummary', { rows: matrix.rows.length, cols: matrix.cols.length, defaultValue: '矩阵 {{rows}}排×{{cols}}列' })}</span>
-            <button type="button" onClick={autoCompose}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
-              <Download size={11} /> {t('rack:autoCompose')}
-            </button>
-            <button type="button" onClick={applyMatrix}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
-              <Download size={11} /> {t('rack:applyMatrix')}
-            </button>
-            {/* M4: 导出机柜设计 Excel（平面图 + 每柜设计 + 上机表） */}
-            <button type="button" onClick={async () => {
-              const path = await exportRackDesignExcel(projectName, cabinets, matrix)
-              if (path) addToast('success', t('rack:rackDesignExported', `机柜设计已导出: ${path}`), 6000)
-            }}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
-              <Download size={11} /> {t('rack:exportRackDesign', '导出机柜设计')}
-            </button>
-            {/* M4b: 改布局处理——清空柜内设计 / 归档并清空（版本归档到 项目名-版本-时间 目录） */}
-            <button type="button" onClick={() => {
-              useRackStore.getState().clearCabinets()
-              addToast('warning', t('rack:cleared', '柜内设计已清空（设备回到待上架池），可重新规划'), 5000)
-            }}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-              <X size={11} /> {t('rack:clearRacks', '清空柜内设计')}
-            </button>
-            <button type="button" onClick={async () => {
-              // AL-R2: 归档并清空——目录名含版本号 + 完整设计渲染（机柜设计/拓扑图/机房平面图）
-              const versionTag = await resolveArchiveVersion()
-              const batchName = buildArchiveBatchName(projectName, versionTag)
-              try {
-                await exportRackDesignExcel(projectName, cabinets, matrix, batchName, ARCHIVE_RACK_DESIGN_FILE)
-              } catch { /* 机柜设计导出失败不阻塞其余产物 */ }
-              try {
-                await exportArchiveTopologyPng(batchName)
-              } catch { /* 拓扑 PNG 尽力而为 */ }
-              try {
-                await exportArchiveRoomLayoutPng(batchName)
-              } catch { /* 平面图 PNG 尽力而为 */ }
-              useRackStore.getState().clearCabinets()
-              addToast('success', t('rack:archived', `当前设计已归档到 ${batchName}，可重新规划`), 6000)
-            }}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
-              <Archive size={11} /> {t('rack:archiveAndClear', '归档并清空')}
-            </button>
-            <button type="button" onClick={runRackOptimize}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
-              <Download size={11} /> {t('rack:rackOptimize')}
-            </button>
-            <button type="button" onClick={saveAll}
-              className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-green-600 hover:bg-green-700 text-white">
-              <FileCheck2 size={11} /> {t('common:save', '保存')}
-            </button>
-          </>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <label className="text-2xs text-gray-400">{t('rack:room.rows', '排数')}
-              <input className="w-12 ml-1 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
-                value={rowsInput} onChange={(e) => setRowsInput(e.target.value)} />
-            </label>
-            <label className="text-2xs text-gray-400">{t('rack:room.cols', '列数')}
-              <input className="w-12 ml-1 px-1 py-0.5 text-2xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app"
-                value={colsInput} onChange={(e) => setColsInput(e.target.value)} />
-            </label>
-            <button type="button" onClick={createMtx}
-              className="px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white">{t('rack:room.create', '创建矩阵')}</button>
-          </div>
-        )}
-      </div>
-
-      {/* 段一：机房-机柜布局设计（平面矩阵） */}
-      {segment === 'layout' && (
-        <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">
-          {matrix ? (
-            <DataCenterLayout />
-          ) : (
-            <div className="h-full flex items-center justify-center text-xs text-gray-400 p-6">
-              {t('workbench:rackMatrixEmpty')}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 段二：柜内设备布放设计（RackTab 逐柜微调 + 智能落位） */}
-      {segment === 'racks' && (
-        <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">
-          <RackTab cabinetId={null} />
-        </div>
-      )}
-    </div>
-  )
-}
 
 /** 打磨轮（v1.3）：归档/导出子视图（导出 MC 交付包 + 渲染结果） */
 function ExportView({ projectName }: { projectName: string }) {
@@ -682,7 +385,7 @@ export function WorkbenchTab() {
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">Ready</span>
               </div>
             </div>
-            {/* M1/M2（AL-D1/D2）：机房设计 / 机柜设计 独立子视图入口（新入口不再进两段式 RackWorkbenchView） */}
+            {/* M1/M2（AL-D1/D2）+M3（AL-D3c）：机房设计 / 机柜设计 独立子视图入口（旧两段式 RackWorkbenchView 已收敛） */}
             <div className="rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated p-3 mb-4 flex items-center gap-2">
               <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{t('workbench:designSteps', '设计步骤')}:</span>
               <button type="button" onClick={() => openSubview('roomdesign')}
@@ -743,8 +446,6 @@ export function WorkbenchTab() {
         return <DesignTab />
       case 'visualization':
         return <TopologyTab />
-      case 'rack':
-        return <RackWorkbenchView projectName={project} />
       case 'roomdesign':
         return <RoomDesignTab projectName={project} />
       case 'rackdesign':
