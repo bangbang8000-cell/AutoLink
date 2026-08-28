@@ -17,6 +17,8 @@ import { OutputResultsView } from '@/components/workbench/OutputResultsView'
 import { useToastStore } from '@/stores/toast.store'
 import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizardModal'
 import { exportDeliveryZip } from '@/utils/aidcDelivery'
+// M8（AL-U2）：工作台 Header 项目切换器——复用 Dropdown 组件
+import { Dropdown } from '@/components/ui/Dropdown'
 
 /** 打磨轮（v1.6 收尾）：工作台步骤分组标签（5 卡→三步） */
 /* AL-M4j：升级为水平步骤条——数字徽章 + 连接线延伸贯穿卡片分组宽度,串联三步视觉 */
@@ -281,9 +283,21 @@ export function WorkbenchTab() {
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
           {t('workbench:title')}
         </span>
-        <span className="text-xs text-gray-400 dark:text-gray-500">
-          {selectedProjectName}
-        </span>
+        {/* M8（AL-U2）：项目切换器——多项目显示下拉（当前项高亮，切换走 selectProject）；单项目降级为纯文本 */}
+        {projects.length > 1 ? (
+          <Dropdown
+            items={projects.map((p) => ({ value: p.name, label: p.name }))}
+            value={selectedProjectName ?? undefined}
+            onChange={(name) => {
+              const target = projects.find((p) => p.name === name)
+              if (target) selectProject(target)
+            }}
+            className="w-56"
+            menuClassName="w-56"
+          />
+        ) : (
+          <span className="text-xs text-gray-400 dark:text-gray-500">{selectedProjectName}</span>
+        )}
       </div>
 
       {/* 打磨轮（v1.6 / AL-T1b）：工作台二级页签栏（访问过的子视图保留，快速切换/关闭） */}
