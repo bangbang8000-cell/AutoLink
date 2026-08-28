@@ -3,7 +3,7 @@
  * - 子视图路由渲染（WorkbenchTab subview=roomdesign 分发到 RoomDesignTab）
  * - 矩阵加载 / 无矩阵创建引导（复用 DataCenterLayout）
  * - 定稿 / 撤销定稿状态保留（room.store.finalized）
- * - 工具栏按钮存在（定稿布局 / 导出机房设计 Excel 占位，M7 接入）
+ * - 工具栏按钮存在（定稿布局；M4/AL-N3：无「导出机房设计 Excel」按钮，导出统一到「本项目输出」）
  */
 import '@/i18n'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -81,7 +81,7 @@ beforeEach(() => {
 })
 
 describe('RoomDesignTab', () => {
-  it('有矩阵（未定稿）→ 渲染机房设计工具栏（标题/定稿/导出占位）与矩阵视图', async () => {
+  it('有矩阵（未定稿）→ 渲染机房设计工具栏（标题/定稿）与矩阵视图；AL-N3 无导出按钮', async () => {
     mockGetFile(makeMatrix(false))
     render(
       <ProjectProvider>
@@ -90,7 +90,8 @@ describe('RoomDesignTab', () => {
     )
     expect(await screen.findByText('机房设计')).toBeInTheDocument()
     expect(screen.getByText('定稿布局')).toBeInTheDocument()
-    expect(screen.getByText('导出机房设计 Excel')).toBeInTheDocument()
+    // AL-N3 / E-1：设计子视图无导出按钮（导出统一到「本项目输出」）
+    expect(screen.queryByText(/导出机房设计/)).not.toBeInTheDocument()
     // DataCenterLayout 矩阵视图已挂载（矩阵名）
     expect(screen.getByText('机房 A')).toBeInTheDocument()
   })
@@ -177,15 +178,14 @@ describe('WorkbenchTab 子视图路由（M1/M2 集成）', () => {
     expect(await screen.findByText(/请先完成机房设计并定稿/)).toBeInTheDocument()
   })
 
-  it('M3 旧 rack 子视图已收敛：不再渲染两段式 RackWorkbenchView', async () => {
+  it('M3 旧 rack 子视图已收敛 + AL-N1：main 内不再渲染设计入口', async () => {
     mockGetFile(makeMatrix(false))
     render(<WorkbenchTab />)
     await waitFor(() => expect(useUIStore.getState().workbenchSubview).toBe('main'))
-    useUIStore.getState().setWorkbenchSubview('rack' as WorkbenchSubview)
     // 旧两段式切换按钮（① 机房-机柜布局 / ② 柜内设备布放）不再渲染
     expect(screen.queryByText('① 机房-机柜布局')).not.toBeInTheDocument()
     expect(screen.queryByText('② 柜内设备布放')).not.toBeInTheDocument()
-    // 两个独立子视图入口仍在 main 视图中（设计步骤）
-    expect(screen.getAllByText(/机房设计/).length).toBeGreaterThan(0)
+    // AL-N1：main（组网渲染）内不再有「设计步骤」行（设计入口已移至中栏独立条目）
+    expect(screen.queryByText(/设计步骤/)).not.toBeInTheDocument()
   })
 })

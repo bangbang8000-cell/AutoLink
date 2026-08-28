@@ -257,6 +257,13 @@ describe('RoomEditing（M4/AL-ED3 框选批量操作）', () => {
   })
 })
 
+describe('RoomDesignTab（M4/AL-N3 导出收敛）', () => {
+  it('E-1 机房设计子视图无「导出机房设计 Excel」按钮（导出统一到「本项目输出」）', async () => {
+    await renderRoom()
+    expect(screen.queryByText(/导出机房设计/)).not.toBeInTheDocument()
+  })
+})
+
 describe('RoomEditing（M6/AL-ED7 批量二次确认 + 冲突明细）', () => {
   it('ED-7 批量「清空」需二次确认（统一文案：再次点击确认清空）', async () => {
     const { container } = await renderRoom()

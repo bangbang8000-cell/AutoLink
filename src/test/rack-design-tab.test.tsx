@@ -1,7 +1,8 @@
 /**
  * M2（AL-D2/D3）：机柜设计独立子视图测试（RackDesignTab）
  * - 定稿门槛：未定稿显示引导（"请先完成机房设计并定稿"），不进入机柜设计
- * - 已定稿 → 渲染机柜设计工具栏（导出机柜设计 Excel / 归档 占位，M7 接入）与 RackTab
+ * - 已定稿 → 渲染机柜设计工具栏（归档 占位，M7 接入）与 RackTab
+ * - M4（AL-N3 / E-1）：设计子视图无「导出机柜设计 Excel」按钮（导出统一到「本项目输出」）
  * - RackTab 上架/移动/功率/批量模板 + isometric 等距立体保留（视图切换器存在）
  * - M5（AL-ED4/ED6）：柜内机柜信息调整（Modal 保存/冲突阻塞/右键菜单）与同柜批量更新（多选/属性/偏移）
  */
@@ -81,12 +82,14 @@ describe('RackDesignTab', () => {
     expect(screen.queryByText(/导出机柜设计/)).not.toBeInTheDocument()
   })
 
-  it('已定稿 → 渲染机柜设计工具栏（导出机柜设计 Excel / 归档 占位）与 RackTab（isometric 保留）', async () => {
+  it('已定稿 → 渲染机柜设计工具栏（无导出按钮，导出收敛到「本项目输出」）与 RackTab（isometric 保留）', async () => {
     mockGetFile(makeMatrix(true))
     useRackStore.setState({ cabinets: [makeCabinet()], unplacedDevices: [], selectedCabinetId: 1 })
     render(<RackDesignTab projectName="p1" />)
-    expect(await screen.findByText(/导出机柜设计/)).toBeInTheDocument()
-    expect(screen.getByText(/归档/)).toBeInTheDocument()
+    // 先等 async loadMatrix 完成 → 工具栏出现（归档并清空 占位按钮）
+    expect(await screen.findByText(/归档/)).toBeInTheDocument()
+    // AL-N3 / E-1：设计子视图无导出按钮
+    expect(screen.queryByText(/导出机柜设计/)).not.toBeInTheDocument()
     // RackTab 已挂载：机柜选择器含机柜名 + isometric 视图切换按钮存在
     expect(screen.getByText(/机柜 1/)).toBeInTheDocument()
     expect(screen.getByText('3D 等距')).toBeInTheDocument()
