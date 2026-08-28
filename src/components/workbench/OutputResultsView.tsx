@@ -3,13 +3,19 @@
  *  - 项目 → 输出版本批次(vN_ts) → 材料文件树
  *  - 预览三态：文本（JSON/ini/csv 高亮） / 表格（xlsx 只读） / 图形（PNG/SVG）
  *  - 操作：导出批次 ZIP / 导出全部 / 删单文件 / 删批次 / 清空项目 / 清空全部 / 打开位置
+ *  - M4（AL-N3）：导出收敛——设计子视图导出按钮移除，统一在此导出「机房设计 Excel / 机柜设计 Excel」
+ *    （复用 exportRoomDesignExcel/exportRackDesignExcel，不传 batchName → 落 output/ 根目录 → [根目录] 批次）
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
+import { useRoomStore } from '@/stores/room.store'
+import { useRackStore } from '@/stores/rack.store'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { exportRoomDesignExcel, buildRoomDesignRackConfig } from '@/utils/exportRoomDesignExcel'
+import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
 import {
   RefreshCw, Download, Trash2, ChevronRight, ChevronDown,
   FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2,
@@ -131,6 +137,34 @@ function PreviewPanel({ preview, fileName, loading }: { preview: PreviewData | n
   )
 }
 
+/**
+ * M4（AL-N3）：导出收敛——从当前设计 store 导出「机房设计 Excel」到 output/ 根目录（不传 batchName
+ * → electron export.saveFile → 落 output/ 根目录，自动出现在「[根目录]」批次）。成功返回落盘路径；
+ * 无矩阵/落盘失败时抛错（由调用方提示）。
+ */
+export async function exportRoomDesignExcelToRoot(projectName: string): Promise<string> {
+  const matrix = useRoomStore.getState().matrix
+  if (!matrix) {
+    throw new Error('机房设计尚未定义（请先在「机房设计」子视图创建矩阵）')
+  }
+  const cabinets = useRackStore.getState().cabinets
+  const filePath = await exportRoomDesignExcel(projectName, matrix, cabinets, buildRoomDesignRackConfig())
+  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）')
+  return filePath
+}
+
+/**
+ * M4（AL-N3）：导出收敛——从当前设计 store 导出「机柜设计 Excel」到 output/ 根目录（不传 batchName
+ * → electron export.saveFile → 落 output/ 根目录，自动出现在「[根目录]」批次）。成功返回落盘路径；
+ * 落盘失败时抛错（由调用方提示）。
+ */
+export async function exportRackDesignExcelToRoot(projectName: string): Promise<string> {
+  const cabinets = useRackStore.getState().cabinets
+  const filePath = await exportRackDesignExcel(projectName, cabinets)
+  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）')
+  return filePath
+}
+
 export function OutputResultsView({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
@@ -192,6 +226,27 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
       addToast('error', `导出失败: ${(err as Error).message}`, 5000)
     }
   }, [activeProject, addToast])
+
+  // M4（AL-N3）：导出收敛——「本项目输出」统一导出双设计 Excel（落 output/ 根目录 → [根目录] 批次）
+  const handleExportRoomDesign = useCallback(async () => {
+    try {
+      const path = await exportRoomDesignExcelToRoot(activeProject)
+      addToast('success', `${t('rack:roomDesignExported', '机房设计 Excel 已导出')}: ${path}`, 4000)
+      refresh()
+    } catch (err) {
+      addToast('error', (err as Error).message, 4000)
+    }
+  }, [activeProject, addToast, refresh, t])
+
+  const handleExportRackDesign = useCallback(async () => {
+    try {
+      const path = await exportRackDesignExcelToRoot(activeProject)
+      addToast('success', `${t('rack:rackDesignExported', '机柜设计 Excel 已导出')}: ${path}`, 4000)
+      refresh()
+    } catch (err) {
+      addToast('error', (err as Error).message, 4000)
+    }
+  }, [activeProject, addToast, refresh, t])
 
   const handleDeleteFile = useCallback(async (file?: BatchFile) => {
     const target = file ?? selectedFile
@@ -300,6 +355,15 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         <button type="button" onClick={() => handleExport()} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
           <Download size={11} /> {t('workbench:output.exportAllZip', '导出全部 ZIP')}
+        </button>
+        {/* M4（AL-N3）：导出收敛——设计子视图导出按钮移除后，统一在本项目输出导出双设计 Excel */}
+        <button type="button" onClick={handleExportRoomDesign}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
+          <Download size={11} /> {t('workbench:output.exportRoomDesignExcel', '导出机房设计 Excel')}
+        </button>
+        <button type="button" onClick={handleExportRackDesign}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
+          <Download size={11} /> {t('workbench:output.exportRackDesignExcel', '导出机柜设计 Excel')}
         </button>
         <button type="button" onClick={handleClearProject} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-40">
