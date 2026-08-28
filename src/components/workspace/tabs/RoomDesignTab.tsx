@@ -41,14 +41,17 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
 
   // M3（AL-D3b 联动 A）：矩阵选中格（有已上架机柜）→ 打开/切到「机柜设计」子视图并选中该柜
   // （等值守卫防死循环：cabinetId 未变不重复 selectCabinet；setWorkbenchSubview 幂等）
+  // AL-N4c：联动前校验 cabinetId 在 rack store 存在，不存在则仅切子视图不设置选中（避免显示错柜）
   useEffect(() => {
     if (!selectedPosition) return
     const cell = matrix?.cells.find((c) => `${c.row}${c.col}` === selectedPosition)
     if (cell?.cabinetId != null) {
-      if (cell.cabinetId !== selectedCabinetId) selectCabinet(cell.cabinetId)
+      if (cabinets.some((c) => c.id === cell.cabinetId) && cell.cabinetId !== selectedCabinetId) {
+        selectCabinet(cell.cabinetId)
+      }
       setWorkbenchSubview('rackdesign' as WorkbenchSubview)
     }
-  }, [selectedPosition, matrix, selectedCabinetId, selectCabinet, setWorkbenchSubview])
+  }, [selectedPosition, matrix, cabinets, selectedCabinetId, selectCabinet, setWorkbenchSubview])
 
   // 默认列配比自动布点（从 RackWorkbenchView 迁移：每列 1 电源 + 空调占位 + GPU(1柜1台) + 网络）
   const autoCompose = () => {
