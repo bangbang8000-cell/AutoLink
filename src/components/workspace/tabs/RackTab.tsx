@@ -48,6 +48,10 @@ const CONFLICT_REASON_LABELS: Record<TemplateConflict['reason'], string> = {
   overflow: 'U位溢出柜高',
   top_reserved: '柜顶预留区',
   power: '功率超限',
+  // M-F2（F2-1）：跨项目兼容校验原因
+  type_mismatch: '机柜类型不兼容',
+  totalU_mismatch: '机柜高度不一致',
+  device_type_mismatch: '设备类型与机柜不兼容',
 }
 
 // M3（AL-CP2）：设备粘贴失败原因文案
@@ -58,6 +62,8 @@ const PASTE_REASON_LABELS: Record<string, string> = {
   occupied: 'U 位被占',
   power: '功率超限',
   no_space: '无可用 U 位',
+  // M-F2（F2-1）：跨项目设备类型域不兼容
+  type_mismatch: '设备类型与目标机柜不兼容',
 }
 
 export function RackTab({ cabinetId }: Props) {
@@ -371,7 +377,9 @@ export function RackTab({ cabinetId }: Props) {
     if (!cabinet) return
     const r = pasteDevice(cabinet.id, uNum)
     if (r.ok) {
-      addToast('success', `已粘贴设备「${r.deviceName}」到 U${r.startU}-U${r.endU}`, 3000)
+      // M-F2（F2-1）：跨项目粘贴成功 → toast 提示来源项目
+      const src = r.crossProject && r.sourceProjectName ? `（来自项目「${r.sourceProjectName}」）` : ''
+      addToast('success', `已粘贴设备「${r.deviceName}」到 U${r.startU}-U${r.endU}${src}`, 3000)
       markDirty()
     } else {
       addToast('error', `粘贴失败：${PASTE_REASON_LABELS[r.reason ?? 'no_clipboard']}`, 4000)
@@ -382,7 +390,9 @@ export function RackTab({ cabinetId }: Props) {
     if (!cabinet) return
     const r = pasteDeviceAuto(cabinet.id)
     if (r.ok) {
-      addToast('success', `已粘贴设备「${r.deviceName}」到 U${r.startU}-U${r.endU}`, 3000)
+      // M-F2（F2-1）：跨项目粘贴成功 → toast 提示来源项目
+      const src = r.crossProject && r.sourceProjectName ? `（来自项目「${r.sourceProjectName}」）` : ''
+      addToast('success', `已粘贴设备「${r.deviceName}」到 U${r.startU}-U${r.endU}${src}`, 3000)
       markDirty()
     } else {
       addToast('error', `粘贴失败：${PASTE_REASON_LABELS[r.reason ?? 'no_clipboard']}`, 4000)

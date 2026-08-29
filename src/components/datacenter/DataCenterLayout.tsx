@@ -12,7 +12,7 @@ import {
   Eye, Pencil, Info, Trash2, Eraser, Copy, Grid3x3, AlertTriangle, CheckCircle2, ClipboardPaste,
 } from 'lucide-react'
 import { useDataCenterStore, getPowerColor } from '@/stores/datacenter.store'
-import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS, type CabinetType, type BulkUpdateIssue } from '@/stores/rack.store'
+import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS, getRackCurrentProject, type CabinetType, type BulkUpdateIssue } from '@/stores/rack.store'
 import { useRoomStore, ROOM_TOOL_LABEL_KEYS, type RoomMatrixData, type RoomMarkTool } from '@/stores/room.store'
 import { RoomOptimizeModal } from '@/components/datacenter/RoomOptimizeModal'
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu'
@@ -44,6 +44,17 @@ const LABEL_H = 24
 const MARK_TOOLS: RoomMarkTool[] = [
   'select', 'ac', 'pillar', 'gpu', 'network', 'storage', 'compute', 'combined', 'power', 'clear',
 ]
+
+// M3 + M-F2（F2-1）：机柜粘贴冲突原因文案（模块级常量，供 useCallback 引用不产生依赖告警）
+const PASTE_CONFLICT_LABEL: Record<string, string> = {
+  occupied: 'U位被占',
+  overflow: 'U位溢出',
+  top_reserved: '柜顶预留区',
+  power: '功率超限',
+  type_mismatch: '机柜类型不兼容',
+  totalU_mismatch: '机柜高度不一致',
+  device_type_mismatch: '设备类型与机柜不兼容',
+}
 
 // ================================================================
 // M4（AL-ED1/ED2/ED3）：机房编辑能力——右键信息/编辑 + 同类批量 + 框选批量 UI
@@ -659,17 +670,11 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     return null
   }, [matrix])
 
-  // ---- M3（AL-CP1）：机柜复制/粘贴（机房右键入口） ----
-  const PASTE_CONFLICT_LABEL: Record<string, string> = {
-    occupied: 'U位被占',
-    overflow: 'U位溢出',
-    top_reserved: '柜顶预留区',
-    power: '功率超限',
-  }
+  // ---- M3（AL-CP1）+ M-F2（F2-1）：机柜复制/粘贴（机房右键入口；跨项目兼容校验） ----
   const handleCopyCabinet = useCallback((cabinetId: number) => {
     if (copyCabinet(cabinetId)) {
       const cab = cabinets.find((c) => c.id === cabinetId)
-      addToast('success', `已复制机柜「${cab?.name ?? cabinetId}」到剪贴板`, 3000)
+      addToast('success', `已复制机柜「${cab?.name ?? cabinetId}」到剪贴板（可切换项目后粘贴）`, 3000)
     }
   }, [cabinets, copyCabinet, addToast])
 
@@ -677,8 +682,12 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     const r = pasteCabinet(targetId)
     const cab = cabinets.find((c) => c.id === targetId)
     const base = cab ? `已粘贴到机柜「${cab.name}」` : '粘贴完成'
+    // M-F2（F2-1）：跨项目成功 → toast 提示来源项目
+    const srcInfo = useRackStore.getState().getClipboardSource()
+    const cross = !!srcInfo?.sourceProjectName && !!getRackCurrentProject() && srcInfo.sourceProjectName !== getRackCurrentProject()
+    const src = cross && srcInfo?.sourceProjectName ? `（来自项目「${srcInfo.sourceProjectName}」）` : ''
     if (r.applied > 0 || r.conflicts.length === 0) {
-      addToast('success', `${base}：复制设备 ${r.applied} 处${r.conflicts.length > 0 ? `，${r.conflicts.length} 处冲突已跳过` : ''}`, 4000)
+      addToast('success', `${base}：复制设备 ${r.applied} 处${src}${r.conflicts.length > 0 ? `，${r.conflicts.length} 处冲突已跳过` : ''}`, 4000)
     } else {
       const detail = r.conflicts.slice(0, 3).map((c) => `${c.deviceName} ${PASTE_CONFLICT_LABEL[c.reason] ?? c.reason}`).join('、')
       addToast('warning', `${base}：${r.conflicts.length} 处冲突全部跳过（${detail}${r.conflicts.length > 3 ? '…' : ''}）`, 5000)
@@ -689,7 +698,11 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     const newId = pasteCabinetToNew()
     if (newId == null) return null
     const cab = useRackStore.getState().cabinets.find((c) => c.id === newId)
-    addToast('success', `已粘贴为新机柜「${cab?.name ?? ''}」`, 3000)
+    // M-F2（F2-1）：跨项目粘贴为新柜 → toast 提示来源项目
+    const srcInfo = useRackStore.getState().getClipboardSource()
+    const cross = !!srcInfo?.sourceProjectName && !!getRackCurrentProject() && srcInfo.sourceProjectName !== getRackCurrentProject()
+    const src = cross && srcInfo?.sourceProjectName ? `（来自项目「${srcInfo.sourceProjectName}」）` : ''
+    addToast('success', `已粘贴为新机柜「${cab?.name ?? ''}」${src}`, 3000)
     return newId
   }, [pasteCabinetToNew, addToast])
 

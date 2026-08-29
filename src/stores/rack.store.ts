@@ -87,7 +87,15 @@ export interface UnplacedDevice {
   power_watts: number
 }
 
-export type TemplateConflictReason = 'occupied' | 'overflow' | 'top_reserved' | 'power'
+// M-F2（F2-1）：跨项目粘贴兼容校验新增原因（type=机柜类型不匹配 / totalU=柜高不匹配 / device_type=设备类型域不匹配）
+export type TemplateConflictReason =
+  | 'occupied'
+  | 'overflow'
+  | 'top_reserved'
+  | 'power'
+  | 'type_mismatch'
+  | 'totalU_mismatch'
+  | 'device_type_mismatch'
 
 export interface TemplateConflict {
   cabinetId: number
@@ -102,15 +110,45 @@ export interface ApplyCabinetTemplateResult {
   conflicts: TemplateConflict[]
 }
 
-// ===== M3（AL-CP1/CP2）：应用内剪贴板（机柜/设备复制粘贴；非 OS 剪贴板） =====
+// ===== M3（AL-CP1/CP2）+ M-F2（F2-1）：应用内剪贴板（机柜/设备复制粘贴；非 OS 剪贴板） =====
 
 /** M3：剪贴板态——机柜或设备深拷贝 + 源柜 id（粘贴目标柜/新柜用） */
 export type RackClipboard =
-  | { type: 'cabinet'; cabinet: RackCabinet; sourceCabinetId: number }
-  | { type: 'device'; device: RackDevice; sourceCabinetId: number }
+  | { type: 'cabinet'; cabinet: RackCabinet; sourceCabinetId: number; sourceProjectName?: string | null }
+  | { type: 'device'; device: RackDevice; sourceCabinetId: number; sourceProjectName?: string | null }
+
+/**
+ * M-F2（F2-1）：应用级剪贴板信封——复制时序列化到 localStorage（key `autolink-clipboard`），
+ * 切换项目后仍可粘贴；sourceProjectName 记录来源项目，供跨项目兼容校验与 UI 提示。
+ */
+export interface RackClipboardEnvelope {
+  schemaVersion: number
+  type: 'cabinet' | 'device'
+  /** 机柜或设备深拷贝（按 type 二选一） */
+  data: RackCabinet | RackDevice
+  sourceCabinetId: number
+  /** 来源项目名（currentProjectName 为空时为 null，视为未知来源 → 不做跨项目严格校验） */
+  sourceProjectName: string | null
+  serializedAt: string
+}
+
+/** M-F2（F2-1）：应用级剪贴板 localStorage key（跨项目共享，不随项目切换清空） */
+export const CLIPBOARD_STORAGE_KEY = 'autolink-clipboard'
+/** M-F2（F2-1）：剪贴板信封结构版本（不兼容旧格式时忽略并提示） */
+export const CLIPBOARD_SCHEMA_VERSION = 1
+/** M-F2（F2-1）：剪贴板序列化字节上限（防止超大连通柜撑爆 localStorage） */
+export const CLIPBOARD_MAX_BYTES = 256 * 1024
 
 /** M3：设备粘贴失败原因（U 位/顶部预留/占用/功率/无空位/无剪贴板内容） */
-export type DevicePasteReason = 'no_clipboard' | 'overflow' | 'top_reserved' | 'occupied' | 'power' | 'no_space'
+export type DevicePasteReason =
+  | 'no_clipboard'
+  | 'overflow'
+  | 'top_reserved'
+  | 'occupied'
+  | 'power'
+  | 'no_space'
+  // M-F2（F2-1）：跨项目设备类型与目标柜类型域不兼容
+  | 'type_mismatch'
 
 export interface DevicePasteResult {
   ok: boolean
@@ -118,6 +156,9 @@ export interface DevicePasteResult {
   startU?: number
   endU?: number
   deviceName?: string
+  // M-F2（F2-1）：跨项目粘贴标记（成功时置 true，供 UI 提示来源项目）
+  crossProject?: boolean
+  sourceProjectName?: string | null
 }
 
 // M4/M5（AL-ED2/ED7/ED6）：机柜/设备批量更新冲突原因（overflow=改矮/越界、power=功率改小/超限、top_reserved=柜顶预留区、occupied=U位被占）
@@ -329,6 +370,11 @@ interface RackState {
   clearClipboard: () => void
   /** 是否有剪贴板内容（可传 type 限定机柜/设备） */
   hasClipboard: (type?: RackClipboard['type']) => boolean
+  // ===== M-F2（F2-1）：跨项目剪贴板 =====
+  /** 读取剪贴板来源信息（type + sourceProjectName），供 UI 跨项目提示；空返回 null */
+  getClipboardSource: () => { type: RackClipboard['type']; sourceProjectName: string | null } | null
+  /** 记录当前项目上下文（项目切换/加载时由 loadRackLayout 自动维护；测试可显式调用模拟切换） */
+  setCurrentProjectName: (projectName: string | null) => void
   selectedDeviceInfo: (id: string) => RackDevice | null
   selectDevice: (id: string | null) => void
   /** 打磨轮（v1.5 / AL-O1b）：batchName 提供时写入版本批次目录 output/<batch>/ */
@@ -398,6 +444,137 @@ function freshDeviceId(existingIds: Set<string>, base: string): string {
   let id = `${base}_copy_${++copyDeviceSeq}`
   while (existingIds.has(id)) id = `${base}_copy_${++copyDeviceSeq}`
   return id
+}
+
+// ===== M-F2（F2-1）：跨项目剪贴板——应用级 localStorage + 兼容校验 =====
+
+/** M-F2（F2-1）：当前项目上下文（loadRackLayout/setCurrentProjectName 维护；null=无项目/未加载，不做跨项目严格校验） */
+let currentProjectName: string | null = null
+
+/** M-F2（F2-1）：设置当前项目上下文（项目切换/加载时调用；测试可显式调用模拟跨项目） */
+export function setRackCurrentProject(projectName: string | null): void {
+  currentProjectName = projectName
+}
+
+/** M-F2（F2-1）：当前项目名只读（供外部判断项目上下文） */
+export function getRackCurrentProject(): string | null {
+  return currentProjectName
+}
+
+/** M-F2（F2-1）：把信封序列化到应用级 localStorage（容量守卫，超限丢弃并 console 提示） */
+export function saveClipboardEnvelope(envelope: RackClipboardEnvelope): void {
+  try {
+    const json = JSON.stringify(envelope)
+    if (json.length > CLIPBOARD_MAX_BYTES) {
+      console.warn('[clipboard] 剪贴板内容超限，未写入 localStorage:', json.length)
+      return
+    }
+    localStorage.setItem(CLIPBOARD_STORAGE_KEY, json)
+  } catch (err) {
+    console.error('[clipboard] localStorage 写入失败:', err)
+  }
+}
+
+/** M-F2（F2-1）：从应用级 localStorage 读取信封（结构/版本校验；损坏返回 null） */
+export function loadClipboardEnvelope(): RackClipboardEnvelope | null {
+  try {
+    const raw = localStorage.getItem(CLIPBOARD_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<RackClipboardEnvelope>
+    if (parsed?.schemaVersion !== CLIPBOARD_SCHEMA_VERSION) return null
+    if (parsed.type !== 'cabinet' && parsed.type !== 'device') return null
+    if (!parsed.data || typeof parsed.data !== 'object') return null
+    return parsed as RackClipboardEnvelope
+  } catch {
+    return null
+  }
+}
+
+/** M-F2（F2-1）：清除应用级剪贴板 */
+export function clearClipboardEnvelope(): void {
+  try {
+    localStorage.removeItem(CLIPBOARD_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * M-F2（F2-1）：是否跨项目粘贴——来源项目存在且与当前项目不同
+ * （sourceProjectName 为 null/空 / 当前无项目上下文 → 视为项目内，保持既有行为）
+ */
+export function isCrossProjectClipboard(sourceProjectName: string | null | undefined): boolean {
+  if (!sourceProjectName) return false
+  if (!currentProjectName) return false
+  return sourceProjectName !== currentProjectName
+}
+
+/**
+ * M-F2（F2-1）：从应用级 localStorage 恢复剪贴板到内存（粘贴/检查用；内存已有则直接返回）。
+ * 切换项目后内存剪贴板被清空/重建，localStorage 仍是唯一来源。
+ */
+function resolveClipboardFromStorage(): RackClipboard | null {
+  const s = useRackStore.getState()
+  if (s.clipboard) return s.clipboard
+  const env = loadClipboardEnvelope()
+  if (!env) return null
+  const clip: RackClipboard =
+    env.type === 'cabinet'
+      ? {
+          type: 'cabinet',
+          cabinet: env.data as RackCabinet,
+          sourceCabinetId: env.sourceCabinetId,
+          sourceProjectName: env.sourceProjectName,
+        }
+      : {
+          type: 'device',
+          device: env.data as RackDevice,
+          sourceCabinetId: env.sourceCabinetId,
+          sourceProjectName: env.sourceProjectName,
+        }
+  useRackStore.setState({ clipboard: clip })
+  return clip
+}
+
+/** M-F2（F2-1）：设备类型 → 设备域（gpu/storage/network/compute；无法识别返回 null 表示不限制） */
+export function deviceDomainOf(type: string | undefined): string | null {
+  const t = (type ?? '').toLowerCase()
+  if (t.includes('gpu')) return 'gpu'
+  if (t.includes('存储') || t.includes('storage')) return 'storage'
+  if (t.includes('switch') || t.includes('交换机') || t.includes('leaf') || t.includes('spine') || t.includes('core')) return 'network'
+  if (t.includes('通算') || t.includes('compute')) return 'compute'
+  return null
+}
+
+/** M-F2（F2-1）：机柜类型 → 设备域（security/custom/scaleup/power 等域外类型不限制） */
+export function cabinetDomainOf(type: CabinetType): string | null {
+  if (type === 'gpu' || type === 'network' || type === 'storage' || type === 'compute') return type
+  return null
+}
+
+/**
+ * M-F2（F2-1）：跨项目机柜 → 目标柜兼容预检（整柜级）
+ * - type 不一致 → 'type_mismatch'；totalU 不一致 → 'totalU_mismatch'；兼容返回 null
+ */
+export function checkCrossProjectCabinetCompatibility(
+  source: RackCabinet,
+  target: RackCabinet,
+): TemplateConflictReason | null {
+  if (source.type !== target.type) return 'type_mismatch'
+  if (source.totalU !== target.totalU) return 'totalU_mismatch'
+  return null
+}
+
+/** M-F2（F2-1）：跨项目设备 → 目标柜类型域兼容校验；兼容返回 null，否则 'type_mismatch' */
+export function checkCrossProjectDeviceCompatibility(
+  device: RackDevice,
+  target: RackCabinet,
+): TemplateConflictReason | null {
+  const dom = deviceDomainOf(device.type)
+  if (!dom) return null
+  const cdom = cabinetDomainOf(target.type)
+  if (!cdom) return null
+  return dom === cdom ? null : 'type_mismatch'
 }
 
 export const useRackStore = create<RackState>()(
@@ -715,6 +892,8 @@ export const useRackStore = create<RackState>()(
   },
 
   loadRackLayout: async (projectName) => {
+    // M-F2（F2-1/2）：记录当前项目上下文（跨项目粘贴判断 + 撤销持久化按项目落盘）
+    setRackCurrentProject(projectName)
     try {
       if (window.electron?.project?.getFile) {
         const jsonStr = await window.electron.project.getFile(projectName, 'rack_layout.json')
@@ -742,6 +921,8 @@ export const useRackStore = create<RackState>()(
               selectedDevice: null,
               editingDevice: null,
             }))
+            // M-F2（F2-2）：加载完成后恢复上次会话持久化的撤销/重做栈（覆盖加载产生的快照）
+            await restoreRackUndoHistory(projectName).catch(() => {})
             return
           }
         }
@@ -760,6 +941,8 @@ export const useRackStore = create<RackState>()(
       selectedDevice: null,
       editingDevice: null,
     }))
+    // M-F2（F2-2）：空状态也恢复持久化撤销栈（可回退到重启前）
+    await restoreRackUndoHistory(projectName).catch(() => {})
   },
 
   saveRackLayout: async (projectName) => {
@@ -989,27 +1172,60 @@ export const useRackStore = create<RackState>()(
     return { applied: idSet.size, skipped: 0, issues: [] }
   },
 
-  // ===== M3（AL-CP1/CP2）：应用内剪贴板复制/粘贴（机柜与设备） =====
+  // ===== M3（AL-CP1/CP2）+ M-F2（F2-1）：应用内剪贴板复制/粘贴（机柜与设备；跨项目持久化到 localStorage） =====
 
   copyCabinet: (cabinetId) => {
     const cab = get().cabinets.find((c) => c.id === cabinetId)
     if (!cab) return false
-    set({ clipboard: { type: 'cabinet', cabinet: structuredClone(cab), sourceCabinetId: cabinetId } })
+    const clip: RackClipboard = {
+      type: 'cabinet',
+      cabinet: structuredClone(cab),
+      sourceCabinetId: cabinetId,
+      sourceProjectName: currentProjectName,
+    }
+    set({ clipboard: clip })
+    // M-F2（F2-1）：应用级 localStorage 双写——切换项目后仍可粘贴
+    saveClipboardEnvelope({
+      schemaVersion: CLIPBOARD_SCHEMA_VERSION,
+      type: 'cabinet',
+      data: structuredClone(cab),
+      sourceCabinetId: cabinetId,
+      sourceProjectName: currentProjectName,
+      serializedAt: new Date().toISOString(),
+    })
     return true
   },
 
   pasteCabinet: (targetCabinetId) => {
     const s = get()
-    const clip = s.clipboard
+    // M-F2（F2-1）：内存优先，空则从 localStorage 恢复（跨项目切回后剪贴板仍可用）
+    const clip = s.clipboard ?? resolveClipboardFromStorage()
     if (!clip || clip.type !== 'cabinet') return { applied: 0, skipped: 0, conflicts: [] }
     const target = s.cabinets.find((c) => c.id === targetCabinetId)
     if (!target) return { applied: 0, skipped: 0, conflicts: [] }
     const source = clip.cabinet
+    // M-F2（F2-1）：跨项目整柜兼容预检——type/totalU 与源一致才允许（不兼容整柜拒绝并返回 reason）
+    const cross = isCrossProjectClipboard(clip.sourceProjectName)
+    if (cross) {
+      const compat = checkCrossProjectCabinetCompatibility(source, target)
+      if (compat) {
+        return {
+          applied: 0,
+          skipped: 0,
+          conflicts: [{ cabinetId: target.id, deviceName: source.name, startU: 1, reason: compat }],
+        }
+      }
+    }
     const added: RackDevice[] = []
     const conflicts: TemplateConflict[] = []
     const existingIds = new Set(target.devices.map((d) => d.id))
     // 设备 U 位映射 + 冲突校验（与 applyCabinetTemplate 同源：overflow/top_reserved/occupied/power）
     for (const sd of source.devices) {
+      // M-F2（F2-1）：跨项目设备类型域校验（设备类型与目标柜类型域不兼容 → 跳过并返回原因）
+      if (cross && checkCrossProjectDeviceCompatibility(sd, target)) {
+        conflicts.push({ cabinetId: target.id, deviceName: sd.name, startU: sd.startU, reason: 'device_type_mismatch' })
+        continue
+      }
       const endU = sd.endU
       if (sd.startU < 1 || endU > target.totalU) {
         conflicts.push({ cabinetId: target.id, deviceName: sd.name, startU: sd.startU, reason: 'overflow' })
@@ -1060,8 +1276,9 @@ export const useRackStore = create<RackState>()(
   },
 
   pasteCabinetToNew: () => {
+    // M-F2（F2-1）：粘贴为新柜无目标约束（新建柜 type/totalU 取源值），跨项目始终允许
     const s = get()
-    const clip = s.clipboard
+    const clip = s.clipboard ?? resolveClipboardFromStorage()
     if (!clip || clip.type !== 'cabinet') return null
     const newId = s.cabinets.length > 0 ? Math.max(...s.cabinets.map((c) => c.id)) + 1 : 1
     const name = nextCopyName(s.cabinets.map((c) => c.name), `${clip.cabinet.name}-副本`)
@@ -1092,17 +1309,37 @@ export const useRackStore = create<RackState>()(
     const cab = get().cabinets.find((c) => c.id === cabinetId)
     const device = cab?.devices.find((d) => d.id === deviceId)
     if (!device) return false
-    set({ clipboard: { type: 'device', device: structuredClone(device), sourceCabinetId: cabinetId } })
+    const clip: RackClipboard = {
+      type: 'device',
+      device: structuredClone(device),
+      sourceCabinetId: cabinetId,
+      sourceProjectName: currentProjectName,
+    }
+    set({ clipboard: clip })
+    // M-F2（F2-1）：应用级 localStorage 双写
+    saveClipboardEnvelope({
+      schemaVersion: CLIPBOARD_SCHEMA_VERSION,
+      type: 'device',
+      data: structuredClone(device),
+      sourceCabinetId: cabinetId,
+      sourceProjectName: currentProjectName,
+      serializedAt: new Date().toISOString(),
+    })
     return true
   },
 
   pasteDevice: (targetCabinetId, startU) => {
     const s = get()
-    const clip = s.clipboard
+    const clip = s.clipboard ?? resolveClipboardFromStorage()
     if (!clip || clip.type !== 'device') return { ok: false, reason: 'no_clipboard' }
     const target = s.cabinets.find((c) => c.id === targetCabinetId)
     if (!target) return { ok: false, reason: 'no_clipboard' }
     const device = clip.device
+    // M-F2（F2-1）：跨项目设备类型域校验（设备类型与目标柜类型域不兼容 → 拒绝并返回 reason）
+    const cross = isCrossProjectClipboard(clip.sourceProjectName)
+    if (cross && checkCrossProjectDeviceCompatibility(device, target)) {
+      return { ok: false, reason: 'type_mismatch' }
+    }
     // 复用 checkDeviceMove 统一落点校验（唯一临时 id，避免排除自身误判）
     const check = checkDeviceMove(target, { ...device, id: `${device.id}__paste_check__` }, startU, s.topReservedU)
     if (!check.ok) return { ok: false, reason: check.reason ?? 'occupied' }
@@ -1116,16 +1353,27 @@ export const useRackStore = create<RackState>()(
         c.id === targetCabinetId ? { ...c, devices: [...c.devices, pasted] } : c,
       ),
     }))
-    return { ok: true, startU, endU, deviceName: device.name }
+    return {
+      ok: true,
+      startU,
+      endU,
+      deviceName: device.name,
+      // M-F2（F2-1）：跨项目粘贴标记（供 UI 提示来源项目）
+      ...(cross ? { crossProject: true, sourceProjectName: clip.sourceProjectName } : {}),
+    }
   },
 
   pasteDeviceAuto: (targetCabinetId) => {
     const s = get()
-    const clip = s.clipboard
+    const clip = s.clipboard ?? resolveClipboardFromStorage()
     if (!clip || clip.type !== 'device') return { ok: false, reason: 'no_clipboard' }
     const target = s.cabinets.find((c) => c.id === targetCabinetId)
     if (!target) return { ok: false, reason: 'no_clipboard' }
     const device = clip.device
+    // M-F2（F2-1）：跨项目设备类型域校验
+    if (isCrossProjectClipboard(clip.sourceProjectName) && checkCrossProjectDeviceCompatibility(device, target)) {
+      return { ok: false, reason: 'type_mismatch' }
+    }
     const height = device.endU - device.startU + 1
     const startU = findFirstAvailableU(target, height, {
       topReservedU: s.topReservedU,
@@ -1135,11 +1383,27 @@ export const useRackStore = create<RackState>()(
     return get().pasteDevice(targetCabinetId, startU)
   },
 
-  clearClipboard: () => set({ clipboard: null }),
+  clearClipboard: () => {
+    // M-F2（F2-1）：内存 + 应用级 localStorage 同时清空
+    set({ clipboard: null })
+    clearClipboardEnvelope()
+  },
 
   hasClipboard: (type) => {
-    const clip = get().clipboard
+    // M-F2（F2-1）：内存优先，空则从 localStorage 恢复判断（跨项目切回后仍可识别）
+    const clip = get().clipboard ?? resolveClipboardFromStorage()
     return clip != null && (type == null || clip.type === type)
+  },
+
+  // M-F2（F2-1）：剪贴板来源信息（跨项目 UI 提示用）
+  getClipboardSource: () => {
+    const clip = get().clipboard ?? resolveClipboardFromStorage()
+    if (!clip) return null
+    return { type: clip.type, sourceProjectName: clip.sourceProjectName ?? null }
+  },
+
+  setCurrentProjectName: (projectName) => {
+    setRackCurrentProject(projectName)
   },
 
   selectedDeviceInfo: (id) => {
@@ -1278,3 +1542,160 @@ export const useRackStore = create<RackState>()(
   },
 ),
 )
+
+// ===== M-F2（F2-2）：撤销/重做栈跨会话持久化（节流写盘到项目目录 + 容量受控 + 重启恢复） =====
+
+/** M-F2（F2-2）：持久化栈深上限（仅持久化最近 N 条，防存储膨胀） */
+export const RACK_UNDO_PERSIST_LIMIT = 20
+/** M-F2（F2-2）：持久化字节阈值（超限丢弃最旧 undo 快照；单条仍超限则放弃本次） */
+export const RACK_UNDO_PERSIST_MAX_BYTES = 1024 * 1024
+/** M-F2（F2-2）：关键编辑后节流写盘防抖时长 */
+export const RACK_UNDO_PERSIST_DEBOUNCE_MS = 800
+/** M-F2（F2-2）：项目目录内持久化文件名（<project>/output/<file>） */
+export const RACK_UNDO_PERSIST_FILE = 'undo_history.json'
+
+/** M-F2（F2-2）：落盘文件结构（store 标识区分 rack/room 两个栈文件） */
+export interface RackUndoPersistFile {
+  schema_version: number
+  saved_at: string
+  store: 'rack'
+  undoStack: RackHistorySnapshot[]
+  redoStack: RackHistorySnapshot[]
+}
+
+let rackUndoPersistTimer: ReturnType<typeof setTimeout> | null = null
+
+function undoLocalStorageKey(projectName: string): string {
+  return `autolink-rack-undo:${projectName}`
+}
+
+/** M-F2（F2-2）：UTF-8 文本 → base64（Electron 渲染层 / Node 测试环境兼容；btoa 对中文抛错，故先 UTF-8 编码） */
+function utf8ToBase64(text: string): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(text, 'utf-8').toString('base64')
+  const bytes = new TextEncoder().encode(text)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin)
+}
+
+/** M-F2（F2-2）：构建持久化文件（栈深截断到最近 N 条） */
+export function buildRackUndoPersistFile(
+  undoStack: RackHistorySnapshot[],
+  redoStack: RackHistorySnapshot[],
+): RackUndoPersistFile {
+  return {
+    schema_version: 1,
+    saved_at: new Date().toISOString(),
+    store: 'rack',
+    undoStack: undoStack.slice(-RACK_UNDO_PERSIST_LIMIT),
+    redoStack: redoStack.slice(-RACK_UNDO_PERSIST_LIMIT),
+  }
+}
+
+/**
+ * M-F2（F2-2）：容量受控截断纯函数——栈深上限 + 字节阈值，超限丢弃最旧 undo（redo 保留）。
+ * 返回 null 表示即使只剩一条仍超限（放弃本次持久化）。
+ */
+export function truncateRackUndoByBytes(
+  undoStack: RackHistorySnapshot[],
+  redoStack: RackHistorySnapshot[],
+  maxBytes: number,
+): { undoStack: RackHistorySnapshot[]; redoStack: RackHistorySnapshot[] } | null {
+  let u = undoStack.slice(-RACK_UNDO_PERSIST_LIMIT)
+  const r = redoStack.slice(-RACK_UNDO_PERSIST_LIMIT)
+  let file = buildRackUndoPersistFile(u, r)
+  let json = JSON.stringify(file)
+  while (json.length > maxBytes && u.length > 0) {
+    u = u.slice(1)
+    file = buildRackUndoPersistFile(u, r)
+    json = JSON.stringify(file)
+  }
+  if (json.length > maxBytes) return null
+  return { undoStack: u, redoStack: r }
+}
+
+/**
+ * M-F2（F2-2）：序列化并落盘（容量受控：栈深上限 + 字节阈值，超限丢弃最旧 undo）。
+ * 首选 `render.saveOutputFile` 写 <project>/output/undo_history.json；受阻退化为 localStorage（方案B）。
+ */
+export async function persistRackUndoHistory(projectName: string): Promise<void> {
+  const s = useRackStore.getState()
+  const capped = truncateRackUndoByBytes(s.undoStack, s.redoStack, RACK_UNDO_PERSIST_MAX_BYTES)
+  if (!capped) return
+  const json = JSON.stringify(buildRackUndoPersistFile(capped.undoStack, capped.redoStack))
+  try {
+    if (window.electron?.render?.saveOutputFile) {
+      await window.electron.render.saveOutputFile(projectName, RACK_UNDO_PERSIST_FILE, utf8ToBase64(json))
+      return
+    }
+  } catch (err) {
+    console.error('[undo-persist] render.saveOutputFile 失败，退化 localStorage:', err)
+  }
+  try {
+    localStorage.setItem(undoLocalStorageKey(projectName), json)
+  } catch {
+    // quota 超限忽略
+  }
+}
+
+/** M-F2（F2-2）：编辑后节流调度写盘（防抖 800ms；无项目上下文不写） */
+export function scheduleRackUndoPersist(projectName: string | null): void {
+  if (!projectName) return
+  if (rackUndoPersistTimer) clearTimeout(rackUndoPersistTimer)
+  rackUndoPersistTimer = setTimeout(() => {
+    rackUndoPersistTimer = null
+    persistRackUndoHistory(projectName).catch(() => {})
+  }, RACK_UNDO_PERSIST_DEBOUNCE_MS)
+}
+
+/** M-F2（F2-2）：落盘结构校验（避免旧/损坏数据污染撤销栈） */
+function isRackUndoPersistFile(data: unknown): data is RackUndoPersistFile {
+  const d = data as Partial<RackUndoPersistFile> | null
+  return !!d && d.store === 'rack' && Array.isArray(d.undoStack) && Array.isArray(d.redoStack)
+}
+
+/**
+ * M-F2（F2-2）：恢复上次会话持久化的撤销/重做栈（覆盖当前栈；可回退到重启前）。
+ * 优先级：项目目录 output/undo_history.json（project.getFile）→ localStorage（方案B）。
+ */
+export async function restoreRackUndoHistory(projectName: string): Promise<void> {
+  let file: RackUndoPersistFile | null = null
+  try {
+    if (window.electron?.project?.getFile) {
+      const raw = await window.electron.project.getFile(projectName, `output/${RACK_UNDO_PERSIST_FILE}`)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (isRackUndoPersistFile(parsed)) file = parsed
+      }
+    }
+  } catch (err) {
+    console.error('[undo-persist] 读取 undo_history.json 失败:', err)
+  }
+  if (!file) {
+    try {
+      const raw = localStorage.getItem(undoLocalStorageKey(projectName))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (isRackUndoPersistFile(parsed)) file = parsed
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (!file) return
+  const undoStack = file.undoStack.slice(-RACK_UNDO_PERSIST_LIMIT)
+  const redoStack = file.redoStack.slice(-RACK_UNDO_PERSIST_LIMIT)
+  useRackStore.setState({
+    undoStack,
+    redoStack,
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
+  })
+}
+
+// M-F2（F2-2）：撤销/重做栈变化 → 节流写盘（编辑后自动持久化；无项目上下文不写）
+useRackStore.subscribe((state, prev) => {
+  if (state.undoStack !== prev.undoStack || state.redoStack !== prev.redoStack) {
+    scheduleRackUndoPersist(currentProjectName)
+  }
+})

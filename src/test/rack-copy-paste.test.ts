@@ -1,7 +1,7 @@
 /**
- * M3（AL-CP1/CP2）：机柜/设备 复制粘贴（应用内剪贴板）单测
+ * M3（AL-CP1/CP2）+ M-F2（F2-1）：机柜/设备 复制粘贴（应用内剪贴板）单测
  *
- * 覆盖（PRD v3.3 / 开发计划 M3 AL-CP1a/AL-CP2a/AL-CP1b）：
+ * 覆盖（PRD v3.3 / 开发计划 M3 AL-CP1a/AL-CP2a/AL-CP1b + PRD v3.6 F2-1）：
  * - C-1 机柜复制 → 粘贴到目标柜（名称保留/类型/功率/设备复制 + U 位映射 + 冲突明细）
  * - C-2 机柜粘贴冲突明细（occupied / top_reserved / overflow / power）
  * - C-3 粘贴到新柜（名称后缀「-副本」/「-副本2」+ 类型/功率/设备复制）
@@ -9,6 +9,9 @@
  * - C-5 空剪贴板 no-op（不压撤销栈）
  * - C-6 撤销可回退粘贴（机柜/设备/新柜）
  * - clipboard 态：hasClipboard / clearClipboard
+ * - F2-1 R-1 跨项目复制粘贴成功（切项目后 localStorage 恢复 + 来源标记）
+ * - F2-1 R-2 跨项目兼容冲突拒绝（机柜 type/totalU 不一致、设备类型域不匹配 → 返回 reason）
+ * - F2-1 R-3 跨项目粘贴入撤销栈（undo 可回退）
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useRackStore, type RackCabinet, type RackDevice, type CabinetType } from '../stores/rack.store'
@@ -20,8 +23,10 @@ const dev = (id: string, name: string, startU: number, endU: number, power = 100
   id, name, type: 'GPU Server', cabinetId: 1, startU, endU, power_watts: power,
 })
 
-describe('RackStore 复制/粘贴（AL-CP1/CP2）', () => {
+describe('RackStore 复制/粘贴（AL-CP1/CP2 + F2-1 跨项目）', () => {
   beforeEach(() => {
+    // M-F2（F2-1）：应用级剪贴板持久化到 localStorage——每例清空避免残留串扰
+    localStorage.clear()
     useRackStore.setState({
       cabinets: [],
       unplacedDevices: [],
@@ -37,6 +42,7 @@ describe('RackStore 复制/粘贴（AL-CP1/CP2）', () => {
       canRedo: false,
       clipboard: null,
     })
+    useRackStore.getState().setCurrentProjectName(null)
   })
 
   describe('C-1 机柜复制 → 粘贴到目标柜', () => {
@@ -381,6 +387,150 @@ describe('RackStore 复制/粘贴（AL-CP1/CP2）', () => {
       useRackStore.getState().clearClipboard()
       expect(useRackStore.getState().undoStack).toHaveLength(0)
       expect(useRackStore.getState().canUndo).toBe(false)
+    })
+  })
+
+  // ===== M-F2（F2-1）：跨项目复制粘贴（应用级剪贴板 + 兼容校验 + 入撤销栈） =====
+
+  describe('F2-1 跨项目复制粘贴', () => {
+    /** 模拟「从项目 projA 复制 → 切到 projB（内存剪贴板清空）→ 粘贴」 */
+    const switchProject = (name: string | null) => {
+      useRackStore.getState().setCurrentProjectName(name)
+      // 切换项目后内存剪贴板被清空/重建（模拟 store 重置），localStorage 仍是唯一来源
+      useRackStore.setState({ clipboard: null })
+    }
+
+    it('R-1 复制机柜后切项目 → localStorage 恢复粘贴成功（来源标记）', () => {
+      switchProject('projA')
+      useRackStore.setState({
+        cabinets: [
+          cab(1, '机柜 A1', { devices: [dev('gpu-1', 'GPU服务器_1', 2, 9, 5000)] }),
+        ],
+      })
+      useRackStore.getState().copyCabinet(1)
+      // localStorage 已写入信封（含来源项目）
+      expect(localStorage.getItem('autolink-clipboard')).toContain('projA')
+      // 切到 projB，内存剪贴板清空
+      switchProject('projB')
+      expect(useRackStore.getState().hasClipboard('cabinet')).toBe(true)
+      useRackStore.setState({
+        cabinets: [
+          cab(1, '机柜 B1', { devices: [dev('x', 'x', 1, 8)] }),
+          cab(2, '机柜 B2'),
+        ],
+      })
+      const r = useRackStore.getState().pasteCabinet(2)
+      expect(r.applied).toBe(1)
+      expect(r.conflicts).toEqual([])
+      // 粘贴入撤销栈（F2-1 验收）
+      expect(useRackStore.getState().undoStack.length).toBeGreaterThan(0)
+      const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
+      expect(target.devices.find((d) => d.name === 'GPU服务器_1')).toBeDefined()
+    })
+
+    it('R-1b 跨项目设备粘贴成功（来源标记 crossProject/sourceProjectName）', () => {
+      switchProject('projA')
+      useRackStore.setState({
+        cabinets: [cab(1, '机柜 A1', { devices: [dev('gpu-1', 'GPU服务器_1', 1, 8, 1000)] })],
+      })
+      useRackStore.getState().copyDevice(1, 'gpu-1')
+      switchProject('projB')
+      useRackStore.setState({ cabinets: [cab(1, '机柜 B1'), cab(2, '机柜 B2')] })
+      const r = useRackStore.getState().pasteDeviceAuto(2)
+      expect(r.ok).toBe(true)
+      expect(r.crossProject).toBe(true)
+      expect(r.sourceProjectName).toBe('projA')
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.devices).toHaveLength(1)
+    })
+
+    it('R-2 跨项目机柜 type 不一致 → type_mismatch 拒绝（不压栈）', () => {
+      switchProject('projA')
+      useRackStore.setState({ cabinets: [cab(1, '机柜 A1', { type: 'gpu', devices: [dev('gpu-1', 'GPU服务器_1', 2, 9, 1000)] })] })
+      useRackStore.getState().copyCabinet(1)
+      switchProject('projB')
+      // 目标柜是 network 柜 → type 不兼容整柜拒绝
+      useRackStore.setState({ cabinets: [cab(1, '机柜 B1', { type: 'network' as CabinetType })] })
+      const r = useRackStore.getState().pasteCabinet(1)
+      expect(r.applied).toBe(0)
+      expect(r.conflicts).toEqual([
+        { cabinetId: 1, deviceName: '机柜 A1', startU: 1, reason: 'type_mismatch' },
+      ])
+      expect(useRackStore.getState().cabinets[0].devices).toHaveLength(0)
+      expect(useRackStore.getState().undoStack).toHaveLength(0)
+    })
+
+    it('R-2b 跨项目机柜 totalU 不一致 → totalU_mismatch 拒绝', () => {
+      switchProject('projA')
+      useRackStore.setState({ cabinets: [cab(1, '机柜 A1', { totalU: 42, devices: [dev('gpu-1', 'GPU服务器_1', 2, 9, 1000)] })] })
+      useRackStore.getState().copyCabinet(1)
+      switchProject('projB')
+      useRackStore.setState({ cabinets: [cab(1, '机柜 B1', { totalU: 48 })] })
+      const r = useRackStore.getState().pasteCabinet(1)
+      expect(r.applied).toBe(0)
+      expect(r.conflicts).toEqual([
+        { cabinetId: 1, deviceName: '机柜 A1', startU: 1, reason: 'totalU_mismatch' },
+      ])
+    })
+
+    it('R-2c 跨项目设备类型域不匹配 → device_type_mismatch 拒绝（设备级）', () => {
+      switchProject('projA')
+      useRackStore.setState({
+        cabinets: [cab(1, '机柜 A1', { type: 'gpu', devices: [{ ...dev('sw-1', '交换机_1', 30, 30, 300), type: 'Switch' }] })],
+      })
+      useRackStore.getState().copyCabinet(1)
+      switchProject('projB')
+      // 目标 gpu 柜：交换机设备与 gpu 柜域不匹配 → 设备级跳过
+      useRackStore.setState({ cabinets: [cab(1, '机柜 B1', { type: 'gpu' })] })
+      const r = useRackStore.getState().pasteCabinet(1)
+      expect(r.applied).toBe(0)
+      expect(r.conflicts).toEqual([
+        { cabinetId: 1, deviceName: '交换机_1', startU: 30, reason: 'device_type_mismatch' },
+      ])
+    })
+
+    it('R-2d 跨项目设备粘贴类型域不匹配 → type_mismatch 拒绝', () => {
+      switchProject('projA')
+      useRackStore.setState({
+        cabinets: [cab(1, '机柜 A1', { devices: [{ ...dev('sw-1', '交换机_1', 1, 1, 300), type: 'Switch' }] })],
+      })
+      useRackStore.getState().copyDevice(1, 'sw-1')
+      switchProject('projB')
+      useRackStore.setState({ cabinets: [cab(1, '机柜 B1', { type: 'gpu' })] })
+      const r = useRackStore.getState().pasteDeviceAuto(1)
+      expect(r.ok).toBe(false)
+      expect(r.reason).toBe('type_mismatch')
+      expect(useRackStore.getState().cabinets[0].devices).toHaveLength(0)
+    })
+
+    it('R-3 跨项目粘贴入撤销栈 → undo 可回退，redo 恢复', () => {
+      switchProject('projA')
+      useRackStore.setState({
+        cabinets: [cab(1, '机柜 A1', { devices: [dev('gpu-1', 'GPU服务器_1', 2, 9, 5000)] })],
+      })
+      useRackStore.getState().copyCabinet(1)
+      switchProject('projB')
+      useRackStore.setState({ cabinets: [cab(1, '机柜 B1'), cab(2, '机柜 B2')] })
+      useRackStore.getState().pasteCabinet(2)
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.devices).toHaveLength(1)
+      useRackStore.getState().undo()
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.devices).toHaveLength(0)
+      useRackStore.getState().redo()
+      expect(useRackStore.getState().cabinets.find((c) => c.id === 2)!.devices).toHaveLength(1)
+    })
+
+    it('R-4 跨项目复制粘贴为新柜始终允许（无目标约束）', () => {
+      switchProject('projA')
+      useRackStore.setState({
+        cabinets: [cab(1, '机柜 A1', { devices: [dev('gpu-1', 'GPU服务器_1', 2, 9, 5000)] })],
+      })
+      useRackStore.getState().copyCabinet(1)
+      switchProject('projB')
+      useRackStore.setState({ cabinets: [] })
+      const newId = useRackStore.getState().pasteCabinetToNew()
+      expect(newId).toBe(1)
+      const fresh = useRackStore.getState().cabinets.find((c) => c.id === newId)!
+      expect(fresh.name).toBe('机柜 A1-副本')
+      expect(fresh.devices).toHaveLength(1)
     })
   })
 })
