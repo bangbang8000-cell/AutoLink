@@ -9,7 +9,7 @@
  */
 import { useMemo, useEffect, useState, useRef, useCallback } from 'react'
 import {
-  Eye, Pencil, Info, Trash2, Eraser, Copy, Grid3x3, AlertTriangle, CheckCircle2,
+  Eye, Pencil, Info, Trash2, Eraser, Copy, Grid3x3, AlertTriangle, CheckCircle2, ClipboardPaste,
 } from 'lucide-react'
 import { useDataCenterStore, getPowerColor } from '@/stores/datacenter.store'
 import { useRackStore, CABINET_TYPE_LABELS, RACK_TYPE_COLORS, type CabinetType, type BulkUpdateIssue } from '@/stores/rack.store'
@@ -561,6 +561,13 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
   const { currentProject } = useProjectContext()
   const saveMatrix = useRoomStore((s) => s.saveMatrix)
 
+  // M3（AL-CP1）：机柜复制/粘贴（应用内剪贴板）
+  const copyCabinet = useRackStore((s) => s.copyCabinet)
+  const pasteCabinet = useRackStore((s) => s.pasteCabinet)
+  const pasteCabinetToNew = useRackStore((s) => s.pasteCabinetToNew)
+  const clipboard = useRackStore((s) => s.clipboard)
+  const addToast = useToastStore((s) => s.addToast)
+
   // M4（AL-ED2/ED3）：多选态
   const multiSelected = useRoomStore((s) => s.multiSelected)
   const toggleMultiSelect = useRoomStore((s) => s.toggleMultiSelect)
@@ -652,6 +659,45 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     return null
   }, [matrix])
 
+  // ---- M3（AL-CP1）：机柜复制/粘贴（机房右键入口） ----
+  const PASTE_CONFLICT_LABEL: Record<string, string> = {
+    occupied: 'U位被占',
+    overflow: 'U位溢出',
+    top_reserved: '柜顶预留区',
+    power: '功率超限',
+  }
+  const handleCopyCabinet = useCallback((cabinetId: number) => {
+    if (copyCabinet(cabinetId)) {
+      const cab = cabinets.find((c) => c.id === cabinetId)
+      addToast('success', `已复制机柜「${cab?.name ?? cabinetId}」到剪贴板`, 3000)
+    }
+  }, [cabinets, copyCabinet, addToast])
+
+  const handlePasteToCabinet = useCallback((targetId: number) => {
+    const r = pasteCabinet(targetId)
+    const cab = cabinets.find((c) => c.id === targetId)
+    const base = cab ? `已粘贴到机柜「${cab.name}」` : '粘贴完成'
+    if (r.applied > 0 || r.conflicts.length === 0) {
+      addToast('success', `${base}：复制设备 ${r.applied} 处${r.conflicts.length > 0 ? `，${r.conflicts.length} 处冲突已跳过` : ''}`, 4000)
+    } else {
+      const detail = r.conflicts.slice(0, 3).map((c) => `${c.deviceName} ${PASTE_CONFLICT_LABEL[c.reason] ?? c.reason}`).join('、')
+      addToast('warning', `${base}：${r.conflicts.length} 处冲突全部跳过（${detail}${r.conflicts.length > 3 ? '…' : ''}）`, 5000)
+    }
+  }, [cabinets, pasteCabinet, addToast])
+
+  const pasteToNew = useCallback(() => {
+    const newId = pasteCabinetToNew()
+    if (newId == null) return null
+    const cab = useRackStore.getState().cabinets.find((c) => c.id === newId)
+    addToast('success', `已粘贴为新机柜「${cab?.name ?? ''}」`, 3000)
+    return newId
+  }, [pasteCabinetToNew, addToast])
+
+  const handlePasteToEmptyCell = useCallback((pos: string) => {
+    const newId = pasteToNew()
+    if (newId != null) mountCabinet(pos, newId)
+  }, [pasteToNew, mountCabinet])
+
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     if (!ctxMenu) return []
     const pos = ctxMenu.position
@@ -662,6 +708,10 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
       items.push(
         { label: '查看机柜信息', icon: Eye, action: () => setInfoTarget({ kind: 'cabinet', cabinetId }) },
         { label: '编辑机柜属性', icon: Pencil, action: () => setEditCabinetId(cabinetId) },
+        // M3（AL-CP1）：复制机柜 / 粘贴机柜（到目标柜；禁用态取决于剪贴板）
+        { label: '复制机柜', icon: Copy, action: () => handleCopyCabinet(cabinetId) },
+        { label: '粘贴机柜', icon: ClipboardPaste, disabled: clipboard?.type !== 'cabinet', action: () => handlePasteToCabinet(cabinetId) },
+        { separator: true },
         { label: '编辑格子', icon: Grid3x3, action: () => setEditCellPos(pos) },
         { separator: true },
         { label: '全选同类机柜', icon: Copy, action: () => { selectSameType(pos!); setBulkMode('cabinets') } },
@@ -669,6 +719,14 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     } else if (cell) {
       items.push(
         { label: '编辑格子', icon: Grid3x3, action: () => setEditCellPos(pos) },
+        // M3（AL-CP1）：粘贴到空位 → 新建机柜并上架
+        { separator: true },
+        { label: '粘贴机柜到此处', icon: ClipboardPaste, disabled: clipboard?.type !== 'cabinet', action: () => handlePasteToEmptyCell(pos!) },
+      )
+    } else {
+      // M3（AL-CP1）：空白处粘贴 → 新建机柜（未上架）
+      items.push(
+        { label: '粘贴为新机柜', icon: ClipboardPaste, disabled: clipboard?.type !== 'cabinet', action: pasteToNew },
       )
     }
     items.push(
@@ -676,7 +734,7 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
       { label: '查看机房信息', icon: Info, action: () => setInfoTarget({ kind: 'room' }) },
     )
     return items
-  }, [ctxMenu, cellMap, selectSameType])
+  }, [ctxMenu, cellMap, selectSameType, clipboard, handleCopyCabinet, handlePasteToCabinet, handlePasteToEmptyCell, pasteToNew])
 
   // ---- M4（AL-ED3）：拖拽框选（仅 select 工具） ----
   const svgPoint = useCallback((e: React.MouseEvent) => {

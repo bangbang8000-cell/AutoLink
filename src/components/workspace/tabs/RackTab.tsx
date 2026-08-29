@@ -14,7 +14,7 @@ import { RackPowerHeatView } from '@/components/rack/RackPowerHeatView'
 import { RackMultiCompareView } from '@/components/rack/RackMultiCompareView'
 import { RackIsometricView } from '@/components/rack/RackIsometricView'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid, Settings, ListChecks } from 'lucide-react'
+import { GripVertical, X, ArrowRight, ChevronDown, Plus, Flame, Columns, Box, LayoutGrid, Settings, ListChecks, Copy, ClipboardPaste } from 'lucide-react'
 
 type ViewMode = 'basic' | 'power-heat' | 'multi-compare' | 'isometric'
 
@@ -50,6 +50,16 @@ const CONFLICT_REASON_LABELS: Record<TemplateConflict['reason'], string> = {
   power: '功率超限',
 }
 
+// M3（AL-CP2）：设备粘贴失败原因文案
+const PASTE_REASON_LABELS: Record<string, string> = {
+  no_clipboard: '剪贴板无设备',
+  overflow: 'U 位越界',
+  top_reserved: '柜顶预留区',
+  occupied: 'U 位被占',
+  power: '功率超限',
+  no_space: '无可用 U 位',
+}
+
 export function RackTab({ cabinetId }: Props) {
   const { t } = useTranslation()
   // 视图模式（i18n：label 在组件内用 t() 解析，避免模块级常量残留中文）
@@ -77,6 +87,12 @@ export function RackTab({ cabinetId }: Props) {
   const shiftDevicesU = useRackStore((s) => s.shiftDevicesU)
   const setRackConfig = useRackStore((s) => s.setRackConfig)
   const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
+  // M3（AL-CP1/CP2）：机柜/设备 复制粘贴（应用内剪贴板）
+  const copyCabinet = useRackStore((s) => s.copyCabinet)
+  const copyDevice = useRackStore((s) => s.copyDevice)
+  const pasteDevice = useRackStore((s) => s.pasteDevice)
+  const pasteDeviceAuto = useRackStore((s) => s.pasteDeviceAuto)
+  const clipboard = useRackStore((s) => s.clipboard)
 
   const [selectedUnplaced, setSelectedUnplaced] = useState<string | null>(null)
   const [showUnplaced, setShowUnplaced] = useState(true)
@@ -90,7 +106,8 @@ export function RackTab({ cabinetId }: Props) {
   const [cabinetEditOpen, setCabinetEditOpen] = useState(false)
   const [editForm, setEditForm] = useState<{ name: string; totalU: string; type: CabinetType; powerLimit: string; topReservedU: string } | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  // M3（AL-CP1/CP2）：柜内右键菜单上下文（header=机柜级 / device=设备级 / slot=U 位级）
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; kind: 'header' | 'device' | 'slot'; deviceId?: string; uNum?: number } | null>(null)
   // M5（AL-ED6）：同柜批量编辑（多选态 + 批量操作条）
   const [batchMode, setBatchMode] = useState(false)
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set())
@@ -339,6 +356,39 @@ export function RackTab({ cabinetId }: Props) {
     markDirty()
   }, [cabinet, removeDevice, markDirty])
 
+  // M3（AL-CP1/CP2）：机柜/设备 复制粘贴
+  const handleCopyCabinet = useCallback(() => {
+    if (!cabinet) return
+    if (copyCabinet(cabinet.id)) addToast('success', `已复制机柜「${cabinet.name}」到剪贴板`, 3000)
+  }, [cabinet, copyCabinet, addToast])
+
+  const handleCopyDevice = useCallback((deviceId: string) => {
+    if (!cabinet) return
+    if (copyDevice(cabinet.id, deviceId)) addToast('success', '已复制设备到剪贴板', 3000)
+  }, [cabinet, copyDevice, addToast])
+
+  const handlePasteDeviceAt = useCallback((uNum: number) => {
+    if (!cabinet) return
+    const r = pasteDevice(cabinet.id, uNum)
+    if (r.ok) {
+      addToast('success', `已粘贴设备「${r.deviceName}」到 U${r.startU}-U${r.endU}`, 3000)
+      markDirty()
+    } else {
+      addToast('error', `粘贴失败：${PASTE_REASON_LABELS[r.reason ?? 'no_clipboard']}`, 4000)
+    }
+  }, [cabinet, pasteDevice, addToast, markDirty])
+
+  const handlePasteDeviceAuto = useCallback(() => {
+    if (!cabinet) return
+    const r = pasteDeviceAuto(cabinet.id)
+    if (r.ok) {
+      addToast('success', `已粘贴设备「${r.deviceName}」到 U${r.startU}-U${r.endU}`, 3000)
+      markDirty()
+    } else {
+      addToast('error', `粘贴失败：${PASTE_REASON_LABELS[r.reason ?? 'no_clipboard']}`, 4000)
+    }
+  }, [cabinet, pasteDeviceAuto, addToast, markDirty])
+
   const handleSelectCabinet = useCallback((id: number) => {
     selectCabinet(id)
     setCabinetDropdownOpen(false)
@@ -388,9 +438,9 @@ export function RackTab({ cabinetId }: Props) {
         className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50"
         onContextMenu={(e) => {
           e.preventDefault()
-          setContextMenu({ x: e.clientX, y: e.clientY })
+          setContextMenu({ x: e.clientX, y: e.clientY, kind: 'header' })
         }}
-        title={t('rack:cabinetHeaderCtx', '右键：机柜信息调整 / 批量编辑设备')}
+        title={t('rack:cabinetHeaderCtx', '右键：机柜信息调整 / 批量编辑设备 / 复制粘贴')}
       >
         <div className="flex items-center gap-2">
           {/* Cabinet selector */}
@@ -811,6 +861,11 @@ export function RackTab({ cabinetId }: Props) {
                           if (batchMode) { clearSelection(); return }
                           handleSlotClick(uNum)
                         }}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setContextMenu({ x: e.clientX, y: e.clientY, kind: 'slot', uNum })
+                        }}
                         onDragOver={(e) => { if (dragDevice) { e.preventDefault(); setDragOverU(uNum) } }}
                         onDrop={(e) => { e.preventDefault(); handleDrop(uNum) }}
                         className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 w-full transition-colors block ${
@@ -850,6 +905,11 @@ export function RackTab({ cabinetId }: Props) {
                         if (!batchMode) return
                         e.stopPropagation()
                         toggleDeviceSelect(device.id)
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setContextMenu({ x: e.clientX, y: e.clientY, kind: 'device', deviceId: device.id })
                       }}
                       className={`h-7 border-b border-gray-200 dark:border-edge-subtle last:border-b-0 flex items-center px-2 ${colorClass} text-white transition-colors group ${isDragging ? 'opacity-50 cursor-grabbing' : batchMode ? 'cursor-pointer' : 'cursor-grab'} ${isSelected ? 'ring-2 ring-primary-300 dark:ring-primary-400' : ''}`}
                       title={`${device.name} (U${device.startU}-U${device.endU} · ${device.power_watts}W)`}
@@ -962,14 +1022,31 @@ export function RackTab({ cabinetId }: Props) {
       )}
     </Modal>
 
-    {/* M5（AL-ED4）：柜内右键菜单（Header 右键触发） */}
+    {/* M5（AL-ED4）+ M3（AL-CP1/CP2）：柜内右键菜单（Header 机柜级 / 设备行 / U 位槽） */}
     {contextMenu && (
       <ContextMenu
-        items={[
-          { label: '机柜信息调整', icon: Settings, action: openCabinetEdit },
-          { separator: true },
-          { label: '批量编辑设备', icon: ListChecks, action: () => setBatchMode(true) },
-        ]}
+        items={(() => {
+          if (contextMenu.kind === 'device') {
+            return [
+              { label: '复制设备', icon: Copy, action: () => handleCopyDevice(contextMenu.deviceId!) },
+              { separator: true },
+              { label: '粘贴设备（自动找位）', icon: ClipboardPaste, disabled: clipboard?.type !== 'device', action: handlePasteDeviceAuto },
+            ]
+          }
+          if (contextMenu.kind === 'slot') {
+            return [
+              { label: `粘贴设备到 U${contextMenu.uNum}`, icon: ClipboardPaste, disabled: clipboard?.type !== 'device', action: () => handlePasteDeviceAt(contextMenu.uNum!) },
+            ]
+          }
+          return [
+            { label: '复制机柜', icon: Copy, action: handleCopyCabinet },
+            { label: '机柜信息调整', icon: Settings, action: openCabinetEdit },
+            { separator: true },
+            { label: '批量编辑设备', icon: ListChecks, action: () => setBatchMode(true) },
+            { separator: true },
+            { label: '粘贴设备（自动找位）', icon: ClipboardPaste, disabled: clipboard?.type !== 'device', action: handlePasteDeviceAuto },
+          ]
+        })()}
         x={contextMenu.x}
         y={contextMenu.y}
         onClose={() => setContextMenu(null)}
