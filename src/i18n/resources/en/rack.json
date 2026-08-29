@@ -67,5 +67,16 @@
   "savedAll": "Room matrix and rack layout saved",
   "rackOptimized": "In-rack optimized: placed {{placed}}{{extra}}",
   "noRackPlaceable": "No racks to place into — create/mount racks first",
-  "noUnplaced": "No unplaced devices to place"
+  "noUnplaced": "No unplaced devices to place",
+  "snapshot.save": "Save Snapshot",
+  "snapshot.list": "Snapshots",
+  "snapshot.saveTitle": "Save Design Snapshot",
+  "snapshot.name": "Snapshot name",
+  "snapshot.listTitle": "Design Snapshots",
+  "snapshot.restore": "Restore",
+  "snapshot.delete": "Delete",
+  "snapshot.empty": "No design snapshots yet",
+  "snapshot.createdAt": "Created at",
+  "snapshot.saved": "Design snapshot saved: {{name}}",
+  "snapshot.deleted": "Snapshot deleted: {{name}}"
 }

@@ -67,5 +67,16 @@
   "savedAll": "機房マトリクスとラック配置を保存しました",
   "rackOptimized": "ラック内最適配置完了：{{placed}} 台{{extra}}",
   "noRackPlaceable": "配置先ラックがありません。先にラックを作成/マウントしてください",
-  "noUnplaced": "配置待ちデバイスがありません"
+  "noUnplaced": "配置待ちデバイスがありません",
+  "snapshot.save": "スナップショット保存",
+  "snapshot.list": "スナップショット一覧",
+  "snapshot.saveTitle": "設計スナップショットを保存",
+  "snapshot.name": "スナップショット名",
+  "snapshot.listTitle": "設計スナップショット一覧",
+  "snapshot.restore": "復元",
+  "snapshot.delete": "削除",
+  "snapshot.empty": "設計スナップショットはまだありません",
+  "snapshot.createdAt": "作成日時",
+  "snapshot.saved": "設計スナップショットを保存しました: {{name}}",
+  "snapshot.deleted": "スナップショットを削除しました: {{name}}"
 }

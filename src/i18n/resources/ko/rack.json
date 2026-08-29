@@ -67,5 +67,16 @@
   "savedAll": "기계실 매트릭스와 랙 배치 저장됨",
   "rackOptimized": "랙 내 최적 배치 완료: {{placed}}대{{extra}}",
   "noRackPlaceable": "배치할 랙이 없습니다. 랙을 먼저 생성/마운트하세요",
-  "noUnplaced": "배치 대기 장치가 없습니다"
+  "noUnplaced": "배치 대기 장치가 없습니다",
+  "snapshot.save": "스냅샷 저장",
+  "snapshot.list": "스냅샷 목록",
+  "snapshot.saveTitle": "설계 스냅샷 저장",
+  "snapshot.name": "스냅샷 이름",
+  "snapshot.listTitle": "설계 스냅샷 목록",
+  "snapshot.restore": "복원",
+  "snapshot.delete": "삭제",
+  "snapshot.empty": "아직 설계 스냅샷이 없습니다",
+  "snapshot.createdAt": "생성 시간",
+  "snapshot.saved": "설계 스냅샷 저장됨: {{name}}",
+  "snapshot.deleted": "스냅샷 삭제됨: {{name}}"
 }

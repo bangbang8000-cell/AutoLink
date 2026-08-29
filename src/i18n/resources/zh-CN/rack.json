@@ -67,5 +67,16 @@
   "savedAll": "机房矩阵与机柜布局已保存",
   "rackOptimized": "柜内智能落位完成：放置 {{placed}} 台{{extra}}",
   "noRackPlaceable": "无机柜可放置，请先创建/上架机柜",
-  "noUnplaced": "待上架设备池为空，暂无可落位设备"
+  "noUnplaced": "待上架设备池为空，暂无可落位设备",
+  "snapshot.save": "保存快照",
+  "snapshot.list": "快照列表",
+  "snapshot.saveTitle": "保存设计快照",
+  "snapshot.name": "快照名称",
+  "snapshot.listTitle": "设计快照列表",
+  "snapshot.restore": "恢复",
+  "snapshot.delete": "删除",
+  "snapshot.empty": "暂无设计快照",
+  "snapshot.createdAt": "创建时间",
+  "snapshot.saved": "设计快照已保存：{{name}}",
+  "snapshot.deleted": "已删除快照：{{name}}"
 }

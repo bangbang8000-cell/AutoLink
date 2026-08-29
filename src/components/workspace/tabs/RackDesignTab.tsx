@@ -10,14 +10,17 @@
  * 工具栏：撤销定稿、归档（占位，M7 接入）、柜内智能落位、清空柜内设计、保存
  *         （M4/AL-N3：导出机柜设计 Excel 按钮已移除，统一到「本项目输出」导出）。
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, FileCheck2, Lock, Unlock, X, Archive, ArrowLeft, Undo2, Redo2 } from 'lucide-react'
+import { Download, FileCheck2, Lock, Unlock, X, Archive, ArrowLeft, Undo2, Redo2, Camera, History, Trash2 } from 'lucide-react'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
+import { useSnapshotStore, defaultSnapshotName } from '@/stores/snapshot.store'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
 
 export function RackDesignTab({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
@@ -108,6 +111,12 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
 
   const finalized = !!matrix?.finalized
 
+  // M2（AL-SNAP1/3）：设计快照 hooks（必须在提前 return 之前声明，避免渲染 hooks 数不一致）
+  const snapshots = useSnapshotStore((s) => s.snapshots)
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [listOpen, setListOpen] = useState(false)
+  const [snapName, setSnapName] = useState('')
+
   // M2（AL-D3a）：定稿门槛——未定稿显示引导，不进入机柜设计
   if (!finalized) {
     return (
@@ -149,6 +158,29 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
     await useRoomStore.getState().saveMatrix(projectName)
     await useRackStore.getState().saveRackLayout(projectName)
     addToast('success', t('rack:savedAll', '机房矩阵与机柜布局已保存'), 3000)
+  }
+
+  // ===== M2（AL-SNAP1/3）：设计快照——保存/列表/恢复/删除（handlers，引用顶部 hooks 状态） =====
+  const openSaveModal = () => {
+    setSnapName(defaultSnapshotName())
+    setSaveOpen(true)
+  }
+  const doSaveSnapshot = () => {
+    const name = snapName.trim() || defaultSnapshotName()
+    const r = useSnapshotStore.getState().saveSnapshot(name)
+    if (r.ok) {
+      addToast('success', t('rack:snapshot.saved', '设计快照已保存：{{name}}', { name }), 4000)
+      setSaveOpen(false)
+    }
+  }
+  const doRestoreSnapshot = (id: string) => {
+    useSnapshotStore.getState().restoreSnapshot(id)
+    setListOpen(false)
+  }
+  const doDeleteSnapshot = (id: string) => {
+    const item = useSnapshotStore.getState().list().find((it) => it.id === id)
+    useSnapshotStore.getState().deleteSnapshot(id)
+    if (item) addToast('success', t('rack:snapshot.deleted', '已删除快照：{{name}}', { name: item.name }), 3000)
   }
 
   // M7 占位：归档并清空（版本归档到 项目名-版本-时间 目录）
@@ -206,6 +238,15 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
           <X size={11} /> {t('rack:clearRacks', '清空柜内设计')}
         </button>
+        {/* M2（AL-SNAP1/3）：设计快照——保存/列表（会话内持久化） */}
+        <button type="button" onClick={openSaveModal}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+          <Camera size={11} /> {t('rack:snapshot.save', '保存快照')}
+        </button>
+        <button type="button" onClick={() => setListOpen(true)}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+          <History size={11} /> {t('rack:snapshot.list', '快照列表')}
+        </button>
         <button type="button" onClick={saveAll}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-green-600 hover:bg-green-700 text-white">
           <FileCheck2 size={11} /> {t('common:save', '保存')}
@@ -216,6 +257,60 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
       <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">
         <RackTab cabinetId={null} />
       </div>
+
+      {/* M2（AL-SNAP1/3）：保存快照命名弹窗 */}
+      <Modal
+        open={saveOpen}
+        onClose={() => setSaveOpen(false)}
+        title={t('rack:snapshot.saveTitle', '保存设计快照')}
+        footer={
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setSaveOpen(false)}
+              className="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+              {t('common:cancel', '取消')}
+            </button>
+            <button type="button" onClick={doSaveSnapshot}
+              className="px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white">
+              {t('common:confirm', '确认')}
+            </button>
+          </div>
+        }>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+          {t('rack:snapshot.name', '快照名称')}
+        </label>
+        <Input value={snapName} onChange={(e) => setSnapName(e.target.value)} placeholder={t('rack:snapshot.name', '快照名称')} />
+      </Modal>
+
+      {/* M2（AL-SNAP1/3）：快照列表（恢复/删除） */}
+      <Modal
+        open={listOpen}
+        onClose={() => setListOpen(false)}
+        title={t('rack:snapshot.listTitle', '设计快照列表')}>
+        <div className="space-y-1 max-h-[50vh] overflow-auto">
+          {snapshots.length === 0 && (
+            <div className="text-xs text-gray-400 text-center py-6">{t('rack:snapshot.empty', '暂无设计快照')}</div>
+          )}
+          {snapshots.map((it) => (
+            <div key={it.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-app-hover">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{it.name}</div>
+                <div className="text-2xs text-gray-400">
+                  {t('rack:snapshot.createdAt', '创建时间')}: {new Date(it.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <button type="button" onClick={() => doRestoreSnapshot(it.id)}
+                className="px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                {t('rack:snapshot.restore', '恢复')}
+              </button>
+              <button type="button" onClick={() => doDeleteSnapshot(it.id)}
+                className="p-1 rounded hover:bg-error-50 text-gray-400 hover:text-error-500"
+                title={t('rack:snapshot.delete', '删除')}>
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }

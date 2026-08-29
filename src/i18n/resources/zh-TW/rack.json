@@ -67,5 +67,16 @@
   "savedAll": "機櫃矩陣與機櫃佈局已儲存",
   "rackOptimized": "櫃內智慧落位完成：放置 {{placed}} 台{{extra}}",
   "noRackPlaceable": "無機櫃可放置，請先建立/上架機櫃",
-  "noUnplaced": "待上架設備池為空，暫無可落位設備"
+  "noUnplaced": "待上架設備池為空，暫無可落位設備",
+  "snapshot.save": "儲存快照",
+  "snapshot.list": "快照列表",
+  "snapshot.saveTitle": "儲存設計快照",
+  "snapshot.name": "快照名稱",
+  "snapshot.listTitle": "設計快照列表",
+  "snapshot.restore": "復原",
+  "snapshot.delete": "刪除",
+  "snapshot.empty": "暫無設計快照",
+  "snapshot.createdAt": "建立時間",
+  "snapshot.saved": "設計快照已儲存：{{name}}",
+  "snapshot.deleted": "已刪除快照：{{name}}"
 }
