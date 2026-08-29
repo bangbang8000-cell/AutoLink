@@ -269,6 +269,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   canRedo: false,
 
   loadMatrix: async (projectName) => {
+    // M-F2（F2-2）：记录当前项目上下文（room 撤销栈按项目落盘/恢复）
+    setRoomCurrentProject(projectName)
     try {
       if (window.electron?.project?.getFile) {
         const jsonStr = await window.electron.project.getFile(projectName, 'room_layout.json')
@@ -276,6 +278,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
           const data = JSON.parse(jsonStr) as RoomMatrixData
           if (data && Array.isArray(data.rows) && Array.isArray(data.cols) && Array.isArray(data.cells)) {
             set({ matrix: data, selectedPosition: null })
+            // M-F2（F2-2）：加载完成后恢复上次会话持久化的撤销/重做栈（覆盖加载产生的快照）
+            await restoreRoomUndoHistory(projectName).catch(() => {})
             return
           }
         }
@@ -285,6 +289,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       useToastStore.getState().addToast('error', '机房矩阵加载失败，已重置', 5000)
     }
     set({ matrix: null, selectedPosition: null })
+    // M-F2（F2-2）：空状态也恢复持久化撤销栈（可回退到重启前）
+    await restoreRoomUndoHistory(projectName).catch(() => {})
   },
 
   createMatrix: async (projectName, rows, cols, name) => {
@@ -796,3 +802,165 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
 
   reset: () => set({ matrix: null, selectedPosition: null, multiSelected: [] }),
 }))
+
+// ===== M-F2（F2-2）：机房矩阵撤销/重做栈跨会话持久化（项目目录 + 容量受控 + 重启恢复） =====
+
+/** M-F2（F2-2）：room 持久化栈深上限（仅持久化最近 N 条） */
+export const ROOM_UNDO_PERSIST_LIMIT = 20
+/** M-F2（F2-2）：room 持久化字节阈值（超限丢弃最旧 undo 快照） */
+export const ROOM_UNDO_PERSIST_MAX_BYTES = 1024 * 1024
+/** M-F2（F2-2）：room 编辑后节流写盘防抖时长 */
+export const ROOM_UNDO_PERSIST_DEBOUNCE_MS = 800
+/** M-F2（F2-2）：room 持久化文件名（<project>/output/<file>；与 rack 分离避免跨 store 循环依赖） */
+export const ROOM_UNDO_PERSIST_FILE = 'undo_room.json'
+
+/** M-F2（F2-2）：room 落盘文件结构 */
+export interface RoomUndoPersistFile {
+  schema_version: number
+  saved_at: string
+  store: 'room'
+  undoStack: RoomHistorySnapshot[]
+  redoStack: RoomHistorySnapshot[]
+}
+
+/** M-F2（F2-2）：room 当前项目上下文（loadMatrix 维护；null=无项目，不写盘） */
+let roomCurrentProjectName: string | null = null
+
+/** M-F2（F2-2）：设置 room 当前项目上下文（loadMatrix 调用；测试可显式调用模拟切换） */
+export function setRoomCurrentProject(projectName: string | null): void {
+  roomCurrentProjectName = projectName
+}
+
+let roomUndoPersistTimer: ReturnType<typeof setTimeout> | null = null
+
+function roomUndoLocalKey(projectName: string): string {
+  return `autolink-room-undo:${projectName}`
+}
+
+/** M-F2（F2-2）：构建 room 持久化文件（栈深截断到最近 N 条） */
+export function buildRoomUndoPersistFile(
+  undoStack: RoomHistorySnapshot[],
+  redoStack: RoomHistorySnapshot[],
+): RoomUndoPersistFile {
+  return {
+    schema_version: 1,
+    saved_at: new Date().toISOString(),
+    store: 'room',
+    undoStack: undoStack.slice(-ROOM_UNDO_PERSIST_LIMIT),
+    redoStack: redoStack.slice(-ROOM_UNDO_PERSIST_LIMIT),
+  }
+}
+
+/** M-F2（F2-2）：容量受控截断纯函数——栈深上限 + 字节阈值，超限丢弃最旧 undo（redo 保留）；超限仍超标返回 null */
+export function truncateRoomUndoByBytes(
+  undoStack: RoomHistorySnapshot[],
+  redoStack: RoomHistorySnapshot[],
+  maxBytes: number,
+): { undoStack: RoomHistorySnapshot[]; redoStack: RoomHistorySnapshot[] } | null {
+  let u = undoStack.slice(-ROOM_UNDO_PERSIST_LIMIT)
+  const r = redoStack.slice(-ROOM_UNDO_PERSIST_LIMIT)
+  let file = buildRoomUndoPersistFile(u, r)
+  let json = JSON.stringify(file)
+  while (json.length > maxBytes && u.length > 0) {
+    u = u.slice(1)
+    file = buildRoomUndoPersistFile(u, r)
+    json = JSON.stringify(file)
+  }
+  if (json.length > maxBytes) return null
+  return { undoStack: u, redoStack: r }
+}
+
+/** M-F2（F2-2）：UTF-8 文本 → base64（Electron 渲染层 / Node 测试环境兼容；btoa 对中文抛错，故先 UTF-8 编码） */
+function roomUtf8ToBase64(text: string): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(text, 'utf-8').toString('base64')
+  const bytes = new TextEncoder().encode(text)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin)
+}
+
+/**
+ * M-F2（F2-2）：room 撤销/重做栈序列化并落盘（容量受控：栈深上限 + 字节阈值，超限丢弃最旧 undo）。
+ * 首选 `render.saveOutputFile` 写 <project>/output/undo_room.json；受阻退化为 localStorage（方案B）。
+ */
+export async function persistRoomUndoHistory(projectName: string): Promise<void> {
+  const s = useRoomStore.getState()
+  const capped = truncateRoomUndoByBytes(s.undoStack, s.redoStack, ROOM_UNDO_PERSIST_MAX_BYTES)
+  if (!capped) return
+  const json = JSON.stringify(buildRoomUndoPersistFile(capped.undoStack, capped.redoStack))
+  try {
+    if (window.electron?.render?.saveOutputFile) {
+      await window.electron.render.saveOutputFile(projectName, ROOM_UNDO_PERSIST_FILE, roomUtf8ToBase64(json))
+      return
+    }
+  } catch (err) {
+    console.error('[undo-persist] room render.saveOutputFile 失败，退化 localStorage:', err)
+  }
+  try {
+    localStorage.setItem(roomUndoLocalKey(projectName), json)
+  } catch {
+    // quota 超限忽略
+  }
+}
+
+/** M-F2（F2-2）：room 编辑后节流调度写盘（防抖；无项目上下文不写） */
+export function scheduleRoomUndoPersist(projectName: string | null): void {
+  if (!projectName) return
+  if (roomUndoPersistTimer) clearTimeout(roomUndoPersistTimer)
+  roomUndoPersistTimer = setTimeout(() => {
+    roomUndoPersistTimer = null
+    persistRoomUndoHistory(projectName).catch(() => {})
+  }, ROOM_UNDO_PERSIST_DEBOUNCE_MS)
+}
+
+/** M-F2（F2-2）：落盘结构校验 */
+function isRoomUndoPersistFile(data: unknown): data is RoomUndoPersistFile {
+  const d = data as Partial<RoomUndoPersistFile> | null
+  return !!d && d.store === 'room' && Array.isArray(d.undoStack) && Array.isArray(d.redoStack)
+}
+
+/**
+ * M-F2（F2-2）：恢复上次会话持久化的 room 撤销/重做栈（覆盖当前栈；可回退到重启前）。
+ * 优先级：项目目录 output/undo_room.json（project.getFile）→ localStorage（方案B）。
+ */
+export async function restoreRoomUndoHistory(projectName: string): Promise<void> {
+  let file: RoomUndoPersistFile | null = null
+  try {
+    if (window.electron?.project?.getFile) {
+      const raw = await window.electron.project.getFile(projectName, `output/${ROOM_UNDO_PERSIST_FILE}`)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (isRoomUndoPersistFile(parsed)) file = parsed
+      }
+    }
+  } catch (err) {
+    console.error('[undo-persist] room 读取 undo_room.json 失败:', err)
+  }
+  if (!file) {
+    try {
+      const raw = localStorage.getItem(roomUndoLocalKey(projectName))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (isRoomUndoPersistFile(parsed)) file = parsed
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (!file) return
+  const undoStack = file.undoStack.slice(-ROOM_UNDO_PERSIST_LIMIT)
+  const redoStack = file.redoStack.slice(-ROOM_UNDO_PERSIST_LIMIT)
+  useRoomStore.setState({
+    undoStack,
+    redoStack,
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
+  })
+}
+
+// M-F2（F2-2）：room 撤销/重做栈变化 → 节流写盘（编辑后自动持久化；无项目上下文不写）
+useRoomStore.subscribe((state, prev) => {
+  if (state.undoStack !== prev.undoStack || state.redoStack !== prev.redoStack) {
+    scheduleRoomUndoPersist(roomCurrentProjectName)
+  }
+})
