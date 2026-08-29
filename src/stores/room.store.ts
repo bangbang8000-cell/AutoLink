@@ -178,10 +178,12 @@ interface RoomState {
   redoStack: RoomHistorySnapshot[]
   canUndo: boolean
   canRedo: boolean
-  /** 显式压入一次编辑快照（跨 store 批量操作前调用，使一次操作仅产生一条历史） */
+  /** M2（AL-UR1）：显式压入一次编辑快照（跨 store 批量操作前调用，使一次操作仅产生一条历史） */
   pushHistory: () => void
   undo: () => void
   redo: () => void
+  /** M2（AL-SNAP1）：整状态替换矩阵（设计快照恢复用；可撤销；深拷贝隔离快照与活动编辑） */
+  applySnapshot: (matrix: RoomMatrixData | null) => void
 }
 
 /** M2（AL-UR1）：矩阵编辑撤销/重做栈深度上限 */
@@ -372,6 +374,16 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       canUndo: true,
       canRedo: redoStack.length > 0,
     })
+  },
+
+  // M2（AL-SNAP1）：设计快照恢复——整矩阵替换（深拷贝隔离快照与活动编辑；可撤销；清残留选中）
+  applySnapshot: (matrix) => {
+    set((s) => ({
+      ...pushRoomHistory(s),
+      matrix: matrix ? structuredClone(matrix) : null,
+      selectedPosition: null,
+      multiSelected: [],
+    }))
   },
 
   setMarkTool: (tool) => set({ markTool: tool }),
