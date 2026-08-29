@@ -80,3 +80,57 @@ describe('OutputResultsView（AL-N3 导出收敛）', () => {
     )
   })
 })
+
+describe('OutputResultsView（M-F1 版本历史 + 评审 PDF）', () => {
+  beforeEach(() => {
+    ;(window.electron as unknown as {
+      feature: {
+        versionHistory: { list: ReturnType<typeof vi.fn>; rollback: ReturnType<typeof vi.fn> }
+        reviewPdf: ReturnType<typeof vi.fn>
+      }
+    }).feature.reviewPdf.mockReset()
+  })
+
+  it('H-4 工具栏显示「版本历史」「导出评审 PDF」入口', async () => {
+    render(<OutputResultsView projectName="p1" />)
+    expect(await screen.findByText('版本历史')).toBeInTheDocument()
+    expect(screen.getByText('导出评审 PDF')).toBeInTheDocument()
+  })
+
+  it('H-4 点「导出评审 PDF」→ 调 feature.reviewPdf(项目) → 成功后 toast 路径并刷新批次', async () => {
+    ;(window.electron as unknown as {
+      feature: { reviewPdf: ReturnType<typeof vi.fn> }
+    }).feature.reviewPdf.mockResolvedValue({ ok: true, path: '/workspace/p1/output/p1_评审报告.pdf', fileName: 'p1_评审报告.pdf' })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('导出评审 PDF'))
+    await waitFor(() =>
+      expect(
+        (window.electron as unknown as { feature: { reviewPdf: ReturnType<typeof vi.fn> } }).feature.reviewPdf,
+      ).toHaveBeenCalledWith('p1'),
+    )
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((t) => t.type === 'success' && t.message.includes('/workspace/p1/output/p1_评审报告.pdf'))).toBe(true),
+    )
+    // 刷新批次（listOutputBatches 被再次调用）
+    expect((window.electron as unknown as { project: { listOutputBatches: ReturnType<typeof vi.fn> } }).project.listOutputBatches).toHaveBeenCalled()
+  })
+
+  it('H-4 评审 PDF 导出失败 → error toast（不静默）', async () => {
+    ;(window.electron as unknown as { feature: { reviewPdf: ReturnType<typeof vi.fn> } }).feature.reviewPdf
+      .mockResolvedValue({ ok: false, error: '当前项目未生成 AIDC 规划' })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('导出评审 PDF'))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((t) => t.type === 'error' && t.message.includes('当前项目未生成 AIDC 规划'))).toBe(true),
+    )
+  })
+
+  it('M-F1 点「版本历史」→ 打开版本历史 Modal（标题可见）', async () => {
+    ;(window.electron as unknown as {
+      feature: { versionHistory: { list: ReturnType<typeof vi.fn> } }
+    }).feature.versionHistory.list.mockResolvedValue({ ok: true, projectName: 'p1', current: null, files: [] })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('版本历史'))
+    expect(await screen.findByText(/暂无历史版本/)).toBeInTheDocument()
+  })
+})

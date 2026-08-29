@@ -324,6 +324,107 @@ export function sendLog(mainWindow: BrowserWindow | null, message: string, level
   mainWindow?.webContents.send('log:output', { message, level })
 }
 
+// ===== M-F1（PRD v3.6）：版本历史 + 评审 PDF 辅助 =====
+function escapeHtmlText(v: unknown): string {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function planCellValue(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  if (typeof v === 'object') return JSON.stringify(v)
+  return String(v)
+}
+
+function wrapPrintableHtml(body: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; padding: 24px; color: #111827; }
+    h1 { font-size: 22px; border-bottom: 2px solid #2563eb; padding-bottom: 8px; color: #1e3a8a; }
+    h2 { font-size: 16px; margin-top: 22px; color: #1e3a8a; border-left: 4px solid #93c5fd; padding-left: 8px; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; page-break-inside: avoid; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; font-size: 12px; }
+    th { background: #eff6ff; font-weight: 700; }
+    td { word-break: break-all; }
+    p { font-size: 12px; color: #374151; }
+  </style></head><body>${body}</body></html>`
+}
+
+/** 评审 PDF 内容组装：宏观参数 + 设计摘要（拓扑/协议/收敛/设备统计） */
+function buildReviewPdfHtml(projectName: string, plan: Record<string, unknown>): string {
+  const meta = (plan.meta && typeof plan.meta === 'object' && !Array.isArray(plan.meta))
+    ? plan.meta as Record<string, unknown> : {}
+  const macro = (plan.macro && typeof plan.macro === 'object' && !Array.isArray(plan.macro))
+    ? plan.macro as Record<string, unknown> : {}
+  const topology = (plan.topology && typeof plan.topology === 'object' && !Array.isArray(plan.topology))
+    ? plan.topology as Record<string, unknown> : {}
+  const protocols = (plan.protocols && typeof plan.protocols === 'object' && !Array.isArray(plan.protocols))
+    ? plan.protocols as Record<string, unknown> : {}
+  const convergence = (plan.convergence && typeof plan.convergence === 'object' && !Array.isArray(plan.convergence))
+    ? plan.convergence as Record<string, unknown> : {}
+  const deviceList = Array.isArray(plan.deviceList) ? plan.deviceList as Array<Record<string, unknown>> : []
+  const connections = Array.isArray(plan.connections) ? plan.connections : []
+  const terminals = Array.isArray(plan.terminals) ? plan.terminals : []
+
+  const roleCounts: Record<string, number> = {}
+  for (const d of deviceList) {
+    const role = String(d.role ?? d.scenario ?? '?')
+    roleCounts[role] = (roleCounts[role] ?? 0) + 1
+  }
+
+  const rows: string[] = []
+  rows.push('<h1>AutoLink AIDC 规划评审报告</h1>')
+  rows.push(`<p>项目：${escapeHtmlText(projectName)}</p>`)
+  rows.push('<table><tr><th>字段</th><th>值</th></tr>')
+  rows.push(`<tr><td>项目 ID</td><td>${escapeHtmlText(meta.projectId)}</td></tr>`)
+  rows.push(`<tr><td>规划版本</td><td>v${escapeHtmlText(meta.planVersion)}</td></tr>`)
+  rows.push(`<tr><td>planHash</td><td>${escapeHtmlText(meta.planHash)}</td></tr>`)
+  rows.push(`<tr><td>生成时间</td><td>${escapeHtmlText(meta.generatedAt)}</td></tr>`)
+  rows.push('</table>')
+
+  rows.push('<h2>宏观参数</h2>')
+  rows.push('<table><tr><th>参数</th><th>值</th></tr>')
+  for (const [k, v] of Object.entries(macro)) {
+    rows.push(`<tr><td>${escapeHtmlText(k)}</td><td>${escapeHtmlText(planCellValue(v))}</td></tr>`)
+  }
+  rows.push('</table>')
+
+  rows.push('<h2>拓扑摘要</h2>')
+  rows.push('<table><tr><th>字段</th><th>值</th></tr>')
+  for (const [k, v] of Object.entries(topology)) {
+    rows.push(`<tr><td>${escapeHtmlText(k)}</td><td>${escapeHtmlText(planCellValue(v))}</td></tr>`)
+  }
+  rows.push('</table>')
+
+  rows.push('<h2>协议与收敛</h2>')
+  rows.push('<table><tr><th>字段</th><th>值</th></tr>')
+  rows.push(`<tr><td>OSPF</td><td>${escapeHtmlText(planCellValue(protocols.ospf))}</td></tr>`)
+  rows.push(`<tr><td>BGP</td><td>${escapeHtmlText(planCellValue(protocols.bgp))}</td></tr>`)
+  rows.push(`<tr><td>收敛比</td><td>${escapeHtmlText(planCellValue(convergence))}</td></tr>`)
+  rows.push('</table>')
+
+  rows.push(`<h2>设备清单摘要（${deviceList.length} 台）</h2>`)
+  rows.push('<table><tr><th>角色</th><th>数量</th></tr>')
+  for (const [role, count] of Object.entries(roleCounts)) {
+    rows.push(`<tr><td>${escapeHtmlText(role)}</td><td>${count}</td></tr>`)
+  }
+  rows.push('</table>')
+
+  if (deviceList.length > 0) {
+    rows.push(`<h2>设备清单（前 ${Math.min(200, deviceList.length)} 台）</h2>`)
+    rows.push('<table><tr><th>名称</th><th>角色</th><th>型号</th><th>机柜</th><th>ASN</th></tr>')
+    for (const d of deviceList.slice(0, 200)) {
+      rows.push(`<tr><td>${escapeHtmlText(d.name)}</td><td>${escapeHtmlText(d.role)}</td><td>${escapeHtmlText(d.model)}</td><td>${escapeHtmlText(d.rack)}</td><td>${escapeHtmlText(d.asn)}</td></tr>`)
+    }
+    rows.push('</table>')
+  }
+
+  rows.push(`<p>接线 ${connections.length} 条 · 终端 ${terminals.length} 条</p>`)
+  return wrapPrintableHtml(rows.join('\n'))
+}
+
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   // ===== 云端平台（V3.3.0: 登录 + 云中心） =====
   registerCloudIpcHandlers()
@@ -1334,6 +1435,125 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     const buffer = Buffer.from(base64Data, 'base64')
     fs.writeFileSync(filePath, buffer)
     return filePath
+  }))
+
+  // ===== 版本历史（M-F1 / PRD v3.6：F1-1/F1-2 对比与回滚） =====
+  ipcMain.handle('feature:version-history:list', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    if (!fs.existsSync(projectDir)) throw new Error(`项目不存在: ${projectName}`)
+    let current: unknown = null
+    const planPath = path.join(projectDir, 'plan.json')
+    if (fs.existsSync(planPath)) {
+      try { current = JSON.parse(fs.readFileSync(planPath, 'utf-8')) } catch { current = null }
+    }
+    const hdir = path.join(projectDir, 'plan_history')
+    const files: { name: string; content: string | null }[] = []
+    if (fs.existsSync(hdir)) {
+      for (const name of fs.readdirSync(hdir)) {
+        if (!/^v\d+\.plan\.json$/.test(name)) continue
+        try {
+          files.push({ name, content: fs.readFileSync(path.join(hdir, name), 'utf-8') })
+        } catch {
+          files.push({ name, content: null })
+        }
+      }
+    }
+    return { ok: true, projectName, current, files }
+  }))
+
+  ipcMain.handle('feature:version-history:rollback', wrapHandler(async (_event, projectName: string, targetVersion: number) => {
+    sanitizeName(projectName)
+    if (!Number.isInteger(targetVersion) || targetVersion < 1) {
+      throw new Error(`版本号非法: ${targetVersion}`)
+    }
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const planPath = path.join(projectDir, 'plan.json')
+    if (!fs.existsSync(planPath)) throw new Error('当前项目缺少 plan.json，无法回滚')
+    const targetPath = path.join(projectDir, 'plan_history', `v${targetVersion}.plan.json`)
+    if (!fs.existsSync(targetPath)) throw new Error(`历史版本 v${targetVersion} 不存在`)
+    let current: Record<string, unknown>
+    let target: Record<string, unknown>
+    try {
+      current = JSON.parse(fs.readFileSync(planPath, 'utf-8'))
+      target = JSON.parse(fs.readFileSync(targetPath, 'utf-8'))
+    } catch {
+      throw new Error('回滚失败：plan 文件解析异常')
+    }
+    // 与 src/utils/planVersionDiff.ts planRollback 语义一致：先存档当前版本（版本号 +1），再以目标覆盖（+2）
+    const curVersion = Number((current.meta as Record<string, unknown> | undefined)?.planVersion ?? 0) || 0
+    const archivedVersion = curVersion + 1
+    const archived: Record<string, unknown> = {
+      ...current,
+      meta: { ...(current.meta as Record<string, unknown>), planVersion: archivedVersion, archivedAt: new Date().toISOString() },
+    }
+    const newVersion = archivedVersion + 1
+    const restored: Record<string, unknown> = {
+      ...target,
+      meta: { ...(target.meta as Record<string, unknown>), planVersion: newVersion, generatedAt: new Date().toISOString() },
+    }
+    const hdir = path.join(projectDir, 'plan_history')
+    fs.mkdirSync(hdir, { recursive: true })
+    fs.writeFileSync(path.join(hdir, `v${archivedVersion}.plan.json`), JSON.stringify(archived, null, 2), 'utf-8')
+    fs.writeFileSync(planPath, JSON.stringify(restored, null, 2), 'utf-8')
+    // 同步 project_config.json 的 aidc_macro / aidc_meta（与后端 save_aidc_project 语义一致）
+    const cfgPath = path.join(projectDir, 'project_config.json')
+    if (fs.existsSync(cfgPath)) {
+      try {
+        const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'))
+        const rmeta = restored.meta as Record<string, unknown>
+        cfg.aidc_macro = restored.macro
+        cfg.aidc_meta = {
+          projectId: rmeta.projectId,
+          projectName: rmeta.projectName,
+          planVersion: newVersion,
+          planHash: rmeta.planHash,
+        }
+        cfg.meta = { ...(cfg.meta as Record<string, unknown> || {}), updated_at: new Date().toISOString() }
+        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf-8')
+      } catch { /* 损坏的 config 不阻断回滚 */ }
+    }
+    // 刷新 project.json updatedAt
+    const metaPath = path.join(projectDir, 'project.json')
+    if (fs.existsSync(metaPath)) {
+      try {
+        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+        meta.updatedAt = new Date().toISOString()
+        fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+      } catch { /* ignore */ }
+    }
+    return { ok: true, projectName, archivedVersion, newVersion }
+  }))
+
+  // ===== 评审 PDF（M-F1 / PRD v3.6：F1-3 printToPDF A4 → output/ 根目录 → [根目录] 批次） =====
+  ipcMain.handle('feature:review-pdf', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const planPath = path.join(projectDir, 'plan.json')
+    if (!fs.existsSync(planPath)) {
+      throw new Error('当前项目未生成 AIDC 规划，无法导出评审 PDF（请先在「AIDC 规划」视图生成规划）')
+    }
+    let plan: Record<string, unknown>
+    try {
+      plan = JSON.parse(fs.readFileSync(planPath, 'utf-8'))
+    } catch {
+      throw new Error('plan.json 解析失败，无法导出评审 PDF')
+    }
+    const html = buildReviewPdfHtml(projectName, plan)
+    const outputDir = path.join(projectDir, 'output')
+    fs.mkdirSync(outputDir, { recursive: true })
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const fileName = `${projectName}_评审报告_${ts}.pdf`
+    const pdfPath = path.join(outputDir, fileName)
+    const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+    try {
+      await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+      const data = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
+      fs.writeFileSync(pdfPath, data)
+    } finally {
+      win.destroy()
+    }
+    return { ok: true, path: pdfPath, fileName }
   }))
 
   // ===== App =====

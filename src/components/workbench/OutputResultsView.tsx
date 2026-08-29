@@ -19,9 +19,11 @@ import { exportRoomDesignExcel, buildRoomDesignRackConfig } from '@/utils/export
 import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
 import { serializeDesignState } from '@/utils/designSnapshot'
 import { stringToBase64 } from '@/utils/exportSvg'
+import { getFeatureBridge } from '@/utils/planVersionDiff'
+import { VersionHistoryView } from '@/components/workbench/VersionHistoryView'
 import {
   RefreshCw, Download, Trash2, ChevronRight, ChevronDown,
-  FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2, Upload,
+  FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2, Upload, History, FileDown,
 } from 'lucide-react'
 
 interface BatchFile { name: string; path: string }
@@ -198,6 +200,8 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   // AL-M5b：项目 Modal 确认体系（替代 window.confirm）
   const [confirmState, setConfirmState] = useState<{ message: string; danger: boolean; fn: () => void } | null>(null)
   const [busy, setBusy] = useState(false)
+  // M-F1（PRD v3.6）：版本历史 Modal + 评审 PDF 导出
+  const [showHistory, setShowHistory] = useState(false)
 
   const refresh = useCallback(async () => {
     setBusy(true)
@@ -275,6 +279,19 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
       refresh()
     } catch (err) {
       addToast('error', t('workbench:output.snapshotExportFailed', '导出失败：{{reason}}', { reason: (err as Error).message }), 5000)
+    }
+  }, [activeProject, addToast, refresh, t])
+
+  // M-F1（PRD v3.6 / F1-3）：导出评审 PDF（printToPDF A4 → output/ 根目录 → [根目录] 批次）
+  const handleReviewPdf = useCallback(async () => {
+    try {
+      const res = await getFeatureBridge().reviewPdf(activeProject)
+      if (res?.error) throw new Error(res.error)
+      if (!res?.ok || !res.path) throw new Error('导出失败（Electron 桥接未就绪）')
+      addToast('success', t('workbench:output.reviewPdfExported', '评审 PDF 已导出 → {{path}}', { path: res.path }), 5000)
+      refresh()
+    } catch (err) {
+      addToast('error', t('workbench:output.reviewPdfFailed', '评审 PDF 导出失败：{{reason}}', { reason: (err as Error).message }), 5000)
     }
   }, [activeProject, addToast, refresh, t])
 
@@ -430,6 +447,15 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
           <Upload size={11} /> {t('workbench:output.importSnapshot', '导入快照')}
         </button>
+        {/* M-F1（PRD v3.6）：版本历史入口 + 评审 PDF 导出 */}
+        <button type="button" onClick={() => setShowHistory(true)}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
+          <History size={11} /> {t('workbench:versionHistory.open', '版本历史')}
+        </button>
+        <button type="button" onClick={handleReviewPdf}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
+          <FileDown size={11} /> {t('workbench:output.reviewPdf', '导出评审 PDF')}
+        </button>
         <button type="button" onClick={handleClearProject} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-40">
           <Trash2 size={11} /> {t('workbench:output.clearProject', '清空项目输出')}
@@ -529,6 +555,13 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         accept=".json,application/json"
         className="hidden"
         onChange={onImportSnapshotFile}
+      />
+
+      {/* M-F1（PRD v3.6）：版本历史（列表/对比/回滚） */}
+      <VersionHistoryView
+        projectName={activeProject}
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
       />
     </div>
   )

@@ -287,6 +287,17 @@ const electronAPI = {
     saveFile: (projectName: string, fileName: string, base64Data: string) =>
       ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
   },
+  // M-F1（PRD v3.6）：AL 版本历史与评审（版本列表/对比/回滚 + 评审 PDF 导出）
+  feature: {
+    versionHistory: {
+      list: (projectName: string) =>
+        ipcRenderer.invoke('feature:version-history:list', projectName),
+      rollback: (projectName: string, targetVersion: number) =>
+        ipcRenderer.invoke('feature:version-history:rollback', projectName, targetVersion),
+    },
+    reviewPdf: (projectName: string) =>
+      ipcRenderer.invoke('feature:review-pdf', projectName),
+  },
   // V3.3.0-T13: 云端平台（登录 + 云中心）。渲染层零网络（CSP connect-src 'self'），
   // 所有 HTTP 由主进程 cloudService 发起，此处仅透传 IPC。
   cloud: {
