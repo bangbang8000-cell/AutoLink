@@ -41,6 +41,14 @@ const mockElectron = {
   export: {
     saveFile: vi.fn(),
   },
+  // M-F1（PRD v3.6）：版本历史 + 评审 PDF 桥接
+  feature: {
+    versionHistory: {
+      list: vi.fn(),
+      rollback: vi.fn(),
+    },
+    reviewPdf: vi.fn(),
+  },
   deviceLibrary: {
     list: vi.fn(),
     get: vi.fn(),
