@@ -102,6 +102,24 @@ export interface ApplyCabinetTemplateResult {
   conflicts: TemplateConflict[]
 }
 
+// ===== M3（AL-CP1/CP2）：应用内剪贴板（机柜/设备复制粘贴；非 OS 剪贴板） =====
+
+/** M3：剪贴板态——机柜或设备深拷贝 + 源柜 id（粘贴目标柜/新柜用） */
+export type RackClipboard =
+  | { type: 'cabinet'; cabinet: RackCabinet; sourceCabinetId: number }
+  | { type: 'device'; device: RackDevice; sourceCabinetId: number }
+
+/** M3：设备粘贴失败原因（U 位/顶部预留/占用/功率/无空位/无剪贴板内容） */
+export type DevicePasteReason = 'no_clipboard' | 'overflow' | 'top_reserved' | 'occupied' | 'power' | 'no_space'
+
+export interface DevicePasteResult {
+  ok: boolean
+  reason?: DevicePasteReason
+  startU?: number
+  endU?: number
+  deviceName?: string
+}
+
 // M4/M5（AL-ED2/ED7/ED6）：机柜/设备批量更新冲突原因（overflow=改矮/越界、power=功率改小/超限、top_reserved=柜顶预留区、occupied=U位被占）
 export type BulkUpdateIssueReason = 'overflow' | 'power' | 'top_reserved' | 'occupied'
 
@@ -292,6 +310,25 @@ interface RackState {
   updateDevicesBulk: (cabinetId: number, deviceIds: string[], patch: DevicePatch) => BulkUpdateResult
   /** M5（AL-ED6）：同柜设备批量 U 位偏移（整批原子：任一越界/入预留区/冲突即整批拒绝） */
   shiftDevicesU: (cabinetId: number, deviceIds: string[], offset: number) => BulkUpdateResult
+  // ===== M3（AL-CP1/CP2）：应用内剪贴板复制/粘贴（机柜与设备） =====
+  /** 应用内剪贴板态（机柜深拷贝 / 设备深拷贝；复制操作不压撤销栈） */
+  clipboard: RackClipboard | null
+  /** 复制机柜（名称/类型/功率/设备深拷贝）到剪贴板；柜不存在返回 false */
+  copyCabinet: (cabinetId: number) => boolean
+  /** 把剪贴板机柜的设备/类型/功率应用到目标柜：设备 U 位映射，冲突跳过并返回明细 */
+  pasteCabinet: (targetCabinetId: number) => ApplyCabinetTemplateResult
+  /** 把剪贴板机柜粘贴为新柜（名称后缀「-副本」）；无机柜剪贴板返回 null；返回新柜 id */
+  pasteCabinetToNew: () => number | null
+  /** 复制设备（深拷贝）到剪贴板；设备不存在返回 false */
+  copyDevice: (cabinetId: number, deviceId: string) => boolean
+  /** 粘贴剪贴板设备到目标柜指定 U 位（U 位/顶部预留/功率校验），失败返回 reason */
+  pasteDevice: (targetCabinetId: number, startU: number) => DevicePasteResult
+  /** 粘贴剪贴板设备到目标柜首个可用 U 位（bottom-up 自动找位） */
+  pasteDeviceAuto: (targetCabinetId: number) => DevicePasteResult
+  /** 清空剪贴板 */
+  clearClipboard: () => void
+  /** 是否有剪贴板内容（可传 type 限定机柜/设备） */
+  hasClipboard: (type?: RackClipboard['type']) => boolean
   selectedDeviceInfo: (id: string) => RackDevice | null
   selectDevice: (id: string | null) => void
   /** 打磨轮（v1.5 / AL-O1b）：batchName 提供时写入版本批次目录 output/<batch>/ */
@@ -344,6 +381,25 @@ function pushRackHistory(state: RackState): Pick<RackState, 'undoStack' | 'redoS
   return { undoStack, redoStack: [], canUndo: true, canRedo: false }
 }
 
+// ===== M3（AL-CP1/CP2）：复制/粘贴辅助 =====
+
+/** M3：粘贴到新柜的名称后缀（已有「-副本」则递增「-副本2」「-副本3」） */
+function nextCopyName(existingNames: string[], base: string): string {
+  const names = new Set(existingNames)
+  if (!names.has(base)) return base
+  let i = 2
+  while (names.has(`${base}${i}`)) i++
+  return `${base}${i}`
+}
+
+/** M3：粘贴设备生成新 id（避免跨柜/同柜 id 冲突破坏选中/移动/批量），带柜内唯一兜底 */
+let copyDeviceSeq = 0
+function freshDeviceId(existingIds: Set<string>, base: string): string {
+  let id = `${base}_copy_${++copyDeviceSeq}`
+  while (existingIds.has(id)) id = `${base}_copy_${++copyDeviceSeq}`
+  return id
+}
+
 export const useRackStore = create<RackState>()(
   persist(
     (set, get) => ({
@@ -353,6 +409,8 @@ export const useRackStore = create<RackState>()(
   selectedDevice: null,
   addDeviceMode: false,
   editingDevice: null,
+  // M3（AL-CP1/CP2）：应用内剪贴板（初始为空；不持久化）
+  clipboard: null,
   // M2（AL-UR1）：编辑撤销/重做命令栈（仅内存会话，不持久化）
   undoStack: [],
   redoStack: [],
@@ -929,6 +987,159 @@ export const useRackStore = create<RackState>()(
       cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices } : c)),
     }))
     return { applied: idSet.size, skipped: 0, issues: [] }
+  },
+
+  // ===== M3（AL-CP1/CP2）：应用内剪贴板复制/粘贴（机柜与设备） =====
+
+  copyCabinet: (cabinetId) => {
+    const cab = get().cabinets.find((c) => c.id === cabinetId)
+    if (!cab) return false
+    set({ clipboard: { type: 'cabinet', cabinet: structuredClone(cab), sourceCabinetId: cabinetId } })
+    return true
+  },
+
+  pasteCabinet: (targetCabinetId) => {
+    const s = get()
+    const clip = s.clipboard
+    if (!clip || clip.type !== 'cabinet') return { applied: 0, skipped: 0, conflicts: [] }
+    const target = s.cabinets.find((c) => c.id === targetCabinetId)
+    if (!target) return { applied: 0, skipped: 0, conflicts: [] }
+    const source = clip.cabinet
+    const added: RackDevice[] = []
+    const conflicts: TemplateConflict[] = []
+    const existingIds = new Set(target.devices.map((d) => d.id))
+    // 设备 U 位映射 + 冲突校验（与 applyCabinetTemplate 同源：overflow/top_reserved/occupied/power）
+    for (const sd of source.devices) {
+      const endU = sd.endU
+      if (sd.startU < 1 || endU > target.totalU) {
+        conflicts.push({ cabinetId: target.id, deviceName: sd.name, startU: sd.startU, reason: 'overflow' })
+        continue
+      }
+      if (endU > target.totalU - s.topReservedU) {
+        conflicts.push({ cabinetId: target.id, deviceName: sd.name, startU: sd.startU, reason: 'top_reserved' })
+        continue
+      }
+      const occupied =
+        target.devices.some((d) => !(endU < d.startU || sd.startU > d.endU)) ||
+        added.some((d) => !(endU < d.startU || sd.startU > d.endU))
+      if (occupied) {
+        conflicts.push({ cabinetId: target.id, deviceName: sd.name, startU: sd.startU, reason: 'occupied' })
+        continue
+      }
+      const currentPower =
+        target.devices.reduce((sum, d) => sum + d.power_watts, 0) +
+        added.reduce((sum, d) => sum + d.power_watts, 0)
+      if (currentPower + sd.power_watts > target.power_limit) {
+        conflicts.push({ cabinetId: target.id, deviceName: sd.name, startU: sd.startU, reason: 'power' })
+        continue
+      }
+      const copyId = freshDeviceId(existingIds, sd.id)
+      existingIds.add(copyId)
+      added.push({ ...sd, id: copyId, cabinetId: target.id })
+    }
+    // 类型/功率/总U 同步到目标柜（对齐 applyCabinetTemplate：设备校验用原目标值，再应用源柜属性）
+    const nextCabinet: RackCabinet = {
+      ...target,
+      type: source.type,
+      totalU: source.totalU,
+      power_limit: source.power_limit,
+      devices: [...target.devices, ...added],
+    }
+    const changed =
+      added.length > 0 ||
+      nextCabinet.type !== target.type ||
+      nextCabinet.totalU !== target.totalU ||
+      nextCabinet.power_limit !== target.power_limit
+    // 无实际变更（无新增设备且属性未变）→ 不压撤销栈，但冲突明细仍需返回
+    if (!changed) return { applied: 0, skipped: conflicts.length, conflicts }
+    set((st) => ({
+      ...pushRackHistory(st),
+      cabinets: st.cabinets.map((c) => (c.id === targetCabinetId ? nextCabinet : c)),
+    }))
+    return { applied: added.length, skipped: conflicts.length, conflicts }
+  },
+
+  pasteCabinetToNew: () => {
+    const s = get()
+    const clip = s.clipboard
+    if (!clip || clip.type !== 'cabinet') return null
+    const newId = s.cabinets.length > 0 ? Math.max(...s.cabinets.map((c) => c.id)) + 1 : 1
+    const name = nextCopyName(s.cabinets.map((c) => c.name), `${clip.cabinet.name}-副本`)
+    const devices: RackDevice[] = clip.cabinet.devices.map((d, i) => ({
+      ...d,
+      id: `${d.id}_copy_${newId}_${i}`,
+      cabinetId: newId,
+    }))
+    set((st) => ({
+      ...pushRackHistory(st),
+      cabinets: [
+        ...st.cabinets,
+        {
+          id: newId,
+          name,
+          totalU: clip.cabinet.totalU,
+          type: clip.cabinet.type,
+          power_limit: clip.cabinet.power_limit,
+          devices,
+        },
+      ],
+      selectedCabinetId: newId,
+    }))
+    return newId
+  },
+
+  copyDevice: (cabinetId, deviceId) => {
+    const cab = get().cabinets.find((c) => c.id === cabinetId)
+    const device = cab?.devices.find((d) => d.id === deviceId)
+    if (!device) return false
+    set({ clipboard: { type: 'device', device: structuredClone(device), sourceCabinetId: cabinetId } })
+    return true
+  },
+
+  pasteDevice: (targetCabinetId, startU) => {
+    const s = get()
+    const clip = s.clipboard
+    if (!clip || clip.type !== 'device') return { ok: false, reason: 'no_clipboard' }
+    const target = s.cabinets.find((c) => c.id === targetCabinetId)
+    if (!target) return { ok: false, reason: 'no_clipboard' }
+    const device = clip.device
+    // 复用 checkDeviceMove 统一落点校验（唯一临时 id，避免排除自身误判）
+    const check = checkDeviceMove(target, { ...device, id: `${device.id}__paste_check__` }, startU, s.topReservedU)
+    if (!check.ok) return { ok: false, reason: check.reason ?? 'occupied' }
+    const height = device.endU - device.startU + 1
+    const endU = startU + height - 1
+    const copyId = freshDeviceId(new Set(target.devices.map((d) => d.id)), device.id)
+    const pasted: RackDevice = { ...device, id: copyId, cabinetId: targetCabinetId, startU, endU }
+    set((st) => ({
+      ...pushRackHistory(st),
+      cabinets: st.cabinets.map((c) =>
+        c.id === targetCabinetId ? { ...c, devices: [...c.devices, pasted] } : c,
+      ),
+    }))
+    return { ok: true, startU, endU, deviceName: device.name }
+  },
+
+  pasteDeviceAuto: (targetCabinetId) => {
+    const s = get()
+    const clip = s.clipboard
+    if (!clip || clip.type !== 'device') return { ok: false, reason: 'no_clipboard' }
+    const target = s.cabinets.find((c) => c.id === targetCabinetId)
+    if (!target) return { ok: false, reason: 'no_clipboard' }
+    const device = clip.device
+    const height = device.endU - device.startU + 1
+    const startU = findFirstAvailableU(target, height, {
+      topReservedU: s.topReservedU,
+      power_watts: device.power_watts,
+    })
+    if (startU == null) return { ok: false, reason: 'no_space' }
+    return get().pasteDevice(targetCabinetId, startU)
+  },
+
+  clearClipboard: () => set({ clipboard: null }),
+
+  hasClipboard: (type) => {
+    const clip = get().clipboard
+    return clip != null && (type == null || clip.type === type)
   },
 
   selectedDeviceInfo: (id) => {
