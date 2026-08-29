@@ -6,19 +6,22 @@
  *  - M4（AL-N3）：导出收敛——设计子视图导出按钮移除，统一在此导出「机房设计 Excel / 机柜设计 Excel」
  *    （复用 exportRoomDesignExcel/exportRackDesignExcel，不传 batchName → 落 output/ 根目录 → [根目录] 批次）
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
+import { useSnapshotStore } from '@/stores/snapshot.store'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { exportRoomDesignExcel, buildRoomDesignRackConfig } from '@/utils/exportRoomDesignExcel'
 import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
+import { serializeDesignState } from '@/utils/designSnapshot'
+import { stringToBase64 } from '@/utils/exportSvg'
 import {
   RefreshCw, Download, Trash2, ChevronRight, ChevronDown,
-  FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2,
+  FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2, Upload,
 } from 'lucide-react'
 
 interface BatchFile { name: string; path: string }
@@ -165,6 +168,22 @@ export async function exportRackDesignExcelToRoot(projectName: string): Promise<
   return filePath
 }
 
+/**
+ * M2（AL-SNAP2）：导出设计快照 JSON —— 序列化当前设计（矩阵+机柜+配置）到 output/snapshots/
+ * （render.saveOutputFile 相对路径 → 自动以「snapshots」批次出现在材料树）。成功返回落盘路径。
+ */
+export async function exportDesignSnapshotToRoot(projectName: string): Promise<string> {
+  const room = useRoomStore.getState()
+  const rack = useRackStore.getState()
+  const snapshot = serializeDesignState(room, rack)
+  const json = JSON.stringify(snapshot, null, 2)
+  const base64 = stringToBase64(json)
+  const fileName = `设计快照_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`
+  const filePath = await window.electron.render.saveOutputFile(projectName, `output/snapshots/${fileName}`, base64)
+  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）')
+  return filePath
+}
+
 export function OutputResultsView({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
@@ -247,6 +266,43 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
       addToast('error', (err as Error).message, 4000)
     }
   }, [activeProject, addToast, refresh, t])
+
+  // M2（AL-SNAP2）：导出设计快照 JSON（落 output/snapshots/ → 材料树 snapshots 批次）
+  const handleExportSnapshot = useCallback(async () => {
+    try {
+      const path = await exportDesignSnapshotToRoot(activeProject)
+      addToast('success', t('workbench:output.snapshotExported', '设计快照已导出 → {{path}}', { path }), 5000)
+      refresh()
+    } catch (err) {
+      addToast('error', t('workbench:output.snapshotExportFailed', '导出失败：{{reason}}', { reason: (err as Error).message }), 5000)
+    }
+  }, [activeProject, addToast, refresh, t])
+
+  // M2（AL-SNAP2）：导入设计快照 JSON（选文件 → validate → 导入前备份 → 应用）
+  const importFileRef = useRef<HTMLInputElement>(null)
+  const handleImportSnapshot = useCallback(() => {
+    importFileRef.current?.click()
+  }, [])
+
+  const onImportSnapshotFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = String(reader.result ?? '')
+      const r = useSnapshotStore.getState().importFromJson(text)
+      if (r.ok) {
+        addToast('success', t('workbench:output.snapshotImported', '已导入设计快照：{{name}}（导入前已备份当前设计）', { name: r.name ?? file.name }), 6000)
+      } else {
+        addToast('error', t('workbench:output.snapshotImportFailed', '导入失败：{{reason}}', { reason: r.reason }), 6000)
+      }
+    }
+    reader.onerror = () => {
+      addToast('error', t('workbench:output.snapshotImportFailed', '导入失败：{{reason}}', { reason: '文件读取失败' }), 6000)
+    }
+    reader.readAsText(file)
+  }, [addToast, t])
 
   const handleDeleteFile = useCallback(async (file?: BatchFile) => {
     const target = file ?? selectedFile
@@ -365,6 +421,15 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
           <Download size={11} /> {t('workbench:output.exportRackDesignExcel', '导出机柜设计 Excel')}
         </button>
+        {/* M2（AL-SNAP2）：设计快照 导出/导入（JSON，落 output/snapshots/） */}
+        <button type="button" onClick={handleExportSnapshot}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+          <Download size={11} /> {t('workbench:output.exportSnapshot', '导出设计快照 JSON')}
+        </button>
+        <button type="button" onClick={handleImportSnapshot}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+          <Upload size={11} /> {t('workbench:output.importSnapshot', '导入快照')}
+        </button>
         <button type="button" onClick={handleClearProject} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-40">
           <Trash2 size={11} /> {t('workbench:output.clearProject', '清空项目输出')}
@@ -455,6 +520,15 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         danger={confirmState?.danger}
         onConfirm={() => { confirmState?.fn(); setConfirmState(null) }}
         onCancel={() => setConfirmState(null)}
+      />
+
+      {/* M2（AL-SNAP2）：导入设计快照的文件选择器（渲染层 FileReader，无需新增 IPC） */}
+      <input
+        ref={importFileRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={onImportSnapshotFile}
       />
     </div>
   )
