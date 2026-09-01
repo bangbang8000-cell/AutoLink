@@ -4,7 +4,15 @@
     "history": "History",
     "clear": "Clear Session",
     "clearConfirm": "Clear all messages in this session?",
-    "delete": "Delete Session"
+    "delete": "Delete Session",
+    "rename": "Rename Session",
+    "renamePlaceholder": "Enter a new session name…",
+    "summarize": "Summarize",
+    "summarizeMarker": "📌 Session summary (history kept)",
+    "summarizeReplaced": "📌 Session summary (history replaced, continue chatting)",
+    "noSession": "No session to summarize",
+    "summarizeFailed": "Failed to generate summary",
+    "summarizePrompt": "Summarize the following conversation in concise Chinese (for continuing after the summary). Output only the summary:"
   },
   "input": {
     "placeholder": "Type a message. Enter to send, Shift+Enter for newline…",
@@ -28,6 +36,7 @@
   "tool": {
     "calling": "Calling tool",
     "confirm": "This action requires confirmation. Reply CONFIRM to continue, or CANCEL to abort.",
+    "confirmCard": "Operation `{{tool}}` requires confirmation. Continue?",
     "result": "Tool result"
   },
   "mock": {

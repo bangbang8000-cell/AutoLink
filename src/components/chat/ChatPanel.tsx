@@ -3,10 +3,11 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, Eraser, Wifi, WifiOff, Bot, ListChecks, Wrench } from 'lucide-react'
+import { Plus, Trash2, Eraser, Wifi, WifiOff, Bot, ListChecks, Wrench, Pencil, Check, X, FileText } from 'lucide-react'
 import clsx from 'clsx'
 import { useChatStore, sendMessage } from '@/stores/chat.store'
 import { useUIStore } from '@/stores/ui.store'
+import { useToastStore } from '@/stores/toast.store'
 import { ChatMessageBubble } from './ChatMessageBubble'
 import { ChatInput } from './ChatInput'
 import { BatchOptimizePanel } from './BatchOptimizePanel'
@@ -24,6 +25,10 @@ export function ChatPanel() {
   const [optimizeOpen, setOptimizeOpen] = useState(false)
   // V3.2.0-T9-4: 智能修复面板
   const [repairOpen, setRepairOpen] = useState(false)
+  // 4.3 F3-2: 会话重命名（内联输入）与摘要生成中
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [summarizing, setSummarizing] = useState(false)
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) || null,
@@ -55,6 +60,32 @@ export function ChatPanel() {
     const mode = store.currentMode
     const attachments = [...store.pendingAttachments]
     sendMessage(store, content, mode, attachments)
+  }
+
+  // 4.3 F3-2: 会话重命名提交
+  const submitRename = () => {
+    if (renamingId && renameValue.trim()) {
+      useChatStore.getState().renameSession(renamingId, renameValue)
+    }
+    setRenamingId(null)
+    setRenameValue('')
+  }
+
+  // 4.3 F3-2: 会话内手动摘要（上下文摘要衔接，摘要后继续）
+  const handleSummarize = async () => {
+    if (summarizing) return
+    setSummarizing(true)
+    const toast = useToastStore.getState()
+    try {
+      const r = await useChatStore.getState().summarizeSession(undefined)
+      if (r.ok) {
+        toast.addToast('success', t('chat:session.summarize'))
+      } else {
+        toast.addToast('warning', r.error || t('chat:session.summarizeFailed'))
+      }
+    } finally {
+      setSummarizing(false)
+    }
   }
 
   return (
@@ -98,8 +129,18 @@ export function ChatPanel() {
         >
           <Plus size={15} />
         </button>
+        {/* 4.3 F3-2: 会话内手动摘要（摘要后继续） */}
         <button
-          onClick={() => useChatStore.getState().clearCurrentSession()}
+          onClick={() => void handleSummarize()}
+          disabled={summarizing || !activeSession || activeSession.messages.length === 0}
+          className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-app-hover rounded disabled:opacity-40"
+          title={t('chat:session.summarize')}
+        >
+          <FileText size={15} />
+        </button>
+        {/* 4.3 F3-2: 清空会话上下文（前端 + 后端联动） */}
+        <button
+          onClick={() => useChatStore.getState().clearSessionContext()}
           className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-app-hover rounded"
           title={t('chat:session.clear')}
         >
@@ -114,23 +155,70 @@ export function ChatPanel() {
         </button>
       </div>
 
-      {/* 会话标签栏 */}
+      {/* 会话标签栏（4.3 F3-2: 支持重命名） */}
       {sessions.length > 1 && (
         <div className="flex items-center gap-1 px-2 pt-1.5 overflow-x-auto">
-          {sessions.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => useChatStore.getState().setActiveSession(s.id)}
-              className={clsx(
-                'shrink-0 text-xs px-2 py-1 rounded-t border-b-2 transition-colors max-w-[140px] truncate',
-                s.id === activeSessionId
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700',
-              )}
-            >
-              {s.title}
-            </button>
-          ))}
+          {sessions.map((s) =>
+            renamingId === s.id ? (
+              <div
+                key={s.id}
+                className="shrink-0 flex items-center gap-0.5 text-xs px-1 py-0.5 rounded-t border-b-2 border-primary-500 bg-gray-100 dark:bg-app-hover"
+              >
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitRename()
+                    if (e.key === 'Escape') setRenamingId(null)
+                  }}
+                  placeholder={t('chat:session.renamePlaceholder')}
+                  className="w-[110px] bg-transparent outline-none text-primary-600 dark:text-primary-400"
+                />
+                <button onClick={submitRename} className="p-0.5 text-success-500 hover:bg-gray-200 dark:hover:bg-app-hover rounded">
+                  <Check size={12} />
+                </button>
+                <button onClick={() => setRenamingId(null)} className="p-0.5 text-gray-400 hover:bg-gray-200 dark:hover:bg-app-hover rounded">
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <div
+                key={s.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => useChatStore.getState().setActiveSession(s.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    useChatStore.getState().setActiveSession(s.id)
+                  }
+                }}
+                className={clsx(
+                  'shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-t border-b-2 transition-colors max-w-[140px] cursor-pointer',
+                  s.id === activeSessionId
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700',
+                )}
+                title={s.title}
+              >
+                <span className="truncate">{s.title}</span>
+                {s.id === activeSessionId && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setRenamingId(s.id)
+                      setRenameValue(s.title)
+                    }}
+                    className="p-0.5 text-gray-400 hover:text-primary-500 rounded"
+                    title={t('chat:session.rename')}
+                  >
+                    <Pencil size={10} />
+                  </button>
+                )}
+              </div>
+            ),
+          )}
         </div>
       )}
 

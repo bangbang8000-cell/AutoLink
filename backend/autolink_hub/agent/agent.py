@@ -34,6 +34,8 @@ class AgentSession:
         self.autonomy_mode: str = "semi_auto"
         self.current_project: str = ""
         self.session_id: str = ""
+        # 4.3 F3-2: 待用户确认的工具调用（CONFIRM 权限分级，等待下一条回复确认/取消）
+        self.pending_confirmation: dict | None = None
 
     def set_provider(self, name: Optional[str] = None):
         self.provider = registry.get(name)
@@ -72,6 +74,38 @@ class AgentSession:
 
         tools = get_tool_definitions()
         current_messages = list(self.messages)
+
+        # 4.3 F3-2: 处理待确认工具的用户回复（CONFIRM 流程闭环）
+        if self.pending_confirmation:
+            last_user = ""
+            if self.messages and self.messages[-1]["role"] == "user":
+                last_user = str(self.messages[-1]["content"]).strip().lower()
+            if last_user in ("确认", "是", "继续", "好的", "确定", "ok", "yes", "confirm", "y"):
+                pending = self.pending_confirmation
+                self.pending_confirmation = None
+                tool_name, tool_args = pending["name"], pending["args"]
+                yield f"\n\n> ✅ 已确认，正在执行工具: `{tool_name}`...\n\n"
+                tool_call_id = f"call_{uuid.uuid4().hex[:12]}"
+                result = await execute_tool(tool_name, tool_args)
+                tool_result_json = json.dumps(result, ensure_ascii=False)
+                # 工具轮上下文写入持久消息，供后续 LLM 轮次与用户下一条消息使用
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{
+                        "id": tool_call_id,
+                        "type": "function",
+                        "function": {"name": tool_name, "arguments": json.dumps(tool_args, ensure_ascii=False)},
+                    }],
+                }
+                self.add_message("assistant", "", {"tool_calls": assistant_msg["tool_calls"]})
+                self.add_message("tool", tool_result_json, {"tool_call_id": tool_call_id})
+                current_messages = list(self.messages)
+                yield f"> 工具执行结果:\n```json\n{tool_result_json}\n```\n\n"
+            elif last_user in ("取消", "cancel", "no", "n", "不"):
+                self.pending_confirmation = None
+                yield "\n\n> 已取消该操作。\n\n"
+                return
 
         for _round in range(max_tool_rounds):
             # 调用 LLM，实时流式输出
@@ -124,7 +158,12 @@ class AgentSession:
 
             # === Agent v2: 权限分级检查 ===
             if validation.permission == ToolPermission.CONFIRM and self.autonomy_mode != "full_auto":
-                yield f"\n\n> ⚠️ 操作 `{tool_name}` 需要确认。请回复 '确认' 继续，或 '取消' 中止。\n\n"
+                # 4.3 F3-2: 记录待确认工具，等待用户下一条回复确认/取消
+                self.pending_confirmation = {"name": tool_name, "args": tool_args}
+                # 4.3 F3-2: 结构化确认标记，独立一行 `---CONFIRM:<tool>---`，
+                # 前端据此渲染「确认/取消」按钮卡片（渲染时按行剥离，不进显示区）。
+                # 保留原确认文本，旧版前端/无标记场景仍可手动输入"确认"/"取消"。
+                yield f"\n---CONFIRM:{tool_name}---\n\n> ⚠️ 操作 `{tool_name}` 需要确认。请回复 '确认' 继续，或 '取消' 中止。\n\n"
                 return
 
             tool_call_id = f"call_{uuid.uuid4().hex[:12]}"

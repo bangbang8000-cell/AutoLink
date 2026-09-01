@@ -4,7 +4,15 @@
     "history": "履歴",
     "clear": "セッションをクリア",
     "clearConfirm": "このセッションの全メッセージをクリアしますか？",
-    "delete": "セッションを削除"
+    "delete": "セッションを削除",
+    "rename": "セッション名を変更",
+    "renamePlaceholder": "新しいセッション名を入力…",
+    "summarize": "要約を生成",
+    "summarizeMarker": "📌 セッション要約（履歴保持）",
+    "summarizeReplaced": "📌 セッション要約（履歴を置換、続けて会話可）",
+    "noSession": "要約するセッションがありません",
+    "summarizeFailed": "要約の生成に失敗しました",
+    "summarizePrompt": "以下の会話を簡潔な中文で要約してください（要約後に続けるため）。要約のみ出力："
   },
   "input": {
     "placeholder": "メッセージを入力。Enter で送信、Shift+Enter で改行…",
@@ -28,6 +36,7 @@
   "tool": {
     "calling": "ツール呼び出し中",
     "confirm": "この操作には確認が必要です。「確認」と返信して続行、「取消」で中止します。",
+    "confirmCard": "操作「{{tool}}」には確認が必要です。続行しますか？",
     "result": "ツール実行結果"
   },
   "mock": {

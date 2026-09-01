@@ -4,7 +4,15 @@
     "history": "기록",
     "clear": "세션 지우기",
     "clearConfirm": "이 세션의 모든 메시지를 지우시겠습니까?",
-    "delete": "세션 삭제"
+    "delete": "세션 삭제",
+    "rename": "세션 이름 바꾸기",
+    "renamePlaceholder": "새 세션 이름 입력…",
+    "summarize": "요약 생성",
+    "summarizeMarker": "📌 세션 요약 (기록 유지)",
+    "summarizeReplaced": "📌 세션 요약 (기록 교체, 계속 대화 가능)",
+    "noSession": "요약할 세션이 없습니다",
+    "summarizeFailed": "요약 생성 실패",
+    "summarizePrompt": "다음 대화를 간결한 중국어로 요약하세요 (요약 후 이어서 대화하기 위함). 요약만 출력:"
   },
   "input": {
     "placeholder": "메시지 입력. Enter 전송, Shift+Enter 줄바꿈…",
@@ -28,6 +36,7 @@
   "tool": {
     "calling": "도구 호출 중",
     "confirm": "이 작업은 확인이 필요합니다. '확인'으로 계속하거나 '취소'로 중단하세요.",
+    "confirmCard": "작업 '{{tool}}'에 확인이 필요합니다. 계속하시겠습니까?",
     "result": "도구 실행 결과"
   },
   "mock": {

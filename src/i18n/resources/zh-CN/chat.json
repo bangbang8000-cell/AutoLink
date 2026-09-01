@@ -4,7 +4,15 @@
     "history": "历史",
     "clear": "清空会话",
     "clearConfirm": "确定清空当前会话的全部消息吗？",
-    "delete": "删除会话"
+    "delete": "删除会话",
+    "rename": "重命名会话",
+    "renamePlaceholder": "输入新会话名称…",
+    "summarize": "生成摘要",
+    "summarizeMarker": "📌 会话摘要（历史保留）",
+    "summarizeReplaced": "📌 会话摘要（历史已替换，可继续对话）",
+    "noSession": "没有可摘要的会话",
+    "summarizeFailed": "摘要生成失败",
+    "summarizePrompt": "请用简洁中文总结以下对话的要点（用于摘要衔接继续对话），只输出总结："
   },
   "input": {
     "placeholder": "输入消息，Enter 发送，Shift+Enter 换行…",
@@ -28,6 +36,7 @@
   "tool": {
     "calling": "正在调用工具",
     "confirm": "操作需要确认。请回复「确认」继续，或「取消」中止。",
+    "confirmCard": "操作「{{tool}}」需要确认，是否继续？",
     "result": "工具执行结果"
   },
   "mock": {
