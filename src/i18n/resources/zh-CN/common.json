@@ -60,7 +60,58 @@
     "title": "输出日志",
     "clear": "清除",
     "collapse": "折叠",
-    "waiting": "等待输出..."
+    "waiting": "等待输出...",
+    "tabs": {
+      "log": "日志",
+      "performance": "性能"
+    }
+  },
+  "performancePanel": {
+    "title": "性能仪表盘",
+    "clear": "清空记录",
+    "memory": {
+      "title": "内存占用",
+      "used": "已用 JS 堆",
+      "total": "总 JS 堆",
+      "limit": "堆上限",
+      "deviceMemory": "设备内存",
+      "unavailable": "当前环境不提供 JS 堆内存数据"
+    },
+    "operations": {
+      "title": "操作耗时",
+      "empty": "暂无操作耗时记录（可点击测量）",
+      "category": "分类",
+      "label": "操作",
+      "duration": "耗时",
+      "measureDesign": "测量设计序列化",
+      "designMeasureLabel": "设计状态序列化"
+    },
+    "render": {
+      "title": "渲染耗时",
+      "count": "长任务数",
+      "avg": "平均",
+      "max": "最大",
+      "total": "合计",
+      "observing": "观察中",
+      "stopped": "未观察",
+      "run": "运行渲染测量"
+    },
+    "benchmark": {
+      "title": "性能基准对比",
+      "desc": "引用 scripts/bench_perf.py 达标阈值",
+      "threshold": "达标阈值",
+      "source": "来源",
+      "note": "本地采集，不上报"
+    },
+    "categories": {
+      "design": "设计",
+      "render": "渲染",
+      "optimize": "优化",
+      "export": "导出",
+      "save": "保存",
+      "load": "加载",
+      "other": "其他"
+    }
   },
   "project": {
     "duplicate": "复制项目",

@@ -60,7 +60,58 @@
     "title": "출력 로그",
     "clear": "지우기",
     "collapse": "접기",
-    "waiting": "출력 대기 중..."
+    "waiting": "출력 대기 중...",
+    "tabs": {
+      "log": "로그",
+      "performance": "성능"
+    }
+  },
+  "performancePanel": {
+    "title": "성능 대시보드",
+    "clear": "기록 지우기",
+    "memory": {
+      "title": "메모리 사용량",
+      "used": "사용 중 JS 힙",
+      "total": "전체 JS 힙",
+      "limit": "힙 상한",
+      "deviceMemory": "기기 메모리",
+      "unavailable": "이 환경에서는 JS 힙 메모리를 사용할 수 없습니다"
+    },
+    "operations": {
+      "title": "작업 소요 시간",
+      "empty": "아직 작업 기록이 없습니다(클릭하여 측정)",
+      "category": "분류",
+      "label": "작업",
+      "duration": "소요 시간",
+      "measureDesign": "설계 직렬화 측정",
+      "designMeasureLabel": "설계 상태 직렬화"
+    },
+    "render": {
+      "title": "렌더링 소요 시간",
+      "count": "긴 작업 수",
+      "avg": "평균",
+      "max": "최대",
+      "total": "합계",
+      "observing": "관찰 중",
+      "stopped": "미관찰",
+      "run": "렌더링 측정 실행"
+    },
+    "benchmark": {
+      "title": "성능 벤치마크 비교",
+      "desc": "scripts/bench_perf.py 기준값 참조",
+      "threshold": "기준값",
+      "source": "출처",
+      "note": "로컬 수집, 보고 안 함"
+    },
+    "categories": {
+      "design": "설계",
+      "render": "렌더링",
+      "optimize": "최적화",
+      "export": "내보내기",
+      "save": "저장",
+      "load": "로드",
+      "other": "기타"
+    }
   },
   "project": {
     "duplicate": "프로젝트 복제",

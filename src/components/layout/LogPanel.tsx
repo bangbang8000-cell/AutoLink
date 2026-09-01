@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import clsx from 'clsx'
+import { PerformancePanel } from '@/components/layout/PerformancePanel'
 
 interface LogEntry {
   timestamp: string
@@ -8,10 +10,13 @@ interface LogEntry {
   level: 'info' | 'warn' | 'error'
 }
 
+type PanelTab = 'log' | 'performance'
+
 export function LogPanel() {
   const { t } = useTranslation()
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [collapsed, setCollapsed] = useState(false)
+  const [tab, setTab] = useState<PanelTab>('log')
   const scrollRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
 
@@ -66,19 +71,49 @@ export function LogPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1 border-t border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app-surface shrink-0">
-        <span className="text-2xs text-gray-500 font-medium">{t('common:logPanel.title')}</span>
+      {/* Header with tabs */}
+      <div className="flex items-center justify-between px-2 py-0.5 border-t border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app-surface shrink-0">
         <div className="flex items-center gap-0.5">
-          <button onClick={handleClear} className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded" title={t('common:logPanel.clear')}>
-            <Trash2 size={11} className="text-gray-400" />
+          <button
+            onClick={() => setTab('log')}
+            className={clsx(
+              'px-2 py-0.5 rounded text-2xs transition-colors',
+              tab === 'log'
+                ? 'bg-white dark:bg-app text-gray-700 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            {t('common:logPanel.tabs.log')}
           </button>
+          <button
+            onClick={() => setTab('performance')}
+            className={clsx(
+              'px-2 py-0.5 rounded text-2xs transition-colors',
+              tab === 'performance'
+                ? 'bg-white dark:bg-app text-gray-700 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            {t('common:logPanel.tabs.performance')}
+          </button>
+        </div>
+        <div className="flex items-center gap-0.5">
+          {tab === 'log' && (
+            <button onClick={handleClear} className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded" title={t('common:logPanel.clear')}>
+              <Trash2 size={11} className="text-gray-400" />
+            </button>
+          )}
           <button onClick={() => setCollapsed(true)} className="p-0.5 hover:bg-gray-200 dark:hover:bg-app-hover rounded" title={t('common:logPanel.collapse')}>
             <ChevronDown size={12} className="text-gray-400" />
           </button>
         </div>
       </div>
-      {/* Log content */}
+      {/* Content */}
+      {tab === 'performance' ? (
+        <div className="flex-1 overflow-hidden">
+          <PerformancePanel />
+        </div>
+      ) : (
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -101,6 +136,7 @@ export function LogPanel() {
           ))
         )}
       </div>
+      )}
     </div>
   )
 }

@@ -60,7 +60,58 @@
     "title": "Output Log",
     "clear": "Clear",
     "collapse": "Collapse",
-    "waiting": "Waiting for output..."
+    "waiting": "Waiting for output...",
+    "tabs": {
+      "log": "Log",
+      "performance": "Performance"
+    }
+  },
+  "performancePanel": {
+    "title": "Performance Dashboard",
+    "clear": "Clear Records",
+    "memory": {
+      "title": "Memory Usage",
+      "used": "Used JS Heap",
+      "total": "Total JS Heap",
+      "limit": "Heap Limit",
+      "deviceMemory": "Device Memory",
+      "unavailable": "JS heap memory is not available in this environment"
+    },
+    "operations": {
+      "title": "Operation Durations",
+      "empty": "No operation records yet (click to measure)",
+      "category": "Category",
+      "label": "Operation",
+      "duration": "Duration",
+      "measureDesign": "Measure Design Serialization",
+      "designMeasureLabel": "Design state serialization"
+    },
+    "render": {
+      "title": "Render Durations",
+      "count": "Long Tasks",
+      "avg": "Avg",
+      "max": "Max",
+      "total": "Total",
+      "observing": "Observing",
+      "stopped": "Stopped",
+      "run": "Run Render Measure"
+    },
+    "benchmark": {
+      "title": "Benchmark Reference",
+      "desc": "Reference thresholds from scripts/bench_perf.py",
+      "threshold": "Threshold",
+      "source": "Source",
+      "note": "Collected locally, not reported"
+    },
+    "categories": {
+      "design": "Design",
+      "render": "Render",
+      "optimize": "Optimize",
+      "export": "Export",
+      "save": "Save",
+      "load": "Load",
+      "other": "Other"
+    }
   },
   "project": {
     "duplicate": "Duplicate Project",

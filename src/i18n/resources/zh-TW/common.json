@@ -60,7 +60,58 @@
     "title": "輸出日誌",
     "clear": "清除",
     "collapse": "折疊",
-    "waiting": "等待輸出..."
+    "waiting": "等待輸出...",
+    "tabs": {
+      "log": "日誌",
+      "performance": "效能"
+    }
+  },
+  "performancePanel": {
+    "title": "效能儀表板",
+    "clear": "清除記錄",
+    "memory": {
+      "title": "記憶體占用",
+      "used": "已用 JS 堆",
+      "total": "總 JS 堆",
+      "limit": "堆上限",
+      "deviceMemory": "裝置記憶體",
+      "unavailable": "目前環境不提供 JS 堆記憶體資料"
+    },
+    "operations": {
+      "title": "操作耗時",
+      "empty": "尚無操作耗時記錄（可點擊測量）",
+      "category": "分類",
+      "label": "操作",
+      "duration": "耗時",
+      "measureDesign": "測量設計序列化",
+      "designMeasureLabel": "設計狀態序列化"
+    },
+    "render": {
+      "title": "渲染耗時",
+      "count": "長任務數",
+      "avg": "平均",
+      "max": "最大",
+      "total": "合計",
+      "observing": "觀察中",
+      "stopped": "未觀察",
+      "run": "執行渲染測量"
+    },
+    "benchmark": {
+      "title": "效能基準對比",
+      "desc": "引用 scripts/bench_perf.py 達標門檻",
+      "threshold": "達標門檻",
+      "source": "來源",
+      "note": "本機採集，不上報"
+    },
+    "categories": {
+      "design": "設計",
+      "render": "渲染",
+      "optimize": "最佳化",
+      "export": "匯出",
+      "save": "儲存",
+      "load": "載入",
+      "other": "其他"
+    }
   },
   "project": {
     "duplicate": "複製專案",

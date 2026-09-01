@@ -60,7 +60,58 @@
     "title": "出力ログ",
     "clear": "クリア",
     "collapse": "折りたたむ",
-    "waiting": "出力を待っています..."
+    "waiting": "出力を待っています...",
+    "tabs": {
+      "log": "ログ",
+      "performance": "パフォーマンス"
+    }
+  },
+  "performancePanel": {
+    "title": "パフォーマンスダッシュボード",
+    "clear": "記録をクリア",
+    "memory": {
+      "title": "メモリ使用量",
+      "used": "使用中 JS ヒープ",
+      "total": "総 JS ヒープ",
+      "limit": "ヒープ上限",
+      "deviceMemory": "デバイスメモリ",
+      "unavailable": "この環境では JS ヒープメモリを利用できません"
+    },
+    "operations": {
+      "title": "操作所要時間",
+      "empty": "操作記録はまだありません（クリックで測定）",
+      "category": "分類",
+      "label": "操作",
+      "duration": "所要時間",
+      "measureDesign": "設計シリアライズを測定",
+      "designMeasureLabel": "設計状態のシリアライズ"
+    },
+    "render": {
+      "title": "レンダリング所要時間",
+      "count": "ロングタスク数",
+      "avg": "平均",
+      "max": "最大",
+      "total": "合計",
+      "observing": "監視中",
+      "stopped": "未監視",
+      "run": "レンダリング測定を実行"
+    },
+    "benchmark": {
+      "title": "性能ベンチマーク比較",
+      "desc": "scripts/bench_perf.py の基準値",
+      "threshold": "基準値",
+      "source": "出典",
+      "note": "ローカル収集のみ、送信なし"
+    },
+    "categories": {
+      "design": "設計",
+      "render": "レンダリング",
+      "optimize": "最適化",
+      "export": "エクスポート",
+      "save": "保存",
+      "load": "読み込み",
+      "other": "その他"
+    }
   },
   "project": {
     "duplicate": "プロジェクト複製",
