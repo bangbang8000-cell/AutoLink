@@ -23,6 +23,8 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux",
     "typecheck": "tsc --noEmit",
+    "check-version": "python scripts/check_version.py",
+    "version:sync": "python scripts/sync_version.py",
     "lint": "eslint src/ electron/ --ext .ts,.tsx",
     "lint:fix": "eslint src/ electron/ --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"electron/**/*.ts\"",

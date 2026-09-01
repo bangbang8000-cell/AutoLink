@@ -42,6 +42,17 @@ jobs:
       - run: python -m pytest tests/backend -q
       # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
       - run: python scripts/bench_perf.py --rounds 1
+  # 4.0.0-F0-2 / 40-d: 双端版本/发布流水线单源 — 版本单源一致性门禁
+  # version.json = package.json = package-lock.json = VERSION，任一漂移即失败
+  # 仅用 Python 标准库（check_version.py），无需 npm ci / pip install，可与 check 并行
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python scripts/check_version.py
   # V3.2.1-T11-4: Electron E2E（构建产物启动冒烟 + 主题色切换）
   # V3.2.2-R11.4: 扩展业务链路 E2E（建项目→渲染→导出→落位），生成拓扑需 Python 引擎
   e2e:
