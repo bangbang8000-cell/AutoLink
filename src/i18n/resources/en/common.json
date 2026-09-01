@@ -309,7 +309,13 @@
       "closeTab": "Close Tab",
       "reopenTab": "Reopen Closed Tab",
       "shortcutsRef": "Keyboard Shortcuts",
-      "openCommandPalette": "Open Command Palette"
+      "openCommandPalette": "Open Command Palette",
+      "undo": "Undo",
+      "redo": "Redo",
+      "renderCurrentProject": "Render Current Project",
+      "exportCurrentProject": "Export / Output Current Project",
+      "toggleLogPanelAlt": "Toggle Log Panel (alternate key)",
+      "projectViewAlt": "Project Explorer (alternate key)"
     },
     "toast": {
       "selectProjectFirst": "Please select a project first",

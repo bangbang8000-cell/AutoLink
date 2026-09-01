@@ -309,7 +309,13 @@
       "closeTab": "タブを閉じる",
       "reopenTab": "閉じたタブを復元",
       "shortcutsRef": "ショートカットキー",
-      "openCommandPalette": "コマンドパレットを開く"
+      "openCommandPalette": "コマンドパレットを開く",
+      "undo": "元に戻す",
+      "redo": "やり直し",
+      "renderCurrentProject": "現在のプロジェクトをレンダリング",
+      "exportCurrentProject": "現在のプロジェクトをエクスポート/出力",
+      "toggleLogPanelAlt": "ログパネルの切替（追加キー）",
+      "projectViewAlt": "プロジェクトエクスプローラー（追加キー）"
     },
     "toast": {
       "selectProjectFirst": "最初にプロジェクトを選択してください",

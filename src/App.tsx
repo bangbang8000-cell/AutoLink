@@ -7,6 +7,7 @@ import { useUIStore, type ActivityType, type WorkbenchSubview } from '@/stores/u
 import { useCloudStore } from '@/stores/cloud.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDesignStore } from '@/stores/design.store'
+import { useToastStore } from '@/stores/toast.store'
 import { Header } from '@/components/layout/Header'
 import { ActivityBar } from '@/components/layout/ActivityBar'
 import { StatusBar } from '@/components/layout/StatusBar'
@@ -195,7 +196,9 @@ export default function App() {
 
       const def = matchShortcut(e)
       if (!def) return
-      // 输入框内仅允许 Ctrl+S/Ctrl+,/Ctrl+K
+      // 4.4 F4-1（共享规范）：撤销/重做由设计组件（机柜/机房/拓扑）与浏览器原生输入处理，全局不拦截
+      if (def.action === 'undo' || def.action === 'redo') return
+      // 输入框内仅允许 Ctrl+S/Ctrl+,/Ctrl+K/F1
       if (isInput && !['saveConfig', 'preferences', 'showShortcuts', 'openCommandPalette'].includes(def.action)) return
       e.preventDefault()
       switch (def.action) {
@@ -221,11 +224,34 @@ export default function App() {
         case 'showShortcuts': setShowShortcutsDialog(true); break
         // 4.3 F3-1a: Ctrl+K 打开命令面板
         case 'openCommandPalette': setCommandPaletteOpen(true); break
+        // 4.4 F4-1（共享规范）：Ctrl+Enter 渲染当前项目（切工作台并提示一键渲染）
+        case 'renderCurrentProject':
+          if (selectedProjectName) {
+            setActiveActivity('workbench')
+            setWorkbenchSubview('main')
+            openTab({ type: 'workbench', title: t('common:tabs.workbench'), closable: false })
+            useToastStore.getState().addToast('info', t('common:toast.renderHint'))
+          }
+          break
+        // 4.4 F4-1（共享规范）：Ctrl+E 导出/输出当前项目
+        case 'exportCurrentProject':
+          if (selectedProjectName) {
+            void useProjectStore.getState().exportProject(selectedProjectName).then((r) => {
+              if (!r.canceled && r.zipPath) {
+                useToastStore.getState().addToast('success', t('common:commandPalette.commands.exported', { path: r.zipPath }))
+              }
+            }).catch((err: unknown) => {
+              useToastStore.getState().addToast('error', t('common:commandPalette.commands.exportFailed', {
+                error: err instanceof Error ? err.message : String(err),
+              }))
+            })
+          }
+          break
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, openWorkbenchSubview, activeTabId, closeTab, reopenLastClosed, setShowCreateProjectWizard, setShowShortcutsDialog, saveConfig, selectedProjectName])
+  }, [setActiveActivity, toggleSidebar, togglePanel, handleActivityClick, openWorkbenchSubview, activeTabId, closeTab, reopenLastClosed, setShowCreateProjectWizard, setShowShortcutsDialog, saveConfig, selectedProjectName, t, openTab, setWorkbenchSubview])
 
   const renderSidebarContent = useCallback(() => {
     return <ErrorBoundary key={activeActivity}><FileExplorer /></ErrorBoundary>

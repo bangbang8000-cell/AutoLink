@@ -220,8 +220,9 @@ export function MenuBar() {
       { label: t('menu.file.exit'), action: handleExit },
     ],
     [t('menu.topLevel.edit')]: [
-      { label: t('menu.edit.undo'), shortcut: 'Ctrl+Z', action: handleUndo },
-      { label: t('menu.edit.redo'), shortcut: 'Ctrl+Y', action: handleRedo },
+      // 4.4 F4-1（共享规范）：撤销 Ctrl+Z / 重做 Ctrl+Shift+Z（单源显示，与 Cheatsheet 一致）
+      { label: t('menu.edit.undo'), shortcutAction: 'undo', action: handleUndo },
+      { label: t('menu.edit.redo'), shortcutAction: 'redo', action: handleRedo },
       { separator: true },
       { label: t('menu.edit.cut'), shortcut: 'Ctrl+X', action: handleCut },
       { label: t('menu.edit.copy'), shortcut: 'Ctrl+C', action: handleCopy },

@@ -7,6 +7,8 @@
  */
 
 export type ShortcutAction =
+  | 'undo'
+  | 'redo'
   | 'newProject'
   | 'saveConfig'
   | 'preferences'
@@ -25,6 +27,8 @@ export type ShortcutAction =
   | 'reopenTab'
   | 'showShortcuts'
   | 'openCommandPalette'
+  | 'renderCurrentProject'
+  | 'exportCurrentProject'
 
 export interface ShortcutDef {
   /** 显示文本,如 "Ctrl+Shift+E" */
@@ -46,6 +50,9 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
   {
     categoryKey: 'general',
     items: [
+      // 4.4 F4-1（共享规范）：Ctrl+Z / Ctrl+Shift+Z 撤销/重做（AL 由设计组件/浏览器原生处理，全局不拦截）
+      { keys: 'Ctrl+Z', action: 'undo', descKey: 'undo', categoryKey: 'general', ctrl: true, shift: false, alt: false, key: 'z' },
+      { keys: 'Ctrl+Shift+Z', action: 'redo', descKey: 'redo', categoryKey: 'general', ctrl: true, shift: true, alt: false, key: 'z' },
       { keys: 'Ctrl+N', action: 'newProject', descKey: 'newProject', categoryKey: 'general', ctrl: true, shift: false, alt: false, key: 'n' },
       { keys: 'Ctrl+S', action: 'saveConfig', descKey: 'saveConfig', categoryKey: 'general', ctrl: true, shift: false, alt: false, key: 's' },
       { keys: 'Ctrl+,', action: 'preferences', descKey: 'preferences', categoryKey: 'general', ctrl: true, shift: false, alt: false, key: ',' },
@@ -55,23 +62,26 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
     categoryKey: 'view',
     items: [
       { keys: 'Ctrl+B', action: 'toggleSidebar', descKey: 'toggleFileBrowser', categoryKey: 'view', ctrl: true, shift: false, alt: false, key: 'b' },
-      { keys: 'Ctrl+J', action: 'togglePanel', descKey: 'toggleLogPanel', categoryKey: 'view', ctrl: true, shift: false, alt: false, key: 'j' },
+      // 4.4 F4-1（共享规范）：Ctrl+` 终端/日志面板（AL 原 Ctrl+J 保留为附加）
+      { keys: 'Ctrl+`', action: 'togglePanel', descKey: 'toggleLogPanel', categoryKey: 'view', ctrl: true, shift: false, alt: false, key: '`' },
+      { keys: 'Ctrl+J', action: 'togglePanel', descKey: 'toggleLogPanelAlt', categoryKey: 'view', ctrl: true, shift: false, alt: false, key: 'j' },
+      // 4.4 F4-1（共享规范）：Ctrl+Enter 渲染当前项目 / Ctrl+E 导出输出
+      { keys: 'Ctrl+Enter', action: 'renderCurrentProject', descKey: 'renderCurrentProject', categoryKey: 'view', ctrl: true, shift: false, alt: false, key: 'enter' },
+      { keys: 'Ctrl+E', action: 'exportCurrentProject', descKey: 'exportCurrentProject', categoryKey: 'view', ctrl: true, shift: false, alt: false, key: 'e' },
     ],
   },
   {
     categoryKey: 'workspace',
     items: [
-      // V3.3.1: 全局搜索
-      { keys: 'Ctrl+Shift+F', action: 'view-search', descKey: 'searchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'f' },
-      { keys: 'Ctrl+Shift+E', action: 'view-project', descKey: 'projectView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'e' },
+      // 4.4 F4-1（共享规范）：Ctrl+Shift+P 项目面板（AL 原 Ctrl+Shift+E 保留为附加）
+      { keys: 'Ctrl+Shift+P', action: 'view-project', descKey: 'projectView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'p' },
+      { keys: 'Ctrl+Shift+E', action: 'view-project', descKey: 'projectViewAlt', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'e' },
       { keys: 'Ctrl+Shift+D', action: 'view-design', descKey: 'designView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'd' },
       { keys: 'Ctrl+Shift+W', action: 'view-workbench', descKey: 'workbenchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'w' },
       { keys: 'Ctrl+Shift+V', action: 'view-visualization', descKey: 'visualizationView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'v' },
-      // 打磨轮（P-A）：AIDC 规划已并入工作台，Ctrl+Shift+P 直达 AIDC 规划子视图
-      { keys: 'Ctrl+Shift+P', action: 'view-aidcPlan', descKey: 'aidcPlanView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'p' },
       { keys: 'Ctrl+Shift+L', action: 'view-deviceLibrary', descKey: 'deviceLibraryView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'l' },
+      { keys: 'Ctrl+Shift+F', action: 'view-search', descKey: 'searchView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'f' },
       { keys: 'Ctrl+Shift+A', action: 'view-ai', descKey: 'aiView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'a' },
-      // V3.3.0-T13: 云中心
       { keys: 'Ctrl+Shift+C', action: 'view-cloud', descKey: 'cloudView', categoryKey: 'workspace', ctrl: true, shift: true, alt: false, key: 'c' },
     ],
   },
@@ -85,8 +95,9 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
   {
     categoryKey: 'help',
     items: [
-      // 4.3 F3-1a: Ctrl+K 打开命令面板（快捷键参考移入面板内命令）
       { keys: 'Ctrl+K', action: 'openCommandPalette', descKey: 'openCommandPalette', categoryKey: 'help', ctrl: true, shift: false, alt: false, key: 'k' },
+      // 4.4 F4-1（共享规范）：F1 快捷键 Cheatsheet（ShortcutsDialog）
+      { keys: 'F1', action: 'showShortcuts', descKey: 'shortcutsRef', categoryKey: 'help', ctrl: false, shift: false, alt: false, key: 'f1' },
     ],
   },
 ]

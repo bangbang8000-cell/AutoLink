@@ -309,7 +309,13 @@
       "closeTab": "關閉標籤頁",
       "reopenTab": "恢復標籤頁",
       "shortcutsRef": "快捷鍵參考",
-      "openCommandPalette": "開啟命令面板"
+      "openCommandPalette": "開啟命令面板",
+      "undo": "復原",
+      "redo": "重做",
+      "renderCurrentProject": "渲染目前專案",
+      "exportCurrentProject": "匯出/輸出目前專案",
+      "toggleLogPanelAlt": "切換日誌面板（附加鍵）",
+      "projectViewAlt": "專案瀏覽器（附加鍵）"
     },
     "toast": {
       "selectProjectFirst": "請先選擇一個專案",

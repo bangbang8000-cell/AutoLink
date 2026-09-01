@@ -309,7 +309,13 @@
       "closeTab": "关闭标签页",
       "reopenTab": "恢复标签页",
       "shortcutsRef": "快捷键参考",
-      "openCommandPalette": "打开命令面板"
+      "openCommandPalette": "打开命令面板",
+      "undo": "撤销",
+      "redo": "重做",
+      "renderCurrentProject": "渲染当前项目",
+      "exportCurrentProject": "导出/输出当前项目",
+      "toggleLogPanelAlt": "切换日志面板（附加键）",
+      "projectViewAlt": "项目浏览器（附加键）"
     },
     "toast": {
       "selectProjectFirst": "请先选择一个项目",
