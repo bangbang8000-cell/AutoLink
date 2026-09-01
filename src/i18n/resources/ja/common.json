@@ -282,9 +282,11 @@
     "output": "出力結果"
   },
   "theme": {
+    "title": "テーマ",
     "light": "ライト",
     "dark": "ダーク",
-    "system": "システム"
+    "system": "システム",
+    "highContrast": "ハイコントラスト"
   },
   "language": {
     "zh-CN": "简体中文",

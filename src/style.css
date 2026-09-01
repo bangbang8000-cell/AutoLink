@@ -3,28 +3,16 @@
 @tailwind utilities;
 
 /* ================================================================
- * Design Tokens — 4.0 契约单源
- * 事实源: docs/双端设计Token契约_v1.0_2026-08-29.md
- * 值对齐契约并锁定(防漂移);中性/语义色为 RGB 通道三元组,供 Tailwind alpha-value 使用
+ * Design Tokens — 4.0 契约单源（DTCG 化组织）
+ * 事实源: docs/双端设计Token契约_v1.0_2026-08-29.md（唯一事实源）
+ * 组织: 语义色 / 中性色(light/dark/high-contrast) / 圆角 / 阴影 / 间距 / 动效 / 字体
+ * 中性/语义色存 RGB 通道三元组,供 Tailwind alpha-value 使用（防漂移）
+ * 4.1 新增: high-contrast 主题(WCAG AA) + focus ring token
  * ================================================================ */
+
+/* ---- 语义色 (契约 §1, 亮/暗共用, 首位声明供 tokens.test 断言) ---- */
 :root {
-  --font-size-base: 14px;
-
-  /* 中性色 · Light (契约 §2) */
-  --app-bg: 255 255 255;          /* #FFFFFF  color.app */
-  --app-surface: 246 247 249;     /* #F6F7F9  color.app-surface */
-  --app-elevated: 255 255 255;    /* 扩展(非契约) */
-  --app-hover: 236 238 242;       /* #ECEEF2  color.app-hover */
-  --edge-subtle: 228 231 235;     /* #E4E7EB  color.edge-subtle */
-  --edge-default: 209 213 219;    /* 扩展(非契约) */
-
-  /* 文本色 · Light (契约 §2) */
-  --text-primary: 26 32 39;       /* #1A2027  color.text-primary */
-  --text-secondary: 90 100 114;   /* #5A6472  color.text-secondary */
-  --text-muted: 138 148 162;      /* #8A94A2  color.text-muted */
-
-  /* 语义色 (契约 §1, 亮/暗共用) */
-  --primary: 47 111 237;          /* #2F6FED  color.primary */
+  --primary: 47 111 237;          /* #2F6FED  color.primary 主操作/强调 */
   --primary-hover: 30 91 201;     /* #1E5BC9  color.primary-hover */
   --success: 22 163 74;           /* #16A34A  color.success */
   --warning: 245 158 11;          /* #F59E0B  color.warning */
@@ -32,7 +20,21 @@
   --info: 14 165 233;             /* #0EA5E9  color.info */
 }
 
-/* 暗色中性/文本色 (契约 §2) */
+/* ---- 中性色 · Light (契约 §2, 首位声明供 tokens.test 断言) ---- */
+:root {
+  --app-bg: 255 255 255;          /* #FFFFFF  color.app */
+  --app-surface: 246 247 249;     /* #F6F7F9  color.app-surface */
+  --app-elevated: 255 255 255;    /* 扩展(非契约) */
+  --app-hover: 236 238 242;       /* #ECEEF2  color.app-hover */
+  --edge-subtle: 228 231 235;     /* #E4E7EB  color.edge-subtle */
+  --edge-default: 209 213 219;    /* 扩展(非契约) */
+
+  --text-primary: 26 32 39;       /* #1A2027  color.text-primary */
+  --text-secondary: 90 100 114;   /* #5A6472  color.text-secondary */
+  --text-muted: 138 148 162;      /* #8A94A2  color.text-muted */
+}
+
+/* ---- 中性色 · Dark (契约 §2) ---- */
 .dark {
   --app-bg: 15 20 26;             /* #0F141A  color.app */
   --app-surface: 22 28 35;        /* #161C23  color.app-surface */
@@ -46,33 +48,71 @@
   --text-muted: 107 118 131;      /* #6B7683  color.text-muted */
 }
 
-/* ---- 4.0 Token 扩展 (契约 §3-§7: 圆角/阴影/间距/动效/字体) ---- */
+/* ---- Focus ring（默认 2px; 4.1 高对比下加宽为 3px） ---- */
 :root {
-  /* 圆角 §3 */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 1px;
+}
+:focus-visible {
+  outline: var(--focus-ring-width) solid rgb(var(--primary));
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ---- 中性色 · High Contrast (4.1 F1-2, WCAG AA)
+ * 前景/背景加大对比、边框加深、focus ring 加宽。
+ * 对比度(对 #FFFFFF): text-primary 21:1 / secondary 16.5:1 / muted 9.9:1
+ *                  edge-subtle 3.8:1(≥3:1 满足 UI 边界 3:1)
+ * ---- */
+.high-contrast {
+  --app-bg: 255 255 255;          /* #FFFFFF */
+  --app-surface: 255 255 255;     /* #FFFFFF 面板与底色同白,无混色 */
+  --app-elevated: 255 255 255;    /* #FFFFFF */
+  --app-hover: 228 231 235;       /* #E4E7EB 加深 hover 底(3.3:1) */
+  --edge-subtle: 122 132 145;     /* #7A8491 深边框(3.8:1) */
+  --edge-default: 90 100 114;     /* #5A6472 强调边框(6.6:1) */
+
+  --text-primary: 0 0 0;          /* #000000 21:1 */
+  --text-secondary: 26 32 39;     /* #1A2027 16.5:1 */
+  --text-muted: 58 68 80;         /* #3A4450 9.9:1 */
+
+  --focus-ring-width: 3px;        /* 加宽 focus ring */
+  --focus-ring-offset: 2px;
+}
+
+/* ---- 圆角 (契约 §3) ---- */
+:root {
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+}
 
-  /* 阴影 §4 */
+/* ---- 阴影 (契约 §4) ---- */
+:root {
   --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
   --shadow-md: 0 4px 12px rgba(16,24,40,.10);
   --shadow-lg: 0 12px 32px rgba(16,24,40,.14);
+}
 
-  /* 间距 §5 (4px 基数) */
+/* ---- 间距 (契约 §5, 4px 基数) ---- */
+:root {
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
+}
 
-  /* 动效 §6 */
+/* ---- 动效 (契约 §6) ---- */
+:root {
   --motion-fast: 120ms;
   --motion-normal: 200ms;
   --motion-slow: 320ms;
   --motion-ease: cubic-bezier(.2,.8,.2,1);
+}
 
-  /* 字体 §7 */
+/* ---- 字体 (契约 §7) ---- */
+:root {
   --font-sans: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
   --font-size-xs: 12px;
@@ -80,8 +120,7 @@
   --font-size-lg: 16px;
 }
 
-/* v3.2.1-T10-1: primary 品牌色阶 token（RGB 通道值）——默认 sky 蓝
- * 亮/暗共用同一品牌色阶；html[data-accent] 可整体切换主题色 */
+/* ---- 品牌主色阶 (扩展, v3.2.1-T10-1: data-accent 整体切换, 默认 sky) ---- */
 :root {
   --primary-50: 239 246 255;
   --primary-100: 219 234 254;
@@ -140,7 +179,7 @@ html[data-accent='rose'] {
 /* ---- Base ---- */
 body {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-base, var(--font-size-md));
   /* U4: 字体堆栈由 tailwind.config.js fontFamily.sans 接管,body 继承 font-sans */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -172,6 +211,12 @@ body {
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #6B7280;
+}
+.high-contrast ::-webkit-scrollbar-thumb {
+  background: #9aa4b0;
+}
+.high-contrast ::-webkit-scrollbar-thumb:hover {
+  background: #5a6472;
 }
 
 /* ---- Reduced motion ---- */

@@ -47,6 +47,7 @@ export default function App() {
   const togglePanel = useUIStore((s) => s.togglePanel)
   const panelVisible = useUIStore((s) => s.panelVisible)
   const isDark = useUIStore((s) => s.isDark)
+  const isHighContrast = useUIStore((s) => s.isHighContrast)
   const theme = useUIStore((s) => s.theme)
   const setTheme = useUIStore((s) => s.setTheme)
   const syncSystemTheme = useUIStore((s) => s.syncSystemTheme)
@@ -66,12 +67,12 @@ export default function App() {
   // V3.2.1-T10-1: 品牌主题色
   const accent = useUIStore((s) => s.accent)
 
-  // Apply dark mode to HTML element
+  // Apply dark/high-contrast mode to HTML element (4.1 F1-1/F1-2)
   useEffect(() => {
     const root = document.documentElement
-    if (isDark) root.classList.add('dark')
-    else root.classList.remove('dark')
-  }, [isDark])
+    root.classList.toggle('dark', isDark)
+    root.classList.toggle('high-contrast', isHighContrast)
+  }, [isDark, isHighContrast])
 
   // V3.2.1-T10-1: 应用品牌主题色(驱动 --primary-* token)
   useEffect(() => {
@@ -227,7 +228,11 @@ export default function App() {
     <div
       className={clsx(
         'h-screen w-screen flex flex-col overflow-hidden',
-        isDark ? 'dark bg-app text-gray-100' : 'bg-gray-50 text-gray-900',
+        isDark
+          ? 'dark bg-app text-gray-100'
+          : isHighContrast
+            ? 'high-contrast bg-app text-gray-900'
+            : 'bg-gray-50 text-gray-900',
       )}
     >
       <Header />

@@ -282,9 +282,11 @@
     "output": "Output"
   },
   "theme": {
+    "title": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "highContrast": "High contrast"
   },
   "language": {
     "zh-CN": "简体中文",

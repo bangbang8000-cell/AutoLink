@@ -2,12 +2,12 @@ import { useUIStore } from '@/stores/ui.store'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Monitor, Moon, Sun, X, Minus, Square, Maximize2 } from 'lucide-react'
-import type { ThemeMode } from '@/stores/ui.store'
+import { X, Minus, Square, Maximize2 } from 'lucide-react'
 import { UpdatePopover } from '@/components/layout/UpdatePopover'
 import { MenuBar } from '@/components/layout/MenuBar'
 import { CloudStatusIndicator } from '@/components/cloud/CloudStatusIndicator'
 import { UserProfileView } from '@/components/cloud/UserProfileView'
+import { ThemePopover } from '@/components/ui/ThemePopover'
 import clsx from 'clsx'
 
 const languages = [
@@ -20,11 +20,8 @@ const languages = [
 
 export function Header() {
   const { t, i18n } = useTranslation()
-  const theme = useUIStore((s) => s.theme)
-  const setTheme = useUIStore((s) => s.setTheme)
   const language = useUIStore((s) => s.language)
   const setLanguage = useUIStore((s) => s.setLanguage)
-  const [themeOpen, setThemeOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
@@ -42,15 +39,6 @@ export function Header() {
     })
     return () => { unsub?.() }
   }, [])
-
-  const themeIcon =
-    theme === 'dark' ? <Moon size={16} /> : theme === 'light' ? <Sun size={16} /> : <Monitor size={16} />
-
-  const themes: { mode: ThemeMode; icon: React.ReactNode; label: string }[] = [
-    { mode: 'light', icon: <Sun size={14} />, label: t('common:theme.light') },
-    { mode: 'dark', icon: <Moon size={14} />, label: t('common:theme.dark') },
-    { mode: 'system', icon: <Monitor size={14} />, label: t('common:theme.system') },
-  ]
 
   const handleMinimize = () => window.electron?.window?.minimize()
   const handleMaximize = () => window.electron?.window?.maximize()
@@ -74,7 +62,7 @@ export function Header() {
         {/* Language（M7: 以 MC 为准——顺序 Language→Theme→…→Update，文字徽章） */}
         <div className="relative">
           <button
-            onClick={() => { setLangOpen(!langOpen); setThemeOpen(false) }}
+            onClick={() => { setLangOpen(!langOpen); setProfileOpen(false) }}
             className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
             title={t('common:language')}
           >
@@ -96,30 +84,8 @@ export function Header() {
           )}
         </div>
 
-        {/* Theme */}
-        <div className="relative">
-          <button
-            onClick={() => { setThemeOpen(!themeOpen); setLangOpen(false) }}
-            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400"
-          >
-            {themeIcon}
-          </button>
-          {themeOpen && (
-            <div className="absolute top-8 right-0 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 z-50 w-36 animate-dropdown-in">
-              {themes.map((t) => (
-                <button
-                  key={t.mode}
-                  onClick={() => { setTheme(t.mode); setThemeOpen(false) }}
-                  className="w-full px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
-                >
-                  {t.icon}
-                  {t.label}
-                  {theme === t.mode && <span className="ml-auto text-gray-500">✓</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Theme（4.1 F1-1/F1-2: ThemePopover 统一 light/dark/system/high-contrast） */}
+        <ThemePopover />
 
         {/* Update */}
         <UpdatePopover />
@@ -131,7 +97,7 @@ export function Header() {
         {cloudEnabled && cloudLoggedIn && (
           <div className="relative">
             <button
-              onClick={() => { setProfileOpen(!profileOpen); setThemeOpen(false); setLangOpen(false) }}
+              onClick={() => { setProfileOpen(!profileOpen); setLangOpen(false) }}
               className="w-7 h-7 flex items-center justify-center rounded-full bg-primary-600 text-white text-xs font-medium hover:opacity-80 transition-opacity"
               title={cloudUsername || 'Account'}
             >

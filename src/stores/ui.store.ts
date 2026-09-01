@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { resolveTheme } from '@/utils/theme'
 
 export type ActivityType =
   | 'search'
@@ -17,7 +18,7 @@ export type ActivityType =
   | 'output'           // 打磨轮（v1.6 / AL-O2a）：全部项目输出结果（最左边栏一级入口）
   | 'settings'
 
-export type ThemeMode = 'light' | 'dark' | 'system'
+export type ThemeMode = 'light' | 'dark' | 'system' | 'high-contrast'
 
 /** V3.2.1-T10-1: 品牌主题色（驱动 --primary-* token，默认 sky） */
 export type AccentColor = 'sky' | 'emerald' | 'violet' | 'rose'
@@ -57,6 +58,8 @@ interface UIState {
   panelVisible: boolean
   theme: ThemeMode
   isDark: boolean
+  /** 4.1 F1-2: 高对比主题(WCAG AA)是否生效(由 theme='high-contrast' 推导,不持久化) */
+  isHighContrast: boolean
   /** V3.2.1-T10-1: 品牌主题色 */
   accent: AccentColor
   language: string
@@ -112,6 +115,7 @@ export const useUIStore = create<UIState>()(
       panelVisible: false,
       theme: 'system',
       isDark: false,
+      isHighContrast: false,
       accent: 'sky',
       language: 'zh-CN',
       explorerProjectListHeight: 300,
@@ -139,15 +143,23 @@ export const useUIStore = create<UIState>()(
       togglePanel: () => set((s) => ({ panelVisible: !s.panelVisible })),
 
       setTheme: (mode) => {
-        const isDark =
-          mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        set({ theme: mode, isDark })
+        // 4.1 F1-1/F1-2: 统一经 resolveTheme 解析(与 public/theme-init.js 无闪变逻辑一致)
+        const resolved = resolveTheme(
+          mode,
+          window.matchMedia('(prefers-color-scheme: dark)').matches,
+        )
+        set({ theme: mode, ...resolved })
       },
 
       toggleTheme: () => {
-        const { isDark } = get()
+        const { isDark, isHighContrast } = get()
+        // 高对比主题下切换 → 回到亮色
+        if (isHighContrast) {
+          set({ theme: 'light', isDark: false, isHighContrast: false })
+          return
+        }
         const nextDark = !isDark
-        set({ theme: nextDark ? 'dark' : 'light', isDark: nextDark })
+        set({ theme: nextDark ? 'dark' : 'light', isDark: nextDark, isHighContrast: false })
       },
 
       syncSystemTheme: () => {

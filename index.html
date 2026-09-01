@@ -10,6 +10,8 @@
       content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:5174 ws://localhost:5174; worker-src 'self'; object-src 'none'; base-uri 'self'"
     />
     <title>AutoLink</title>
+    <!-- 4.1 F1-1: 启动前同步应用持久化主题,避免首帧闪变(public/theme-init.js) -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
