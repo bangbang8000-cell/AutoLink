@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { BatchSummary } from '@/utils/batchOps'
 
 export type RenderStatus = 'idle' | 'rendering' | 'complete' | 'error'
 
@@ -29,12 +30,24 @@ export type OutputType =
   | 'roomLayout'
   | 'rackImages'
 
+/** 4.4 F4-2: 批量导出输出进度（多项目包/批次导出「进度可查」） */
+export interface BatchExportProgress {
+  total: number
+  done: number
+  current: string
+  message: string
+}
+
 interface RenderState {
   progress: RenderProgress
   results: RenderResult[]
   selectedOutputTypes: OutputType[]
   batchMode: boolean
   batchProjects: string[]
+  /** 4.4 F4-2: 批量渲染失败汇总（进度可查；null=无批量渲染记录） */
+  batchSummary: BatchSummary | null
+  /** 4.4 F4-2: 批量导出输出进度（null=空闲） */
+  batchExportProgress: BatchExportProgress | null
 
   setProgress: (progress: Partial<RenderProgress>) => void
   resetProgress: () => void
@@ -44,6 +57,9 @@ interface RenderState {
   setBatchMode: (enabled: boolean) => void
   setBatchProjects: (projects: string[]) => void
   toggleBatchProject: (name: string) => void
+  setBatchSummary: (s: BatchSummary | null) => void
+  clearBatchSummary: () => void
+  setBatchExportProgress: (p: BatchExportProgress | null) => void
   /** 打磨轮（v1.2 / AL-2）：批量删除渲染结果（output/output-label/yaml） */
   deleteOutput: (projects: string[]) => Promise<{ deleted: number }>
 }
@@ -55,6 +71,8 @@ export const useRenderStore = create<RenderState>()((set) => ({
   selectedOutputTypes: ['connections', 'deviceList', 'rackTable', 'topology', 'cablingGuide', 'bom', 'pdfReport', 'roomLayout', 'rackImages'],
   batchMode: false,
   batchProjects: [],
+  batchSummary: null,
+  batchExportProgress: null,
 
   setProgress: (partial) =>
     set((s) => ({ progress: { ...s.progress, ...partial } })),
@@ -84,6 +102,12 @@ export const useRenderStore = create<RenderState>()((set) => ({
         ? s.batchProjects.filter((n) => n !== name)
         : [...s.batchProjects, name],
     })),
+
+  setBatchSummary: (summary) => set({ batchSummary: summary }),
+
+  clearBatchSummary: () => set({ batchSummary: null }),
+
+  setBatchExportProgress: (progress) => set({ batchExportProgress: progress }),
 
   deleteOutput: async (projects) => {
     if (!window.electron?.render?.deleteOutput) return { deleted: 0 }

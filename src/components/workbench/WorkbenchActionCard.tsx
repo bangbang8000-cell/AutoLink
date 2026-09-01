@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Play, Eye, Trash2, Loader2 } from 'lucide-react'
+import { Play, Eye, Trash2, Loader2, Download } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
@@ -10,6 +10,7 @@ import { useUIStore } from '@/stores/ui.store'
 import { useToastStore } from '@/stores/toast.store'
 import { exportTopologyViewPng } from '@/utils/exportTopologyView'
 import { roomLayoutArt, rackElevationSvg, rackElevationSize, svgToPngBase64 } from '@/utils/exportGraphics'
+import { summarizeBatch, type BatchItemResult } from '@/utils/batchOps'
 
 // V2.9.1-T4: IPC 动态返回结构类型化（避免 any）
 interface RenderProgressData {
@@ -32,11 +33,13 @@ export function WorkbenchActionCard() {
   const matrix = useRoomStore((s) => s.matrix)
   const exportToExcel = useRackStore((s) => s.exportToExcel)
   const {
-    progress, selectedOutputTypes, batchMode, batchProjects,
+    progress, selectedOutputTypes, batchMode, batchProjects, batchSummary, batchExportProgress,
     setProgress, addResult, clearResults, resetProgress, deleteOutput,
+    setBatchSummary, setBatchExportProgress,
   } = useRenderStore()
   const addToast = useToastStore((s) => s.addToast)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
+  const [batchExporting, setBatchExporting] = useState(false)
 
   const isRendering = progress.status === 'rendering'
   // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计有拓扑产出即可渲染（软门禁）；
@@ -111,8 +114,12 @@ export function WorkbenchActionCard() {
     const batchRel = (batch: string | undefined, file: string) =>
       `output/${batch ? `${batch}/` : ''}${file}`
 
+    // 4.4 F4-2: 批量渲染失败汇总（多项目/失败可查）
+    const failures: Array<{ project: string; error: string }> = []
+
     for (const projectName of projects) {
       let batchName: string | undefined
+      const projectErrors: string[] = []
       try {
         // 1. Python 基础材料（连接/设备/布线/BOM/PDF 一次调用，产出版本批次目录）
         if (pythonTypes.length > 0) {
@@ -132,6 +139,7 @@ export function WorkbenchActionCard() {
               })
             }
           } catch (err) {
+            projectErrors.push((err as Error).message)
             addToast('error', t('common:toast.renderFailed', { project: projectName, error: (err as Error).message }))
           }
           updateProgress()
@@ -142,6 +150,7 @@ export function WorkbenchActionCard() {
           setProgress({ message: `[${projectName}] 生成上机表...` })
           try {
             const filePath = await exportToExcel(projectName, batchName)
+            if (!filePath) projectErrors.push('上机表导出失败')
             addResult({
               type: 'rackTable',
               file: filePath || batchRel(batchName, '上机表.xlsx'),
@@ -150,6 +159,7 @@ export function WorkbenchActionCard() {
               timestamp: nowIso(),
             })
           } catch (err) {
+            projectErrors.push((err as Error).message)
             addResult({ type: 'rackTable', file: batchRel(batchName, '上机表.xlsx'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
@@ -162,8 +172,10 @@ export function WorkbenchActionCard() {
             const base64 = await exportTopologyViewPng(topology.nodes, topology.edges, savedLayout)
             const fileName = '组网拓扑图.png'
             const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, fileName), base64)
+            if (!filePath) projectErrors.push('拓扑图保存失败')
             addResult({ type: 'topology', file: filePath || batchRel(batchName, fileName), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
           } catch (err) {
+            projectErrors.push((err as Error).message)
             addResult({ type: 'topology', file: batchRel(batchName, '组网拓扑图.png'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
@@ -175,13 +187,16 @@ export function WorkbenchActionCard() {
           try {
             const art = roomLayoutArt()
             if (!art) {
+              projectErrors.push('未定义机房矩阵')
               addResult({ type: 'roomLayout', file: batchRel(batchName, '机房布局图.png'), status: 'error', error: '未定义机房矩阵', timestamp: nowIso() })
             } else {
               const base64 = await svgToPngBase64(art.svg, art.width, art.height)
               const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, '机房布局图.png'), base64)
+              if (!filePath) projectErrors.push('布局图保存失败')
               addResult({ type: 'roomLayout', file: filePath || batchRel(batchName, '机房布局图.png'), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
             }
           } catch (err) {
+            projectErrors.push((err as Error).message)
             addResult({ type: 'roomLayout', file: batchRel(batchName, '机房布局图.png'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
@@ -200,24 +215,44 @@ export function WorkbenchActionCard() {
               await window.electron.render.saveOutputFile(projectName, batchRel(batchName, `racks/${safeName}.png`), base64)
               saved++
             }
+            if (saved === 0) projectErrors.push('无柜可导出')
             addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: saved > 0 ? 'success' : 'error', error: saved > 0 ? undefined : '无柜可导出', timestamp: nowIso() })
           } catch (err) {
+            projectErrors.push((err as Error).message)
             addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
         }
       } catch (err) {
+        projectErrors.push((err as Error).message)
         addToast('error', t('common:toast.renderFailed', { project: projectName, error: (err as Error).message }))
       }
+      if (projectErrors.length > 0) failures.push({ project: projectName, error: projectErrors[0] })
     }
 
     setProgress({ status: 'complete', message: '渲染完成', progress: 100 })
-    addToast('success', t('common:toast.renderComplete'))
+
+    // 4.4 F4-2: 写入批量渲染失败汇总（进度可查）并提示汇总结果
+    const batchResults: BatchItemResult[] = projects.map((p) => {
+      const f = failures.find((x) => x.project === p)
+      return f ? { project: p, ok: false, error: f.error } : { project: p, ok: true }
+    })
+    const summary = summarizeBatch(batchResults)
+    setBatchSummary(summary)
+    if (summary.failed === 0) {
+      addToast('success', t('common:toast.renderComplete'))
+    } else {
+      addToast('warning', t('common:toast.batchRenderPartial', {
+        success: summary.succeeded,
+        fail: summary.failed,
+        details: summary.failures.map((f) => `  - ${f.project}: ${f.error}`).join('\n'),
+      }))
+    }
     useProjectStore.getState().fetchProjects()
   }, [
     selectedProjectName, batchMode, batchProjects, selectedOutputTypes,
     cabinets, topology, savedLayout, exportToExcel,
-    setProgress, addResult, clearResults, addToast, t,
+    setProgress, addResult, clearResults, addToast, t, setBatchSummary,
   ])
 
   const handleClear = useCallback(() => {
@@ -241,6 +276,38 @@ export function WorkbenchActionCard() {
     }
   }, [batchMode, batchProjects, selectedProjectName, deleteOutput, addToast, t])
 
+  // 4.4 F4-2：批量导出项目包（多项目包，选择目录后逐个导出，进度可查）
+  const handleBatchExport = useCallback(async () => {
+    if (batchExporting) return
+    const projects = batchMode ? batchProjects : selectedProjectName ? [selectedProjectName] : []
+    if (projects.length === 0) {
+      addToast('warning', t('common:toast.selectRenderProject'))
+      return
+    }
+    setBatchExporting(true)
+    setBatchExportProgress({ total: projects.length, done: 0, current: '', message: t('workbench:batchExport.start') })
+    try {
+      const result = await useProjectStore.getState().batchExportProjects(projects)
+      if (!result.canceled && result.result) {
+        const { successes, failures } = result.result
+        if (failures.length === 0) {
+          addToast('success', t('workbench:batchExport.done', { count: successes.length, dir: result.targetDir }))
+        } else {
+          addToast('warning', t('workbench:batchExport.partial', {
+            success: successes.length,
+            fail: failures.length,
+            details: failures.map((f) => `  - ${f.name}: ${f.error}`).join('\n'),
+          }))
+        }
+      }
+    } catch (err) {
+      addToast('error', t('workbench:batchExport.failed', { error: (err as Error).message }))
+    } finally {
+      setBatchExportProgress(null)
+      setBatchExporting(false)
+    }
+  }, [batchMode, batchProjects, selectedProjectName, batchExporting, addToast, t, setBatchExportProgress])
+
   return (
     <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
       <div className="px-3 py-2 bg-gray-50 dark:bg-app/50 text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
@@ -261,6 +328,27 @@ export function WorkbenchActionCard() {
                 style={{ width: `${progress.progress}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {/* 4.4 F4-2：批量导出输出进度（进度可查） */}
+        {batchExportProgress && !batchExporting && (
+          <div className="px-2.5 py-1.5 rounded border border-primary-200 dark:border-primary-800 bg-primary-50/60 dark:bg-primary-900/20 text-2xs text-primary-700 dark:text-primary-300">
+            {batchExportProgress.message}（{batchExportProgress.done}/{batchExportProgress.total}）
+          </div>
+        )}
+
+        {/* 4.4 F4-2：批量渲染失败汇总（进度可查） */}
+        {!isRendering && batchSummary && batchSummary.failed > 0 && (
+          <div className="px-2.5 py-1.5 rounded border border-warning-200 dark:border-warning-800 bg-warning-50/60 dark:bg-warning-900/20 text-2xs text-warning-700 dark:text-warning-300">
+            <span>{t('workbench:batch.renderSummary', { success: batchSummary.succeeded, fail: batchSummary.failed })}</span>
+            <ul className="mt-1 space-y-0.5">
+              {batchSummary.failures.map((f) => (
+                <li key={f.project} className="truncate">
+                  <span className="font-medium">{f.project}</span>: {f.error}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -325,6 +413,18 @@ export function WorkbenchActionCard() {
               ? `删除 ${batchProjects.length} 个项目渲染结果`
               : '删除渲染结果'}
           </button>
+
+          {/* 4.4 F4-2：批量导出项目包（多项目包/批次） */}
+          {batchMode && batchProjects.length > 0 && (
+            <button
+              onClick={handleBatchExport}
+              disabled={batchExporting || isRendering}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs rounded border border-success-300 dark:border-success-700 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20 disabled:opacity-50"
+            >
+              {batchExporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+              {batchExporting ? t('workbench:batchExport.exporting') : t('workbench:batchExport.button', { count: batchProjects.length })}
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -82,9 +82,8 @@ describe('BatchOptimizePanel', () => {
       expect(screen.getByText('参数网收敛比优化')).toBeTruthy()
     })
     // 取消第 1、3 条，只保留第 2 条（成本）
-    const boxes = screen.getAllByRole('checkbox')
-    fireEvent.click(boxes[0])
-    fireEvent.click(boxes[2])
+    fireEvent.click(screen.getByLabelText(/参数网收敛比优化/))
+    fireEvent.click(screen.getByLabelText(/冷却方式与功率密度匹配/))
     expect(screen.getByText(/已选 1 条/)).toBeTruthy()
     fireEvent.click(screen.getByText('应用选中 (1)'))
     await waitFor(() => {

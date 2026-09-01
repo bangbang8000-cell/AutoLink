@@ -12,6 +12,8 @@ import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
 
 interface OptimizationSuggestion {
+  /** 4.4 F4-2: 多项目批量优化——每条建议归属的项目 */
+  projectName: string
   category: 'convergence' | 'cost' | 'thermal'
   categoryLabel: string
   title: string
@@ -36,11 +38,16 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
   const { t } = useTranslation()
   const addToast = useToastStore((s) => s.addToast)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
+  const projects = useProjectStore((s) => s.projects)
   const [loading, setLoading] = useState(false)
   const [applying, setApplying] = useState(false)
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([])
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [appliedCount, setAppliedCount] = useState(0)
+  // 4.4 F4-2: 多项目批量优化——默认选中当前项目
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(() =>
+    selectedProjectName ? [selectedProjectName] : [],
+  )
 
   const grouped = useMemo(() => {
     return CATEGORY_ORDER
@@ -60,22 +67,32 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
   if (!open) return null
 
   const handleSuggest = async () => {
-    if (!selectedProjectName) {
+    if (selectedProjects.length === 0) {
       addToast('error', t('batchOptimize.selectFirst'), 4000)
       return
     }
     setLoading(true)
     setAppliedCount(0)
+    setSuggestions([])
+    setChecked(new Set())
     try {
-      const res = (await window.electron.optimize.suggest({ projectName: selectedProjectName }))
-      if (!res.success) {
-        addToast('error', res.error || t('batchOptimize.failed'), 5000)
-        setSuggestions([])
-        return
+      // 4.4 F4-2: 多项目逐个生成建议（聚合展示，按项目归属）
+      const all: OptimizationSuggestion[] = []
+      let total = 0
+      for (const projectName of selectedProjects) {
+        const res = (await window.electron.optimize.suggest({ projectName }))
+        if (!res.success) {
+          addToast('error', res.error || t('batchOptimize.failed'), 5000)
+          continue
+        }
+        total += res.total ?? 0
+        for (const s of res.suggestions ?? []) {
+          all.push({ ...s, projectName })
+        }
       }
-      setSuggestions(res.suggestions ?? [])
-      setChecked(new Set((res.suggestions ?? []).map((_, i) => i)))
-      addToast('success', t('batchOptimize.generated', { count: res.total ?? 0 }), 4000)
+      setSuggestions(all)
+      setChecked(new Set(all.map((_, i) => i)))
+      addToast('success', t('batchOptimize.generated', { count: total }), 4000)
     } catch (err) {
       addToast('error', `${t('batchOptimize.failed')}：${(err as Error).message}`, 5000)
     } finally {
@@ -97,19 +114,30 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
   }
 
   const handleApply = async () => {
-    if (!selectedProjectName || selected.length === 0) return
+    if (selected.length === 0) return
     setApplying(true)
     try {
-      const res = (await window.electron.optimize.apply({
-        projectName: selectedProjectName,
-        suggestions: selected.map((s) => ({ category: s.category, title: s.title, patch: s.patch })),
-      }))
-      if (!res.success) {
-        addToast('error', res.error || t('batchOptimize.applyFailed'), 5000)
-        return
+      // 4.4 F4-2: 多项目批量应用——按项目分组逐个 apply
+      const byProject = new Map<string, OptimizationSuggestion[]>()
+      for (const s of selected) {
+        const list = byProject.get(s.projectName) ?? []
+        list.push(s)
+        byProject.set(s.projectName, list)
       }
-      setAppliedCount(res.applied?.length ?? 0)
-      addToast('success', t('batchOptimize.appliedTo', { count: res.applied?.length ?? 0, name: selectedProjectName }), 5000)
+      let appliedTotal = 0
+      for (const [projectName, items] of byProject) {
+        const res = (await window.electron.optimize.apply({
+          projectName,
+          suggestions: items.map((s) => ({ category: s.category, title: s.title, patch: s.patch })),
+        }))
+        if (!res.success) {
+          addToast('error', res.error || t('batchOptimize.applyFailed'), 5000)
+          continue
+        }
+        appliedTotal += res.applied?.length ?? 0
+      }
+      setAppliedCount(appliedTotal)
+      addToast('success', t('batchOptimize.appliedMulti', { count: appliedTotal, names: byProject.size }), 5000)
       onClose()
     } catch (err) {
       addToast('error', `${t('batchOptimize.applyFailed')}：${(err as Error).message}`, 5000)
@@ -137,19 +165,46 @@ export function BatchOptimizePanel({ open, onClose }: { open: boolean; onClose: 
 
         {/* body */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-2xs">
-          {/* project + suggest */}
-          <div className="flex items-center gap-3">
-            <span className="text-gray-500 dark:text-gray-400 truncate">
-              {t('batchOptimize.project')}<span className="font-medium text-gray-700 dark:text-gray-200">{selectedProjectName || t('batchOptimize.notSelected')}</span>
-            </span>
-            <button
-              onClick={handleSuggest}
-              disabled={loading || !selectedProjectName}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
-            >
-              {loading ? <Loader2 size={13} className="animate-spin" /> : <ListChecks size={13} />}
-              {loading ? t('batchOptimize.analyzing') : t('batchOptimize.suggest')}
-            </button>
+          {/* 4.4 F4-2: 多项目选择 + suggest */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-gray-500 dark:text-gray-400 truncate">
+                {t('batchOptimize.project')}
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {selectedProjects.length > 0 ? `${selectedProjects.length} 个项目` : t('batchOptimize.notSelected')}
+                </span>
+              </span>
+              <button
+                onClick={handleSuggest}
+                disabled={loading || selectedProjects.length === 0}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
+              >
+                {loading ? <Loader2 size={13} className="animate-spin" /> : <ListChecks size={13} />}
+                {loading ? t('batchOptimize.analyzing') : t('batchOptimize.suggest')}
+              </button>
+            </div>
+            {/* 多项目勾选（当前项目兜底） */}
+            <div className="flex flex-wrap gap-x-3 gap-y-1 max-h-24 overflow-auto">
+              {(projects.length > 0 ? projects : (selectedProjectName ? [{ id: -1, name: selectedProjectName, index: 0 }] : []))
+                .map((p) => {
+                  const on = selectedProjects.includes(p.name)
+                  return (
+                    <label key={p.name} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => {
+                          setSelectedProjects((prev) =>
+                            on ? prev.filter((x) => x !== p.name) : [...prev, p.name],
+                          )
+                        }}
+                        className="accent-primary-600"
+                      />
+                      <span className="text-gray-600 dark:text-gray-300">{p.name}</span>
+                    </label>
+                  )
+                })}
+            </div>
           </div>
 
           {/* summary */}
