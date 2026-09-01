@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [4.0.0] - 2026-08-29
+
+### 4.0 系列启动 · 工程基座与质量门禁
+
+- **版本单源**：新增 `version.json` 单源 + `sync_version.py`/`check_version.py` + CI `check-version` 门禁；发布说明抽取（`extract_release_notes.py`）适配单源；修复 `package-lock.json` 版本漂移（3.6.3→3.7.7→4.0.0）
+- **五门禁对等确认全绿**：E2E（Playwright 3 例）/ golden 19/19 / 模板 19/19 / 性能门禁 / 渲染安全基线
+- **设计 token 契约对齐**（按《双端设计Token契约_v1.0》）：语义色/中性/surface/圆角/阴影/间距/动效/字体 + 断言单测防漂移
+- **组件行为契约**：Modal/Popover/Toast/ContextMenu/Select/Tabs/Dropdown 行为契约测试（补齐 Popover 基础组件）
+
 ## [3.7.7] - 2026-08-29
 
 ### 双端最终打磨（v3.6：版本历史与评审 / 复用增强）
