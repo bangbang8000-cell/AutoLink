@@ -69,8 +69,19 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "project_create": ToolPermission.NOTIFY,
     "project_write_file": ToolPermission.NOTIFY,
     "project_delete": ToolPermission.CONFIRM,
-    # 高风险（CONFIRM）
+    # 4.3 F3-4：项目/模板操作工具（双端统一命名）
+    "list_projects": ToolPermission.AUTO,
+    "create_project": ToolPermission.NOTIFY,
+    "update_project": ToolPermission.NOTIFY,
     "delete_project": ToolPermission.CONFIRM,
+    "import_project": ToolPermission.NOTIFY,
+    "export_project": ToolPermission.NOTIFY,
+    "create_from_template": ToolPermission.NOTIFY,
+    "preview_template": ToolPermission.AUTO,
+    # 4.3 F3-3：技能库工具（只读 AUTO / 启用禁用 NOTIFY）
+    "skill_list": ToolPermission.AUTO,
+    "skill_view": ToolPermission.AUTO,
+    "skill_set_enabled": ToolPermission.NOTIFY,
 }
 
 TOOL_NAME_ALIASES: dict[str, str] = {
@@ -143,6 +154,22 @@ TOOL_NAME_ALIASES: dict[str, str] = {
     "read_file": "project_read_file",
     "write_project_file": "project_write_file",
     "write_file": "project_write_file",
+    # 4.3 F3-4：项目/模板操作工具别名
+    "update_project": "update_project",
+    "edit_project": "update_project",
+    "import_project": "import_project",
+    "export_project": "export_project",
+    "create_from_template": "create_from_template",
+    "create_project_from_template": "create_from_template",
+    "preview_template": "preview_template",
+    "template_preview": "preview_template",
+    # 4.3 F3-3：技能工具别名
+    "skills": "skill_list",
+    "list_skills": "skill_list",
+    "get_skill": "skill_view",
+    "skill_detail": "skill_view",
+    "enable_skill": "skill_set_enabled",
+    "disable_skill": "skill_set_enabled",
 }
 
 PARAM_ALIASES: dict[str, str] = {

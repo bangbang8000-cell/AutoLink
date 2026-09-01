@@ -77,6 +77,106 @@ def _schema(properties: dict, required: list[str]) -> dict:
     return {"type": "object", "properties": properties, "required": required}
 
 
+# ============================================================
+# 4.3 F3-4/F3-3: 自定义工具 handler（不走 cli.execute 的直连后端函数）
+# ============================================================
+
+def _deep_merge(base: dict, overlay: dict) -> dict:
+    """递归深合并：overlay 中的 dict 键递归合并，其余直接覆盖"""
+    result = dict(base)
+    for k, v in overlay.items():
+        if isinstance(v, dict) and isinstance(result.get(k), dict):
+            result[k] = _deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
+def _update_project_handler(arguments: dict) -> dict:
+    """update_project：读当前 project_config.json → 深合并 overlay → 写回 → 宽松校验摘要。
+
+    全部复用 manage 既有函数（project_read_file/project_write_file/project_info），
+    无需新增 engine action。
+    """
+    from manage import project_info, project_read_file, project_write_file
+
+    name = arguments.get("projectName") or ""
+    overlay = arguments.get("config") or {}
+    if not name:
+        return {"success": False, "error": "项目名不能为空"}
+    if not isinstance(overlay, dict) or not overlay:
+        return {"success": False, "error": "config 必须是非空 ProjectConfig JSON 对象"}
+
+    # 读当前配置
+    read = project_read_file(name, "project_config.json")
+    if not read.get("success"):
+        return {"success": False, "error": read.get("error", f"项目不存在: {name}")}
+    try:
+        import json
+        current = json.loads(read.get("content") or "{}")
+        if not isinstance(current, dict):
+            return {"success": False, "error": "项目 project_config.json 格式异常（非 JSON 对象）"}
+    except Exception as e:
+        return {"success": False, "error": f"项目配置解析失败: {e}"}
+
+    merged = _deep_merge(current, overlay)
+    # 保持项目名一致
+    merged.setdefault("meta", {})["name"] = name
+
+    import json as _json
+    write = project_write_file(name, "project_config.json", _json.dumps(merged, ensure_ascii=False, indent=2))
+    if not write.get("success"):
+        return {"success": False, "error": write.get("error", "写入失败")}
+
+    info = project_info(name)
+    return {
+        "success": True,
+        "project": name,
+        "updated": True,
+        "config": merged,
+        "validation": info.get("validation"),
+    }
+
+
+def _skill_list_handler(arguments: dict) -> dict:
+    from autolink_hub.skills.engine import get_skills_engine
+    skills = get_skills_engine().list_skills()
+    return {"success": True, "skills": skills, "total": len(skills)}
+
+
+def _skill_view_handler(arguments: dict) -> dict:
+    from autolink_hub.skills.engine import get_skills_engine
+    skill = get_skills_engine().get_skill(arguments.get("name") or "")
+    if skill is None:
+        return {"success": False, "error": f"技能不存在: {arguments.get('name') or ''}"}
+    return {
+        "success": True,
+        "skill": {
+            "name": skill.name,
+            "enabled": skill.enabled,
+            "use_count": skill.use_count,
+            "last_used": skill.last_used,
+            "content": skill.content,
+        },
+    }
+
+
+def _skill_set_enabled_handler(arguments: dict) -> dict:
+    from autolink_hub.skills.engine import get_skills_engine
+    name = arguments.get("name") or ""
+    enabled = arguments.get("enabled")
+    if enabled in (True, "true", "True", "1", 1):
+        enabled = True
+    elif enabled in (False, "false", "False", "0", 0, None):
+        enabled = False
+    else:
+        return {"success": False, "error": f"enabled 必须是布尔值，收到: {enabled!r}"}
+    ok = get_skills_engine().set_enabled(name, enabled)
+    if not ok:
+        return {"success": False, "error": f"技能不存在: {name}"}
+    return {"success": True, "skill": name, "enabled": enabled}
+
+
 def init_tools() -> None:
     """注册 AutoLink 白名单工具（T5-2 白名单：backend 现有 action 域）"""
     if _tools:
@@ -454,6 +554,102 @@ def init_tools() -> None:
             "overwrite": _str_param("overwrite", "同名覆盖（默认 false）"),
         }, required=["source"]),
         _make_cli_handler("project:import"),
+        permission="notify",
+    )
+
+    # ---- 4.3 F3-4：项目/模板操作工具（双端统一命名：list/create/update/delete/导入导出/基于模板创建/预览）----
+    register_tool(
+        "list_projects", "项目清单：扫描工作区，返回项目摘要（名称/描述/时间/是否含配置）。回答\"有哪些项目\"时调用（只读 AUTO）",
+        _schema({}, []),
+        _make_cli_handler("project:list"),
+        permission="auto",
+    )
+    register_tool(
+        "create_project", "新建项目：用默认配置创建工作区项目并转 AIDC（mint projectId + plan.json）。回答\"帮我建一个 XX 项目\"（未指定模板）时调用。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "新项目名", True),
+            "description": _str_param("description", "项目描述"),
+        }, required=["projectName"]),
+        _make_cli_handler("project:create"),
+        permission="notify",
+    )
+    register_tool(
+        "update_project", "更新项目配置：把 overlay 配置（ProjectConfig JSON 对象）深度合并写入项目的 project_config.json 并重新校验（宽松校验摘要）。回答\"帮我改一下 XX 项目的参数\"时调用（先 project_info 读当前配置再合并）。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+            "config": _str_param("config", "要合并的 ProjectConfig JSON 对象（如 {topology:{num_gpu_servers:128}}）", True),
+        }, required=["projectName", "config"]),
+        _update_project_handler,
+        permission="notify",
+    )
+    register_tool(
+        "delete_project", "删除工作区项目（不可恢复，需用户明确确认后调用）。写操作（CONFIRM）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+        }, required=["projectName"]),
+        _make_cli_handler("project:delete"),
+        permission="confirm",
+    )
+    register_tool(
+        "import_project", "导入项目：从 zip 把项目导入到工作区，校验 project.json；重名默认拒绝（overwrite=true 覆盖）。写操作（NOTIFY）",
+        _schema({
+            "source": _str_param("source", "项目 zip 路径（来自用户附件或本地路径）", True),
+            "projectName": _str_param("projectName", "导入后的项目名（缺省取 project.json 的 name）"),
+            "overwrite": _str_param("overwrite", "同名覆盖（默认 false）"),
+        }, required=["source"]),
+        _make_cli_handler("project:import"),
+        permission="notify",
+    )
+    register_tool(
+        "export_project", "导出项目：把指定项目打包为交付包 zip（含 plan.json/project_config.json 等）到指定输出路径（outputPath），或返回项目文件清单+内容（缺省）。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "项目名", True),
+            "outputPath": _str_param("outputPath", "zip 输出路径（缺省返回文件清单+内容）"),
+        }, required=["projectName"]),
+        _make_cli_handler("project:export"),
+        permission="notify",
+    )
+    register_tool(
+        "create_from_template", "基于模板创建工作区项目：先用 template_recommend 或 template_list 选模板，再调用本工具（templateName 必填）。写操作（NOTIFY）",
+        _schema({
+            "projectName": _str_param("projectName", "新项目名", True),
+            "templateName": _str_param("templateName", "基于的模板名", True),
+            "description": _str_param("description", "项目描述"),
+        }, required=["projectName", "templateName"]),
+        _make_cli_handler("project:create"),
+        permission="notify",
+    )
+    register_tool(
+        "preview_template", "模板预览/详情：按名称查看完整 ProjectConfig（规模/协议/机柜约束）。回答\"这个模板怎么样/配置是什么\"时调用（只读 AUTO）",
+        _schema({
+            "name": _str_param("name", "模板名称", True),
+        }, required=["name"]),
+        _make_cli_handler("template:view"),
+        permission="auto",
+    )
+
+    # ---- 4.3 F3-3：技能库工具（list/详情/启用禁用，AI 可调用）----
+    register_tool(
+        "skill_list", "技能清单：列出全部技能（名称/是否启用/使用次数/最近使用）。回答\"有哪些技能\"时调用（只读 AUTO）",
+        _schema({}, []),
+        _skill_list_handler,
+        permission="auto",
+    )
+    register_tool(
+        "skill_view", "技能详情：查看单个技能内容（markdown）。回答\"XX 技能讲什么\"时调用（只读 AUTO）",
+        _schema({
+            "name": _str_param("name", "技能名", True),
+        }, required=["name"]),
+        _skill_view_handler,
+        permission="auto",
+    )
+    register_tool(
+        "skill_set_enabled", "启用/禁用技能：enabled=true 启用、false 禁用（影响其是否注入 system prompt）。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "技能名", True),
+            "enabled": _str_param("enabled", "是否启用（true/false）", True),
+        }, required=["name", "enabled"]),
+        _skill_set_enabled_handler,
         permission="notify",
     )
 

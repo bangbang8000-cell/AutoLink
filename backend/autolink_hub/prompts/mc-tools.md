@@ -74,6 +74,21 @@ AutoLink 通过工具执行真实操作。所有工具调用必须使用如下�
 - `project_read_file`（🟢）：读取项目内文本文件（防目录穿越）
 - `project_write_file`（🟡）：写入项目内文本文件（防目录穿越）
 
+4.3 F3-4 项目/模板操作工具（双端统一命名）：
+- `list_projects`（🟢）：项目清单，问"有哪些项目"时调用
+- `create_project`（🟡）：默认配置新建项目（未指定模板时）
+- `update_project`（🟡）：深合并更新项目 project_config.json 并重新校验（改参数时先 project_info 读现状）
+- `delete_project`（🔴）：删除项目（不可恢复，需用户确认）
+- `import_project`（🟡）：从 zip 导入项目（重名默认拒绝，overwrite=true 覆盖）
+- `export_project`（🟡）：项目打包为交付包 zip
+- `create_from_template`（🟡）：基于指定模板创建项目（templateName 必填；先用 template_recommend/template_list 选模板）
+- `preview_template`（🟢）：模板预览/详情（完整 ProjectConfig），问"这个模板怎么样"时调用
+
+4.3 F3-3 技能库工具：
+- `skill_list`（🟢）：技能清单（名称/启用/使用次数）
+- `skill_view`（🟢）：技能详情内容
+- `skill_set_enabled`（🟡）：启用/禁用技能（影响注入 system prompt）
+
 反模式：
 - 不重复调用 list_config_schema 等只读工具。
 - 涉及删除/覆盖类操作前必须向用户确认。
