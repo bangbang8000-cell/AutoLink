@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [4.1.0] - 2026-09-01
+
+### 4.1 视觉与品牌统一
+
+- **主题系统 DTCG 化**：light/dark/system/**high-contrast** 四主题（`public/theme-init.js` 首帧前应用，无闪变 + 持久化）；高对比 WCAG AA（正文 21:1、次要 16.5:1、弱化 9.9:1、边界 3.8:1、focus ring 3px）
+- **组件库视觉收敛到契约 token**：Button/Input/Select/Modal/Tabs/Dropdown/ContextMenu/Popover/Toast 消除硬编码色值，统一 radius/shadow/动效
+- **品牌资产统一**（以 MC 为准、保留 AutoLink 产品名）：启动页/About/徽标渐变/字体栈对齐契约 primary
+- **空态/加载/错误态统一**：新增 Loading/ErrorState 公共组件，EmptyState 收敛 token
+
 ## [4.0.0] - 2026-08-29
 
 ### 4.0 系列启动 · 工程基座与质量门禁
