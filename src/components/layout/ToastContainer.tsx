@@ -33,7 +33,7 @@ function ToastItem({ toast }: { toast: Toast }) {
       onMouseLeave={() => resumeToast(toast.id)}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border shadow-lg text-xs
         transition-all duration-300 ${entering ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
-        ${bgMap[toast.type]} text-gray-700 dark:text-gray-200 min-w-[260px] max-w-[360px]`}
+        ${bgMap[toast.type]} text-text-primary min-w-[260px] max-w-[360px]`}
     >
       {iconMap[toast.type]}
       <span className="flex-1">{toast.message}</span>

@@ -88,7 +88,7 @@ export function Modal({
     >
       <div
         ref={modalRef}
-        className="bg-white dark:bg-app-surface rounded-lg shadow-xl border border-gray-200 dark:border-edge-default overflow-hidden flex flex-col"
+        className="bg-app dark:bg-app-surface rounded-lg shadow-lg border border-edge-subtle overflow-hidden flex flex-col"
         style={{ width: `${width}px`, maxHeight }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -97,14 +97,14 @@ export function Modal({
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-edge-default shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-edge-subtle shrink-0">
             {title && (
-              <h2 id={titleId} className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+              <h2 id={titleId} className="text-sm font-semibold text-text-primary">{title}</h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 dark:text-gray-400 ml-auto"
+                className="p-1 rounded hover:bg-app-hover text-text-secondary ml-auto"
                 aria-label={t('close')}
               >
                 <X size={16} />
@@ -118,7 +118,7 @@ export function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-edge-default shrink-0 bg-gray-50 dark:bg-app/30">
+          <div className="px-4 py-3 border-t border-edge-subtle shrink-0 bg-app-surface dark:bg-app/30">
             {footer}
           </div>
         )}

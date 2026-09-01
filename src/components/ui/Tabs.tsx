@@ -91,8 +91,8 @@ export function Tabs({
         className={clsx(
           'flex items-center shrink-0',
           underline
-            ? 'border-b border-gray-200 dark:border-edge-subtle gap-4'
-            : 'gap-1 p-0.5 bg-gray-100 dark:bg-app-surface rounded-lg',
+            ? 'border-b border-edge-subtle gap-4'
+            : 'gap-1 p-0.5 bg-app-hover rounded-lg',
         )}
       >
         {items.map((item) => {
@@ -117,14 +117,14 @@ export function Tabs({
                   ? clsx(
                       'border-b-2 -mb-px',
                       isActive
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-text-secondary hover:text-text-primary',
                     )
                   : clsx(
                       'rounded-md',
                       isActive
-                        ? 'bg-white dark:bg-app-elevated text-primary-600 dark:text-primary-400 shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-app-hover',
+                        ? 'bg-app text-primary shadow-sm'
+                        : 'text-text-secondary hover:bg-app-hover',
                     ),
                 item.disabled && 'opacity-40 cursor-not-allowed',
               )}

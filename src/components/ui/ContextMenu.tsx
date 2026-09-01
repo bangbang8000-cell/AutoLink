@@ -63,12 +63,12 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
       />
       <div
         ref={menuRef}
-        className="fixed z-[100] bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 min-w-[180px]"
+        className="fixed z-[100] bg-app dark:bg-app-surface border border-edge-subtle rounded-lg shadow-lg py-1 min-w-[180px]"
         style={{ left: adjustedX, top: adjustedY }}
       >
         {items.map((item, idx) => {
           if (item.separator) {
-            return <div key={idx} className="my-1 border-t border-gray-200 dark:border-edge-subtle" />
+            return <div key={idx} className="my-1 border-t border-edge-subtle" />
           }
           const Icon = item.icon
           return (
@@ -83,10 +83,10 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
               className={clsx(
                 'w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors',
                 item.disabled
-                  ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                  ? 'text-text-muted cursor-not-allowed'
                   : item.danger
-                    ? 'text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover',
+                    ? 'text-danger hover:bg-danger/10'
+                    : 'text-text-primary hover:bg-app-hover',
               )}
             >
               {Icon && <Icon size={13} className="shrink-0" />}

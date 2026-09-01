@@ -90,7 +90,7 @@ export function Popover({
         <div
           role="dialog"
           className={clsx(
-            'absolute z-50 bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg',
+            'absolute z-50 bg-app dark:bg-app-surface border border-edge-subtle rounded-lg shadow-lg',
             panelClassName,
           )}
         >

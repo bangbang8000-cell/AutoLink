@@ -143,20 +143,20 @@ export function Dropdown({
         aria-expanded={open}
         className={clsx(
           'flex items-center justify-between gap-1.5 px-2.5 py-1.5 text-xs rounded-md border',
-          'border-gray-300 dark:border-gray-600 bg-white dark:bg-app-surface text-gray-900 dark:text-gray-100',
-          'hover:border-gray-400 dark:hover:border-gray-500',
-          'focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500',
+          'border-edge-subtle bg-app dark:bg-app-surface text-text-primary',
+          'hover:border-edge-default',
+          'focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           menuClassName,
         )}
       >
         <span className="flex items-center gap-1.5 truncate">
           {selectedItem?.icon}
-          <span className={clsx('truncate', !selectedItem && 'text-gray-400 dark:text-gray-500')}>
+          <span className={clsx('truncate', !selectedItem && 'text-text-muted')}>
             {selectedItem ? selectedItem.label : resolvedPlaceholder}
           </span>
         </span>
-        <ChevronDown size={14} className={clsx('shrink-0 text-gray-400 transition-transform', open && 'rotate-180')} />
+        <ChevronDown size={14} className={clsx('shrink-0 text-text-muted transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
@@ -166,7 +166,7 @@ export function Dropdown({
           aria-labelledby={id}
           className={clsx(
             'absolute z-[80] mt-0.5 max-h-60 overflow-auto py-1',
-            'bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg',
+            'bg-app dark:bg-app-surface border border-edge-subtle rounded-lg shadow-lg',
             'animate-dropdown-in',
             menuClassName,
           )}
@@ -185,15 +185,15 @@ export function Dropdown({
                 onClick={() => handleSelect(item)}
                 className={clsx(
                   'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer select-none',
-                  'text-gray-700 dark:text-gray-300',
+                  'text-text-primary',
                   item.disabled && 'opacity-40 cursor-not-allowed',
-                  !item.disabled && isActive && 'bg-gray-100 dark:bg-app-hover',
-                  !item.disabled && !isActive && 'hover:bg-gray-50 dark:hover:bg-app-hover/60',
+                  !item.disabled && isActive && 'bg-app-hover',
+                  !item.disabled && !isActive && 'hover:bg-app-hover/60',
                 )}
               >
                 {item.icon}
                 <span className="flex-1 truncate">{item.label}</span>
-                {isSelected && <Check size={12} className="text-primary-500 shrink-0" />}
+                {isSelected && <Check size={12} className="text-primary shrink-0" />}
               </li>
             )
           })}
