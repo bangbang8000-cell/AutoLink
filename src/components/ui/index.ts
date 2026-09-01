@@ -16,3 +16,5 @@ export { Dropdown } from './Dropdown'
 export type { DropdownItem } from './Dropdown'
 export { Tabs } from './Tabs'
 export type { TabItem } from './Tabs'
+// 4.0 组件行为契约: Popover(双端基础 UI 之一)
+export { Popover } from './Popover'
