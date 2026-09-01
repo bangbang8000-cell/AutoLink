@@ -308,7 +308,8 @@
       "cloudView": "Cloud Center",
       "closeTab": "Close Tab",
       "reopenTab": "Reopen Closed Tab",
-      "shortcutsRef": "Keyboard Shortcuts"
+      "shortcutsRef": "Keyboard Shortcuts",
+      "openCommandPalette": "Open Command Palette"
     },
     "toast": {
       "selectProjectFirst": "Please select a project first",
@@ -922,5 +923,46 @@
     "catCost": "Cost",
     "catThermal": "Thermal"
   },
-  "selectPlaceholder": "Please select"
+  "selectPlaceholder": "Please select",
+  "commandPalette": {
+    "placeholder": "Type a command or search…",
+    "noResults": "No matching commands",
+    "categories": {
+      "project": "Project",
+      "design": "Design",
+      "template": "Template",
+      "common": "Common"
+    },
+    "commands": {
+      "newProject": "New Project",
+      "renderProject": "Render Current Project",
+      "exportProject": "Export Current Project",
+      "openProject": "Open Project",
+      "openedProject": "Project opened",
+      "roomDesign": "Room Design",
+      "rackDesign": "Rack Design",
+      "snapshot": "Save Design Snapshot",
+      "aidcPlan": "AIDC Plan",
+      "templateCenter": "Open Template Center",
+      "templateCenterHint": "Template center opened (right-click a template to preview / create)",
+      "previewTemplate": "Preview Template",
+      "createFromTemplate": "Create From Template",
+      "ai": "AI Assistant",
+      "deviceLibrary": "Device Library",
+      "search": "Global Search",
+      "cloud": "Cloud Center",
+      "settings": "Settings",
+      "newChat": "New AI Chat",
+      "toggleSidebar": "Toggle Sidebar",
+      "toggleTheme": "Toggle Theme",
+      "shortcuts": "Keyboard Shortcuts",
+      "noProject": "Select a project first",
+      "renderHint": "Open the workbench and click \"One-Click Render\"",
+      "exported": "Project exported: {{path}}",
+      "exportFailed": "Export failed: {{error}}",
+      "snapshotSaved": "Design snapshot saved",
+      "snapshotNoData": "No design data to save (define a rack matrix first)",
+      "snapshotTooLarge": "Design snapshot too large, skipped"
+    }
+  }
 }

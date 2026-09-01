@@ -308,7 +308,8 @@
       "cloudView": "클라우드 센터",
       "closeTab": "탭 닫기",
       "reopenTab": "닫힌 탭 복원",
-      "shortcutsRef": "단축키"
+      "shortcutsRef": "단축키",
+      "openCommandPalette": "명령 팔레트 열기"
     },
     "toast": {
       "selectProjectFirst": "먼저 프로젝트를 선택하세요",
@@ -922,5 +923,46 @@
     "catCost": "비용",
     "catThermal": "방열"
   },
-  "selectPlaceholder": "선택하세요"
+  "selectPlaceholder": "선택하세요",
+  "commandPalette": {
+    "placeholder": "명령을 입력하거나 검색…",
+    "noResults": "일치하는 명령이 없습니다",
+    "categories": {
+      "project": "프로젝트",
+      "design": "설계",
+      "template": "템플릿",
+      "common": "일반"
+    },
+    "commands": {
+      "newProject": "새 프로젝트",
+      "renderProject": "현재 프로젝트 렌더링",
+      "exportProject": "현재 프로젝트 내보내기",
+      "openProject": "프로젝트 열기",
+      "openedProject": "프로젝트를 열었습니다",
+      "roomDesign": "랙룸 설계",
+      "rackDesign": "랙 설계",
+      "snapshot": "설계 스냅샷 저장",
+      "aidcPlan": "AIDC 플랜",
+      "templateCenter": "템플릿 센터 열기",
+      "templateCenterHint": "템플릿 센터를 열었습니다 (마우스 우클릭으로 미리보기/생성)",
+      "previewTemplate": "템플릿 미리보기",
+      "createFromTemplate": "템플릿에서 생성",
+      "ai": "AI 어시스턴트",
+      "deviceLibrary": "장치 라이브러리",
+      "search": "전역 검색",
+      "cloud": "클라우드 센터",
+      "settings": "설정",
+      "newChat": "새 AI 채팅",
+      "toggleSidebar": "사이드바 전환",
+      "toggleTheme": "테마 전환",
+      "shortcuts": "단축키",
+      "noProject": "먼저 프로젝트를 선택하세요",
+      "renderHint": "워크벤치를 열고 \"원클릭 렌더링\"을 클릭하세요",
+      "exported": "프로젝트 내보냄: {{path}}",
+      "exportFailed": "내보내기 실패: {{error}}",
+      "snapshotSaved": "설계 스냅샷 저장됨",
+      "snapshotNoData": "저장할 설계 데이터가 없습니다 (먼저 랙룸 행렬 정의)",
+      "snapshotTooLarge": "설계 스냅샷이 너무 커서 건너뜀"
+    }
+  }
 }

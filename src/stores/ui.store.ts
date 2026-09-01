@@ -70,6 +70,8 @@ interface UIState {
   templateForWizard: string | null
   showAboutDialog: boolean
   showShortcutsDialog: boolean
+  /** 4.3 F3-1a: 命令面板打开的模板预览名（null=关闭；由 App 挂载 TemplatePreviewModal 渲染） */
+  templatePreviewName: string | null
   /** V3.1.1-T5-5: AI 配置（默认厂商/自主模式/各厂商 BYO-Key） */
   aiConfig: AIConfig
   /** AL-S3: 各 Provider 是否已配置密钥（只存布尔，不落明文 key；密钥本体归后端 ai_secrets.json） */
@@ -99,6 +101,8 @@ interface UIState {
   openWizardFromTemplate: (name: string) => void
   setShowAboutDialog: (show: boolean) => void
   setShowShortcutsDialog: (show: boolean) => void
+  /** 4.3 F3-1a: 设置命令面板模板预览目标（null=关闭） */
+  setTemplatePreviewName: (name: string | null) => void
   /** V3.1.1-T5-5: AI 配置更新（浅合并） */
   setAIConfig: (updates: Partial<AIConfig>) => void
   /** V3.1.1-T5-5: 更新单个 Provider 配置 */
@@ -124,6 +128,7 @@ export const useUIStore = create<UIState>()(
       templateForWizard: null,
       showAboutDialog: false,
       showShortcutsDialog: false,
+      templatePreviewName: null,
       aiConfig: {
         defaultProvider: 'deepseek',
         autonomyMode: 'semi_auto',
@@ -186,6 +191,9 @@ export const useUIStore = create<UIState>()(
       setShowAboutDialog: (show) => set({ showAboutDialog: show }),
 
       setShowShortcutsDialog: (show) => set({ showShortcutsDialog: show }),
+
+      // 4.3 F3-1a: 命令面板模板预览
+      setTemplatePreviewName: (name) => set({ templatePreviewName: name }),
 
       setAIConfig: (updates) =>
         set((s) => {

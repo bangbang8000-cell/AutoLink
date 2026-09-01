@@ -24,6 +24,7 @@ export type ShortcutAction =
   | 'closeTab'
   | 'reopenTab'
   | 'showShortcuts'
+  | 'openCommandPalette'
 
 export interface ShortcutDef {
   /** 显示文本,如 "Ctrl+Shift+E" */
@@ -84,7 +85,8 @@ export const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutDef[] }[] = 
   {
     categoryKey: 'help',
     items: [
-      { keys: 'Ctrl+K', action: 'showShortcuts', descKey: 'shortcutsRef', categoryKey: 'help', ctrl: true, shift: false, alt: false, key: 'k' },
+      // 4.3 F3-1a: Ctrl+K 打开命令面板（快捷键参考移入面板内命令）
+      { keys: 'Ctrl+K', action: 'openCommandPalette', descKey: 'openCommandPalette', categoryKey: 'help', ctrl: true, shift: false, alt: false, key: 'k' },
     ],
   },
 ]

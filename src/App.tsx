@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { useProjectStore } from '@/stores/project.store'
@@ -16,6 +16,9 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary'
 import { LogPanel } from '@/components/layout/LogPanel'
 import { FileExplorer } from '@/components/layout/FileExplorer'
 import { ShortcutsDialog } from '@/components/layout/ShortcutsDialog'
+import { TemplatePreviewModal } from '@/components/layout/TemplatePreviewModal'
+import { CommandPalette } from '@/components/ui/CommandPalette'
+import { buildCommandPaletteCommands } from '@/utils/commands'
 import { WorkspaceView } from '@/components/workspace/WorkspaceView'
 import { WorkspaceErrorBoundary } from '@/components/workspace/WorkspaceErrorBoundary'
 import { ServerProfileForm } from '@/components/device/ServerProfileForm'
@@ -62,6 +65,9 @@ export default function App() {
   const templateForWizard = useUIStore((s) => s.templateForWizard)
   const showShortcutsDialog = useUIStore((s) => s.showShortcutsDialog)
   const setShowShortcutsDialog = useUIStore((s) => s.setShowShortcutsDialog)
+  const templatePreviewName = useUIStore((s) => s.templatePreviewName)
+  // 4.3 F3-1a: 命令面板开关（Ctrl+K）
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   // v2.7.3-T1: Ctrl+S 保存配置
   const saveConfig = useDesignStore((s) => s.saveConfig)
   // V3.2.1-T10-1: 品牌主题色
@@ -190,7 +196,7 @@ export default function App() {
       const def = matchShortcut(e)
       if (!def) return
       // 输入框内仅允许 Ctrl+S/Ctrl+,/Ctrl+K
-      if (isInput && !['saveConfig', 'preferences', 'showShortcuts'].includes(def.action)) return
+      if (isInput && !['saveConfig', 'preferences', 'showShortcuts', 'openCommandPalette'].includes(def.action)) return
       e.preventDefault()
       switch (def.action) {
         case 'newProject': setShowCreateProjectWizard(true); break
@@ -213,6 +219,8 @@ export default function App() {
         case 'closeTab': if (activeTabId) closeTab(activeTabId); break
         case 'reopenTab': reopenLastClosed(); break
         case 'showShortcuts': setShowShortcutsDialog(true); break
+        // 4.3 F3-1a: Ctrl+K 打开命令面板
+        case 'openCommandPalette': setCommandPaletteOpen(true); break
       }
     }
     window.addEventListener('keydown', handler)
@@ -256,6 +264,28 @@ export default function App() {
       {/* V2.9.2-T7: 首次启动引导 */}
       <OnboardingModal />
       {showShortcutsDialog && <ShortcutsDialog onClose={() => setShowShortcutsDialog(false)} />}
+      {/* 4.3 F3-1a: 命令面板（Ctrl+K，命令注册本地化） */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        commands={buildCommandPaletteCommands(t)}
+      />
+      {/* 4.3 F3-1a: 命令面板模板预览入口 */}
+      {templatePreviewName && (
+        <TemplatePreviewModal
+          template={{
+            id: templatePreviewName,
+            name: templatePreviewName,
+            isBuiltin: useProjectStore.getState().templates.find((tp) => tp.name === templatePreviewName)?.isBuiltin,
+          }}
+          onClose={() => useUIStore.getState().setTemplatePreviewName(null)}
+          onCreateProject={(name) => {
+            useUIStore.getState().setTemplatePreviewName(null)
+            useUIStore.getState().openWizardFromTemplate(name)
+          }}
+          onEdit={() => useUIStore.getState().setTemplatePreviewName(null)}
+        />
+      )}
       <ServerProfileForm />
       <SwitchProfileForm />
       <DeviceImportModal />

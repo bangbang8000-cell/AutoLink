@@ -308,7 +308,8 @@
       "cloudView": "云中心",
       "closeTab": "关闭标签页",
       "reopenTab": "恢复标签页",
-      "shortcutsRef": "快捷键参考"
+      "shortcutsRef": "快捷键参考",
+      "openCommandPalette": "打开命令面板"
     },
     "toast": {
       "selectProjectFirst": "请先选择一个项目",
@@ -922,5 +923,46 @@
     "catCost": "成本",
     "catThermal": "散热"
   },
-  "selectPlaceholder": "请选择"
+  "selectPlaceholder": "请选择",
+  "commandPalette": {
+    "placeholder": "输入命令或搜索…",
+    "noResults": "未找到匹配的命令",
+    "categories": {
+      "project": "项目",
+      "design": "设计",
+      "template": "模板",
+      "common": "常用"
+    },
+    "commands": {
+      "newProject": "新建项目",
+      "renderProject": "渲染当前项目",
+      "exportProject": "导出当前项目",
+      "openProject": "打开项目",
+      "openedProject": "已打开项目",
+      "roomDesign": "机房设计",
+      "rackDesign": "机柜设计",
+      "snapshot": "保存设计快照",
+      "aidcPlan": "AIDC 规划",
+      "templateCenter": "打开模板中心",
+      "templateCenterHint": "已打开模板中心（可右键模板预览/基于模板创建）",
+      "previewTemplate": "预览模板",
+      "createFromTemplate": "基于模板创建",
+      "ai": "AI 助手",
+      "deviceLibrary": "设备库",
+      "search": "全局搜索",
+      "cloud": "云中心",
+      "settings": "设置",
+      "newChat": "新建 AI 对话",
+      "toggleSidebar": "切换侧边栏",
+      "toggleTheme": "切换主题",
+      "shortcuts": "快捷键参考",
+      "noProject": "请先选择一个项目",
+      "renderHint": "请在工作台中点击\"一键渲染\"开始渲染",
+      "exported": "项目已导出: {{path}}",
+      "exportFailed": "导出失败: {{error}}",
+      "snapshotSaved": "设计快照已保存",
+      "snapshotNoData": "当前没有可保存的设计数据（请先定义机柜矩阵）",
+      "snapshotTooLarge": "设计快照过大，已跳过保存"
+    }
+  }
 }

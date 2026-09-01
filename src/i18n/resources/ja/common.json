@@ -308,7 +308,8 @@
       "cloudView": "クラウドセンター",
       "closeTab": "タブを閉じる",
       "reopenTab": "閉じたタブを復元",
-      "shortcutsRef": "ショートカットキー"
+      "shortcutsRef": "ショートカットキー",
+      "openCommandPalette": "コマンドパレットを開く"
     },
     "toast": {
       "selectProjectFirst": "最初にプロジェクトを選択してください",
@@ -922,5 +923,46 @@
     "catCost": "コスト",
     "catThermal": "放熱"
   },
-  "selectPlaceholder": "選択してください"
+  "selectPlaceholder": "選択してください",
+  "commandPalette": {
+    "placeholder": "コマンドを入力または検索…",
+    "noResults": "一致するコマンドがありません",
+    "categories": {
+      "project": "プロジェクト",
+      "design": "設計",
+      "template": "テンプレート",
+      "common": "共通"
+    },
+    "commands": {
+      "newProject": "新規プロジェクト",
+      "renderProject": "現在のプロジェクトをレンダリング",
+      "exportProject": "現在のプロジェクトをエクスポート",
+      "openProject": "プロジェクトを開く",
+      "openedProject": "プロジェクトを開きました",
+      "roomDesign": "ラックルーム設計",
+      "rackDesign": "ラック設計",
+      "snapshot": "設計スナップショットを保存",
+      "aidcPlan": "AIDC プラン",
+      "templateCenter": "テンプレートセンターを開く",
+      "templateCenterHint": "テンプレートセンターを開きました（右クリックでプレビュー/作成）",
+      "previewTemplate": "テンプレートをプレビュー",
+      "createFromTemplate": "テンプレートから作成",
+      "ai": "AI アシスタント",
+      "deviceLibrary": "デバイスライブラリ",
+      "search": "グローバル検索",
+      "cloud": "クラウドセンター",
+      "settings": "設定",
+      "newChat": "新しい AI チャット",
+      "toggleSidebar": "サイドバー切替",
+      "toggleTheme": "テーマ切替",
+      "shortcuts": "ショートカットキー",
+      "noProject": "先にプロジェクトを選択してください",
+      "renderHint": "ワークベンチを開き「ワンクリックレンダリング」をクリックしてください",
+      "exported": "プロジェクトをエクスポートしました: {{path}}",
+      "exportFailed": "エクスポートに失敗しました: {{error}}",
+      "snapshotSaved": "設計スナップショットを保存しました",
+      "snapshotNoData": "保存できる設計データがありません（先にラックルーム行列を定義）",
+      "snapshotTooLarge": "設計スナップショットが大きすぎるため、保存をスキップしました"
+    }
+  }
 }
