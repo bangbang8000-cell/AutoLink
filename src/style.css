@@ -2,27 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---- Design Tokens ---- */
-/* U4: 移除未使用的 CSS 变量(--color-surface 等组件代码 0 引用),仅保留字号调节用变量 */
+/* ================================================================
+ * Design Tokens — 4.0 契约单源
+ * 事实源: docs/双端设计Token契约_v1.0_2026-08-29.md
+ * 值对齐契约并锁定(防漂移);中性/语义色为 RGB 通道三元组,供 Tailwind alpha-value 使用
+ * ================================================================ */
 :root {
   --font-size-base: 14px;
-  /* v2.7.3-T5: 亮色语义色阶 (RGB 通道值,供 Tailwind alpha-value 使用) */
-  --app-bg: 255 255 255;
-  --app-surface: 249 250 251;
-  --app-elevated: 255 255 255;
-  --app-hover: 243 244 246;
-  --edge-subtle: 229 231 235;
-  --edge-default: 209 213 219;
+
+  /* 中性色 · Light (契约 §2) */
+  --app-bg: 255 255 255;          /* #FFFFFF  color.app */
+  --app-surface: 246 247 249;     /* #F6F7F9  color.app-surface */
+  --app-elevated: 255 255 255;    /* 扩展(非契约) */
+  --app-hover: 236 238 242;       /* #ECEEF2  color.app-hover */
+  --edge-subtle: 228 231 235;     /* #E4E7EB  color.edge-subtle */
+  --edge-default: 209 213 219;    /* 扩展(非契约) */
+
+  /* 文本色 · Light (契约 §2) */
+  --text-primary: 26 32 39;       /* #1A2027  color.text-primary */
+  --text-secondary: 90 100 114;   /* #5A6472  color.text-secondary */
+  --text-muted: 138 148 162;      /* #8A94A2  color.text-muted */
+
+  /* 语义色 (契约 §1, 亮/暗共用) */
+  --primary: 47 111 237;          /* #2F6FED  color.primary */
+  --primary-hover: 30 91 201;     /* #1E5BC9  color.primary-hover */
+  --success: 22 163 74;           /* #16A34A  color.success */
+  --warning: 245 158 11;          /* #F59E0B  color.warning */
+  --danger: 220 38 38;            /* #DC2626  color.danger */
+  --info: 14 165 233;             /* #0EA5E9  color.info */
 }
 
-/* v2.7.3-T5: 暗色语义色阶 */
+/* 暗色中性/文本色 (契约 §2) */
 .dark {
-  --app-bg: 13 17 23;
-  --app-surface: 22 27 34;
-  --app-elevated: 28 35 51;
-  --app-hover: 37 45 58;
-  --edge-subtle: 48 54 61;
-  --edge-default: 72 79 88;
+  --app-bg: 15 20 26;             /* #0F141A  color.app */
+  --app-surface: 22 28 35;        /* #161C23  color.app-surface */
+  --app-elevated: 28 35 51;       /* 扩展(非契约) */
+  --app-hover: 30 39 48;          /* #1E2730  color.app-hover */
+  --edge-subtle: 42 53 64;        /* #2A3540  color.edge-subtle */
+  --edge-default: 72 79 88;       /* 扩展(非契约) */
+
+  --text-primary: 230 234 240;    /* #E6EAF0  color.text-primary */
+  --text-secondary: 154 165 177;  /* #9AA5B1  color.text-secondary */
+  --text-muted: 107 118 131;      /* #6B7683  color.text-muted */
+}
+
+/* ---- 4.0 Token 扩展 (契约 §3-§7: 圆角/阴影/间距/动效/字体) ---- */
+:root {
+  /* 圆角 §3 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* 阴影 §4 */
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
+  --shadow-md: 0 4px 12px rgba(16,24,40,.10);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,.14);
+
+  /* 间距 §5 (4px 基数) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* 动效 §6 */
+  --motion-fast: 120ms;
+  --motion-normal: 200ms;
+  --motion-slow: 320ms;
+  --motion-ease: cubic-bezier(.2,.8,.2,1);
+
+  /* 字体 §7 */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  --font-size-xs: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
 }
 
 /* v3.2.1-T10-1: primary 品牌色阶 token（RGB 通道值）——默认 sky 蓝
