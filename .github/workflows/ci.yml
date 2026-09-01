@@ -29,7 +29,8 @@ jobs:
       # V3.2.2-R11.1: 渲染层安全断言 — 0 直接网络 / 0 Node 访问（一切经 preload IPC 桥接）
       - name: Security baseline (renderer IPC-only)
         run: |
-          if grep -rEn "\bfetch\(|XMLHttpRequest|require\(|process\." src --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx"; then
+          # 仅扫描打包进渲染层的源码；src/test 为测试代码（合法使用 Node API），不属渲染层，排除
+          if grep -rEn --exclude-dir=test "\bfetch\(|XMLHttpRequest|require\(|process\." src --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx"; then
             echo "FAIL: renderer must not access network or Node APIs directly"
             exit 1
           fi
