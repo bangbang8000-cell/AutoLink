@@ -30,6 +30,7 @@ describe('UIStore', () => {
       panelVisible: false,
       theme: 'system',
       isDark: false,
+      isHighContrast: false,
       language: 'zh-CN',
       explorerProjectListHeight: 300,
       explorerGroupMode: 'smart',
@@ -113,6 +114,15 @@ describe('UIStore', () => {
       mockMatchMedia(true)
       useUIStore.getState().setTheme('system')
       expect(useUIStore.getState().isDark).toBe(true)
+    })
+
+    it('high-contrast 模式应设置 isHighContrast=true 且 isDark=false', () => {
+      mockMatchMedia(true)
+      useUIStore.getState().setTheme('high-contrast')
+      const s = useUIStore.getState()
+      expect(s.theme).toBe('high-contrast')
+      expect(s.isHighContrast).toBe(true)
+      expect(s.isDark).toBe(false)
     })
   })
 
