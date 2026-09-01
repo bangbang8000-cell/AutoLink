@@ -147,7 +147,7 @@ export function AboutDialog({ onClose }: Props) {
             {updateState === 'idle' && (
               <button
                 onClick={handleCheckUpdate}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md bg-primary hover:bg-primary-hover text-white"
               >
                 <RefreshCw size={12} />
                 {t('about.checkUpdate')}
@@ -172,7 +172,7 @@ export function AboutDialog({ onClose }: Props) {
                 </span>
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md bg-primary hover:bg-primary-hover text-white"
                 >
                   <Download size={11} />
                   {t('about.downloadInstall')}
@@ -181,9 +181,9 @@ export function AboutDialog({ onClose }: Props) {
             )}
             {updateState === 'downloading' && (
               <div className="flex items-center gap-2 flex-1 max-w-[240px]">
-                <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                <div className="flex-1 h-1.5 bg-app-hover rounded overflow-hidden">
                   <div
-                    className="h-full bg-primary-500 transition-all"
+                    className="h-full bg-primary transition-all"
                     style={{ width: `${downloadPercent}%` }}
                   />
                 </div>
@@ -224,7 +224,7 @@ export function AboutDialog({ onClose }: Props) {
                 </button>
                 <button
                   onClick={handleCheckUpdate}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-app-hover hover:bg-app-hover/70 text-text-secondary"
                 >
                   <RefreshCw size={11} />
                   {t('about.retry')}
@@ -235,7 +235,7 @@ export function AboutDialog({ onClose }: Props) {
 
           <button
             onClick={onClose}
-            className="px-3 py-1 text-xs rounded bg-gray-500 hover:bg-gray-600 text-white shrink-0"
+            className="px-3 py-1 text-xs rounded-md bg-text-secondary hover:bg-text-primary text-white shrink-0"
           >
             {t('about.close')}
           </button>
@@ -270,7 +270,7 @@ export function AboutDialog({ onClose }: Props) {
         <ul className="space-y-1.5">
           {(t('about.features', { returnObjects: true }) as string[]).map((f, i) => (
             <li key={i} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
               <span>{f}</span>
             </li>
           ))}
@@ -292,7 +292,7 @@ export function AboutDialog({ onClose }: Props) {
           href="https://github.com/bangbang8000-cell/AutoLink"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-primary-500"
+          className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-primary"
         >
           <GitBranch size={12} />
           {t('about.repository')}

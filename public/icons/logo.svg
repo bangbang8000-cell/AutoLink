@@ -1,9 +1,9 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0EA5E9"/>
-      <stop offset="55%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#7C3AED"/>
+      <stop offset="0%" stop-color="#7AA8F8"/>
+      <stop offset="55%" stop-color="#2F6FED"/>
+      <stop offset="100%" stop-color="#1E5BC9"/>
     </linearGradient>
     <linearGradient id="bgSheen" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
@@ -11,14 +11,14 @@
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
     <linearGradient id="legGrad" x1="160" y1="392" x2="352" y2="120" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#7DD3FC"/>
+      <stop offset="0%" stop-color="#B7CBFB"/>
       <stop offset="55%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#C4B5FD"/>
+      <stop offset="100%" stop-color="#A3B9F7"/>
     </linearGradient>
     <linearGradient id="barGrad" x1="112" y1="260" x2="400" y2="260" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#7DD3FC"/>
+      <stop offset="0%" stop-color="#B7CBFB"/>
       <stop offset="50%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#C4B5FD"/>
+      <stop offset="100%" stop-color="#A3B9F7"/>
     </linearGradient>
     <filter id="glowLeg" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="4" result="b"/>

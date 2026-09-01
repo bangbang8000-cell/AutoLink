@@ -19,14 +19,14 @@
       width: 100%; height: 100%;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0c4a6e 100%);
+      background: linear-gradient(135deg, #0F141A 0%, #1E5BC9 52%, #2F6FED 100%);
       color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
       position: relative;
     }
     /* Animated background particles（克制，不干扰品牌） */
     .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-    .particle { position: absolute; width: 3px; height: 3px; background: rgba(125,211,252,0.35); border-radius: 50%; animation: float 9s infinite ease-in-out; }
+    .particle { position: absolute; width: 3px; height: 3px; background: rgba(122,168,248,0.35); border-radius: 50%; animation: float 9s infinite ease-in-out; }
     .particle:nth-child(1) { left: 15%; top: 20%; animation-delay: 0s; }
     .particle:nth-child(2) { left: 80%; top: 15%; animation-delay: 1.5s; }
     .particle:nth-child(3) { left: 25%; top: 75%; animation-delay: 2.5s; }
@@ -60,7 +60,7 @@
 
     .app-name {
       font-size: 27px; font-weight: 700; letter-spacing: 2px;
-      background: linear-gradient(90deg, #7dd3fc, #a78bfa);
+      background: linear-gradient(90deg, #7AA8F8, #2F6FED);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
       animation: fadeIn 0.8s 0.15s both;
     }
@@ -70,7 +70,7 @@
     /* 阶段文案 + 真实进度条 */
     .stage-text { margin-top: 34px; font-size: 11px; color: rgba(255,255,255,0.62); letter-spacing: 1px; animation: fadeIn 0.6s 0.4s both; min-height: 16px; }
     .progress-wrap { margin-top: 14px; width: 220px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; animation: fadeIn 0.6s 0.45s both; }
-    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #7dd3fc, #a78bfa); border-radius: 2px; transition: width 0.45s ease; }
+    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #7AA8F8, #2F6FED); border-radius: 2px; transition: width 0.45s ease; }
 
     .version { position: absolute; bottom: 16px; font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
   </style>
@@ -89,16 +89,16 @@
       <svg class="logo-svg" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#0EA5E9"/><stop offset="55%" stop-color="#2563EB"/><stop offset="100%" stop-color="#7C3AED"/>
+            <stop offset="0%" stop-color="#7AA8F8"/><stop offset="55%" stop-color="#2F6FED"/><stop offset="100%" stop-color="#1E5BC9"/>
           </linearGradient>
           <linearGradient id="bgSheen" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/><stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.04"/><stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
           </linearGradient>
           <linearGradient id="legGrad" x1="160" y1="392" x2="352" y2="120" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7DD3FC"/><stop offset="55%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#C4B5FD"/>
+            <stop offset="0%" stop-color="#B7CBFB"/><stop offset="55%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#A3B9F7"/>
           </linearGradient>
           <linearGradient id="barGrad" x1="112" y1="260" x2="400" y2="260" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7DD3FC"/><stop offset="50%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#C4B5FD"/>
+            <stop offset="0%" stop-color="#B7CBFB"/><stop offset="50%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#A3B9F7"/>
           </linearGradient>
           <filter id="glowLeg" x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
