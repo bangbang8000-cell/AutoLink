@@ -124,3 +124,97 @@ describe('buildCommandPaletteCommands 注册表（A-1）', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 })
+
+describe('buildCommandPaletteCommands 命令全集（E-5）', () => {
+  beforeEach(() => {
+    useProjectStore.setState({
+      projects: [
+        { id: 1, name: 'P1', index: 0 },
+        { id: 2, name: 'P2', index: 1 },
+      ],
+      templates: [{ id: 'T1', name: 'T1', description: '', scenario: '', tags: [], updatedAt: '' }],
+      selectedProjectName: 'P1',
+      recentProjects: ['P1'],
+      favoriteProjects: ['P2'],
+    } as never)
+  })
+
+  it('命令全集覆盖 项目/设计/渲染导出/批量/一键管线/最近收藏/模板/设置/快捷键 九类操作', () => {
+    const t = (key: string) => key
+    const cmds = buildCommandPaletteCommands(t as never)
+    const ids = new Set(cmds.map((c) => c.id))
+    // 项目
+    expect(ids.has('project.new')).toBe(true)
+    expect(ids.has('project.import')).toBe(true)
+    expect(ids.has('project.render')).toBe(true)
+    expect(ids.has('project.export')).toBe(true)
+    expect(ids.has('project.favorite')).toBe(true)
+    expect(ids.has('project.open.P1')).toBe(true)
+    // 设计
+    expect(ids.has('design.room')).toBe(true)
+    expect(ids.has('design.rack')).toBe(true)
+    expect(ids.has('design.generate')).toBe(true)
+    expect(ids.has('design.saveConfig')).toBe(true)
+    expect(ids.has('design.snapshot')).toBe(true)
+    expect(ids.has('design.aidcPlan')).toBe(true)
+    // 渲染/导出
+    expect(ids.has('render.current')).toBe(true)
+    expect(ids.has('export.delivery')).toBe(true)
+    expect(ids.has('export.output')).toBe(true)
+    // 批量
+    expect(ids.has('batch.render')).toBe(true)
+    expect(ids.has('batch.export')).toBe(true)
+    // 一键管线
+    expect(ids.has('pipeline.run')).toBe(true)
+    expect(ids.has('pipeline.template')).toBe(true)
+    // 最近/收藏（动态子命令）
+    expect(ids.has('recent.open.P1')).toBe(true)
+    expect(ids.has('favorite.open.P2')).toBe(true)
+    // 模板（动态）
+    expect(ids.has('template.center')).toBe(true)
+    expect(ids.has('template.preview.T1')).toBe(true)
+    expect(ids.has('template.create.T1')).toBe(true)
+    // 设置/快捷键
+    expect(ids.has('common.settings')).toBe(true)
+    expect(ids.has('common.toggleTheme')).toBe(true)
+    expect(ids.has('common.shortcuts')).toBe(true)
+  })
+
+  it('命令分类覆盖：项目/设计/模板/常用 + 渲染导出/批量/一键管线/最近收藏', () => {
+    const t = (key: string) => key
+    const cmds = buildCommandPaletteCommands(t as never)
+    const cats = new Set(cmds.map((c) => c.category))
+    for (const c of [
+      'common:commandPalette.categories.project',
+      'common:commandPalette.categories.design',
+      'common:commandPalette.categories.template',
+      'common:commandPalette.categories.common',
+      'common:commandPalette.categories.render',
+      'common:commandPalette.categories.batch',
+      'common:commandPalette.categories.pipeline',
+      'common:commandPalette.categories.recent',
+    ]) {
+      expect(cats.has(c), `缺少分类 ${c}`).toBe(true)
+    }
+  })
+
+  it('命令执行有反馈：命令 id 唯一且部分命令标注快捷键', () => {
+    const t = (key: string) => key
+    const cmds = buildCommandPaletteCommands(t as never)
+    const ids = cmds.map((c) => c.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(cmds.find((c) => c.id === 'render.current')?.shortcut).toBe('Ctrl+Enter')
+    expect(cmds.find((c) => c.id === 'common.settings')?.shortcut).toBe('Ctrl+,')
+    expect(cmds.find((c) => c.id === 'common.shortcuts')?.shortcut).toBe('F1')
+    // 全部命令均有 action 可执行
+    expect(cmds.every((c) => typeof c.action === 'function')).toBe(true)
+  })
+
+  it('无收藏项目时提供「收藏空态引导」命令', () => {
+    useProjectStore.setState({ favoriteProjects: [] } as never)
+    const t = (key: string) => key
+    const cmds = buildCommandPaletteCommands(t as never)
+    const ids = new Set(cmds.map((c) => c.id))
+    expect(ids.has('recent.favoriteEmpty')).toBe(true)
+  })
+})
