@@ -306,6 +306,9 @@ const electronAPI = {
     },
     reviewPdf: (projectName: string) =>
       ipcRenderer.invoke('feature:review-pdf', projectName),
+    // 48-d（F8-4）：评审包（聚合版本历史+设计报告+校验+交付清单 → zip）
+    reviewPackage: (projectName: string) =>
+      ipcRenderer.invoke('feature:review-package', projectName),
     snapshot: {
       exportFile: (defaultName: string, jsonText: string) =>
         ipcRenderer.invoke('feature:snapshot:exportFile', defaultName, jsonText),

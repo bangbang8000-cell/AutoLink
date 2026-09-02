@@ -167,6 +167,15 @@ export interface ReviewPdfResult {
   error?: string
 }
 
+// 48-d（F8-4）：评审包（聚合版本历史 + 设计报告 + 校验 + 交付清单 → zip）
+export interface ReviewPackageResult {
+  ok?: boolean
+  path?: string
+  fileName?: string
+  versions?: number
+  error?: string
+}
+
 export interface VersionHistoryListResult {
   ok?: boolean
   projectName?: string
@@ -207,6 +216,7 @@ export interface FeatureBridge {
     importFile: (projectName: string, opts?: { overwrite?: boolean }) => Promise<VersionHistoryFileResult>
   }
   reviewPdf: (projectName: string) => Promise<ReviewPdfResult>
+  reviewPackage: (projectName: string) => Promise<ReviewPackageResult>
   snapshot: {
     exportFile: (defaultName: string, jsonText: string) => Promise<SnapshotFileResult>
     importFile: () => Promise<SnapshotFileResult>

@@ -23,7 +23,7 @@ import { getFeatureBridge } from '@/utils/planVersionDiff'
 import { VersionHistoryView } from '@/components/workbench/VersionHistoryView'
 import {
   RefreshCw, Download, Trash2, ChevronRight, ChevronDown,
-  FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2, Upload, History, FileDown,
+  FileText, FileSpreadsheet, Image as ImageIcon, FolderOpen, Eye, Loader2, Upload, History, FileDown, Package,
 } from 'lucide-react'
 
 interface BatchFile { name: string; path: string }
@@ -311,6 +311,19 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     }
   }, [activeProject, addToast, refresh, t])
 
+  // 48-d（F8-4）：导出评审包（聚合版本历史 + 设计报告 + 校验 + 交付清单 → zip，含 PDF 报告）
+  const handleReviewPackage = useCallback(async () => {
+    try {
+      const res = await getFeatureBridge().reviewPackage(activeProject)
+      if (res?.error) throw new Error(res.error)
+      if (!res?.ok || !res.path) throw new Error('导出失败（Electron 桥接未就绪）')
+      addToast('success', t('workbench:output.reviewPackageExported', '评审包已导出 → {{path}}', { path: res.path }), 6000)
+      refresh()
+    } catch (err) {
+      addToast('error', t('workbench:output.reviewPackageFailed', '评审包导出失败：{{reason}}', { reason: (err as Error).message }), 6000)
+    }
+  }, [activeProject, addToast, refresh, t])
+
   // M2（AL-SNAP2）：导入设计快照 JSON（选文件 → validate → 导入前备份 → 应用）
   const importFileRef = useRef<HTMLInputElement>(null)
   const handleImportSnapshot = useCallback(() => {
@@ -476,6 +489,11 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         <button type="button" onClick={handleReviewPdf}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
           <FileDown size={11} /> {t('workbench:output.reviewPdf', '导出评审 PDF')}
+        </button>
+        {/* 48-d（F8-4）：评审包（聚合版本历史+设计报告+校验+交付清单 → zip，含 PDF） */}
+        <button type="button" onClick={handleReviewPackage}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
+          <Package size={11} /> {t('workbench:output.reviewPackage', '导出评审包')}
         </button>
         <button type="button" onClick={handleClearProject} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-40">

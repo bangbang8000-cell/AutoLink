@@ -51,6 +51,7 @@ const mockElectron = {
       importFile: vi.fn(),
     },
     reviewPdf: vi.fn(),
+    reviewPackage: vi.fn(),
     snapshot: {
       exportFile: vi.fn(),
       importFile: vi.fn(),

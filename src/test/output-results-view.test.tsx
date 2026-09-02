@@ -134,6 +134,37 @@ describe('OutputResultsView（M-F1 版本历史 + 评审 PDF）', () => {
     fireEvent.click(await screen.findByText('版本历史'))
     expect(await screen.findByText(/暂无历史版本/)).toBeInTheDocument()
   })
+
+  it('48-d 工具栏显示「导出评审包」入口', async () => {
+    render(<OutputResultsView projectName="p1" />)
+    expect(await screen.findByText('导出评审包')).toBeInTheDocument()
+  })
+
+  it('48-d 点「导出评审包」→ 调 feature.reviewPackage(项目) → 成功后 toast 路径并刷新', async () => {
+    ;(window.electron as unknown as {
+      feature: { reviewPackage: ReturnType<typeof vi.fn> }
+    }).feature.reviewPackage.mockReset().mockResolvedValue({ ok: true, path: '/workspace/p1/output/p1_评审包.zip', fileName: 'p1_评审包.zip', versions: 3 })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('导出评审包'))
+    await waitFor(() =>
+      expect(
+        (window.electron as unknown as { feature: { reviewPackage: ReturnType<typeof vi.fn> } }).feature.reviewPackage,
+      ).toHaveBeenCalledWith('p1'),
+    )
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((t) => t.type === 'success' && t.message.includes('/workspace/p1/output/p1_评审包.zip'))).toBe(true),
+    )
+  })
+
+  it('48-d 评审包导出失败 → error toast（不静默）', async () => {
+    ;(window.electron as unknown as { feature: { reviewPackage: ReturnType<typeof vi.fn> } }).feature.reviewPackage
+      .mockReset().mockResolvedValue({ ok: false, error: '当前项目未生成 AIDC 规划' })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('导出评审包'))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((t) => t.type === 'error' && t.message.includes('当前项目未生成 AIDC 规划'))).toBe(true),
+    )
+  })
 })
 
 describe('OutputResultsView（48-b 便携快照文件导出）', () => {
