@@ -4,6 +4,8 @@ AutoLink V2.1 - Exporter 模块单元测试
 """
 import sys
 import os
+import json
+import copy
 import tempfile
 import pandas as pd
 
@@ -379,3 +381,73 @@ storage_speed = 200G
 
                 df = pd.read_excel(r["file"])
                 assert len(df) > 0
+
+
+class TestStorageDisabledExport:
+    """4.4.1 回归：存储网络关闭时导出不崩溃。
+
+    根因：NetworkDesignerV2.storage_servers_per_group 仅在 storage_enabled 分支赋值，
+    存储网关闭/融合网时 exporter 无条件引用 → AttributeError。
+    """
+
+    @staticmethod
+    def _write_project(tmpdir, storage_network=False):
+        from project_config import DEFAULT_PROJECT_CONFIG
+        cfg = copy.deepcopy(DEFAULT_PROJECT_CONFIG)
+        cfg['meta']['name'] = 'regress-no-storage'
+        cfg['networks']['storage_network'] = storage_network
+        cfg['networks']['biz_network'] = False
+        cfg['networks']['oob_network'] = False
+        cfg['topology']['num_gpu_servers'] = 8
+        cfg['topology']['param_ports_per_server'] = 8
+        cfg['topology']['storage_ports_per_server'] = 1
+        cfg['topology']['param_switch_ports'] = 64
+        cfg['topology']['storage_switch_ports'] = 48
+        json_path = os.path.join(tmpdir, 'project_config.json')
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        return json_path
+
+    def test_designer_storage_servers_per_group_defaults_zero(self):
+        """存储网关闭时 storage_servers_per_group 存在且为 0（exporter 不再 AttributeError）"""
+        from designer import NetworkDesignerV2
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = self._write_project(tmpdir, storage_network=False)
+            designer = NetworkDesignerV2(json_path)
+            assert hasattr(designer, 'storage_servers_per_group')
+            assert designer.storage_servers_per_group == 0
+
+    def test_export_connections_storage_disabled_no_attr_error(self):
+        """存储网关闭项目导出连接表不抛 'NetworkDesignerV2' object has no attribute 'storage_servers_per_group'"""
+        from engine import handle_export
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = self._write_project(tmpdir, storage_network=False)
+            output_dir = os.path.join(tmpdir, 'output')
+            result = handle_export({
+                "configFile": json_path,
+                "outputDir": output_dir,
+                "outputTypes": ["connections"],
+            })
+            assert result["results"][0]["status"] == "success"
+            file_path = result["results"][0]["file"]
+            assert os.path.exists(file_path)
+            with open(file_path, 'rb') as f:
+                assert f.read()[:2] == b'PK', f"连接表应以 PK 开头，实际: {file_path}"
+
+    def test_export_connections_eth_combined_no_attr_error(self):
+        """融合网（eth_combined）项目导出连接表同样不崩溃"""
+        from engine import handle_export
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = self._write_project(tmpdir, storage_network=True)
+            with open(json_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            cfg['networks']['eth_combined'] = True
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=2)
+            output_dir = os.path.join(tmpdir, 'output')
+            result = handle_export({
+                "configFile": json_path,
+                "outputDir": output_dir,
+                "outputTypes": ["connections"],
+            })
+            assert result["results"][0]["status"] == "success"

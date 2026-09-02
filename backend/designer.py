@@ -727,6 +727,7 @@ class NetworkDesignerV2:
         self.storage_pods = 0
         self.storage_servers_per_pod = 0
         self.storage_groups = 0
+        self.storage_servers_per_group = 0
         # V3.0.2-T2-5: 三合一融合网（eth_combined）替代独立存储/业务网
         if getattr(self, 'eth_combined', False):
             self._calc_combined_hierarchy()
@@ -1598,6 +1599,8 @@ class NetworkDesignerV2:
         self.storage_pods = 0
         self.storage_servers_per_pod = 0
         self.storage_groups = 0
+        # 4.4.1 修复：融合网分支同样需保证该属性存在（exporter 无条件引用）
+        self.storage_servers_per_group = 0
 
     def _create_combined_switches(self, profile=None):
         """V3.0.2-T2-5: 创建融合网 Leaf（单层）"""
