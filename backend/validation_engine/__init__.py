@@ -5,6 +5,7 @@
   - consistency   一致性校验（规划↔设计 / 设计内部 / 设计→渲染）
   - export_check  导出数据核对（渲染批次产物 vs 设计/规划）
   - ip_check      IP 规划校验（子网重叠/网关冲突/越界/重复/掩码）
+  - ai_accuracy   AI 规划器准确性校验（建议声称值 vs 后端真实计算）
 
 典型用法：
     from validation_engine import check_plan_design_consistency, check_export_batch, check_ip_plan
@@ -22,6 +23,10 @@ from validation_engine.ip_check import (
     check_ip_plan, validate_subnet, check_subnet_overlap,
     check_gateway_conflicts, check_allocations,
 )
+from validation_engine.ai_accuracy import (
+    check_suggestion_accuracy, check_optimization_suggestions, check_ai_plan_claims,
+    designer_convergence,
+)
 
 __all__ = [
     'ValidationProblem', 'ValidationReport',
@@ -32,4 +37,6 @@ __all__ = [
     'collect_batch_stats', 'check_export_batch',
     'check_ip_plan', 'validate_subnet', 'check_subnet_overlap',
     'check_gateway_conflicts', 'check_allocations',
+    'check_suggestion_accuracy', 'check_optimization_suggestions', 'check_ai_plan_claims',
+    'designer_convergence',
 ]
