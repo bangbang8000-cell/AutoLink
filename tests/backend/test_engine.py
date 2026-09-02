@@ -238,6 +238,11 @@ storage_speed = 200G
                 manifest = json.load(f)
             assert manifest["version"] == 1
             assert manifest["config_hash"]
+            # 48-e（F8-5）：manifest 带逐文件清单（name/size/sha256，不含 manifest.json）
+            assert isinstance(manifest.get('files'), list) and len(manifest['files']) >= 1
+            assert manifest['files'][0]['name'].endswith('.xlsx')
+            assert manifest['files'][0]['size'] > 0
+            assert len(manifest['files'][0]['sha256']) == 64
 
     def test_version_archiving_config_change_increments(self):
         """配置变化 → 版本递增"""

@@ -33,6 +33,14 @@ interface Window {
       getFileBinary: (name: string, filePath: string) => Promise<string | null>
       listOutputFiles: (name: string) => Promise<{ name: string; type: string }[]>
       listOutputBatches: (projectName: string) => Promise<import('@/types/file-tree').OutputBatch[]>
+      // 48-e（F8-5）：批次 manifest + 实际文件清单（逐文件 sha256，前端 deriveBatchIntegrity 推导完整性）
+      batchManifest: (projectName: string, batchName: string) => Promise<{
+        ok: boolean
+        error?: string
+        batchName?: string
+        manifest?: { files?: Array<{ name: string; size?: number; sha256?: string }> } | null
+        actualFiles?: Array<{ name: string; size: number; sha256: string }>
+      }>
       deleteOutputFile: (projectName: string, filePath: string) => Promise<void>
       deleteOutputBatch: (projectName: string, batchName: string) => Promise<void>
       clearOutput: (projectName: string) => Promise<void>

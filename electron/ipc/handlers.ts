@@ -827,6 +827,31 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return [...batches, ...dirs]
   }))
 
+  // 48-e（F8-5）：批次 manifest + 实际文件清单（逐文件 sha256/size，前端 deriveBatchIntegrity 推导完整性）
+  ipcMain.handle('project:batchManifest', wrapHandler(async (_event, projectName: string, batchName: string) => {
+    sanitizeName(projectName)
+    sanitizeName(batchName)
+    const batchDir = path.join(getWorkspacePath(), projectName, 'output', batchName)
+    if (!fs.existsSync(batchDir)) return { ok: false, error: `批次不存在: ${batchName}` }
+    const crypto = await import('crypto')
+    let manifest: unknown = null
+    const manifestPath = path.join(batchDir, 'manifest.json')
+    if (fs.existsSync(manifestPath)) {
+      try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) } catch { manifest = null }
+    }
+    const actualFiles: { name: string; size: number; sha256: string }[] = []
+    for (const name of fs.readdirSync(batchDir)) {
+      const fpath = path.join(batchDir, name)
+      if (!fs.statSync(fpath).isFile()) continue
+      let sha256 = ''
+      try {
+        sha256 = crypto.createHash('sha256').update(fs.readFileSync(fpath)).digest('hex')
+      } catch { sha256 = '' }
+      actualFiles.push({ name, size: fs.statSync(fpath).size, sha256 })
+    }
+    return { ok: true, batchName, manifest, actualFiles }
+  }))
+
   ipcMain.handle('project:saveConfigFile', wrapHandler(async (_event, name: string, content: string) => {
     sanitizeName(name)
     const projectDir = path.join(getWorkspacePath(), name)

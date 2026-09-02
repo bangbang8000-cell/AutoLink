@@ -154,3 +154,73 @@ class TestCheckExportBatch:
                          connections=[{'source': 'a', 'target': 'b'}] * 5)
         issues = check_export_batch(str(batch), design)
         assert not [i for i in issues if i.severity == 'error']
+
+
+class TestBatchIntegrity:
+    """48-e（F8-5）：批次产物完整性——manifest.files 逐文件（缺失/漂移/哈希不符 → E008）"""
+
+    def _sha256(self, path):
+        import hashlib
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def _write_manifest_with_files(self, batch, files, extra_actual=()):
+        """files: [{name, content}] → 写文件并生成带逐文件清单的 manifest"""
+        for f in files:
+            (batch / f['name']).write_bytes(f['content'])
+        for name in extra_actual:
+            (batch / name).write_text('drift', encoding='utf-8')
+        (batch / 'manifest.json').write_text(json.dumps({
+            'schema_version': 1, 'version': 1, 'config_hash': 'x',
+            'output_types': ['connections'], 'results': [],
+            'stats': {'servers': 0, 'param_leaves': 0, 'param_spines': 0, 'param_cores': 0,
+                      'storage_leaves': 0, 'storage_spines': 0, 'biz_access': 0, 'biz_agg': 0,
+                      'oob_access': 0, 'oob_agg': 0},
+            'files': [{'name': f['name'], 'size': len(f['content']), 'sha256': self._sha256(batch / f['name'])}
+                      for f in files],
+        }, ensure_ascii=False), encoding='utf-8')
+
+    def test_intact_batch_no_e008(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        self._write_manifest_with_files(batch, [{'name': 'a.xlsx', 'content': b'AAA'}])
+        issues = check_export_batch(str(batch))
+        assert not [i for i in issues if i.rule_id == 'E008']
+
+    def test_missing_file_e008(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        files = [{'name': 'a.xlsx', 'content': b'AAA'}, {'name': 'b.xlsx', 'content': b'BBB'}]
+        self._write_manifest_with_files(batch, files)
+        (batch / 'b.xlsx').unlink()
+        issues = check_export_batch(str(batch))
+        e008 = [i for i in issues if i.rule_id == 'E008']
+        assert any('缺失' in i.message for i in e008)
+
+    def test_hash_mismatch_e008(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        self._write_manifest_with_files(batch, [{'name': 'a.xlsx', 'content': b'AAA'}])
+        # 篡改文件内容 → 哈希不符
+        (batch / 'a.xlsx').write_bytes(b'BBB')
+        issues = check_export_batch(str(batch))
+        e008 = [i for i in issues if i.rule_id == 'E008']
+        assert any('哈希不符' in i.message for i in e008)
+
+    def test_drift_extra_file_e008(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        self._write_manifest_with_files(batch, [{'name': 'a.xlsx', 'content': b'AAA'}], extra_actual=('extra.txt',))
+        issues = check_export_batch(str(batch))
+        e008 = [i for i in issues if i.rule_id == 'E008']
+        assert any('漂移' in i.message for i in e008)
+
+    def test_check_batch_integrity_returns_problems(self, tmp_path):
+        """独立入口：check_batch_integrity 直接校验。"""
+        from validation_engine.export_check import check_batch_integrity
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        self._write_manifest_with_files(batch, [{'name': 'a.xlsx', 'content': b'AAA'}])
+        (batch / 'a.xlsx').write_bytes(b'ZZZ')
+        problems = check_batch_integrity(str(batch))
+        assert any(p.rule_id == 'E008' and '哈希不符' in p.message for p in problems)
+        assert all(p.rule_id == 'E008' for p in problems)

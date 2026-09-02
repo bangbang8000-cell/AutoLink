@@ -20,6 +20,7 @@ import { exportRackDesignExcel } from '@/utils/exportRackDesignExcel'
 import { serializeDesignState } from '@/utils/designSnapshot'
 import { stringToBase64 } from '@/utils/exportSvg'
 import { getFeatureBridge } from '@/utils/planVersionDiff'
+import { deriveBatchIntegrity } from '@/utils/batchIntegrity'
 import { VersionHistoryView } from '@/components/workbench/VersionHistoryView'
 import {
   RefreshCw, Download, Trash2, ChevronRight, ChevronDown,
@@ -193,6 +194,8 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
   const [activeProject, setActiveProject] = useState(projectName)
   const [batches, setBatches] = useState<Batch[]>([])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  // 48-e（F8-5）：批次完整性状态（manifest 逐文件校验：缺失/漂移/哈希不符）
+  const [batchIntegrity, setBatchIntegrity] = useState<Record<string, { integrity: 'ok' | 'issues'; issues: number }>>({})
   const [selectedFile, setSelectedFile] = useState<BatchFile | null>(null)
   const [preview, setPreview] = useState<PreviewData | null>(null)
   // AL-M5d：预览加载态（骨架屏）
@@ -213,6 +216,19 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
       if (first && !expanded[first.name]) {
         setExpanded((e) => ({ ...e, [first.name]: true }))
       }
+      // 48-e（F8-5）：逐版本批次拉取 manifest 完整性（缺失/漂移/哈希不符）
+      const next: Record<string, { integrity: 'ok' | 'issues'; issues: number }> = {}
+      for (const batch of (b as Batch[]) ?? []) {
+        if (!/^v\d+_/.test(batch.name)) continue
+        try {
+          const res = await window.electron.project.batchManifest(activeProject, batch.name)
+          if (res?.ok) {
+            const s = deriveBatchIntegrity(res.manifest, res.actualFiles ?? [])
+            next[batch.name] = { integrity: s.integrity, issues: s.issues }
+          }
+        } catch { /* 完整性拉取失败不阻断 */ }
+      }
+      setBatchIntegrity(next)
     } catch {
       setBatches([])
     } finally {
@@ -525,6 +541,20 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
                     {isOpen ? <ChevronDown size={12} className="shrink-0 text-gray-400" /> : <ChevronRight size={12} className="shrink-0 text-gray-400" />}
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{batch.name}</span>
                     <span className="text-2xs text-gray-400 ml-auto shrink-0">{batch.files.length}</span>
+                    {/* 48-e（F8-5）：批次完整性状态（manifest 逐文件校验） */}
+                    {batchIntegrity[batch.name] && (
+                      batchIntegrity[batch.name].integrity === 'ok'
+                        ? (
+                            <span className="shrink-0 text-2xs text-success-600 dark:text-success-400" title={t('workbench:output.integrityOk', '产物完整性校验通过')}>
+                              ✓完整
+                            </span>
+                          )
+                        : (
+                            <span className="shrink-0 text-2xs text-amber-600 dark:text-amber-400" title={t('workbench:output.integrityIssues', '产物完整性异常（缺失/漂移/哈希不符）')}>
+                              ⚠{batchIntegrity[batch.name].issues}
+                            </span>
+                          )
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch) }}
                       className="p-0.5 rounded hover:bg-error-50 text-gray-400 hover:text-error-500 shrink-0" title={t('workbench:output.deleteBatch', '删除批次')}>

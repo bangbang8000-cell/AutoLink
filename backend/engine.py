@@ -1691,8 +1691,28 @@ def _write_manifest(batch_dir, **fields):
         'render_time': datetime.datetime.now().isoformat(timespec='seconds'),
     }
     manifest.update(fields)
+    # 48-e（F8-5）：逐文件清单（name/size/sha256，不含 manifest.json 自身），供完整性校验
+    manifest['files'] = _batch_file_manifest(batch_dir)
     with open(os.path.join(batch_dir, 'manifest.json'), 'w', encoding='utf-8') as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
+
+
+def _batch_file_manifest(batch_dir):
+    """48-e（F8-5）：批次目录逐文件清单 [{name, size, sha256}]（排除 manifest.json 自身）。"""
+    files = []
+    if not os.path.isdir(batch_dir):
+        return files
+    for fname in sorted(os.listdir(batch_dir)):
+        fpath = os.path.join(batch_dir, fname)
+        if not os.path.isfile(fpath) or fname == 'manifest.json':
+            continue
+        try:
+            with open(fpath, 'rb') as f:
+                digest = hashlib.sha256(f.read()).hexdigest()
+            files.append({'name': fname, 'size': os.path.getsize(fpath), 'sha256': digest})
+        except OSError:
+            continue
+    return files
 
 
 @register_action('export')

@@ -7,10 +7,12 @@
   E005 连接表行数 vs 设计连接数（或非空合理性）
   E006 产物文件命名与设计模式匹配
   E007 设备清单/BOM 条目非空
+  E008 批次完整性（manifest.files 逐文件：缺失/漂移/哈希不符）——48-e（F8-5）
 
 collect_batch_stats 读取 output/<batch> 目录（manifest.json + xlsx 产物行数），
 供 check_export_batch 与门禁脚本复用。纯标准库 + openpyxl/pandas 读取，只读不改产物。
 """
+import hashlib
 import os
 import re
 from typing import Any, Dict, List, Optional
@@ -63,6 +65,7 @@ def collect_batch_stats(batch_dir: str) -> Dict[str, Any]:
         'exists': os.path.isdir(batch_dir),
         'files': [],
         'has_manifest': False,
+        'has_files_manifest': False,
         'manifest': None,
         'mode': '',
         'output_types': [],
@@ -86,6 +89,8 @@ def collect_batch_stats(batch_dir: str) -> Dict[str, Any]:
             stats['manifest'] = manifest
             stats['mode'] = manifest.get('downlink_mode') or ''
             stats['output_types'] = list(manifest.get('output_types') or [])
+            # 48-e（F8-5）：逐文件清单存在标记（完整性校验前置）
+            stats['has_files_manifest'] = isinstance(manifest.get('files'), list) and len(manifest.get('files') or []) > 0
 
     # 文件名推断模式（当 manifest 缺失时兜底）：AI智算网络_full模式_xxx.xlsx
     if not stats['mode']:
@@ -107,6 +112,89 @@ def collect_batch_stats(batch_dir: str) -> Dict[str, Any]:
                     stats['bom_rows'] = rows
                 break
     return stats
+
+
+def check_batch_integrity(batch_dir: str) -> List[ValidationProblem]:
+    """48-e（F8-5）：批次完整性——manifest.files 逐文件校验（缺失 / 哈希不符 / 大小漂移 / 清单外文件）。
+
+    读 manifest.json 的 files（name/size/sha256），与磁盘实际文件比对：
+      - 清单有、磁盘无 → 缺失（ERROR）
+      - 清单有、磁盘有但 sha256 不符 → 哈希不符（ERROR）；size 漂移 → WARNING
+      - 磁盘有、清单无 → 漂移（WARNING）
+    """
+    problems: List[ValidationProblem] = []
+    manifest = _read_json_file(os.path.join(batch_dir, 'manifest.json'))
+    if not isinstance(manifest, dict) or not isinstance(manifest.get('files'), list):
+        return problems
+    expected = {f['name']: f for f in manifest['files'] if isinstance(f, dict) and f.get('name')}
+    if not expected:
+        return problems
+
+    actual: Dict[str, int] = {}
+    for fname in os.listdir(batch_dir):
+        fpath = os.path.join(batch_dir, fname)
+        if os.path.isfile(fpath):
+            actual[fname] = os.path.getsize(fpath)
+
+    # 缺失
+    for name in sorted(set(expected) - set(actual)):
+        problems.append(ValidationProblem(
+            rule_id='E008',
+            severity=SEVERITY_ERROR,
+            category=CATEGORY_EXPORT,
+            location=f'output/<batch>/{name}',
+            message=f'清单文件缺失: {name}',
+            suggestion='重新渲染恢复该产物，或核对是否被误删',
+            data={'file': name},
+        ))
+
+    # 哈希不符 / 大小漂移
+    for name in sorted(set(actual) & set(expected)):
+        if name == 'manifest.json':
+            continue
+        exp = expected[name]
+        try:
+            with open(os.path.join(batch_dir, name), 'rb') as f:
+                digest = hashlib.sha256(f.read()).hexdigest()
+        except OSError:
+            continue
+        exp_hash = str(exp.get('sha256') or '')
+        if exp_hash and digest != exp_hash:
+            problems.append(ValidationProblem(
+                rule_id='E008',
+                severity=SEVERITY_ERROR,
+                category=CATEGORY_EXPORT,
+                location=f'output/<batch>/{name}',
+                message=f'产物哈希不符（可能被篡改/损坏）: {name}',
+                suggestion='重新渲染生成该产物，避免使用不一致的批次',
+                data={'file': name, 'expected_sha256': exp_hash[:12], 'actual_sha256': digest[:12]},
+            ))
+            continue
+        exp_size = exp.get('size')
+        if isinstance(exp_size, int) and actual[name] != exp_size:
+            problems.append(ValidationProblem(
+                rule_id='E008',
+                severity=SEVERITY_WARNING,
+                category=CATEGORY_EXPORT,
+                location=f'output/<batch>/{name}',
+                message=f'产物大小漂移: {name}（清单 {exp_size} 字节 / 实际 {actual[name]} 字节）',
+                suggestion='核对产物是否被部分改写，必要时重新渲染',
+                data={'file': name, 'expected_size': exp_size, 'actual_size': actual[name]},
+            ))
+
+    # 清单外文件（漂移）
+    for name in sorted(set(actual) - set(expected) - {'manifest.json'}):
+        problems.append(ValidationProblem(
+            rule_id='E008',
+            severity=SEVERITY_WARNING,
+            category=CATEGORY_EXPORT,
+            location=f'output/<batch>/{name}',
+            message=f'清单外文件（漂移）: {name}',
+            suggestion='清理无关产物或重新渲染保持清单一致',
+            data={'file': name},
+        ))
+
+    return problems
 
 
 def check_export_batch(batch_dir: str,
@@ -268,5 +356,9 @@ def check_export_batch(batch_dir: str,
                 suggestion='检查 BOM 导出是否成功',
                 data={},
             ))
+
+    # --- E008 批次完整性（48-e F8-5）：manifest.files 逐文件校验（缺失/漂移/哈希不符） ---
+    if stats.get('has_files_manifest'):
+        problems.extend(check_batch_integrity(batch_dir))
 
     return problems

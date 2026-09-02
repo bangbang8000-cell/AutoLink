@@ -34,6 +34,9 @@ const electronAPI = {
       ipcRenderer.invoke('project:listOutputFiles', name),
     listOutputBatches: (projectName: string) =>
       ipcRenderer.invoke('project:listOutputBatches', projectName),
+    // 48-e（F8-5）：批次 manifest + 实际文件清单（逐文件 sha256，前端推导完整性）
+    batchManifest: (projectName: string, batchName: string) =>
+      ipcRenderer.invoke('project:batchManifest', projectName, batchName),
     deleteOutputFile: (projectName: string, filePath: string) =>
       ipcRenderer.invoke('project:deleteOutputFile', projectName, filePath),
     deleteOutputBatch: (projectName: string, batchName: string) =>

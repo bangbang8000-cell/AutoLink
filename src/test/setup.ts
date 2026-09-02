@@ -12,6 +12,8 @@ const mockElectron = {
     getConfigFile: vi.fn(),
     getFile: vi.fn(),
     listOutputFiles: vi.fn(),
+    listOutputBatches: vi.fn(),
+    batchManifest: vi.fn(),
     saveConfigFile: vi.fn(),
     saveFile: vi.fn(),
   },

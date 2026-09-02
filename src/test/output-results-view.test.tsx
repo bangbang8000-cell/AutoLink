@@ -167,6 +167,47 @@ describe('OutputResultsView（M-F1 版本历史 + 评审 PDF）', () => {
   })
 })
 
+describe('OutputResultsView（48-e 批次完整性状态）', () => {
+  const sha = (c: string) => c.repeat(64)
+
+  it('完整批次 → 显示「✓完整」徽标', async () => {
+    ;(window.electron as unknown as { project: { listOutputBatches: ReturnType<typeof vi.fn> } }).project.listOutputBatches
+      .mockReset().mockResolvedValue([{ name: 'v1_20260101', files: [{ name: 'a.xlsx', path: 'output/v1_20260101/a.xlsx' }] }])
+    ;(window.electron as unknown as { project: { batchManifest: ReturnType<typeof vi.fn> } }).project.batchManifest
+      .mockReset().mockResolvedValue({
+        ok: true,
+        batchName: 'v1_20260101',
+        manifest: { files: [{ name: 'a.xlsx', size: 3, sha256: sha('a') }] },
+        actualFiles: [{ name: 'a.xlsx', size: 3, sha256: sha('a') }],
+      })
+    render(<OutputResultsView projectName="p1" />)
+    expect(await screen.findByText(/✓完整/)).toBeInTheDocument()
+  })
+
+  it('哈希不符批次 → 显示「⚠n」异常徽标', async () => {
+    ;(window.electron as unknown as { project: { listOutputBatches: ReturnType<typeof vi.fn> } }).project.listOutputBatches
+      .mockReset().mockResolvedValue([{ name: 'v1_20260101', files: [{ name: 'a.xlsx', path: 'output/v1_20260101/a.xlsx' }] }])
+    ;(window.electron as unknown as { project: { batchManifest: ReturnType<typeof vi.fn> } }).project.batchManifest
+      .mockReset().mockResolvedValue({
+        ok: true,
+        batchName: 'v1_20260101',
+        manifest: { files: [{ name: 'a.xlsx', size: 3, sha256: sha('a') }] },
+        actualFiles: [{ name: 'a.xlsx', size: 3, sha256: sha('z') }],
+      })
+    render(<OutputResultsView projectName="p1" />)
+    expect(await screen.findByText(/⚠1/)).toBeInTheDocument()
+  })
+
+  it('非版本批次（如 [根目录]）不拉取完整性', async () => {
+    const batchManifest = vi.fn()
+    ;(window.electron as unknown as { project: { listOutputBatches: ReturnType<typeof vi.fn> } }).project.listOutputBatches
+      .mockReset().mockResolvedValue([{ name: '[根目录]', files: [{ name: 'x.xlsx', path: 'output/x.xlsx' }] }])
+    ;(window.electron as unknown as { project: { batchManifest: ReturnType<typeof vi.fn> } }).project.batchManifest = batchManifest
+    render(<OutputResultsView projectName="p1" />)
+    await waitFor(() => expect(batchManifest).not.toHaveBeenCalled())
+  })
+})
+
 describe('OutputResultsView（48-b 便携快照文件导出）', () => {
   beforeEach(() => {
     // 预置一个快照供导出
