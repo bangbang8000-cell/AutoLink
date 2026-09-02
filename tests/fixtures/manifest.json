@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-02",
+  "purpose": "4.6.0（F6-2）测试数据资产：样例项目/规划/设计快照/渲染基线，可被 pytest 与 vitest 复用",
+  "projects": [
+    {
+      "id": "64_h100",
+      "name": "64 台 H100 规划",
+      "path": "projects/64_h100/project_config.json",
+      "scenario": "单 POD 64 台 H100，RoCE 400G 参数网 + 存储/业务/带外四网",
+      "consumed_by": ["pytest:test_quality_fixtures", "pytest:test_quality_report"]
+    },
+    {
+      "id": "128_h100_multi_rack",
+      "name": "128 台 H100 多机柜",
+      "path": "projects/128_h100_multi_rack/project_config.json",
+      "scenario": "128 GPU + 16 存储 + 16 通算，多机柜落位",
+      "consumed_by": ["pytest:test_quality_fixtures"]
+    },
+    {
+      "id": "combined_network_gb300",
+      "name": "GB300 三合一融合网",
+      "path": "projects/combined_network_gb300/project_config.json",
+      "scenario": "72 台 GB300 NVL72，800G IB 参数网 + 融合以太网 + 独立 OOB",
+      "consumed_by": ["pytest:test_quality_fixtures"]
+    },
+    {
+      "id": "storage_disabled",
+      "name": "存储网络关闭",
+      "path": "projects/storage_disabled/project_config.json",
+      "scenario": "96 GPU，存储网络关闭（无存储设备）",
+      "consumed_by": ["pytest:test_quality_fixtures"]
+    },
+    {
+      "id": "supernode_384",
+      "name": "384 NPU 华为超节点",
+      "path": "projects/supernode_384/project_config.json",
+      "scenario": "384 NPU 超节点，UB 域内全对等 + 800G Scale-Out",
+      "consumed_by": ["pytest:test_quality_fixtures"]
+    },
+    {
+      "id": "zcube_512",
+      "name": "512 GPU ZCube",
+      "path": "projects/zcube_512/project_config.json",
+      "scenario": "512 GPU ZCube 扁平二部图（双口混合接入，无 Spine/Core）",
+      "consumed_by": ["pytest:test_quality_fixtures"]
+    }
+  ],
+  "baselines": [],
+  "note": "样例项目配置可直接被 NetworkDesignerV2 消费（与 template/ 同构）；manifest.json 供前端 vitest 消费校验。"
+}

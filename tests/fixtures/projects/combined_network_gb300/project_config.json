@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "name": "combined_network_gb300",
+    "description": "4.6.0（F6-2）测试数据资产：72 台 GB300 NVL72 三合一融合网（800G IB 参数网 + 融合以太网 + 独立 OOB）",
+    "version": 1,
+    "created_at": "2026-09-02T00:00:00.000000",
+    "updated_at": "2026-09-02T00:00:00.000000"
+  },
+  "networks": {
+    "param_network": true,
+    "storage_network": false,
+    "biz_network": false,
+    "oob_network": true,
+    "eth_combined": true
+  },
+  "topology": {
+    "downlink_mode": "full",
+    "param_protocol": "IB",
+    "num_gpu_servers": 72,
+    "num_all_flash_storage": 4,
+    "num_hybrid_flash_storage": 0,
+    "num_compute_servers": 8,
+    "param_ports_per_server": 8,
+    "storage_ports_per_server": 2,
+    "param_switch_ports": 64,
+    "storage_switch_ports": 48,
+    "param_speed": "800G",
+    "storage_speed": "100G",
+    "param_downlink_limit": 25,
+    "storage_downlink_limit": 20,
+    "biz_downlink_limit": 25,
+    "oob_downlink_limit": 25
+  },
+  "device_refs": {
+    "gpu_server": {
+      "library_id": "nvidia_dgx_gb300_nvl72"
+    },
+    "param_leaf_switch": {
+      "library_id": "nvidia_q3400_144_800g_ib"
+    },
+    "param_spine_switch": {
+      "library_id": "nvidia_q3400_144_800g_ib"
+    },
+    "param_core_switch": {
+      "library_id": "nvidia_q3400_144_800g_ib"
+    },
+    "param_switch": {
+      "library_id": "nvidia_q3400_144_800g_ib"
+    },
+    "storage_leaf_switch": {
+      "library_id": "huawei_ce6885h"
+    },
+    "storage_spine_switch": {
+      "library_id": "huawei_ce6885h"
+    },
+    "storage_switch": {
+      "library_id": "huawei_ce6885h"
+    },
+    "all_flash_storage_server": {
+      "library_id": "huawei_oceanstor_dorado_8000"
+    },
+    "hybrid_flash_storage_server": {
+      "library_id": "huawei_oceanstor_5310"
+    },
+    "storage_server": {
+      "library_id": "huawei_oceanstor_dorado_8000"
+    },
+    "biz_access_switch": {
+      "library_id": "huawei_ce6881_48s6cq"
+    },
+    "biz_agg_switch": {
+      "library_id": "huawei_s6730_h48x6c"
+    },
+    "compute_server": {
+      "library_id": "huawei_2288h_v7"
+    },
+    "oob_access_switch": {
+      "library_id": "huawei_s5735_l48t4x_a"
+    },
+    "oob_agg_switch": {
+      "library_id": "huawei_s5732_h48s6q"
+    }
+  },
+  "rack_config": {
+    "rack_type": 42,
+    "power_limit_per_rack": 18000,
+    "naming_prefix": "机柜",
+    "cooling_method": "cold_plate",
+    "gpu_dedicated": true
+  },
+  "scale_up": {
+    "protocol": "NVLink",
+    "num_gpus": 72,
+    "gpus_per_node": 8,
+    "domain_size": 72,
+    "bandwidth": 1800.0
+  }
+}
