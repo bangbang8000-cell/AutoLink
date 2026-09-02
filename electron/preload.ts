@@ -14,7 +14,8 @@ const electronAPI = {
       ipcRenderer.invoke('project:rename', oldName, newName),
     exportZip: (projectName: string, options?: { password?: string }) =>
       ipcRenderer.invoke('project:exportZip', projectName, options),
-    importZip: (options?: { projectName?: string; zipPath?: string; password?: string }) =>
+    // 48-a（F8-1）：projectId 幂等导入（ifExists: skip/overwrite）
+    importZip: (options?: { projectName?: string; zipPath?: string; password?: string; ifExists?: 'skip' | 'overwrite' }) =>
       ipcRenderer.invoke('project:importZip', options),
     batchExportZip: (projectNames: string[], options?: { password?: string }) =>
       ipcRenderer.invoke('project:batchExportZip', projectNames, options),

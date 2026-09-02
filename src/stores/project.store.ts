@@ -71,7 +71,14 @@ interface ProjectState {
   duplicateProject: (sourceName: string, targetName: string) => Promise<void>
   renameProject: (oldName: string, newName: string) => Promise<void>
   exportProject: (projectName: string, options?: { password?: string }) => Promise<{ canceled: boolean; zipPath: string }>
-  importProject: (options?: { projectName?: string; zipPath?: string; password?: string }) => Promise<{ canceled: boolean; projectName: string }>
+  // 48-a（F8-1）：projectId 幂等导入（命中既有身份 → skip/覆盖更新）
+  importProject: (options?: { projectName?: string; zipPath?: string; password?: string; ifExists?: 'skip' | 'overwrite' }) => Promise<{
+    canceled: boolean
+    projectName: string
+    projectId: string
+    mode: 'created' | 'updated' | 'skipped'
+    existed: boolean
+  }>
   batchExportProjects: (projectNames: string[], options?: { password?: string }) => Promise<{ canceled: boolean; result: { successes: { name: string }[]; failures: { name: string; error: string }[] } | null; targetDir: string }>
   selectProject: (project: ProjectInfo | null) => void
   toggleFavorite: (name: string) => void
@@ -235,6 +242,16 @@ export const useProjectStore = create<ProjectState>()(
         const result = await window.electron.project.importZip(options)
         if (!result.canceled && result.projectName) {
           await get().fetchProjects()
+          // 48-a（F8-1）：命中既有身份时提示「已存在」语义（覆盖更新/跳过）
+          if (result.mode === 'updated' || result.mode === 'skipped') {
+            useToastStore.getState().addToast(
+              result.mode === 'skipped' ? 'info' : 'success',
+              result.mode === 'skipped'
+                ? `项目「${result.projectName}」已存在，已跳过导入`
+                : `项目「${result.projectName}」已存在，已覆盖更新（身份保留）`,
+              4000,
+            )
+          }
           // 自动选中新导入的项目
           const projects = get().projects
           const newProject = projects.find((p) => p.name === result.projectName)

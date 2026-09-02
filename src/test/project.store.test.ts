@@ -64,6 +64,49 @@ describe('ProjectStore', () => {
     })
   })
 
+  describe('importProject（48-a 幂等导入语义）', () => {
+    it('命中既有身份（mode=updated）时提示覆盖更新并选中', async () => {
+      window.electron.project.importZip = vi.fn().mockResolvedValue({
+        canceled: false,
+        projectName: 'A',
+        projectId: 'p1',
+        mode: 'updated',
+        existed: true,
+      })
+      window.electron.project.list = vi.fn().mockResolvedValue([{ id: 1, name: 'A', index: 0 }])
+
+      await useProjectStore.getState().importProject({ zipPath: '/x.zip' })
+      const state = useProjectStore.getState()
+      expect(state.selectedProjectName).toBe('A')
+      expect(state.recentProjects).toContain('A')
+    })
+
+    it('命中既有身份（mode=skipped）时提示跳过且不新增选中', async () => {
+      window.electron.project.importZip = vi.fn().mockResolvedValue({
+        canceled: false,
+        projectName: 'B',
+        projectId: 'p2',
+        mode: 'skipped',
+        existed: true,
+      })
+      window.electron.project.list = vi.fn().mockResolvedValue([])
+      await useProjectStore.getState().importProject({ zipPath: '/y.zip', ifExists: 'skip' })
+      expect(useProjectStore.getState().selectedProjectName).toBeNull()
+    })
+
+    it('取消防弹窗时不做任何处理', async () => {
+      window.electron.project.importZip = vi.fn().mockResolvedValue({
+        canceled: true,
+        projectName: '',
+        projectId: '',
+        mode: 'created',
+        existed: false,
+      })
+      await useProjectStore.getState().importProject({})
+      expect(useProjectStore.getState().selectedProjectName).toBeNull()
+    })
+  })
+
   describe('selectProject', () => {
     it('应该设置选中项目并记录最近使用', () => {
       const project = { id: 1, name: 'test', index: 0 }

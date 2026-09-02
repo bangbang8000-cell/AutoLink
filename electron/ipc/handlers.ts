@@ -716,7 +716,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   }))
 
   // V2.4.1: 项目导入 ZIP - 显示打开对话框；T15-2 支持 password 解密
-  ipcMain.handle('project:importZip', wrapHandler(async (_event, options?: { projectName?: string; zipPath?: string; password?: string }) => {
+  // 48-a（F8-1）：projectId 幂等——命中既有身份时 skip/覆盖更新，返回「已存在」语义
+  ipcMain.handle('project:importZip', wrapHandler(async (_event, options?: { projectName?: string; zipPath?: string; password?: string; ifExists?: 'skip' | 'overwrite' }) => {
     let zipPath = options?.zipPath
     if (!zipPath) {
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -729,8 +730,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       }
       zipPath = result.filePaths[0]
     }
-    const finalName = await projectIOService.importProjectZip(zipPath, options?.projectName, options?.password)
-    return { canceled: false, projectName: finalName }
+    const result = await projectIOService.importProjectZip(zipPath, options)
+    return { canceled: false, ...result }
   }))
 
   // V2.4.1: 批量项目导出；T15-2 支持 password 加密

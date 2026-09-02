@@ -8,7 +8,14 @@ interface Window {
       duplicate: (sourceName: string, targetName: string) => Promise<void>
       rename: (oldName: string, newName: string) => Promise<void>
       exportZip: (projectName: string, options?: { password?: string }) => Promise<{ canceled: boolean; zipPath: string }>
-      importZip: (options?: { projectName?: string; zipPath?: string; password?: string }) => Promise<{ canceled: boolean; projectName: string }>
+      // 48-a（F8-1）：projectId 幂等导入（命中既有身份 → skip/覆盖更新，返回「已存在」语义）
+      importZip: (options?: { projectName?: string; zipPath?: string; password?: string; ifExists?: 'skip' | 'overwrite' }) => Promise<{
+        canceled: boolean
+        projectName: string
+        projectId: string
+        mode: 'created' | 'updated' | 'skipped'
+        existed: boolean
+      }>
       batchExportZip: (projectNames: string[], options?: { password?: string }) => Promise<{
         canceled: boolean
         result: {
