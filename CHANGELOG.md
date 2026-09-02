@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [4.4.1] - 2026-09-02
+
+### 修复
+
+- **存储网络关闭/融合网导出崩溃**：`NetworkDesignerV2.storage_servers_per_group` 仅在存储网启用分支赋值，存储网关闭或融合网（eth_combined）项目导出连接表时抛 `AttributeError`（该缺陷此前被无条件成功提示掩盖）。修复：默认值与融合网分支补 `storage_servers_per_group=0`；新增 3 例回归测试（默认值 / 存储关闭 / 融合网）。
+
 ## [4.4.0] - 2026-09-01
 
 ### 4.4 效率与自动化工作流
