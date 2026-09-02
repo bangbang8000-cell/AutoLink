@@ -63,7 +63,8 @@
     "waiting": "출력 대기 중...",
     "tabs": {
       "log": "로그",
-      "performance": "성능"
+      "performance": "성능",
+      "quality": "품질"
     }
   },
   "performancePanel": {
@@ -112,6 +113,49 @@
       "load": "로드",
       "other": "기타"
     }
+  },
+  "qualityPanel": {
+    "title": "품질 대시보드",
+    "refresh": "새로고침",
+    "refreshing": "새로고침 중…",
+    "updatedAt": "업데이트: {{time}}",
+    "noReport": "테스트 보고서 없음",
+    "noReportHint": "python scripts/test_report.py로 통합 테스트 보고서를 생성한 후 새로고침을 클릭하면 커버리지/게이트/테스트 통과율을 확인할 수 있습니다.",
+    "error": "로드 실패: {{error}}",
+    "coverage": "테스트 커버리지",
+    "backend": "백엔드 (pytest)",
+    "frontend": "프론트엔드 (vitest)",
+    "coveragePassed": "통과",
+    "coverageFailed": "미달",
+    "noCoverageData": "커버리지 데이터 없음",
+    "metrics": {
+      "lines": "라인",
+      "statements": "문장",
+      "functions": "함수",
+      "branches": "분기"
+    },
+    "modules": "테스트 모듈",
+    "module": "모듈",
+    "tests": "테스트",
+    "failures": "실패",
+    "passRate": "통과율",
+    "duration": "소요시간",
+    "gates": "게이트 결과",
+    "gate": "게이트",
+    "result": "결과",
+    "gatePassed": "통과",
+    "gateFailed": "실패",
+    "gateSummary": "게이트 {{passed}}/{{total}} 통과",
+    "testPassRate": "테스트 {{passed}}/{{total}} 통과 ({{rate}}%)",
+    "validation": "데이터 검증",
+    "validationPassRate": "검증 통과율",
+    "validationIssues": "문제 수",
+    "validationNeverRun": "검증이 아직 실행되지 않음",
+    "runValidation": "검증 실행",
+    "benchmark": "성능 벤치마크",
+    "benchmarkSource": "scripts/bench_perf.py 달성 임계값",
+    "benchmarkThreshold": "달성 임계값",
+    "noData": "데이터 없음"
   },
   "project": {
     "duplicate": "프로젝트 복제",

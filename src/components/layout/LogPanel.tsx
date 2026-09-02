@@ -4,6 +4,8 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { PerformancePanel } from '@/components/layout/PerformancePanel'
 import { ValidationReportPanel } from '@/components/validation/ValidationReportPanel'
+// 4.6.0（F6-4）：质量仪表盘 tab
+import { QualityDashboard } from '@/components/quality/QualityDashboard'
 
 interface LogEntry {
   timestamp: string
@@ -11,7 +13,7 @@ interface LogEntry {
   level: 'info' | 'warn' | 'error'
 }
 
-type PanelTab = 'log' | 'performance' | 'validation'
+type PanelTab = 'log' | 'performance' | 'validation' | 'quality'
 
 export function LogPanel() {
   const { t } = useTranslation()
@@ -129,6 +131,10 @@ export function LogPanel() {
       ) : tab === 'validation' ? (
         <div className="flex-1 overflow-hidden">
           <ValidationReportPanel />
+        </div>
+      ) : tab === 'quality' ? (
+        <div className="flex-1 overflow-hidden">
+          <QualityDashboard />
         </div>
       ) : (
       <div

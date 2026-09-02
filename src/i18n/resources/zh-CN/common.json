@@ -63,7 +63,8 @@
     "waiting": "等待输出...",
     "tabs": {
       "log": "日志",
-      "performance": "性能"
+      "performance": "性能",
+      "quality": "质量"
     }
   },
   "performancePanel": {
@@ -112,6 +113,49 @@
       "load": "加载",
       "other": "其他"
     }
+  },
+  "qualityPanel": {
+    "title": "质量仪表盘",
+    "refresh": "刷新",
+    "refreshing": "刷新中…",
+    "updatedAt": "更新于 {{time}}",
+    "noReport": "未检测到测试报告",
+    "noReportHint": "运行 python scripts/test_report.py 生成统一测试报告后点击「刷新」，查看覆盖率 / 门禁 / 测试通过率。",
+    "error": "加载失败: {{error}}",
+    "coverage": "测试覆盖率",
+    "backend": "后端 (pytest)",
+    "frontend": "前端 (vitest)",
+    "coveragePassed": "达标",
+    "coverageFailed": "未达标",
+    "noCoverageData": "未采集覆盖率数据",
+    "metrics": {
+      "lines": "行",
+      "statements": "语句",
+      "functions": "函数",
+      "branches": "分支"
+    },
+    "modules": "测试模块",
+    "module": "模块",
+    "tests": "用例",
+    "failures": "失败",
+    "passRate": "通过率",
+    "duration": "耗时",
+    "gates": "门禁结果",
+    "gate": "门禁",
+    "result": "结果",
+    "gatePassed": "通过",
+    "gateFailed": "失败",
+    "gateSummary": "门禁 {{passed}}/{{total}} 通过",
+    "testPassRate": "用例 {{passed}}/{{total}} 通过（{{rate}}%）",
+    "validation": "数据校验",
+    "validationPassRate": "校验通过率",
+    "validationIssues": "问题数",
+    "validationNeverRun": "尚未执行一键校验",
+    "runValidation": "一键校验",
+    "benchmark": "性能基准",
+    "benchmarkSource": "引用 scripts/bench_perf.py 达标阈值",
+    "benchmarkThreshold": "达标阈值",
+    "noData": "暂无数据"
   },
   "project": {
     "duplicate": "复制项目",

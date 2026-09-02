@@ -63,7 +63,8 @@
     "waiting": "出力を待っています...",
     "tabs": {
       "log": "ログ",
-      "performance": "パフォーマンス"
+      "performance": "パフォーマンス",
+      "quality": "品質"
     }
   },
   "performancePanel": {
@@ -112,6 +113,49 @@
       "load": "読み込み",
       "other": "その他"
     }
+  },
+  "qualityPanel": {
+    "title": "品質ダッシュボード",
+    "refresh": "更新",
+    "refreshing": "更新中…",
+    "updatedAt": "更新: {{time}}",
+    "noReport": "テストレポートがありません",
+    "noReportHint": "python scripts/test_report.py で統合テストレポートを生成し、「更新」をクリックするとカバレッジ/ゲート/テスト合格率を確認できます。",
+    "error": "読み込み失敗: {{error}}",
+    "coverage": "テストカバレッジ",
+    "backend": "バックエンド (pytest)",
+    "frontend": "フロントエンド (vitest)",
+    "coveragePassed": "合格",
+    "coverageFailed": "不合格",
+    "noCoverageData": "カバレッジデータがありません",
+    "metrics": {
+      "lines": "行",
+      "statements": "ステートメント",
+      "functions": "関数",
+      "branches": "分岐"
+    },
+    "modules": "テストモジュール",
+    "module": "モジュール",
+    "tests": "テスト",
+    "failures": "失敗",
+    "passRate": "合格率",
+    "duration": "所要時間",
+    "gates": "ゲート結果",
+    "gate": "ゲート",
+    "result": "結果",
+    "gatePassed": "合格",
+    "gateFailed": "失敗",
+    "gateSummary": "ゲート {{passed}}/{{total}} 合格",
+    "testPassRate": "テスト {{passed}}/{{total}} 合格（{{rate}}%）",
+    "validation": "データ検証",
+    "validationPassRate": "検証合格率",
+    "validationIssues": "問題数",
+    "validationNeverRun": "検証は未実行です",
+    "runValidation": "検証を実行",
+    "benchmark": "パフォーマンスベンチマーク",
+    "benchmarkSource": "scripts/bench_perf.py の達成しきい値",
+    "benchmarkThreshold": "達成しきい値",
+    "noData": "データなし"
   },
   "project": {
     "duplicate": "プロジェクト複製",

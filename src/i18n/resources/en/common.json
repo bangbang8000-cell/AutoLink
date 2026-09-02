@@ -63,7 +63,8 @@
     "waiting": "Waiting for output...",
     "tabs": {
       "log": "Log",
-      "performance": "Performance"
+      "performance": "Performance",
+      "quality": "Quality"
     }
   },
   "performancePanel": {
@@ -112,6 +113,49 @@
       "load": "Load",
       "other": "Other"
     }
+  },
+  "qualityPanel": {
+    "title": "Quality Dashboard",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "updatedAt": "Updated at {{time}}",
+    "noReport": "No test report detected",
+    "noReportHint": "Run `python scripts/test_report.py` to generate the unified test report, then click Refresh to view coverage / gates / test pass rate.",
+    "error": "Load failed: {{error}}",
+    "coverage": "Test Coverage",
+    "backend": "Backend (pytest)",
+    "frontend": "Frontend (vitest)",
+    "coveragePassed": "Pass",
+    "coverageFailed": "Failed",
+    "noCoverageData": "No coverage data collected",
+    "metrics": {
+      "lines": "Lines",
+      "statements": "Statements",
+      "functions": "Functions",
+      "branches": "Branches"
+    },
+    "modules": "Test Modules",
+    "module": "Module",
+    "tests": "Tests",
+    "failures": "Failures",
+    "passRate": "Pass Rate",
+    "duration": "Duration",
+    "gates": "Gate Results",
+    "gate": "Gate",
+    "result": "Result",
+    "gatePassed": "Passed",
+    "gateFailed": "Failed",
+    "gateSummary": "Gates {{passed}}/{{total}} passed",
+    "testPassRate": "{{passed}}/{{total}} tests passed ({{rate}}%)",
+    "validation": "Data Validation",
+    "validationPassRate": "Validation Pass Rate",
+    "validationIssues": "Issues",
+    "validationNeverRun": "Validation not run yet",
+    "runValidation": "Run Validation",
+    "benchmark": "Performance Benchmark",
+    "benchmarkSource": "Thresholds from scripts/bench_perf.py",
+    "benchmarkThreshold": "Threshold",
+    "noData": "No data"
   },
   "project": {
     "duplicate": "Duplicate Project",

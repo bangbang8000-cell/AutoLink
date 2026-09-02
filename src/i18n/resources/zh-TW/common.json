@@ -63,7 +63,8 @@
     "waiting": "等待輸出...",
     "tabs": {
       "log": "日誌",
-      "performance": "效能"
+      "performance": "效能",
+      "quality": "品質"
     }
   },
   "performancePanel": {
@@ -112,6 +113,49 @@
       "load": "載入",
       "other": "其他"
     }
+  },
+  "qualityPanel": {
+    "title": "品質儀表盤",
+    "refresh": "重新整理",
+    "refreshing": "重新整理中…",
+    "updatedAt": "更新於 {{time}}",
+    "noReport": "未偵測到測試報告",
+    "noReportHint": "執行 python scripts/test_report.py 產生統一測試報告後點擊「重新整理」，查看覆蓋率 / 門禁 / 測試通過率。",
+    "error": "載入失敗: {{error}}",
+    "coverage": "測試覆蓋率",
+    "backend": "後端 (pytest)",
+    "frontend": "前端 (vitest)",
+    "coveragePassed": "達標",
+    "coverageFailed": "未達標",
+    "noCoverageData": "未收集覆蓋率資料",
+    "metrics": {
+      "lines": "行",
+      "statements": "語句",
+      "functions": "函式",
+      "branches": "分支"
+    },
+    "modules": "測試模組",
+    "module": "模組",
+    "tests": "用例",
+    "failures": "失敗",
+    "passRate": "通過率",
+    "duration": "耗時",
+    "gates": "門禁結果",
+    "gate": "門禁",
+    "result": "結果",
+    "gatePassed": "通過",
+    "gateFailed": "失敗",
+    "gateSummary": "門禁 {{passed}}/{{total}} 通過",
+    "testPassRate": "用例 {{passed}}/{{total}} 通過（{{rate}}%）",
+    "validation": "資料驗證",
+    "validationPassRate": "驗證通過率",
+    "validationIssues": "問題數",
+    "validationNeverRun": "尚未執行一鍵驗證",
+    "runValidation": "一鍵驗證",
+    "benchmark": "效能基準",
+    "benchmarkSource": "引用 scripts/bench_perf.py 達標閾值",
+    "benchmarkThreshold": "達標閾值",
+    "noData": "暫無資料"
   },
   "project": {
     "duplicate": "複製專案",
