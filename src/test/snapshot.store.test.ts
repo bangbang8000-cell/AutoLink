@@ -225,3 +225,69 @@ describe('导入快照 JSON（P-3 往返 + P-5 导入前备份）', () => {
     expect(useSnapshotStore.getState().list()).toHaveLength(0)
   })
 })
+
+describe('exportToFile / importFromFile（48-b 快照文件导出与回导）', () => {
+  const featureMock = () =>
+    (window as unknown as { electron: { feature: { snapshot: { exportFile: ReturnType<typeof vi.fn>; importFile: ReturnType<typeof vi.fn> } } } }).electron.feature.snapshot
+
+  it('导出：调用 feature.snapshot.exportFile 并返回路径', async () => {
+    applyToStores('A')
+    const r1 = useSnapshotStore.getState().saveSnapshot('定稿')
+    expect(r1.ok).toBe(true)
+    const id = (r1 as { id: string }).id
+    featureMock().exportFile.mockResolvedValue({ canceled: false, path: '/tmp/snap.json' })
+
+    const r = await useSnapshotStore.getState().exportToFile(id, 'ProjX')
+    expect(r.ok).toBe(true)
+    expect(featureMock().exportFile).toHaveBeenCalled()
+    const [, jsonText] = featureMock().exportFile.mock.calls[0]
+    const parsed = JSON.parse(jsonText)
+    expect(parsed.format).toBe('autolink-snapshot-file')
+    expect(parsed.project?.projectName).toBe('ProjX')
+  })
+
+  it('导出：快照不存在 → ok:false not_found，不调用 IPC', async () => {
+    const r = await useSnapshotStore.getState().exportToFile('missing-id')
+    expect(r.ok).toBe(false)
+    expect((r as { reason: string }).reason).toBe('not_found')
+    expect(featureMock().exportFile).not.toHaveBeenCalled()
+  })
+
+  it('导出：用户取消 → ok:false canceled', async () => {
+    applyToStores('A')
+    const r1 = useSnapshotStore.getState().saveSnapshot('定稿')
+    featureMock().exportFile.mockResolvedValue({ canceled: true, path: '' })
+    const r = await useSnapshotStore.getState().exportToFile((r1 as { id: string }).id)
+    expect(r.ok).toBe(false)
+    expect((r as { reason: string }).reason).toBe('canceled')
+  })
+
+  it('回导：读取文件 → 解析校验 → 应用（导入前备份）', async () => {
+    applyToStores('A')
+    const r1 = useSnapshotStore.getState().saveSnapshot('待导入')
+    expect(r1.ok).toBe(true)
+    const snapshot = useSnapshotStore.getState().list()[0].state
+    const fileJson = JSON.stringify({
+      format: 'autolink-snapshot-file',
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      snapshot,
+    })
+    featureMock().importFile.mockResolvedValue({ canceled: false, content: fileJson })
+
+    const r = await useSnapshotStore.getState().importFromFile()
+    expect(r.ok).toBe(true)
+    // 导入前备份了当前设计
+    const list = useSnapshotStore.getState().list()
+    expect(list.some((it) => it.name.includes('导入前备份'))).toBe(true)
+  })
+
+  it('回导：取消 → ok:false canceled，不应用', async () => {
+    applyToStores('A')
+    featureMock().importFile.mockResolvedValue({ canceled: true, content: '' })
+    const r = await useSnapshotStore.getState().importFromFile()
+    expect(r.ok).toBe(false)
+    expect((r as { reason: string }).reason).toBe('canceled')
+    expect(useSnapshotStore.getState().list()).toHaveLength(0)
+  })
+})

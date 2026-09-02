@@ -97,6 +97,10 @@ interface Window {
       exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel' | 'zip') => Promise<{
         canceled?: boolean; path?: string; ok?: boolean; error?: string
       }>
+      // 48-b（F8-2）：plan:table 回导（校验/归一化外部 plan JSON）
+      importPlan: (params: { plan?: Record<string, unknown> } | Record<string, unknown>) => Promise<{
+        ok?: boolean; error?: string; plan?: unknown; projectId?: string; planVersion?: number; planHash?: string
+      }>
       /** P1（V-AL4）：保存拓扑 PNG（base64 → 文件） */
       savePng: (base64: string, defaultName: string) => Promise<{
         canceled?: boolean; path?: string; error?: string

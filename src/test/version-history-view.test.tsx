@@ -128,4 +128,35 @@ describe('VersionHistoryView（M-F1）', () => {
       expect(useToastStore.getState().toasts.some((x) => x.type === 'error' && x.message.includes('历史版本 v9 不存在'))).toBe(true),
     )
   })
+
+  it('48-b 导出历史 → 调 versionHistory.exportFile(项目) → 成功后 toast', async () => {
+    const exportFile = vi.fn().mockResolvedValue({ canceled: false, path: '/tmp/历史.json', count: 2 })
+    ;(window.electron as unknown as {
+      feature: { versionHistory: { exportFile: ReturnType<typeof vi.fn> } }
+    }).feature.versionHistory.exportFile.mockReset().mockImplementation(exportFile)
+    mockList(versionsV2, [file('v1.plan.json', JSON.stringify(versionsV1)), file('v2.plan.json', JSON.stringify(versionsV2))])
+    render(<VersionHistoryView projectName="p1" open onClose={() => {}} />)
+    fireEvent.click(await screen.findByText('导出历史'))
+    await waitFor(() => expect(exportFile).toHaveBeenCalledWith('p1'))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((x) => x.type === 'success' && x.message.includes('/tmp/历史.json'))).toBe(true),
+    )
+  })
+
+  it('48-b 导入历史 → 调 versionHistory.importFile(项目) → 成功后刷新', async () => {
+    const importFile = vi.fn().mockResolvedValue({ canceled: false, imported: 1, skipped: 0 })
+    ;(window.electron as unknown as {
+      feature: { versionHistory: { importFile: ReturnType<typeof vi.fn> } }
+    }).feature.versionHistory.importFile.mockReset().mockImplementation(importFile)
+    const listMock = vi.fn().mockResolvedValue({ ok: true, projectName: 'p1', current: versionsV2, files: [file('v1.plan.json', JSON.stringify(versionsV1))] })
+    ;(window.electron as unknown as {
+      feature: { versionHistory: { list: ReturnType<typeof vi.fn> } }
+    }).feature.versionHistory.list.mockReset().mockImplementation(listMock)
+    render(<VersionHistoryView projectName="p1" open onClose={() => {}} />)
+    fireEvent.click(await screen.findByText('导入历史'))
+    await waitFor(() => expect(importFile).toHaveBeenCalledWith('p1'))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((x) => x.type === 'success' && x.message.includes('已导入 1 个历史版本'))).toBe(true),
+    )
+  })
 })

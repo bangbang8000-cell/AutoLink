@@ -13,6 +13,7 @@ import { useRoomStore, type RoomMatrixData } from '@/stores/room.store'
 import { useRackStore, type RackCabinet } from '@/stores/rack.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useToastStore } from '@/stores/toast.store'
+import { useSnapshotStore } from '@/stores/snapshot.store'
 
 const makeMatrix = (): RoomMatrixData => ({
   schemaVersion: 1,
@@ -132,5 +133,50 @@ describe('OutputResultsView（M-F1 版本历史 + 评审 PDF）', () => {
     render(<OutputResultsView projectName="p1" />)
     fireEvent.click(await screen.findByText('版本历史'))
     expect(await screen.findByText(/暂无历史版本/)).toBeInTheDocument()
+  })
+})
+
+describe('OutputResultsView（48-b 便携快照文件导出）', () => {
+  beforeEach(() => {
+    // 预置一个快照供导出
+    useSnapshotStore.setState({
+      snapshots: [{
+        id: 's1',
+        name: '定稿',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        state: {
+          version: 1,
+          meta: { format: 'autolink-design-snapshot', version: 1, savedAt: '2026-01-01T00:00:00.000Z', name: '定稿' },
+          matrix: makeMatrix(),
+          cabinets: makeCabinets(),
+          unplacedDevices: [],
+          config: { topReservedU: 2, gpuPerCabinet: 1 },
+        },
+      }],
+    })
+  })
+
+  it('点「导出快照文件」→ 调 feature.snapshot.exportFile（便携格式）并刷新', async () => {
+    const snapshotMock = (window.electron as unknown as {
+      feature: { snapshot: { exportFile: ReturnType<typeof vi.fn> } }
+    }).feature.snapshot.exportFile
+    snapshotMock.mockReset().mockResolvedValue({ canceled: false, path: '/tmp/定稿.json' })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('导出快照文件'))
+    await waitFor(() => expect(snapshotMock).toHaveBeenCalled())
+    const [, jsonText] = snapshotMock.mock.calls[0]
+    const parsed = JSON.parse(jsonText)
+    expect(parsed.format).toBe('autolink-snapshot-file')
+  })
+
+  it('导出取消 → 无 error toast（静默）', async () => {
+    const snapshotMock = (window.electron as unknown as {
+      feature: { snapshot: { exportFile: ReturnType<typeof vi.fn> } }
+    }).feature.snapshot.exportFile
+    snapshotMock.mockReset().mockResolvedValue({ canceled: true, path: '' })
+    render(<OutputResultsView projectName="p1" />)
+    fireEvent.click(await screen.findByText('导出快照文件'))
+    await waitFor(() => expect(snapshotMock).toHaveBeenCalled())
+    expect(useToastStore.getState().toasts.some((t) => t.type === 'error')).toBe(false)
   })
 })

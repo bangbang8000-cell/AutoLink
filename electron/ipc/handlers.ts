@@ -1123,6 +1123,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return pythonService.call('plan:aidc:export', { ...stripPathParams(params), format, filepath: result.filePath })
   }))
 
+  // 48-b（F8-2）：plan:table 回导——校验/归一化外部 plan JSON（JSON/ZIP 导出可回导）
+  ipcMain.handle('plan:aidc:import', wrapHandler(async (_event, params: { plan?: Record<string, unknown> } | Record<string, unknown>) => {
+    return pythonService.call('plan:aidc:import', stripPathParams(params ?? {}))
+  }))
+
   // P1（A-3/A-5/A-7）：AIDC 项目化——新建/保存/打开/列表（workspace/<name>/ 落盘 + 版本快照）
   const aidcProjectDir = (name: string): string => {
     sanitizeName(name)
@@ -1569,6 +1574,110 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       } catch { /* ignore */ }
     }
     return { ok: true, projectName, archivedVersion, newVersion }
+  }))
+
+  // ===== 48-b（F8-2）：快照 / 版本历史 文件级导出与回导（导入导出格式增强） =====
+
+  // 设计快照导出为文件（保存对话框 → 写盘）
+  ipcMain.handle('feature:snapshot:exportFile', wrapHandler(async (_event, defaultName: string, jsonText: string) => {
+    const safeName = asciiSafeBase(String(defaultName || 'snapshot').replace(/\.json$/i, ''), '')
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出设计快照',
+      defaultPath: `${safeName || 'snapshot'}.json`,
+      filters: [{ name: '设计快照 JSON', extensions: ['json'] }],
+    })
+    if (result.canceled || !result.filePath) return { canceled: true, path: '' }
+    fs.writeFileSync(result.filePath, String(jsonText ?? ''), 'utf-8')
+    return { canceled: false, path: result.filePath }
+  }))
+
+  // 设计快照文件导入（打开对话框 → 读文本，回导由前端 parseSnapshotFile + importFromJson 完成）
+  ipcMain.handle('feature:snapshot:importFile', wrapHandler(async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '导入设计快照',
+      filters: [{ name: '设计快照 JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return { canceled: true, content: '' }
+    const content = fs.readFileSync(result.filePaths[0], 'utf-8')
+    return { canceled: false, content }
+  }))
+
+  // 版本历史导出为文件（聚合 current + history → 可移植 JSON）
+  ipcMain.handle('feature:version-history:exportFile', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    if (!fs.existsSync(projectDir)) throw new Error(`项目不存在: ${projectName}`)
+    let current: unknown = null
+    const planPath = path.join(projectDir, 'plan.json')
+    if (fs.existsSync(planPath)) {
+      try { current = JSON.parse(fs.readFileSync(planPath, 'utf-8')) } catch { current = null }
+    }
+    const hdir = path.join(projectDir, 'plan_history')
+    const history: { version: number; plan: unknown }[] = []
+    if (fs.existsSync(hdir)) {
+      for (const name of fs.readdirSync(hdir)) {
+        const m = /^v(\d+)\.plan\.json$/.exec(name)
+        if (!m) continue
+        try {
+          history.push({ version: Number(m[1]), plan: JSON.parse(fs.readFileSync(path.join(hdir, name), 'utf-8')) })
+        } catch { /* 跳过损坏快照 */ }
+      }
+    }
+    history.sort((a, b) => a.version - b.version)
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: `导出版本历史 "${projectName}"`,
+      defaultPath: `${projectName}_版本历史.json`,
+      filters: [{ name: '版本历史 JSON', extensions: ['json'] }],
+    })
+    if (result.canceled || !result.filePath) return { canceled: true, path: '', count: 0 }
+    const payload = {
+      format: 'autolink-plan-history',
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      project: { projectName },
+      ...(current != null ? { current } : {}),
+      history,
+    }
+    fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2), 'utf-8')
+    return { canceled: false, path: result.filePath, count: history.length }
+  }))
+
+  // 版本历史文件回导（打开对话框 → 解析 → 合并写盘；overwrite=true 覆盖同版本，默认补齐缺失）
+  ipcMain.handle('feature:version-history:importFile', wrapHandler(async (_event, projectName: string, opts?: { overwrite?: boolean }) => {
+    sanitizeName(projectName)
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '导入版本历史',
+      filters: [{ name: '版本历史 JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return { canceled: true, imported: 0, skipped: 0 }
+    let payload: { format?: unknown; schemaVersion?: unknown; history?: { version?: unknown; plan?: unknown }[] }
+    try {
+      payload = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf-8'))
+    } catch {
+      throw new Error('版本历史文件不是合法 JSON')
+    }
+    if (payload?.format !== 'autolink-plan-history') throw new Error('版本历史文件格式标识缺失/不符')
+    if (!Array.isArray(payload?.history)) throw new Error('版本历史文件缺少 history 段')
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const hdir = path.join(projectDir, 'plan_history')
+    fs.mkdirSync(hdir, { recursive: true })
+    const overwrite = opts?.overwrite === true
+    let imported = 0
+    let skipped = 0
+    for (const entry of payload.history ?? []) {
+      const v = Number(entry?.version)
+      if (!Number.isInteger(v) || v < 1 || entry?.plan == null) continue
+      const targetPath = path.join(hdir, `v${v}.plan.json`)
+      if (fs.existsSync(targetPath) && !overwrite) {
+        skipped++
+        continue
+      }
+      fs.writeFileSync(targetPath, JSON.stringify(entry.plan, null, 2), 'utf-8')
+      imported++
+    }
+    return { canceled: false, imported, skipped }
   }))
 
   // ===== 评审 PDF（M-F1 / PRD v3.6：F1-3 printToPDF A4 → output/ 根目录 → [根目录] 批次） =====

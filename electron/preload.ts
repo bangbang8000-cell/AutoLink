@@ -69,6 +69,9 @@ const electronAPI = {
     // G2（REQ-A3）+ 契约 v1.2（A-2）：导出 plan:table（json|excel|zip 交付包），保存对话框在主进程弹出
     exportPlan: (params: Record<string, unknown>, format: 'json' | 'excel' | 'zip') =>
       ipcRenderer.invoke('plan:aidc:export', params, format),
+    // 48-b（F8-2）：plan:table 回导（校验/归一化外部 plan JSON）
+    importPlan: (params: { plan?: Record<string, unknown> } | Record<string, unknown>) =>
+      ipcRenderer.invoke('plan:aidc:import', params),
     // P1（V-AL4）：保存拓扑 PNG（base64 → 文件）
     savePng: (base64: string, defaultName: string) =>
       ipcRenderer.invoke('aidc:savePng', base64, defaultName),
@@ -289,15 +292,26 @@ const electronAPI = {
       ipcRenderer.invoke('export:saveFile', projectName, fileName, base64Data),
   },
   // M-F1（PRD v3.6）：AL 版本历史与评审（版本列表/对比/回滚 + 评审 PDF 导出）
+  // 48-b（F8-2）：快照/版本历史 文件级导出与回导
   feature: {
     versionHistory: {
       list: (projectName: string) =>
         ipcRenderer.invoke('feature:version-history:list', projectName),
       rollback: (projectName: string, targetVersion: number) =>
         ipcRenderer.invoke('feature:version-history:rollback', projectName, targetVersion),
+      exportFile: (projectName: string) =>
+        ipcRenderer.invoke('feature:version-history:exportFile', projectName),
+      importFile: (projectName: string, opts?: { overwrite?: boolean }) =>
+        ipcRenderer.invoke('feature:version-history:importFile', projectName, opts),
     },
     reviewPdf: (projectName: string) =>
       ipcRenderer.invoke('feature:review-pdf', projectName),
+    snapshot: {
+      exportFile: (defaultName: string, jsonText: string) =>
+        ipcRenderer.invoke('feature:snapshot:exportFile', defaultName, jsonText),
+      importFile: () =>
+        ipcRenderer.invoke('feature:snapshot:importFile'),
+    },
   },
   // V3.3.0-T13: 云端平台（登录 + 云中心）。渲染层零网络（CSP connect-src 'self'），
   // 所有 HTTP 由主进程 cloudService 发起，此处仅透传 IPC。

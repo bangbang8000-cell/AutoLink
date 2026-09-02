@@ -559,6 +559,20 @@ def handle_plan_aidc_export(params):
         return {'error': f'导出失败: {e}'}
 
 
+@register_action('plan:aidc:import')
+def handle_plan_aidc_import(params):
+    """48-b（F8-2）：plan:table 回导——校验/归一化外部 plan JSON（导入导出格式增强）。
+
+    params: {plan: {...}}（直接 plan:table 对象也可）
+    返回: {'ok': True, 'plan': ..., 'projectId': ..., 'planVersion': ..., 'planHash': ...} 或 {'error': ...}
+    """
+    from aidc_planner import import_plan
+    try:
+        return import_plan(dict(params or {}))
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'plan 回导失败: {e}'}
+
+
 @register_action('design:from-gpus')
 def handle_design_from_gpus(params):
     """A1（G2）：GPU 规模 + 宏观参数 → plan:table 端到端（后端 action 开放）。

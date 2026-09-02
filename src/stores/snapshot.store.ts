@@ -18,6 +18,8 @@ import {
   type DesignSnapshot,
   type ValidateResult,
 } from '@/utils/designSnapshot'
+import { buildSnapshotFile, parseSnapshotFile } from '@/utils/snapshotFile'
+import { getFeatureBridge } from '@/utils/planVersionDiff'
 
 export interface DesignSnapshotItem {
   id: string
@@ -35,6 +37,10 @@ interface SnapshotState {
   deleteSnapshot: (id: string) => void
   /** 导入快照 JSON 文本：校验 → 导入前备份当前状态 → 应用；成功返回导入快照名 */
   importFromJson: (jsonText: string, opts?: { backupName?: string }) => ValidateResult & { name?: string }
+  /** 48-b（F8-2）：快照导出为可移植文件（保存对话框由主进程弹出） */
+  exportToFile: (id?: string, projectName?: string) => Promise<ValidateResult & { path?: string }>
+  /** 48-b（F8-2）：从快照文件回导（打开对话框 → 解析校验 → 应用） */
+  importFromFile: () => Promise<ValidateResult & { name?: string }>
 }
 
 /** 序列化后 UTF-8 字节数（TextEncoder 优先，兜底按字符数近似） */
@@ -123,6 +129,40 @@ export const useSnapshotStore = create<SnapshotState>()(
         const r = applyDesignState(useRoomStore.getState(), useRackStore.getState(), snapshot)
         if (!r.ok) return r
         return { ...r, name: snapshot.meta?.name }
+      },
+
+      // 48-b（F8-2）：快照导出为可移植文件
+      exportToFile: async (id, projectName) => {
+        const item = id
+          ? get().snapshots.find((it) => it.id === id)
+          : get().snapshots[get().snapshots.length - 1]
+        if (!item) return { ok: false, reason: 'not_found' }
+        const json = buildSnapshotFile(item.state, { projectName })
+        try {
+          const res = await getFeatureBridge().snapshot.exportFile(item.name, json)
+          if (res.canceled) return { ok: false, reason: 'canceled' }
+          if (res.path) {
+            useToastStore.getState().addToast('success', `设计快照已导出 → ${res.path}`, 4000)
+          }
+          return { ok: true, ...(res.path ? { path: res.path } : {}) }
+        } catch (err) {
+          return { ok: false, reason: `导出失败：${(err as Error).message}` }
+        }
+      },
+
+      // 48-b（F8-2）：从快照文件回导（解析校验 → 复用 importFromJson 应用）
+      importFromFile: async () => {
+        try {
+          const res = await getFeatureBridge().snapshot.importFile()
+          if (res.canceled || !res.content) return { ok: false, reason: 'canceled' }
+          const parsed = parseSnapshotFile(res.content)
+          if (!parsed.ok) return parsed
+          if (!parsed.snapshot) return { ok: false, reason: 'no_snapshot' }
+          const backupName = `导入前备份 ${defaultSnapshotName()}`
+          return get().importFromJson(JSON.stringify(parsed.snapshot), { backupName })
+        } catch (err) {
+          return { ok: false, reason: `导入失败：${(err as Error).message}` }
+        }
       },
     }),
     {

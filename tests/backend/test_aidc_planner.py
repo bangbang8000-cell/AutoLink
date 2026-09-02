@@ -14,7 +14,7 @@ import zipfile
 import pytest
 
 from aidc_planner import (CONTRACT_VERSION, SCN_ABBR, _SCALE, export_plan,
-                          plan_aidc, plan_hash, validate_macro)
+                          import_plan, plan_aidc, plan_hash, validate_macro)
 
 
 class TestPlanAidcContract:
@@ -162,3 +162,61 @@ class TestExport:
         out = execute('design:from-gpus', {'gpu_count': 64})
         assert out['meta']['projectType'] == 'aidc'
         assert len(out['deviceList']) == 22
+
+
+class TestImportPlan:
+    """48-b（F8-2）：plan:table 回导（导入导出格式增强——JSON/ZIP 可回导）。"""
+
+    def _plan(self, project_id='PID-IMPORT', plan_version=3, with_hash=True):
+        plan = plan_aidc({'gpu_count': 64, 'project_id': project_id,
+                          'project_name': '导入示例', 'plan_version': plan_version})
+        meta = plan['meta']
+        if not with_hash:
+            meta.pop('planHash', None)
+        return plan
+
+    def test_import_plan_roundtrip(self):
+        plan = self._plan()
+        res = import_plan(plan)
+        assert res['ok'] is True
+        assert res['projectId'] == 'PID-IMPORT'
+        assert res['planVersion'] == 3
+        assert res['planHash'] == plan['meta']['planHash']
+        assert res['plan']['meta']['projectId'] == 'PID-IMPORT'
+
+    def test_import_plan_accepts_wrapper(self):
+        """兼容 plan:aidc:export json 的外壳 {plan: {...}}（等价 zip 内 plan.json）。"""
+        plan = self._plan()
+        res = import_plan({'plan': plan})
+        assert res['ok'] is True
+        assert res['projectId'] == 'PID-IMPORT'
+
+    def test_import_plan_recomputes_hash_when_missing(self):
+        plan = self._plan(with_hash=False)
+        assert 'planHash' not in plan['meta']
+        res = import_plan(plan)
+        assert res['ok'] is True
+        # 归一化：按 macro 重算 planHash（契约 v1.2 §1.3）
+        assert res['planHash'] == plan_hash(plan['macro'])
+        assert plan['meta']['planHash'] == res['planHash']
+
+    def test_import_plan_rejects_non_plan(self):
+        assert import_plan({'schema': 'other', 'macro': {}, 'deviceList': []})['error']
+        assert import_plan({'meta': {}})['error']
+        assert import_plan('x')['error']
+        assert import_plan(42)['error']
+
+    def test_import_plan_rejects_incomplete_structure(self):
+        plan = self._plan()
+        del plan['terminals']
+        res = import_plan(plan)
+        assert 'error' in res and 'terminals' in res['error']
+
+    def test_plan_aidc_import_action(self):
+        """后端 action 层开放（engine.py handle_plan_aidc_import）。"""
+        from cli import execute
+        plan = self._plan()
+        out = execute('plan:aidc:import', {'plan': plan})
+        assert out['ok'] is True
+        assert out['projectId'] == 'PID-IMPORT'
+        assert out['plan']['meta']['planHash'] == plan['meta']['planHash']

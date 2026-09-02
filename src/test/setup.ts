@@ -42,12 +42,19 @@ const mockElectron = {
     saveFile: vi.fn(),
   },
   // M-F1（PRD v3.6）：版本历史 + 评审 PDF 桥接
+  // 48-b（F8-2）：快照/版本历史 文件级导出与回导
   feature: {
     versionHistory: {
       list: vi.fn(),
       rollback: vi.fn(),
+      exportFile: vi.fn(),
+      importFile: vi.fn(),
     },
     reviewPdf: vi.fn(),
+    snapshot: {
+      exportFile: vi.fn(),
+      importFile: vi.fn(),
+    },
   },
   deviceLibrary: {
     list: vi.fn(),

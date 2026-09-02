@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GitCompareArrows, History, RefreshCw, RotateCcw, Loader2 } from 'lucide-react'
+import { GitCompareArrows, History, RefreshCw, RotateCcw, Loader2, FileDown, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToastStore } from '@/stores/toast.store'
@@ -112,6 +112,41 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
     }
   }, [rollbackTarget, projectName, addToast, t, load])
 
+  // 48-b（F8-2）：版本历史 导出为文件 / 从文件回导（合并补齐缺失版本）
+  const [historyBusy, setHistoryBusy] = useState(false)
+  const handleExportHistory = useCallback(async () => {
+    setHistoryBusy(true)
+    try {
+      const res = await getFeatureBridge().versionHistory.exportFile(projectName)
+      if (res?.error) throw new Error(res.error)
+      if (res?.canceled) return
+      if (res?.path) {
+        addToast('success', t('workbench:versionHistory.exported', { path: res.path, count: res.count ?? 0, defaultValue: '版本历史已导出 → {{path}}（{{count}} 个快照）' }), 5000)
+      }
+    } catch (err) {
+      addToast('error', t('workbench:versionHistory.exportFailed', { reason: (err as Error).message, defaultValue: '版本历史导出失败：{{reason}}' }), 5000)
+    } finally {
+      setHistoryBusy(false)
+    }
+  }, [projectName, addToast, t])
+
+  const handleImportHistory = useCallback(async () => {
+    setHistoryBusy(true)
+    try {
+      const res = await getFeatureBridge().versionHistory.importFile(projectName)
+      if (res?.error) throw new Error(res.error)
+      if (res?.canceled) return
+      if (res?.imported) {
+        addToast('success', t('workbench:versionHistory.imported', { imported: res.imported, skipped: res.skipped ?? 0, defaultValue: '已导入 {{imported}} 个历史版本（合并跳过 {{skipped}} 个）' }), 5000)
+      }
+      await load()
+    } catch (err) {
+      addToast('error', t('workbench:versionHistory.importFailed', { reason: (err as Error).message, defaultValue: '版本历史导入失败：{{reason}}' }), 5000)
+    } finally {
+      setHistoryBusy(false)
+    }
+  }, [projectName, addToast, t, load])
+
   const statusClass = (status: DiffEntry['status']) => {
     switch (status) {
       case 'changed': return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
@@ -161,6 +196,23 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
             className="ml-auto flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover"
           >
             {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />} {t('workbench:output.refresh', '刷新')}
+          </button>
+          {/* 48-b（F8-2）：版本历史 导出/回导 文件 */}
+          <button
+            type="button"
+            onClick={handleExportHistory}
+            disabled={historyBusy}
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 disabled:opacity-40"
+          >
+            {historyBusy ? <Loader2 size={11} className="animate-spin" /> : <FileDown size={11} />} {t('workbench:versionHistory.exportBtn', '导出历史')}
+          </button>
+          <button
+            type="button"
+            onClick={handleImportHistory}
+            disabled={historyBusy}
+            className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 disabled:opacity-40"
+          >
+            {historyBusy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} {t('workbench:versionHistory.importBtn', '导入历史')}
           </button>
         </div>
 

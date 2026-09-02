@@ -182,12 +182,35 @@ export interface VersionRollbackResult {
   error?: string
 }
 
+// 48-b（F8-2）：版本历史 / 快照 文件级导出与回导
+export interface VersionHistoryFileResult {
+  canceled?: boolean
+  path?: string
+  count?: number
+  imported?: number
+  skipped?: number
+  error?: string
+}
+
+export interface SnapshotFileResult {
+  canceled?: boolean
+  path?: string
+  content?: string
+  error?: string
+}
+
 export interface FeatureBridge {
   versionHistory: {
     list: (projectName: string) => Promise<VersionHistoryListResult>
     rollback: (projectName: string, targetVersion: number) => Promise<VersionRollbackResult>
+    exportFile: (projectName: string) => Promise<VersionHistoryFileResult>
+    importFile: (projectName: string, opts?: { overwrite?: boolean }) => Promise<VersionHistoryFileResult>
   }
   reviewPdf: (projectName: string) => Promise<ReviewPdfResult>
+  snapshot: {
+    exportFile: (defaultName: string, jsonText: string) => Promise<SnapshotFileResult>
+    importFile: () => Promise<SnapshotFileResult>
+  }
 }
 
 export function getFeatureBridge(): FeatureBridge {

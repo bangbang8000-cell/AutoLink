@@ -339,6 +339,41 @@ def _delivery_readme(plan: dict) -> str:
     return '\n'.join(lines)
 
 
+def import_plan(payload: dict) -> dict:
+    """48-b（F8-2）：plan:table 回导——校验/归一化外部 plan JSON（导入导出格式增强）。
+
+    接受：
+      - plan:table 对象（含 schema/meta/deviceList/...，契约 v1.2）
+      - 或含 'plan' 键的外壳（plan:aidc:export json 的直接产物，等价于从 zip 抽取 plan.json）
+    返回：{'ok': True, 'plan': ..., 'projectId': ..., 'planVersion': ..., 'planHash': ...} 或 {'error': ...}
+    """
+    if not isinstance(payload, dict):
+        return {'error': 'plan 回导输入必须是对象'}
+    plan = payload.get('plan') if isinstance(payload.get('plan'), dict) else payload
+    # schema 标识：顶层 plan.schema 或 meta.schema（契约 v1.2 放 meta）
+    schema = plan.get('schema', '')
+    if not isinstance(schema, str) or not str(schema).startswith('plan:table/'):
+        meta = plan.get('meta') if isinstance(plan.get('meta'), dict) else {}
+        meta_schema = meta.get('schema', '')
+        if not isinstance(meta_schema, str) or not str(meta_schema).startswith('plan:table/'):
+            return {'error': f'不支持的 plan 格式标识: {schema or meta_schema}'}
+    if not isinstance(plan.get('macro'), dict):
+        return {'error': 'plan 缺少 macro 段，无法回导'}
+    missing = [k for k in ('deviceList', 'connections', 'terminals') if k not in plan]
+    if missing:
+        return {'error': f'plan 结构不完整，缺失: {", ".join(missing)}'}
+    meta = plan.get('meta') if isinstance(plan.get('meta'), dict) else {}
+    project_id = str(meta.get('projectId') or '')
+    plan_version = int(meta.get('planVersion') or 0) or 0
+    plan_hash_str = str(meta.get('planHash') or '')
+    # 归一化：planHash 缺失时按 macro 重算（契约 v1.2 §1.3 权威判据）
+    if not plan_hash_str:
+        plan_hash_str = plan_hash(plan['macro'])
+        plan['meta'] = dict(meta, planHash=plan_hash_str)
+    return {'ok': True, 'plan': plan, 'projectId': project_id,
+            'planVersion': plan_version, 'planHash': plan_hash_str}
+
+
 def export_plan(macro: dict, filepath: str, fmt: str = 'json',
                 png_base64: str | None = None,
                 extra_files: dict | None = None) -> str:

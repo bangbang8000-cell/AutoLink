@@ -282,6 +282,22 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     }
   }, [activeProject, addToast, refresh, t])
 
+  // 48-b（F8-2）：导出快照为可移植文件（保存对话框 → 便携格式，可跨端/跨机回导）
+  const handleExportSnapshotFile = useCallback(async () => {
+    try {
+      const r = await useSnapshotStore.getState().exportToFile(undefined, activeProject)
+      if (!r.ok) {
+        if (r.reason !== 'canceled') {
+          addToast('error', t('workbench:output.snapshotExportFailed', '导出失败：{{reason}}', { reason: r.reason }), 5000)
+        }
+        return
+      }
+      refresh()
+    } catch (err) {
+      addToast('error', t('workbench:output.snapshotExportFailed', '导出失败：{{reason}}', { reason: (err as Error).message }), 5000)
+    }
+  }, [activeProject, addToast, refresh, t])
+
   // M-F1（PRD v3.6 / F1-3）：导出评审 PDF（printToPDF A4 → output/ 根目录 → [根目录] 批次）
   const handleReviewPdf = useCallback(async () => {
     try {
@@ -442,6 +458,11 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         <button type="button" onClick={handleExportSnapshot}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
           <Download size={11} /> {t('workbench:output.exportSnapshot', '导出设计快照 JSON')}
+        </button>
+        {/* 48-b（F8-2）：便携快照文件（保存对话框 → 可跨端回导） */}
+        <button type="button" onClick={handleExportSnapshotFile}
+          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+          <Download size={11} /> {t('workbench:output.exportSnapshotFile', '导出快照文件')}
         </button>
         <button type="button" onClick={handleImportSnapshot}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
