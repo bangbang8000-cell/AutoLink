@@ -172,4 +172,47 @@ describe('DeviceLibraryStore', () => {
       expect(window.electron.deviceLibrary.list).toHaveBeenCalled()
     })
   })
+
+  describe('exportPortable / importPortable（48-c 跨端可移植）', () => {
+    it('导出可移植格式 → 调 deviceLibrary.exportPortable 并关闭弹窗', async () => {
+      window.electron.deviceLibrary.exportPortable = vi.fn().mockResolvedValue({ canceled: false, path: '/tmp/lib.json', count: 1 })
+      useDeviceLibraryStore.setState({ showExportModal: true })
+      await useDeviceLibraryStore.getState().exportPortable(['dev1'])
+      expect(window.electron.deviceLibrary.exportPortable).toHaveBeenCalledWith(['dev1'])
+      expect(useDeviceLibraryStore.getState().showExportModal).toBe(false)
+    })
+
+    it('导出失败 → 记录 error 不抛', async () => {
+      window.electron.deviceLibrary.exportPortable = vi.fn().mockRejectedValue(new Error('写盘失败'))
+      await useDeviceLibraryStore.getState().exportPortable(['dev1'])
+      expect(useDeviceLibraryStore.getState().error).toContain('写盘失败')
+    })
+
+    it('导入 MC 扁平数组 → 归一化 → importDevices', async () => {
+      const mcJson = JSON.stringify([{ id: 'h3c_s9827', vendor: 'H3C', model: 'S9827', port_count: 128, port_speed: '400G', applicable_networks: ['param'] }])
+      window.electron.deviceLibrary.importPortable = vi.fn().mockResolvedValue({ canceled: false, content: mcJson })
+      window.electron.deviceLibrary.import = vi.fn().mockResolvedValue(undefined)
+      window.electron.deviceLibrary.list = vi.fn().mockResolvedValue({ categories: [] })
+      await useDeviceLibraryStore.getState().importPortable()
+      expect(window.electron.deviceLibrary.import).toHaveBeenCalled()
+      const devices = (window.electron.deviceLibrary.import as ReturnType<typeof vi.fn>).mock.calls[0][0] as LibraryDevice[]
+      expect(devices[0].id).toBe('h3c_s9827')
+      expect(devices[0].category).toBe('switches_param')
+      expect(devices[0].source).toBe('custom')
+    })
+
+    it('导入取消 → 不做任何事', async () => {
+      window.electron.deviceLibrary.importPortable = vi.fn().mockResolvedValue({ canceled: true, content: '' })
+      const importSpy = vi.fn()
+      window.electron.deviceLibrary.import = importSpy
+      await useDeviceLibraryStore.getState().importPortable()
+      expect(importSpy).not.toHaveBeenCalled()
+    })
+
+    it('导入格式非法 → 记录 error', async () => {
+      window.electron.deviceLibrary.importPortable = vi.fn().mockResolvedValue({ canceled: false, content: 'not-json' })
+      await useDeviceLibraryStore.getState().importPortable()
+      expect(useDeviceLibraryStore.getState().error).toContain('导入设备库失败')
+    })
+  })
 })

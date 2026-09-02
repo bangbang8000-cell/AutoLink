@@ -515,6 +515,15 @@ interface Window {
       delete: (deviceId: string) => Promise<void>
       import: (devices: import('@/types/device-profile').LibraryDevice[]) => Promise<void>
       export: (deviceIds: string[], format: 'json' | 'excel' | 'zip') => Promise<string | { devices: unknown[]; format: string }>
+      // 48-c（F8-3）：设备库跨端可移植格式（MC↔AL）
+      exportPortable: (deviceIds: string[]) => Promise<{ canceled: boolean; path: string; count: number }>
+      importPortable: () => Promise<{ canceled: boolean; content: string }>
+    }
+    // 48-c（F8-3）：技能库文件级导入导出（跨端互灌）
+    skills: {
+      list: () => Promise<{ ok?: boolean; skills?: Array<{ name: string; enabled: boolean; use_count: number; last_used: string; file: string }> }>
+      export: () => Promise<{ canceled: boolean; path: string; count?: number; error?: string }>
+      import: (opts?: { overwrite?: boolean }) => Promise<{ canceled: boolean; imported: number; skipped: number; error?: string }>
     }
     export: {
       saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>

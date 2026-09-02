@@ -93,6 +93,9 @@ interface DeviceLibraryState {
   openExportModal: () => void
   closeExportModal: () => void
   exportDevices: (deviceIds: string[], format: 'json' | 'excel' | 'zip') => Promise<void>
+  // 48-c（F8-3）：设备库跨端可移植格式（MC↔AL）
+  exportPortable: (deviceIds: string[]) => Promise<void>
+  importPortable: () => Promise<void>
 }
 
 export const useDeviceLibraryStore = create<DeviceLibraryState>()((set, get) => ({
@@ -331,6 +334,36 @@ export const useDeviceLibraryStore = create<DeviceLibraryState>()((set, get) => 
       get().closeExportModal()
     } catch (err) {
       set({ error: `导出设备失败: ${(err as Error).message}` })
+    }
+  },
+
+  // 48-c（F8-3）：设备库跨端可移植格式导出（带 schema/版本清单，MC 可导入）
+  exportPortable: async (deviceIds) => {
+    try {
+      if (window.electron?.deviceLibrary?.exportPortable) {
+        await window.electron.deviceLibrary.exportPortable(deviceIds)
+      }
+      get().closeExportModal()
+    } catch (err) {
+      set({ error: `导出设备库（可移植）失败: ${(err as Error).message}` })
+    }
+  },
+
+  // 48-c（F8-3）：设备库跨端可移植格式导入（MC 扁平数组 / AL 可移植格式 → 归一化 → 导入）
+  importPortable: async () => {
+    try {
+      if (!window.electron?.deviceLibrary?.importPortable) return
+      const res = await window.electron.deviceLibrary.importPortable()
+      if (res.canceled || !res.content) return
+      const { parsePortableLibrary } = await import('@/utils/deviceLibraryPortable')
+      const parsed = parsePortableLibrary(res.content)
+      if (!parsed.ok) {
+        set({ error: `导入设备库失败: ${parsed.reason}` })
+        return
+      }
+      await get().importDevices(parsed.devices)
+    } catch (err) {
+      set({ error: `导入设备库失败: ${(err as Error).message}` })
     }
   },
 }))

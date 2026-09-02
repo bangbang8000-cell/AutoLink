@@ -412,6 +412,15 @@ const electronAPI = {
     delete: (deviceId: string) => ipcRenderer.invoke('device-library:delete', deviceId),
     import: (devices: unknown[]) => ipcRenderer.invoke('device-library:import', devices),
     export: (deviceIds: string[], format: string) => ipcRenderer.invoke('device-library:export', deviceIds, format),
+    // 48-c（F8-3）：设备库跨端可移植格式（MC↔AL）
+    exportPortable: (deviceIds: string[]) => ipcRenderer.invoke('device-library:exportPortable', deviceIds),
+    importPortable: () => ipcRenderer.invoke('device-library:importPortable'),
+  },
+  // 48-c（F8-3）：技能库文件级导入导出（跨端互灌）
+  skills: {
+    list: () => ipcRenderer.invoke('skills:list'),
+    export: () => ipcRenderer.invoke('skills:export'),
+    import: (opts?: { overwrite?: boolean }) => ipcRenderer.invoke('skills:import', opts),
   },
   versions: {
     node: process.versions.node,

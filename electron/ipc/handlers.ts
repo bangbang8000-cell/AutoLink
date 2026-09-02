@@ -1916,6 +1916,65 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return { devices: selectedDevices, format }
   }))
 
+  // 48-c（F8-3）：设备库跨端可移植格式（MC↔AL）——导出带 schema/版本清单的可移植 JSON
+  ipcMain.handle('device-library:exportPortable', wrapHandler(async (_event, deviceIds: string[]) => {
+    const libData = loadDeviceLibrary()
+    const allDevices = libData.categories.flatMap((c) => c.devices)
+    const selected = allDevices.filter((d) => deviceIds.includes(d.id))
+    if (selected.length === 0) throw new Error('未选择要导出的设备')
+    const payload = {
+      format: 'autolink-device-library',
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      devices: selected,
+    }
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出设备库（可移植 / MC 可导入）',
+      defaultPath: 'device_library_portable.json',
+      filters: [{ name: '设备库 JSON', extensions: ['json'] }],
+    })
+    if (result.canceled || !result.filePath) return { canceled: true, path: '', count: 0 }
+    fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2), 'utf-8')
+    return { canceled: false, path: result.filePath, count: selected.length }
+  }))
+
+  // 48-c（F8-3）：设备库跨端可移植格式导入（读取文件文本，前端 parsePortableLibrary 归一化后走 device-library:import）
+  ipcMain.handle('device-library:importPortable', wrapHandler(async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '导入设备库（可移植 / MC）',
+      filters: [{ name: '设备库 JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return { canceled: true, content: '' }
+    const content = fs.readFileSync(result.filePaths[0], 'utf-8')
+    return { canceled: false, content }
+  }))
+
+  // 48-c（F8-3）：技能库文件级导入导出（打包 skills/*.md + 状态 → zip，跨端互灌）
+  ipcMain.handle('skills:list', wrapHandler(async () => {
+    return pythonService.call('skills:list', {})
+  }))
+  ipcMain.handle('skills:export', wrapHandler(async () => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出技能库',
+      defaultPath: 'skills_export.zip',
+      filters: [{ name: '技能库 ZIP', extensions: ['zip'] }],
+    })
+    if (result.canceled || !result.filePath) return { canceled: true, path: '' }
+    const r = await pythonService.call('skills:export', { filepath: result.filePath })
+    return { canceled: false, ...r }
+  }))
+  ipcMain.handle('skills:import', wrapHandler(async (_event, opts?: { overwrite?: boolean }) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '导入技能库',
+      filters: [{ name: '技能库 ZIP', extensions: ['zip'] }],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return { canceled: true, imported: 0, skipped: 0 }
+    const r = await pythonService.call('skills:import', { zipPath: result.filePaths[0], overwrite: opts?.overwrite === true })
+    return { canceled: false, ...r }
+  }))
+
   // ===== Template =====
   ipcMain.handle('template:getStructure', wrapHandler(async (_event, templateName: string) => {
     sanitizeName(templateName)

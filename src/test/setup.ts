@@ -63,6 +63,15 @@ const mockElectron = {
     delete: vi.fn(),
     import: vi.fn(),
     export: vi.fn(),
+    // 48-c（F8-3）：设备库跨端可移植格式
+    exportPortable: vi.fn(),
+    importPortable: vi.fn(),
+  },
+  // 48-c（F8-3）：技能库文件级导入导出
+  skills: {
+    list: vi.fn(),
+    export: vi.fn(),
+    import: vi.fn(),
   },
   shell: {
     showItemInFolder: vi.fn(),

@@ -573,6 +573,42 @@ def handle_plan_aidc_import(params):
         return {'error': f'plan 回导失败: {e}'}
 
 
+# ================= 48-c（F8-3）：技能库文件级导入导出（跨端互灌） =================
+
+@register_action('skills:list')
+def handle_skills_list(params):
+    """技能清单（名称/启用/使用次数/最近使用），供技能库面板展示。"""
+    from autolink_hub.skills.portable import list_skills_payload
+    return list_skills_payload()
+
+
+@register_action('skills:export')
+def handle_skills_export(params):
+    """打包 skills/*.md + 状态 + manifest → zip（filepath 由主进程保存对话框生成）。"""
+    from autolink_hub.skills.portable import export_skills_package
+    filepath = (params or {}).get('filepath', '')
+    if not filepath:
+        return {'error': '缺 filepath'}
+    try:
+        return export_skills_package(filepath)
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'技能库导出失败: {e}'}
+
+
+@register_action('skills:import')
+def handle_skills_import(params):
+    """解包安装技能（*.md → skills 目录 + 合并状态），overwrite=true 覆盖同名。"""
+    from autolink_hub.skills.portable import import_skills_package
+    p = params or {}
+    zip_path = p.get('zipPath') or p.get('zip_path') or ''
+    if not zip_path:
+        return {'error': '缺 zipPath'}
+    try:
+        return import_skills_package(zip_path, overwrite=bool(p.get('overwrite', False)))
+    except Exception as e:  # noqa: BLE001
+        return {'error': f'技能库导入失败: {e}'}
+
+
 @register_action('design:from-gpus')
 def handle_design_from_gpus(params):
     """A1（G2）：GPU 规模 + 宏观参数 → plan:table 端到端（后端 action 开放）。
