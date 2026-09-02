@@ -156,3 +156,70 @@ class TestCheckOptimizationSuggestions:
         ids = {i.rule_id for i in issues}
         assert 'A001' in ids
         assert 'A003' in ids
+
+
+class TestAutolinkHubIntegration:
+    """autolink_hub 建议路径覆盖：optimize:suggest 动作产物 → 校验引擎一致性
+
+    autolink_hub 的 optimize_suggest 工具经由 _make_cli_handler('optimize:suggest')
+    路由到 engine.handle_optimize_suggest → optimization.suggest，产出建议对象
+    {category,title,description,patch,impact}，本测试验证其声称值与后端真实计算一致。
+    """
+
+    TEMPLATE = 'template/DP3Tier-1024/project_config.json'
+
+    def _tmp_config(self, tmp_path):
+        import shutil
+        cfg = tmp_path / 'project_config.json'
+        shutil.copyfile(self.TEMPLATE, cfg)
+        return str(cfg)
+
+    def _designer_and_config(self, cfg):
+        from designer import NetworkDesignerV2
+        from project_config import load_project_config
+        designer = NetworkDesignerV2(cfg)
+        config, _err = load_project_config(cfg)
+        return designer, config or {}
+
+    def _convergence_suggestion(self, designer):
+        """构造声称值与真实计算一致的收敛比建议（正例）"""
+        actual = designer_convergence(designer, 'param')
+        dl = actual['downlink']
+        ports = actual['switch_ports']
+        patch_dl = max(1, dl // 2)
+        new_ratio = patch_dl / max(ports - patch_dl, 1)
+        return {
+            'category': 'convergence', 'categoryLabel': '收敛比', 'title': '参数网收敛比优化',
+            'description': f'参数网收敛比 {actual["convergence_ratio"]}:1 超过目标 1:1，建议降低 Leaf 下联端口数',
+            'patch': {'topology': {'param_downlink_limit': patch_dl}},
+            'impact': f'参数网收敛比降至约 {round(new_ratio, 1)}:1，缓解上行拥塞',
+        }
+
+    def test_optimize_suggest_action_suggestions_pass_accuracy(self, tmp_path):
+        """正例：动作产物（cost/thermal 等）校验无 A001/A003 error"""
+        from engine import handle_optimize_suggest
+        cfg = self._tmp_config(tmp_path)
+        res = handle_optimize_suggest({'configFile': cfg})
+        assert res.get('success') is True
+        suggestions = res['suggestions']
+        assert suggestions, '真实模板应产出优化建议'
+        designer, config = self._designer_and_config(cfg)
+        issues = check_optimization_suggestions(suggestions, designer, config)
+        assert not any(i.rule_id in ('A001', 'A003') and i.severity == 'error' for i in issues)
+
+    def test_convergence_suggestion_against_real_designer_passes(self, tmp_path):
+        """正例：声称值与真实计算一致的收敛比建议 → 无 A001/A002/A003"""
+        cfg = self._tmp_config(tmp_path)
+        designer, config = self._designer_and_config(cfg)
+        sug = self._convergence_suggestion(designer)
+        issues = check_optimization_suggestions([sug], designer, config)
+        assert not any(i.rule_id in ('A001', 'A002', 'A003') and i.severity == 'error' for i in issues)
+
+    def test_convergence_suggestion_drift_caught(self, tmp_path):
+        """负例：篡改声称收敛比 → A001 error（引擎可捕获 AI 虚构值）"""
+        cfg = self._tmp_config(tmp_path)
+        designer, config = self._designer_and_config(cfg)
+        sug = self._convergence_suggestion(designer)
+        sug['description'] = '参数网收敛比 99.9:1 超过目标 1:1，建议降低 Leaf 下联端口数'
+        issues = check_optimization_suggestions([sug], designer, config)
+        assert any(i.rule_id == 'A001' and i.severity == 'error' for i in issues)
