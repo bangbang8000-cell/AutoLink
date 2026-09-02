@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [4.7.0] - 2026-09-02
+
+### 4.7 部署运维与可观测
+
+- **诊断中心**：系统信息 / 错误日志 / 崩溃 / 审计 / 性能快照一处可查 + 一键导出支持包（zip）
+- **健康检查/自检**：环境（OS/arch/node/electron/磁盘）+ 引擎（AI Hub `/api/chat/health` + engine `cli:info`）+ 网络（cloud health，未配置跳过）+ 依赖（Python），可读报告 + 导出 JSON
+- **本地遥测**：默认关闭（autolink-telemetry-enabled）+ 本地 telemetry.jsonl + redact 脱敏 + 体积上限裁剪 + 读/导出/清空，不联网
+- **安装/升级体验**：三平台离线安装包 + 版本化 artifactName 打包配置校验 + 更新 UI 离线友好提示 + 下载完整性校验显示
+
 ## [4.6.0] - 2026-09-02
 
 ### 4.6 质量与测试体系
