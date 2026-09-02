@@ -91,13 +91,13 @@ describe('measureSync / measureAsync（P-1 耗时采集）', () => {
 
   it('measureAsync 等待异步完成并记录耗时', async () => {
     const r = await measureAsync('异步测量', 'load', async () => {
-      await new Promise((res) => setTimeout(res, 5))
+      await new Promise((res) => setTimeout(res, 80))
       return 'done'
     })
     expect(r).toBe('done')
     const ops = getOps('load')
     expect(ops).toHaveLength(1)
-    expect(ops[0].durationMs).toBeGreaterThanOrEqual(5)
+    expect(ops[0].durationMs).toBeGreaterThanOrEqual(60)
   })
 
   it('measureAsync 异常时仍记录耗时并抛出', async () => {
