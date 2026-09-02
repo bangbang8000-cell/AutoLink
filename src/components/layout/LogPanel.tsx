@@ -6,6 +6,9 @@ import { PerformancePanel } from '@/components/layout/PerformancePanel'
 import { ValidationReportPanel } from '@/components/validation/ValidationReportPanel'
 // 4.6.0（F6-4）：质量仪表盘 tab
 import { QualityDashboard } from '@/components/quality/QualityDashboard'
+// 4.7.0（47-b/47-c）：诊断中心 + 健康检查 tab
+import { DiagnosticsPanel } from '@/components/layout/DiagnosticsPanel'
+import { HealthPanel } from '@/components/layout/HealthPanel'
 
 interface LogEntry {
   timestamp: string
@@ -13,7 +16,7 @@ interface LogEntry {
   level: 'info' | 'warn' | 'error'
 }
 
-type PanelTab = 'log' | 'performance' | 'validation' | 'quality'
+type PanelTab = 'log' | 'performance' | 'validation' | 'quality' | 'diagnostics' | 'health'
 
 export function LogPanel() {
   const { t } = useTranslation()
@@ -111,6 +114,30 @@ export function LogPanel() {
           >
             {t('common:logPanel.tabs.validation', '校验')}
           </button>
+          {/* 4.7.0（47-c）：健康检查 tab */}
+          <button
+            onClick={() => setTab('health')}
+            className={clsx(
+              'px-2 py-0.5 rounded text-2xs transition-colors',
+              tab === 'health'
+                ? 'bg-white dark:bg-app text-gray-700 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            {t('common:logPanel.tabs.health', '健康')}
+          </button>
+          {/* 4.7.0（47-b）：诊断中心 tab */}
+          <button
+            onClick={() => setTab('diagnostics')}
+            className={clsx(
+              'px-2 py-0.5 rounded text-2xs transition-colors',
+              tab === 'diagnostics'
+                ? 'bg-white dark:bg-app text-gray-700 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            {t('common:logPanel.tabs.diagnostics', '诊断')}
+          </button>
         </div>
         <div className="flex items-center gap-0.5">
           {tab === 'log' && (
@@ -135,6 +162,14 @@ export function LogPanel() {
       ) : tab === 'quality' ? (
         <div className="flex-1 overflow-hidden">
           <QualityDashboard />
+        </div>
+      ) : tab === 'health' ? (
+        <div className="flex-1 overflow-hidden">
+          <HealthPanel />
+        </div>
+      ) : tab === 'diagnostics' ? (
+        <div className="flex-1 overflow-hidden">
+          <DiagnosticsPanel />
         </div>
       ) : (
       <div
