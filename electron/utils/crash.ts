@@ -10,8 +10,10 @@ import { app, BrowserWindow, crashReporter } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { redactForLog } from './redact.js'
+// 47-d（F7-4）：本地遥测（崩溃留痕，默认关）
+import { telemetryService } from '../services/telemetry.service.js'
 
-function getLogPath(): string {
+export function getLogPath(): string {
   const dir = path.join(app.getPath('userData'), 'logs')
   try {
     fs.mkdirSync(dir, { recursive: true })
@@ -45,10 +47,15 @@ export function initCrashReporting(): void {
 /** 主进程异常兜底：脱敏留痕（不吞异常，由 Electron 默认退出策略接管） */
 export function registerProcessGuards(): void {
   process.on('uncaughtException', (err) => {
-    appendErrorLog('uncaughtException', err instanceof Error ? err.stack || err.message : String(err))
+    const message = err instanceof Error ? err.stack || err.message : String(err)
+    appendErrorLog('uncaughtException', message)
+    // 47-d（F7-4）：崩溃事件留痕（遥测默认关）
+    telemetryService.record({ ts: new Date().toISOString(), type: 'crash', source: 'uncaughtException', message })
   })
   process.on('unhandledRejection', (reason) => {
-    appendErrorLog('unhandledRejection', reason instanceof Error ? reason.stack || reason.message : String(reason))
+    const message = reason instanceof Error ? reason.stack || reason.message : String(reason)
+    appendErrorLog('unhandledRejection', message)
+    telemetryService.record({ ts: new Date().toISOString(), type: 'crash', source: 'unhandledRejection', message })
   })
 }
 
@@ -57,6 +64,13 @@ export function watchRendererCrashes(win: BrowserWindow): void {
   win.webContents.on('render-process-gone', (_event, details) => {
     const summary = `reason=${details.reason} exitCode=${details.exitCode}`
     appendErrorLog('render-process-gone', summary)
+    telemetryService.record({
+      ts: new Date().toISOString(),
+      type: 'crash',
+      source: 'render-process-gone',
+      reason: details.reason,
+      exitCode: details.exitCode,
+    })
     // 非正常退出（非 cleanExit）时自动恢复
     if (details.reason !== 'clean-exit' && !win.isDestroyed()) {
       try {

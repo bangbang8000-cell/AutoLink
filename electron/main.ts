@@ -7,6 +7,8 @@ import { updateService } from './services/update.service.js'
 import { pythonService } from './services/python.service.js'
 import { aiHubService } from './services/aiHub.service.js'
 import { initCrashReporting, registerProcessGuards, watchRendererCrashes } from './utils/crash.js'
+// 47-d（F7-4）：本地遥测（启动事件，默认关）
+import { telemetryService } from './services/telemetry.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -22,6 +24,8 @@ class AutoLinkApp {
     await app.whenReady()
     initializeAppDirs()
     ensureDemoProjects()
+    // 47-d（F7-4）：应用启动事件留痕（遥测默认关；开启后记录版本/平台/架构）
+    telemetryService.onAppStart(app.getVersion(), process.platform, process.arch)
     this.registerCsp()
     this.splashStartTime = Date.now()
     this.createSplashWindow()
