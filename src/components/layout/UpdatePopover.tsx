@@ -209,6 +209,8 @@ export function UpdatePopover() {
                     <CheckCircle size={13} />
                     {t('common:update.downloaded')}
                   </p>
+                  {/* 47-e（F7-5）：下载完整性校验显示（Content-Length 字节一致 + 离线可安装） */}
+                  <p className="text-2xs text-gray-400">{t('common:update.integrityOk', '下载完整性校验通过，可离线安装使用')}</p>
                   <button
                     onClick={handleQuitAndInstall}
                     className="w-full px-3 py-1.5 text-xs bg-success-500 hover:bg-success-600 text-white rounded transition-colors"
@@ -225,6 +227,10 @@ export function UpdatePopover() {
                     {errorMessage || t('common:update.downloadFailed')}
                   </p>
                   <p className="text-2xs text-gray-400">{t('common:update.downloadFailedHint')}</p>
+                  {/* 47-e（F7-5）：无网络/离线场景友好提示（安装包离线可用） */}
+                  <p className="text-2xs text-gray-400">
+                    {t('common:update.offlineHint', '若处于无网络/离线环境，可跳过在线更新——安装包为离线安装包，安装后离线可用')}
+                  </p>
                   <div className="flex gap-1.5">
                     <button
                       onClick={handleCheckUpdate}
