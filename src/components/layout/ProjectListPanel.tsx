@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Folder, FolderOpen, Search, Star, Plus, Upload, Package, Loader2, Cloud } from 'lucide-react'
+import {
+  Folder,
+  FolderOpen,
+  Search,
+  Star,
+  Plus,
+  Upload,
+  Package,
+  Loader2,
+  Cloud,
+  History,
+} from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useCloudStore } from '@/stores/cloud.store'
@@ -24,7 +35,22 @@ import { TemplateSection } from '@/components/layout/TemplateSection'
 
 export function ProjectExplorer() {
   const { t } = useTranslation()
-  const { projects, templates, selectProject, selectedProjectName, deleteProjects, convertToTemplate, duplicateProject, renameProject, exportProject, importProject, batchExportProjects, favoriteProjects, toggleFavorite } = useProjectStore()
+  const {
+    projects,
+    templates,
+    selectProject,
+    selectedProjectName,
+    deleteProjects,
+    convertToTemplate,
+    duplicateProject,
+    renameProject,
+    exportProject,
+    importProject,
+    batchExportProjects,
+    favoriteProjects,
+    toggleFavorite,
+    recentProjects,
+  } = useProjectStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
   const addToast = useToastStore((s) => s.addToast)
   const setShowCreateProjectWizard = useUIStore((s) => s.setShowCreateProjectWizard)
@@ -41,9 +67,15 @@ export function ProjectExplorer() {
   const [searchQuery, setSearchQuery] = useState('')
   // H3（D-7 并列陈列）：侧栏顶部 项目列表 | 模板中心 切页
   const [activePane, setActivePane] = useState<'projects' | 'templates'>('projects')
-  const [renameModal, setRenameModal] = useState<{ type: 'rename' | 'duplicate' | 'convertToTemplate'; projectName: string } | null>(null)
+  const [renameModal, setRenameModal] = useState<{
+    type: 'rename' | 'duplicate' | 'convertToTemplate'
+    projectName: string
+  } | null>(null)
   // V3.3.2-T15-2: 加密导出/加密导入密码框
-  const [passwordModal, setPasswordModal] = useState<{ mode: 'export' | 'import'; projectName?: string } | null>(null)
+  const [passwordModal, setPasswordModal] = useState<{
+    mode: 'export' | 'import'
+    projectName?: string
+  } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [batchExporting, setBatchExporting] = useState(false)
@@ -61,39 +93,45 @@ export function ProjectExplorer() {
   const setProjectStructure = useExplorerStore((s) => s.setProjectStructure)
   const setOutputBatches = useExplorerStore((s) => s.setOutputBatches)
 
-  const handleOpenProject = useCallback((name: string) => {
-    const project = projects.find((p) => p.name === name)
-    if (project) {
-      selectProject(project)
-      openTab({
-        type: 'projectOverview',
-        title: t('common:explorer.toast.projectOverviewTitle', { name }),
-        closable: true,
-        projectName: name,
-        state: { projectName: name },
-      })
-    }
-  }, [projects, selectProject, openTab])
+  const handleOpenProject = useCallback(
+    (name: string) => {
+      const project = projects.find((p) => p.name === name)
+      if (project) {
+        selectProject(project)
+        openTab({
+          type: 'projectOverview',
+          title: t('common:explorer.toast.projectOverviewTitle', { name }),
+          closable: true,
+          projectName: name,
+          state: { projectName: name },
+        })
+      }
+    },
+    [projects, selectProject, openTab],
+  )
 
   // T9: 项目文件树展开/折叠 — 首次展开拉取结构 + 输出批次并缓存到 store
-  const toggleProjectExpand = useCallback(async (projectName: string) => {
-    // 只要结构缓存为空就拉取(不依赖当前展开状态)
-    // 修复重启后 expandedProjects 持久化为 true 但 projectStructures 为空导致点击无响应的问题
-    if (!projectStructures[projectName]) {
-      try {
-        const [structure, batches] = await Promise.all([
-          window.electron?.project?.getStructure(projectName),
-          window.electron?.project?.listOutputBatches(projectName),
-        ])
-        setProjectStructure(projectName, (structure as FileTreeNode[]) || [])
-        setOutputBatches(projectName, (batches as OutputBatch[]) || [])
-      } catch {
-        setProjectStructure(projectName, [])
-        setOutputBatches(projectName, [])
+  const toggleProjectExpand = useCallback(
+    async (projectName: string) => {
+      // 只要结构缓存为空就拉取(不依赖当前展开状态)
+      // 修复重启后 expandedProjects 持久化为 true 但 projectStructures 为空导致点击无响应的问题
+      if (!projectStructures[projectName]) {
+        try {
+          const [structure, batches] = await Promise.all([
+            window.electron?.project?.getStructure(projectName),
+            window.electron?.project?.listOutputBatches(projectName),
+          ])
+          setProjectStructure(projectName, (structure as FileTreeNode[]) || [])
+          setOutputBatches(projectName, (batches as OutputBatch[]) || [])
+        } catch {
+          setProjectStructure(projectName, [])
+          setOutputBatches(projectName, [])
+        }
       }
-    }
-    toggleProject(projectName)
-  }, [projectStructures, toggleProject, setProjectStructure, setOutputBatches])
+      toggleProject(projectName)
+    },
+    [projectStructures, toggleProject, setProjectStructure, setOutputBatches],
+  )
 
   // 重启后自动恢复已展开项目的结构缓存
   // persist 持久化了 expandedProjects 但不持久化 projectStructures,导致重启后项目展开但子节点为空
@@ -103,13 +141,15 @@ export function ProjectExplorer() {
         Promise.all([
           window.electron?.project?.getStructure(name),
           window.electron?.project?.listOutputBatches(name),
-        ]).then(([structure, batches]) => {
-          setProjectStructure(name, (structure as FileTreeNode[]) || [])
-          setOutputBatches(name, (batches as OutputBatch[]) || [])
-        }).catch(() => {
-          setProjectStructure(name, [])
-          setOutputBatches(name, [])
-        })
+        ])
+          .then(([structure, batches]) => {
+            setProjectStructure(name, (structure as FileTreeNode[]) || [])
+            setOutputBatches(name, (batches as OutputBatch[]) || [])
+          })
+          .catch(() => {
+            setProjectStructure(name, [])
+            setOutputBatches(name, [])
+          })
       }
     }
     // 只在挂载时执行一次
@@ -124,52 +164,63 @@ export function ProjectExplorer() {
   }, [loggedIn, fetchRemoteProjects])
 
   // T9: 删除文件/批次后刷新项目结构 + 批次缓存
-  const refreshProjectStructure = useCallback(async (projectName: string) => {
-    try {
-      const [structure, batches] = await Promise.all([
-        window.electron?.project?.getStructure(projectName),
-        window.electron?.project?.listOutputBatches(projectName),
-      ])
-      setProjectStructure(projectName, (structure as FileTreeNode[]) || [])
-      setOutputBatches(projectName, (batches as OutputBatch[]) || [])
-    } catch { /* ignore */ }
-  }, [setProjectStructure, setOutputBatches])
+  const refreshProjectStructure = useCallback(
+    async (projectName: string) => {
+      try {
+        const [structure, batches] = await Promise.all([
+          window.electron?.project?.getStructure(projectName),
+          window.electron?.project?.listOutputBatches(projectName),
+        ])
+        setProjectStructure(projectName, (structure as FileTreeNode[]) || [])
+        setOutputBatches(projectName, (batches as OutputBatch[]) || [])
+      } catch {
+        /* ignore */
+      }
+    },
+    [setProjectStructure, setOutputBatches],
+  )
 
   // T6: 点击项目内文件 → 打开 fileViewer (filePath 用 node.path 相对项目根)
-  const handleProjectFileClick = useCallback((projectName: string, node: FileTreeNode) => {
-    // v2.8.1-T5: 点击 topology.json 打开可编辑拓扑视图(而非 JSON 文本)
-    if (node.name === 'topology.json') {
-      const project = projects.find((p) => p.name === projectName)
-      if (project) {
-        selectProject(project)
+  const handleProjectFileClick = useCallback(
+    (projectName: string, node: FileTreeNode) => {
+      // v2.8.1-T5: 点击 topology.json 打开可编辑拓扑视图(而非 JSON 文本)
+      if (node.name === 'topology.json') {
+        const project = projects.find((p) => p.name === projectName)
+        if (project) {
+          selectProject(project)
+        }
+        openTab({
+          type: 'topology',
+          title: t('common:menu.topology'),
+          closable: true,
+          projectName: projectName,
+        })
+        return
       }
       openTab({
-        type: 'topology',
-        title: t('common:menu.topology'),
+        type: 'fileViewer',
+        title: node.name,
         closable: true,
         projectName: projectName,
+        state: { filePath: node.path, projectName, isTemplate: false },
       })
-      return
-    }
-    openTab({
-      type: 'fileViewer',
-      title: node.name,
-      closable: true,
-      projectName: projectName,
-      state: { filePath: node.path, projectName, isTemplate: false },
-    })
-  }, [openTab, selectProject, projects, t])
+    },
+    [openTab, selectProject, projects, t],
+  )
 
   // T9: 点击批次内文件 → 打开 fileViewer (filePath 用 workspace 相对路径)
-  const handleBatchFileClick = useCallback((_projectName: string, _batch: OutputBatch, file: OutputBatchFile) => {
-    openTab({
-      type: 'fileViewer',
-      title: file.name,
-      closable: true,
-      projectName: _projectName,
-      state: { filePath: file.path, projectName: _projectName, isTemplate: false },
-    })
-  }, [openTab])
+  const handleBatchFileClick = useCallback(
+    (_projectName: string, _batch: OutputBatch, file: OutputBatchFile) => {
+      openTab({
+        type: 'fileViewer',
+        title: file.name,
+        closable: true,
+        projectName: _projectName,
+        state: { filePath: file.path, projectName: _projectName, isTemplate: false },
+      })
+    },
+    [openTab],
+  )
 
   const handleOpenInExplorer = useCallback(async (projectName: string) => {
     const wsp = await window.electron?.app?.getPath('workspace')
@@ -193,55 +244,94 @@ export function ProjectExplorer() {
     setRenameModal({ type: 'rename', projectName })
   }, [])
 
-  const handleRenameConfirm = useCallback(async (value: string) => {
-    if (!renameModal) return
-    if (renameModal.type === 'duplicate') {
-      await duplicateProject(renameModal.projectName, value)
-      addToast('success', t('common:explorer.toast.projectDuplicated', { name: value }))
-    } else if (renameModal.type === 'convertToTemplate') {
-      try {
-        await convertToTemplate(renameModal.projectName, { name: value })
-        addToast('success', t('common:explorer.toast.projectConvertedToTemplate', { projectName: renameModal.projectName, templateName: value }))
-      } catch (err) {
-        addToast('error', t('common:explorer.toast.convertFailed', { error: err instanceof Error ? err.message : String(err) }))
-        throw err
+  const handleRenameConfirm = useCallback(
+    async (value: string) => {
+      if (!renameModal) return
+      if (renameModal.type === 'duplicate') {
+        await duplicateProject(renameModal.projectName, value)
+        addToast('success', t('common:explorer.toast.projectDuplicated', { name: value }))
+      } else if (renameModal.type === 'convertToTemplate') {
+        try {
+          await convertToTemplate(renameModal.projectName, { name: value })
+          addToast(
+            'success',
+            t('common:explorer.toast.projectConvertedToTemplate', {
+              projectName: renameModal.projectName,
+              templateName: value,
+            }),
+          )
+        } catch (err) {
+          addToast(
+            'error',
+            t('common:explorer.toast.convertFailed', {
+              error: err instanceof Error ? err.message : String(err),
+            }),
+          )
+          throw err
+        }
+      } else {
+        await renameProject(renameModal.projectName, value)
+        addToast('success', t('common:explorer.toast.projectRenamed', { name: value }))
       }
-    } else {
-      await renameProject(renameModal.projectName, value)
-      addToast('success', t('common:explorer.toast.projectRenamed', { name: value }))
-    }
-  }, [renameModal, duplicateProject, renameProject, convertToTemplate, addToast, t])
+    },
+    [renameModal, duplicateProject, renameProject, convertToTemplate, addToast, t],
+  )
 
-  const handleExport = useCallback(async (projectName: string) => {
-    if (exporting) return
-    setExporting(true)
-    try {
-      const result = await exportProject(projectName)
-      if (!result.canceled && result.zipPath) {
-        addToast('success', t('common:explorer.toast.projectExported', { name: projectName, path: result.zipPath }))
+  const handleExport = useCallback(
+    async (projectName: string) => {
+      if (exporting) return
+      setExporting(true)
+      try {
+        const result = await exportProject(projectName)
+        if (!result.canceled && result.zipPath) {
+          addToast(
+            'success',
+            t('common:explorer.toast.projectExported', { name: projectName, path: result.zipPath }),
+          )
+        }
+      } catch (err) {
+        addToast(
+          'error',
+          t('common:explorer.toast.exportFailed', {
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        )
+      } finally {
+        setExporting(false)
       }
-    } catch (err) {
-      addToast('error', t('common:explorer.toast.exportFailed', { error: err instanceof Error ? err.message : String(err) }))
-    } finally {
-      setExporting(false)
-    }
-  }, [exporting, exportProject, addToast, t])
+    },
+    [exporting, exportProject, addToast, t],
+  )
 
   // V3.3.2-T15-2: 加密导出（密码二次确认）
-  const handleEncryptedExport = useCallback(async (projectName: string, password: string) => {
-    if (exporting) return
-    setExporting(true)
-    try {
-      const result = await exportProject(projectName, { password })
-      if (!result.canceled && result.zipPath) {
-        addToast('success', t('common:explorer.toast.projectExportedEncrypted', { name: projectName, path: result.zipPath }))
+  const handleEncryptedExport = useCallback(
+    async (projectName: string, password: string) => {
+      if (exporting) return
+      setExporting(true)
+      try {
+        const result = await exportProject(projectName, { password })
+        if (!result.canceled && result.zipPath) {
+          addToast(
+            'success',
+            t('common:explorer.toast.projectExportedEncrypted', {
+              name: projectName,
+              path: result.zipPath,
+            }),
+          )
+        }
+      } catch (err) {
+        addToast(
+          'error',
+          t('common:explorer.toast.exportFailed', {
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        )
+      } finally {
+        setExporting(false)
       }
-    } catch (err) {
-      addToast('error', t('common:explorer.toast.exportFailed', { error: err instanceof Error ? err.message : String(err) }))
-    } finally {
-      setExporting(false)
-    }
-  }, [exporting, exportProject, addToast, t])
+    },
+    [exporting, exportProject, addToast, t],
+  )
 
   const handleImport = useCallback(async () => {
     if (importing) return
@@ -249,7 +339,10 @@ export function ProjectExplorer() {
     try {
       const result = await importProject()
       if (!result.canceled && result.projectName) {
-        addToast('success', t('common:explorer.toast.projectImported', { name: result.projectName }))
+        addToast(
+          'success',
+          t('common:explorer.toast.projectImported', { name: result.projectName }),
+        )
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -265,36 +358,58 @@ export function ProjectExplorer() {
   }, [importing, importProject, addToast, t])
 
   // V3.3.2-T15-2: 带密码重试导入（重新选文件）
-  const handleImportWithPassword = useCallback(async (password: string) => {
-    if (importing) return
-    setImporting(true)
-    try {
-      const result = await importProject({ password })
-      if (!result.canceled && result.projectName) {
-        addToast('success', t('common:explorer.toast.projectImported', { name: result.projectName }))
+  const handleImportWithPassword = useCallback(
+    async (password: string) => {
+      if (importing) return
+      setImporting(true)
+      try {
+        const result = await importProject({ password })
+        if (!result.canceled && result.projectName) {
+          addToast(
+            'success',
+            t('common:explorer.toast.projectImported', { name: result.projectName }),
+          )
+        }
+      } catch (err) {
+        addToast(
+          'error',
+          t('common:explorer.toast.importFailed', {
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        )
+      } finally {
+        setImporting(false)
       }
-    } catch (err) {
-      addToast('error', t('common:explorer.toast.importFailed', { error: err instanceof Error ? err.message : String(err) }))
-    } finally {
-      setImporting(false)
-    }
-  }, [importing, importProject, addToast, t])
+    },
+    [importing, importProject, addToast, t],
+  )
 
   // V3.3.2-T15-1: 分享链接（登录校验 → 生成只读快照上传 → 复制预览 URL）
-  const handleShareLink = useCallback(async (projectName: string) => {
-    if (!loggedIn) {
-      addToast('warning', t('common:explorer.toast.shareNotLoggedIn'))
-      setActiveActivity('cloud')
-      return
-    }
-    try {
-      const res = await createShare(projectName)
-      await navigator.clipboard.writeText(res.fullUrl)
-      addToast('success', t('common:explorer.toast.shareCreated', { name: projectName, url: res.fullUrl }))
-    } catch (err) {
-      addToast('error', t('common:explorer.toast.shareFailed', { error: err instanceof Error ? err.message : String(err) }))
-    }
-  }, [loggedIn, createShare, addToast, setActiveActivity, t])
+  const handleShareLink = useCallback(
+    async (projectName: string) => {
+      if (!loggedIn) {
+        addToast('warning', t('common:explorer.toast.shareNotLoggedIn'))
+        setActiveActivity('cloud')
+        return
+      }
+      try {
+        const res = await createShare(projectName)
+        await navigator.clipboard.writeText(res.fullUrl)
+        addToast(
+          'success',
+          t('common:explorer.toast.shareCreated', { name: projectName, url: res.fullUrl }),
+        )
+      } catch (err) {
+        addToast(
+          'error',
+          t('common:explorer.toast.shareFailed', {
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        )
+      }
+    },
+    [loggedIn, createShare, addToast, setActiveActivity, t],
+  )
 
   // 搜索过滤 + 收藏置顶排序
   const favoriteSet = new Set(favoriteProjects)
@@ -321,26 +436,46 @@ export function ProjectExplorer() {
       if (!result.canceled && result.result) {
         const { successes, failures } = result.result
         if (failures.length === 0) {
-          addToast('success', t('common:explorer.toast.batchExportSuccess', { count: successes.length, dir: result.targetDir }))
+          addToast(
+            'success',
+            t('common:explorer.toast.batchExportSuccess', {
+              count: successes.length,
+              dir: result.targetDir,
+            }),
+          )
         } else {
-          addToast('warning', t('common:explorer.toast.batchExportPartial', {
-            success: successes.length,
-            fail: failures.length,
-            details: failures.map((f) => `  - ${f.name}: ${f.error}`).join('\n')
-          }))
+          addToast(
+            'warning',
+            t('common:explorer.toast.batchExportPartial', {
+              success: successes.length,
+              fail: failures.length,
+              details: failures.map((f) => `  - ${f.name}: ${f.error}`).join('\n'),
+            }),
+          )
         }
       }
     } catch (err) {
-      addToast('error', t('common:explorer.toast.batchExportFailed', { error: err instanceof Error ? err.message : String(err) }))
+      addToast(
+        'error',
+        t('common:explorer.toast.batchExportFailed', {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      )
     } finally {
       setBatchExporting(false)
     }
   }, [batchExporting, batchExportProjects, sortedProjects, addToast, t])
 
   // T10: 项目文件右键菜单(openFile/showInFileManager/copyFilePath/deleteFile[仅输出文件])
-  const buildProjectFileContextMenu = (projectName: string, node: FileTreeNode): ContextMenuItem[] => {
+  const buildProjectFileContextMenu = (
+    projectName: string,
+    node: FileTreeNode,
+  ): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [
-      { label: t('common:explorer.contextMenu.openFile'), action: () => handleProjectFileClick(projectName, node) },
+      {
+        label: t('common:explorer.contextMenu.openFile'),
+        action: () => handleProjectFileClick(projectName, node),
+      },
       {
         label: t('common:explorer.contextMenu.showInFileManager'),
         action: async () => {
@@ -377,7 +512,10 @@ export function ProjectExplorer() {
   }
 
   // T10: 真实目录右键菜单(raw 模式,1 项)
-  const buildProjectDirContextMenu = (projectName: string, node: FileTreeNode): ContextMenuItem[] => [
+  const buildProjectDirContextMenu = (
+    projectName: string,
+    node: FileTreeNode,
+  ): ContextMenuItem[] => [
     {
       label: t('common:explorer.contextMenu.openInFileManager'),
       action: async () => {
@@ -388,7 +526,12 @@ export function ProjectExplorer() {
   ]
 
   // T10: 智能分组右键菜单(expandAll/collapseAll)
-  const buildProjectGroupContextMenu = (projectName: string, groupKey: GroupKey, nodes: FileTreeNode[], batches: OutputBatch[]): ContextMenuItem[] => [
+  const buildProjectGroupContextMenu = (
+    projectName: string,
+    groupKey: GroupKey,
+    nodes: FileTreeNode[],
+    batches: OutputBatch[],
+  ): ContextMenuItem[] => [
     {
       label: t('common:explorer.contextMenu.expandAll'),
       action: () => {
@@ -456,8 +599,15 @@ export function ProjectExplorer() {
   ]
 
   // T10: 批次内文件右键菜单(4 项)
-  const buildBatchFileContextMenu = (projectName: string, batch: OutputBatch, file: OutputBatchFile): ContextMenuItem[] => [
-    { label: t('common:explorer.contextMenu.openFile'), action: () => handleBatchFileClick(projectName, batch, file) },
+  const buildBatchFileContextMenu = (
+    projectName: string,
+    batch: OutputBatch,
+    file: OutputBatchFile,
+  ): ContextMenuItem[] => [
+    {
+      label: t('common:explorer.contextMenu.openFile'),
+      action: () => handleBatchFileClick(projectName, batch, file),
+    },
     {
       label: t('common:explorer.contextMenu.showInFileManager'),
       action: async () => {
@@ -478,7 +628,10 @@ export function ProjectExplorer() {
       danger: true,
       action: async () => {
         try {
-          await window.electron?.project?.deleteOutputFile(projectName, `${batch.name}/${file.name}`)
+          await window.electron?.project?.deleteOutputFile(
+            projectName,
+            `${batch.name}/${file.name}`,
+          )
           addToast('success', t('common:explorer.toast.fileDeleted', { name: file.name }))
           await refreshProjectStructure(projectName)
         } catch (err) {
@@ -524,7 +677,11 @@ export function ProjectExplorer() {
             className="p-1 rounded hover:bg-gray-200 dark:hover:bg-app-hover text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('common:project.batchExport', '批量导出项目')}
           >
-            {batchExporting ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
+            {batchExporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Package size={14} />
+            )}
           </button>
         )}
         {selectedProjectName && (
@@ -560,13 +717,17 @@ export function ProjectExplorer() {
         {activePane === 'projects' && (
           <div className="ml-auto pr-2 flex items-center gap-0.5 shrink-0">
             {(['smart', 'raw'] as const).map((m) => (
-              <button key={m} type="button" onClick={() => setExplorerGroupMode(m)}
+              <button
+                key={m}
+                type="button"
+                onClick={() => setExplorerGroupMode(m)}
                 className={`text-2xs px-1.5 py-0.5 rounded transition-colors ${
                   explorerGroupMode === m
                     ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                     : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'
                 }`}
-                title={m === 'smart' ? '智能分组（按文件用途）' : '真实分组（按文件系统目录）'}>
+                title={m === 'smart' ? '智能分组（按文件用途）' : '真实分组（按文件系统目录）'}
+              >
                 {m === 'smart' ? '智能' : '真实'}
               </button>
             ))}
@@ -576,107 +737,227 @@ export function ProjectExplorer() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto py-1">
-        {activePane === 'projects' && (<>
-        {/* Projects section */}
-        <Section title={t('common:explorer.allProjects')} icon={<Folder size={14} />} sectionKey="projects">
-          {sortedProjects.length === 0 ? (
-            <div className="py-2">
-              <EmptyState
-                icon={Folder}
-                title={projects.length === 0 ? t('common:explorer.noProjects', '暂无项目') : t('common:explorer.noSearchResults', '未找到匹配的项目')}
-                description={projects.length === 0 ? t('common:explorer.createProjectHint', '点击上方 + 按钮创建新项目') : t('common:explorer.changeSearchQuery', '尝试更换搜索关键词')}
-              />
-            </div>
-          ) : (
-          sortedProjects.map((p) => {
-            const isFavorite = favoriteSet.has(p.name)
-            const isExpanded = expandedProjects[p.name]
-            const structure = projectStructures[p.name] || []
-            const batches = outputBatches[p.name] || []
-            return (
-              <div key={p.name}>
-                <TreeNode
-                  label={p.name}
-                  depth={0}
-                  isActive={p.name === selectedProjectName}
-                  leading={
-                    isFavorite
-                      ? <Star size={12} className="text-warning-400" fill="currentColor" />
-                      : p.name === selectedProjectName
-                        ? <FolderOpen size={12} className="text-gray-400" />
-                        : <Folder size={12} className="text-gray-400" />
-                  }
-                  trailing={p.fileCount != null ? (
-                    <span className="text-2xs text-gray-400 dark:text-gray-500">{p.fileCount}</span>
-                  ) : undefined}
-                  onClick={() => handleOpenProject(p.name)}
-                  onArrowClick={() => toggleProjectExpand(p.name)}
-                  isExpanded={isExpanded}
-                  hasChildren={(p.fileCount ?? 0) > 0 || structure.length > 0}
-                  contextMenu={[
-                    { label: t('common:explorer.contextMenu.setAsCurrent'), action: () => handleOpenProject(p.name) },
-                    { label: t('common:explorer.contextMenu.openInFileManager'), action: () => handleOpenInExplorer(p.name) },
-                    { label: t('common:explorer.contextMenu.duplicateProject'), action: () => handleDuplicate(p.name) },
-                    { label: t('common:explorer.contextMenu.rename'), action: () => handleRename(p.name) },
-                    { label: t('common:explorer.contextMenu.exportZip'), action: () => handleExport(p.name) },
-                    { label: t('common:explorer.contextMenu.exportZipEncrypted'), action: () => setPasswordModal({ mode: 'export', projectName: p.name }) },
-                    { label: t('common:explorer.contextMenu.shareLink'), action: () => handleShareLink(p.name) },
-                    { label: t('common:explorer.contextMenu.convertToTemplate'), action: () => handleConvertToTemplate(p.name) },
-                    { label: isFavorite ? t('common:explorer.contextMenu.unfavorite') : t('common:explorer.contextMenu.favorite'), action: () => toggleFavorite(p.name) },
-                    { label: t('common:explorer.contextMenu.deleteProject'), danger: true, action: () => handleDeleteProject(p) },
-                  ]}
-                />
-                {isExpanded && structure.length > 0 && (
-                  renderProjectChildren(p.name, structure, 1, explorerGroupMode, {
-                    onFileClick: (node) => handleProjectFileClick(p.name, node),
-                    onDirToggle: (scope, relativePath) => toggleDir(scope, relativePath),
-                    isDirExpanded: (scope, relativePath) => !!expandedDirs[`dir:${scope}/${relativePath}`],
-                    isGroupExpanded: (pn, gk) => !!expandedGroups[`group:${pn}/${gk}`],
-                    onGroupToggle: (pn, gk) => toggleGroup(pn, gk),
-                    batches,
-                    isBatchExpanded: (pn, bn) => !!expandedBatches[`batch:${pn}/${bn}`],
-                    onBatchToggle: (pn, bn) => toggleBatch(pn, bn),
-                    onBatchFileClick: (pn, batch, file) => handleBatchFileClick(pn, batch, file),
-                    fileContextMenuBuilder: (node) => buildProjectFileContextMenu(p.name, node),
-                    dirContextMenuBuilder: (node) => buildProjectDirContextMenu(p.name, node),
-                    groupContextMenuBuilder: (gk, nodes) => buildProjectGroupContextMenu(p.name, gk, nodes, batches),
-                    batchContextMenuBuilder: (batch) => buildBatchContextMenu(p.name, batch),
-                    batchFileContextMenuBuilder: (batch, file) => buildBatchFileContextMenu(p.name, batch, file),
-                  })
-                )}
-              </div>
-            )
-          })
-          )}
-        </Section>
-
-        {/* V3.3.1-T14-7: 云端项目分组（登录后显示） */}
-        {loggedIn && (
-          <Section title={t('common:explorer.cloudProjects')} icon={<Cloud size={14} />} sectionKey="cloud-projects">
-            {remoteProjects.length === 0 ? (
-              <div className="px-3 py-2 text-2xs text-gray-400 dark:text-gray-500">
-                {t('common:explorer.noCloudProjects')}
-              </div>
-            ) : (
-              remoteProjects.map((p) => (
-                <TreeNode
-                  key={`${p.owner}/${p.name}`}
-                  label={p.name}
-                  depth={0}
-                  leading={<Cloud size={12} className="text-cyan-400" />}
-                  trailing={<span className="text-2xs text-gray-400 dark:text-gray-500">{p.owner}</span>}
-                  onClick={() => setActiveActivity('cloud')}
-                />
-              ))
+        {activePane === 'projects' && (
+          <>
+            {/* 4.4 F4-4：最近使用项目（持久化，点击直接打开） */}
+            {recentProjects.filter((n) => sortedProjects.some((p) => p.name === n)).length > 0 && (
+              <Section
+                title={t('common:explorer.recentProjects', '最近项目')}
+                icon={<History size={14} />}
+                sectionKey="recent-projects"
+              >
+                {recentProjects
+                  .filter((n) => sortedProjects.some((p) => p.name === n))
+                  .map((n) => {
+                    const p = sortedProjects.find((x) => x.name === n)!
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => handleOpenProject(p.name)}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover/50 text-left"
+                      >
+                        <History size={12} className="text-gray-400 shrink-0" />
+                        <span className="truncate">{p.name}</span>
+                        <span className="ml-auto text-2xs text-gray-400 shrink-0">
+                          {p.updatedAt ? p.updatedAt.slice(0, 10) : ''}
+                        </span>
+                      </button>
+                    )
+                  })}
+              </Section>
             )}
-          </Section>
-        )}
 
-        {/* Output Section */}
-        <OutputSection projects={projects} openTab={openTab} />
-        </>)}
+            {/* Projects section */}
+            <Section
+              title={t('common:explorer.allProjects')}
+              icon={<Folder size={14} />}
+              sectionKey="projects"
+            >
+              {sortedProjects.length === 0 ? (
+                <div className="py-2">
+                  <EmptyState
+                    icon={Folder}
+                    title={
+                      projects.length === 0
+                        ? t('common:explorer.noProjects', '暂无项目')
+                        : t('common:explorer.noSearchResults', '未找到匹配的项目')
+                    }
+                    description={
+                      projects.length === 0
+                        ? t('common:explorer.createProjectHint', '点击上方 + 按钮创建新项目')
+                        : t('common:explorer.changeSearchQuery', '尝试更换搜索关键词')
+                    }
+                  />
+                </div>
+              ) : (
+                sortedProjects.map((p) => {
+                  const isFavorite = favoriteSet.has(p.name)
+                  const isExpanded = expandedProjects[p.name]
+                  const structure = projectStructures[p.name] || []
+                  const batches = outputBatches[p.name] || []
+                  return (
+                    <div key={p.name}>
+                      <TreeNode
+                        label={p.name}
+                        depth={0}
+                        isActive={p.name === selectedProjectName}
+                        leading={
+                          isFavorite ? (
+                            <Star size={12} className="text-warning-400" fill="currentColor" />
+                          ) : p.name === selectedProjectName ? (
+                            <FolderOpen size={12} className="text-gray-400" />
+                          ) : (
+                            <Folder size={12} className="text-gray-400" />
+                          )
+                        }
+                        trailing={
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {/* 4.4 F4-4：行内收藏星标（点击切换） */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleFavorite(p.name)
+                              }}
+                              title={
+                                isFavorite
+                                  ? t('common:explorer.contextMenu.unfavorite')
+                                  : t('common:explorer.contextMenu.favorite')
+                              }
+                              aria-label={
+                                isFavorite
+                                  ? t('common:explorer.contextMenu.unfavorite')
+                                  : t('common:explorer.contextMenu.favorite')
+                              }
+                              className={`transition-colors ${isFavorite ? 'text-warning-400' : 'text-gray-300 dark:text-gray-600 hover:text-warning-400'}`}
+                            >
+                              <Star size={12} fill={isFavorite ? 'currentColor' : 'none'} />
+                            </button>
+                            {p.fileCount != null && (
+                              <span className="text-2xs text-gray-400 dark:text-gray-500">
+                                {p.fileCount}
+                              </span>
+                            )}
+                          </span>
+                        }
+                        onClick={() => handleOpenProject(p.name)}
+                        onArrowClick={() => toggleProjectExpand(p.name)}
+                        isExpanded={isExpanded}
+                        hasChildren={(p.fileCount ?? 0) > 0 || structure.length > 0}
+                        contextMenu={[
+                          {
+                            label: t('common:explorer.contextMenu.setAsCurrent'),
+                            action: () => handleOpenProject(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.openInFileManager'),
+                            action: () => handleOpenInExplorer(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.duplicateProject'),
+                            action: () => handleDuplicate(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.rename'),
+                            action: () => handleRename(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.exportZip'),
+                            action: () => handleExport(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.exportZipEncrypted'),
+                            action: () => setPasswordModal({ mode: 'export', projectName: p.name }),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.shareLink'),
+                            action: () => handleShareLink(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.convertToTemplate'),
+                            action: () => handleConvertToTemplate(p.name),
+                          },
+                          {
+                            label: isFavorite
+                              ? t('common:explorer.contextMenu.unfavorite')
+                              : t('common:explorer.contextMenu.favorite'),
+                            action: () => toggleFavorite(p.name),
+                          },
+                          {
+                            label: t('common:explorer.contextMenu.deleteProject'),
+                            danger: true,
+                            action: () => handleDeleteProject(p),
+                          },
+                        ]}
+                      />
+                      {isExpanded &&
+                        structure.length > 0 &&
+                        renderProjectChildren(p.name, structure, 1, explorerGroupMode, {
+                          onFileClick: (node) => handleProjectFileClick(p.name, node),
+                          onDirToggle: (scope, relativePath) => toggleDir(scope, relativePath),
+                          isDirExpanded: (scope, relativePath) =>
+                            !!expandedDirs[`dir:${scope}/${relativePath}`],
+                          isGroupExpanded: (pn, gk) => !!expandedGroups[`group:${pn}/${gk}`],
+                          onGroupToggle: (pn, gk) => toggleGroup(pn, gk),
+                          batches,
+                          isBatchExpanded: (pn, bn) => !!expandedBatches[`batch:${pn}/${bn}`],
+                          onBatchToggle: (pn, bn) => toggleBatch(pn, bn),
+                          onBatchFileClick: (pn, batch, file) =>
+                            handleBatchFileClick(pn, batch, file),
+                          fileContextMenuBuilder: (node) =>
+                            buildProjectFileContextMenu(p.name, node),
+                          dirContextMenuBuilder: (node) => buildProjectDirContextMenu(p.name, node),
+                          groupContextMenuBuilder: (gk, nodes) =>
+                            buildProjectGroupContextMenu(p.name, gk, nodes, batches),
+                          batchContextMenuBuilder: (batch) => buildBatchContextMenu(p.name, batch),
+                          batchFileContextMenuBuilder: (batch, file) =>
+                            buildBatchFileContextMenu(p.name, batch, file),
+                        })}
+                    </div>
+                  )
+                })
+              )}
+            </Section>
+
+            {/* V3.3.1-T14-7: 云端项目分组（登录后显示） */}
+            {loggedIn && (
+              <Section
+                title={t('common:explorer.cloudProjects')}
+                icon={<Cloud size={14} />}
+                sectionKey="cloud-projects"
+              >
+                {remoteProjects.length === 0 ? (
+                  <div className="px-3 py-2 text-2xs text-gray-400 dark:text-gray-500">
+                    {t('common:explorer.noCloudProjects')}
+                  </div>
+                ) : (
+                  remoteProjects.map((p) => (
+                    <TreeNode
+                      key={`${p.owner}/${p.name}`}
+                      label={p.name}
+                      depth={0}
+                      leading={<Cloud size={12} className="text-cyan-400" />}
+                      trailing={
+                        <span className="text-2xs text-gray-400 dark:text-gray-500">{p.owner}</span>
+                      }
+                      onClick={() => setActiveActivity('cloud')}
+                    />
+                  ))
+                )}
+              </Section>
+            )}
+
+            {/* Output Section */}
+            <OutputSection projects={projects} openTab={openTab} />
+          </>
+        )}
         {activePane === 'templates' && (
-          <TemplateSection templates={templates} openTab={openTab} handleOpenInExplorer={handleOpenInExplorer} />
+          <TemplateSection
+            templates={templates}
+            openTab={openTab}
+            handleOpenInExplorer={handleOpenInExplorer}
+          />
         )}
       </div>
 
@@ -688,7 +969,10 @@ export function ProjectExplorer() {
             const project = projects.find((p) => p.name === deleteTarget.name)
             if (project) {
               await deleteProjects([project.name])
-              addToast('success', t('common:explorer.toast.projectDeleted', { name: deleteTarget.name }))
+              addToast(
+                'success',
+                t('common:explorer.toast.projectDeleted', { name: deleteTarget.name }),
+              )
             }
           }}
           onClose={() => setDeleteTarget(null)}
@@ -699,19 +983,21 @@ export function ProjectExplorer() {
       {renameModal && (
         <RenameProjectModal
           title={
-            renameModal.type === 'duplicate' ? t('common:project.duplicate')
-            : renameModal.type === 'convertToTemplate' ? t('common:explorer.contextMenu.convertToTemplate')
-            : t('common:project.rename')
+            renameModal.type === 'duplicate'
+              ? t('common:project.duplicate')
+              : renameModal.type === 'convertToTemplate'
+                ? t('common:explorer.contextMenu.convertToTemplate')
+                : t('common:project.rename')
           }
           label={
             renameModal.type === 'convertToTemplate'
-            ? t('common:explorer.toast.templateNamePrompt')
-            : t('common:project.newName')
+              ? t('common:explorer.toast.templateNamePrompt')
+              : t('common:project.newName')
           }
           defaultValue={
             renameModal.type === 'duplicate'
-            ? `${renameModal.projectName}${t('common:explorer.copySuffix')}`
-            : renameModal.projectName
+              ? `${renameModal.projectName}${t('common:explorer.copySuffix')}`
+              : renameModal.projectName
           }
           onConfirm={handleRenameConfirm}
           onClose={() => setRenameModal(null)}
@@ -721,8 +1007,16 @@ export function ProjectExplorer() {
       {/* V3.3.2-T15-2: 加密导出 / 加密导入密码框 */}
       {passwordModal && (
         <PasswordPromptModal
-          title={passwordModal.mode === 'export' ? t('common:passwordPrompt.exportTitle') : t('common:passwordPrompt.importTitle')}
-          label={passwordModal.mode === 'export' ? t('common:passwordPrompt.exportLabel') : t('common:passwordPrompt.importLabel')}
+          title={
+            passwordModal.mode === 'export'
+              ? t('common:passwordPrompt.exportTitle')
+              : t('common:passwordPrompt.importTitle')
+          }
+          label={
+            passwordModal.mode === 'export'
+              ? t('common:passwordPrompt.exportLabel')
+              : t('common:passwordPrompt.importLabel')
+          }
           requireConfirm={passwordModal.mode === 'export'}
           onConfirm={async (password) => {
             if (passwordModal.mode === 'export' && passwordModal.projectName) {
