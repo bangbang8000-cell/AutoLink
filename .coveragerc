@@ -1,0 +1,10 @@
+# 4.6.0（F6-1）：后端 pytest 覆盖率门禁配置
+# 用法：python -m pytest tests/backend --cov=backend（低于 fail_under 即退出码 1）
+[run]
+source = backend
+branch = True
+
+[report]
+fail_under = 55
+show_missing = True
+skip_covered = False

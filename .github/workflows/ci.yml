@@ -22,7 +22,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       # V3.0.0-T0-8: 前端单测（vitest，含 python.service 持久 Agent 集成测试）
-      - run: npm test
+      # 4.6.0-F6-1: 前端覆盖率门禁（阈值 ≥40/40/35/32，低于即失败）+ junit/coverage-summary 产物
+      - run: npm run test:report
       - run: npm run build:renderer
       # V3.0.0-T0-8: Electron 主进程/preload 编译门禁
       - run: npm run build:electron
@@ -40,9 +41,13 @@ jobs:
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
       - run: python scripts/gen_golden.py --check
       # V3.0.0-T0-8: 后端全量 pytest
-      - run: python -m pytest tests/backend -q
+      # 4.6.0-F6-1: 后端覆盖率门禁（.coveragerc fail_under=55，低于即失败）+ junit/coverage-json 产物
+      - run: python -m pytest tests/backend -q --cov=backend --cov-report=term --cov-fail-under=55 --cov-report=json:reports/coverage-backend.json --junitxml=reports/pytest.xml
       # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
       - run: python scripts/bench_perf.py --rounds 1
+      # 4.6.0-F6-3: 统一测试报告（聚合 pytest/vitest/golden/bench/模板校验 → reports/）
+      # 4.6.0-F6-1: 覆盖率门禁（阈值 + reports/coverage_baseline.json 只升不降基线，回退即失败）
+      - run: python scripts/test_report.py --from-artifacts
   # 4.0.0-F0-2 / 40-d: 双端版本/发布流水线单源 — 版本单源一致性门禁
   # version.json = package.json = package-lock.json = VERSION，任一漂移即失败
   # 仅用 Python 标准库（check_version.py），无需 npm ci / pip install，可与 check 并行

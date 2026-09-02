@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "description": "4.6.0（F6-1）覆盖率门禁阈值常量（只许升不许降；历史基线见 reports/coverage_baseline.json）",
+  "coverage": {
+    "backend": {
+      "lines": 55,
+      "statements": 55,
+      "functions": 50,
+      "branches": 45
+    },
+    "frontend": {
+      "lines": 40,
+      "statements": 40,
+      "functions": 35,
+      "branches": 32
+    }
+  }
+}
