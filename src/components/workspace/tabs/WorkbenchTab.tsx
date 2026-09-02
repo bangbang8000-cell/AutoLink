@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, X } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, X, History, FilePlus2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { WorkbenchScopeCard } from '@/components/workbench/WorkbenchScopeCard'
@@ -8,6 +8,7 @@ import { WorkbenchReadinessCard } from '@/components/workbench/WorkbenchReadines
 import { WorkbenchOutputCard } from '@/components/workbench/WorkbenchOutputCard'
 import { WorkbenchActionCard } from '@/components/workbench/WorkbenchActionCard'
 import { WorkbenchResultCard } from '@/components/workbench/WorkbenchResultCard'
+import { PipelinePanel } from '@/components/workbench/PipelinePanel'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
@@ -70,7 +71,13 @@ function ExportView({ projectName }: { projectName: string }) {
       if (res?.canceled) return
       if (res?.ok) addToast('success', t('workbench:output.exported', { path: res.path }))
     } catch (e) {
-      addToast('error', t('workbench:exportView.exportFailed', { err: (e as Error).message, defaultValue: '导出失败: {{err}}' }))
+      addToast(
+        'error',
+        t('workbench:exportView.exportFailed', {
+          err: (e as Error).message,
+          defaultValue: '导出失败: {{err}}',
+        }),
+      )
     } finally {
       setBusy(false)
     }
@@ -83,16 +90,31 @@ function ExportView({ projectName }: { projectName: string }) {
       const res = await exportDeliveryZip(projectName)
       if (res?.canceled) return
       if (res?.noPlan) {
-        addToast('warning', t('workbench:exportView.noPlan', '当前项目未生成 AIDC 规划，请先在「AIDC 规划」视图生成规划'), 5000)
+        addToast(
+          'warning',
+          t(
+            'workbench:exportView.noPlan',
+            '当前项目未生成 AIDC 规划，请先在「AIDC 规划」视图生成规划',
+          ),
+          5000,
+        )
         return
       }
       if (res?.error) {
         addToast('error', t('workbench:exportView.deliveryFailed', { err: res.error }), 5000)
       } else {
-        addToast('success', t('workbench:exportView.deliveryExported', { path: res.path ?? '' }), 5000)
+        addToast(
+          'success',
+          t('workbench:exportView.deliveryExported', { path: res.path ?? '' }),
+          5000,
+        )
       }
     } catch (e) {
-      addToast('error', t('workbench:exportView.deliveryFailed', { err: (e as Error).message }), 5000)
+      addToast(
+        'error',
+        t('workbench:exportView.deliveryFailed', { err: (e as Error).message }),
+        5000,
+      )
     } finally {
       setDeliveryBusy(false)
     }
@@ -102,23 +124,36 @@ function ExportView({ projectName }: { projectName: string }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Download size={14} className="text-success-500" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('workbench:exportView.title', { name: projectName })}</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+          {t('workbench:exportView.title', { name: projectName })}
+        </span>
       </div>
       {/* ① 导出 MC 交付包（读项目 plan.json，含 plan.json/README/拓扑图，供 MagicCommander 导入） */}
       <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.toMc')}</p>
         <p className="text-2xs text-gray-400">{t('workbench:exportView.toMcHint')}</p>
-        <button type="button" onClick={exportDelivery} disabled={deliveryBusy}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-success-500 hover:bg-success-600 text-white disabled:opacity-40 disabled:cursor-wait">
-          <Download size={12} /> {deliveryBusy ? t('workbench:exportView.exporting', '导出中…') : t('workbench:exportView.exportDelivery')}
+        <button
+          type="button"
+          onClick={exportDelivery}
+          disabled={deliveryBusy}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-success-500 hover:bg-success-600 text-white disabled:opacity-40 disabled:cursor-wait"
+        >
+          <Download size={12} />{' '}
+          {deliveryBusy
+            ? t('workbench:exportView.exporting', '导出中…')
+            : t('workbench:exportView.exportDelivery')}
         </button>
       </div>
       {/* ② 导出渲染结果（output 批次） */}
       <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.renderResults')}</p>
         <div className="flex gap-2">
-          <button type="button" onClick={() => exportBatch(undefined)} disabled={busy}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
+          <button
+            type="button"
+            onClick={() => exportBatch(undefined)}
+            disabled={busy}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40"
+          >
             <Download size={12} /> {t('workbench:exportView.exportAllZip')}
           </button>
         </div>
@@ -131,17 +166,23 @@ function ExportView({ projectName }: { projectName: string }) {
 export function WorkbenchTab() {
   const { t } = useTranslation()
   const projects = useProjectStore((s) => s.projects)
+  const recentProjects = useProjectStore((s) => s.recentProjects)
+  const templates = useProjectStore((s) => s.templates)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const selectProject = useProjectStore((s) => s.selectProject)
   const subview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
   const setActiveActivity = useUIStore((s) => s.setActiveActivity)
   const setActivityHint = useUIStore((s) => s.setActivityHint)
+  const openWizardFromTemplate = useUIStore((s) => s.openWizardFromTemplate)
 
   // AL-N1（PRD v3.2）：打开子视图（roomdesign/rackdesign 已并入 WorkbenchSubview，无需断言）
-  const openSubview = useCallback((view: WorkbenchSubview) => {
-    setWorkbenchSubview(view)
-  }, [setWorkbenchSubview])
+  const openSubview = useCallback(
+    (view: WorkbenchSubview) => {
+      setWorkbenchSubview(view)
+    },
+    [setWorkbenchSubview],
+  )
 
   const [aidcProjects, setAidcProjects] = useState<string[]>([])
   // AL-M5a：AIDC 新建并入 CreateProjectWizardModal（移除固定 64 台内联表单）
@@ -155,7 +196,11 @@ export function WorkbenchTab() {
   }, [subview])
 
   // AL-M4h：二级页签右键菜单（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）
-  const [subviewCtx, setSubviewCtx] = useState<{ sv: WorkbenchSubview; x: number; y: number } | null>(null)
+  const [subviewCtx, setSubviewCtx] = useState<{
+    sv: WorkbenchSubview
+    x: number
+    y: number
+  } | null>(null)
   // AL-M4c：保活集合 = 激活页签 + 最近 (N-1) 个非激活页签;超限非激活卸载释放内存
   const mountedSubviews = useMemo(() => {
     const activeIdx = openedSubviews.indexOf(subview)
@@ -167,28 +212,33 @@ export function WorkbenchTab() {
   }, [openedSubviews, subview])
 
   // AL-M4h：批量关闭子视图
-  const batchCloseSubviews = useCallback((mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchSubview) => {
-    setOpenedSubviews((prev) => {
-      const idx = prev.indexOf(sv)
-      let next: WorkbenchSubview[]
-      if (mode === 'all') next = ['main']
-      else if (mode === 'this') next = prev.filter((x) => x !== sv)
-      else if (mode === 'others') next = prev.filter((x) => x === sv)
-      else next = idx === -1 ? prev : prev.slice(0, idx + 1) // 关闭右侧 → 保留到 sv（含 sv）
-      if (sv === subview && next.length > 0 && !next.includes(subview)) {
-        openSubview(next[next.length - 1] ?? 'main')
-      } else if (sv === subview && next.length === 0) {
-        openSubview('main')
-      }
-      return next
-    })
-  }, [subview, setOpenedSubviews, openSubview])
+  const batchCloseSubviews = useCallback(
+    (mode: 'this' | 'others' | 'right' | 'all', sv: WorkbenchSubview) => {
+      setOpenedSubviews((prev) => {
+        const idx = prev.indexOf(sv)
+        let next: WorkbenchSubview[]
+        if (mode === 'all') next = ['main']
+        else if (mode === 'this') next = prev.filter((x) => x !== sv)
+        else if (mode === 'others') next = prev.filter((x) => x === sv)
+        else next = idx === -1 ? prev : prev.slice(0, idx + 1) // 关闭右侧 → 保留到 sv（含 sv）
+        if (sv === subview && next.length > 0 && !next.includes(subview)) {
+          openSubview(next[next.length - 1] ?? 'main')
+        } else if (sv === subview && next.length === 0) {
+          openSubview('main')
+        }
+        return next
+      })
+    },
+    [subview, setOpenedSubviews, openSubview],
+  )
 
   // AL-M4h：点击/滚动关闭右键菜单
   useEffect(() => {
     if (!subviewCtx) return
     const closeMenu = () => setSubviewCtx(null)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSubviewCtx(null) }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSubviewCtx(null)
+    }
     window.addEventListener('click', closeMenu)
     window.addEventListener('keydown', onKey)
     return () => {
@@ -199,9 +249,11 @@ export function WorkbenchTab() {
 
   // 加载 AIDC 项目名（判断当前项目类型）
   useEffect(() => {
-    window.electron.aidc.project.list()
+    window.electron.aidc.project
+      .list()
       .then((res) => {
-        const projects = (res as { ok?: boolean; projects?: Array<{ name: string }> })?.projects ?? []
+        const projects =
+          (res as { ok?: boolean; projects?: Array<{ name: string }> })?.projects ?? []
         setAidcProjects(projects.map((p) => p.name))
       })
       .catch(() => {})
@@ -218,7 +270,8 @@ export function WorkbenchTab() {
 
   // AL-M5a：AIDC 项目由 CreateProjectWizardModal 创建完成后刷新列表并选中
   const handleAidcWizardCreated = useCallback(() => {
-    window.electron.aidc.project.list()
+    window.electron.aidc.project
+      .list()
       .then((res) => {
         const list = (res as { ok?: boolean; projects?: Array<{ name: string }> })?.projects ?? []
         setAidcProjects(list.map((p) => p.name))
@@ -233,12 +286,16 @@ export function WorkbenchTab() {
         <div className="max-w-md mx-auto mt-10">
           <div className="flex flex-col items-center text-center mb-6">
             <Zap size={40} className="text-primary-400 mb-2" />
-            <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('workbench:empty.welcome')}</p>
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+              {t('workbench:empty.welcome')}
+            </p>
             <p className="text-xs text-gray-400 mt-1">{t('workbench:empty.hint')}</p>
           </div>
           {projects.length > 0 && (
             <div className="mb-4">
-              <p className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('workbench:empty.selectProject')}</p>
+              <p className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                {t('workbench:empty.selectProject')}
+              </p>
               <div className="space-y-1">
                 {projects.map((p) => (
                   <button
@@ -247,24 +304,94 @@ export function WorkbenchTab() {
                     onClick={() => selectProject(p)}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-left transition-colors"
                   >
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{p.name}</span>
-                    <span className="ml-auto text-2xs text-gray-400 shrink-0">{p.updatedAt ? p.updatedAt.slice(0, 10) : ''}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+                      {p.name}
+                    </span>
+                    <span className="ml-auto text-2xs text-gray-400 shrink-0">
+                      {p.updatedAt ? p.updatedAt.slice(0, 10) : ''}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           )}
+
+          {/* 4.4 F4-4：最近使用项目（持久化，点击直接打开） */}
+          {recentProjects.filter((n) => projects.some((p) => p.name === n)).length > 0 && (
+            <div className="mb-4">
+              <p className="flex items-center gap-1 text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                <History size={11} />
+                {t('workbench:empty.recentProjects')}
+              </p>
+              <div className="space-y-1">
+                {recentProjects
+                  .filter((n) => projects.some((p) => p.name === n))
+                  .map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => {
+                        const p = projects.find((x) => x.name === n)
+                        if (p) selectProject(p)
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded border border-gray-100 dark:border-edge-subtle bg-gray-50/60 dark:bg-app/40 hover:border-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-left transition-colors"
+                    >
+                      <History size={12} className="text-gray-400 shrink-0" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
+                        {n}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4.4 F4-4：从模板新建（模板入口） */}
+          {templates.length > 0 && (
+            <div className="mb-4">
+              <p className="flex items-center gap-1 text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                <FilePlus2 size={11} />
+                {t('workbench:empty.fromTemplate')}
+              </p>
+              <div className="space-y-1">
+                {templates.slice(0, 6).map((tp) => (
+                  <button
+                    key={tp.id}
+                    type="button"
+                    onClick={() => openWizardFromTemplate(tp.name)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded border border-gray-100 dark:border-edge-subtle bg-gray-50/60 dark:bg-app/40 hover:border-success-300 hover:bg-success-50 dark:hover:bg-success-900/20 text-left transition-colors"
+                  >
+                    <FilePlus2 size={12} className="text-success-500 shrink-0" />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
+                      {tp.name}
+                    </span>
+                    {tp.description && (
+                      <span className="ml-auto text-2xs text-gray-400 truncate max-w-[160px]">
+                        {tp.description}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2 justify-center">
             <button
               type="button"
-              onClick={() => { setActiveActivity('project'); setActivityHint('project') }}
+              onClick={() => {
+                setActiveActivity('project')
+                setActivityHint('project')
+              }}
               className="px-3 py-1.5 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
             >
               {t('workbench:empty.gotoProjects')}
             </button>
           </div>
           {projects.length === 0 && (
-            <p className="text-center text-2xs text-gray-400 mt-3">{t('workbench:empty.noProjects')}</p>
+            <p className="text-center text-2xs text-gray-400 mt-3">
+              {t('workbench:empty.noProjects')}
+            </p>
           )}
         </div>
       </div>
@@ -339,21 +466,41 @@ export function WorkbenchTab() {
           style={{ left: subviewCtx.x, top: subviewCtx.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button onClick={() => { batchCloseSubviews('this', subviewCtx.sv); setSubviewCtx(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+          <button
+            onClick={() => {
+              batchCloseSubviews('this', subviewCtx.sv)
+              setSubviewCtx(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
+          >
             {t('welcome.closeTab')}
           </button>
-          <button onClick={() => { batchCloseSubviews('others', subviewCtx.sv); setSubviewCtx(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+          <button
+            onClick={() => {
+              batchCloseSubviews('others', subviewCtx.sv)
+              setSubviewCtx(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
+          >
             {t('welcome.closeOthers')}
           </button>
-          <button onClick={() => { batchCloseSubviews('right', subviewCtx.sv); setSubviewCtx(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+          <button
+            onClick={() => {
+              batchCloseSubviews('right', subviewCtx.sv)
+              setSubviewCtx(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
+          >
             {t('welcome.closeRight')}
           </button>
           <div className="my-1 border-t border-gray-200 dark:border-edge-subtle" />
-          <button onClick={() => { batchCloseSubviews('all', subviewCtx.sv); setSubviewCtx(null) }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300">
+          <button
+            onClick={() => {
+              batchCloseSubviews('all', subviewCtx.sv)
+              setSubviewCtx(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
+          >
             {t('welcome.closeAll')}
           </button>
         </div>
@@ -387,13 +534,21 @@ export function WorkbenchTab() {
                 <FolderOpen size={20} className="text-warning-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{selectedProjectName}</div>
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t('workbench:name')}</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {selectedProjectName}
+                </div>
+                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  {t('workbench:name')}
+                </div>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                 <Settings size={14} className="text-gray-400" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">{t('workbench:status')}:</span>
-                <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">Ready</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('workbench:status')}:
+                </span>
+                <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">
+                  Ready
+                </span>
               </div>
             </div>
             {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
@@ -411,6 +566,10 @@ export function WorkbenchTab() {
             <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3">
               <WorkbenchResultCard />
             </div>
+            {/* 4.4 F4-3：一键管线（规划→设计→渲染→导出 + 模板批处理） */}
+            <div className="mt-4">
+              <PipelinePanel />
+            </div>
           </>
         )
       case 'aidc':
@@ -422,17 +581,25 @@ export function WorkbenchTab() {
               </div>
             )}
             <div className="flex items-center gap-3 mb-3">
-              <button type="button" onClick={() => setShowAidcWizard(true)}
-                className="flex items-center gap-1 px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white">
+              <button
+                type="button"
+                onClick={() => setShowAidcWizard(true)}
+                className="flex items-center gap-1 px-3 py-1 text-xs rounded bg-primary-500 hover:bg-primary-600 text-white"
+              >
                 <Plus size={12} /> {t('workbench:aidcCreate.create')}
               </button>
-              <span className="text-2xs text-gray-500 dark:text-gray-400">{t('workbench:aidcCreate.hint')}</span>
+              <span className="text-2xs text-gray-500 dark:text-gray-400">
+                {t('workbench:aidcCreate.hint')}
+              </span>
             </div>
             {/* AL-M5a：AIDC 新建并入 CreateProjectWizardModal */}
             {showAidcWizard && (
               <CreateProjectWizardModal
                 defaultAidc
-                onClose={() => { setShowAidcWizard(false); handleAidcWizardCreated() }}
+                onClose={() => {
+                  setShowAidcWizard(false)
+                  handleAidcWizardCreated()
+                }}
               />
             )}
             <AidcPlannerPanel boundProjectName={project} />
