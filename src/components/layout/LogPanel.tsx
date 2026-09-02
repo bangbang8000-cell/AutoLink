@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { PerformancePanel } from '@/components/layout/PerformancePanel'
+import { ValidationReportPanel } from '@/components/validation/ValidationReportPanel'
 
 interface LogEntry {
   timestamp: string
@@ -10,7 +11,7 @@ interface LogEntry {
   level: 'info' | 'warn' | 'error'
 }
 
-type PanelTab = 'log' | 'performance'
+type PanelTab = 'log' | 'performance' | 'validation'
 
 export function LogPanel() {
   const { t } = useTranslation()
@@ -96,6 +97,18 @@ export function LogPanel() {
           >
             {t('common:logPanel.tabs.performance')}
           </button>
+          {/* 4.5（F5-5）：数据校验 tab（一键校验 + 报告导出） */}
+          <button
+            onClick={() => setTab('validation')}
+            className={clsx(
+              'px-2 py-0.5 rounded text-2xs transition-colors',
+              tab === 'validation'
+                ? 'bg-white dark:bg-app text-gray-700 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            {t('common:logPanel.tabs.validation', '校验')}
+          </button>
         </div>
         <div className="flex items-center gap-0.5">
           {tab === 'log' && (
@@ -112,6 +125,10 @@ export function LogPanel() {
       {tab === 'performance' ? (
         <div className="flex-1 overflow-hidden">
           <PerformancePanel />
+        </div>
+      ) : tab === 'validation' ? (
+        <div className="flex-1 overflow-hidden">
+          <ValidationReportPanel />
         </div>
       ) : (
       <div

@@ -6,9 +6,12 @@
   - export_check  导出数据核对（渲染批次产物 vs 设计/规划）
   - ip_check      IP 规划校验（子网重叠/网关冲突/越界/重复/掩码）
   - ai_accuracy   AI 规划器准确性校验（建议声称值 vs 后端真实计算）
+  - runner        一键执行 + 校验报告导出（JSON）
 
 典型用法：
-    from validation_engine import check_plan_design_consistency, check_export_batch, check_ip_plan
+    from validation_engine import run_all_validation, build_design_dict, export_report_json
+    report = run_all_validation(plan=plan, designer=designer, batch_dir='output/v1_xxx')
+    export_report_json(report, 'validation_report.json')
 """
 from validation_engine.core import (
     ValidationProblem, ValidationReport, SEVERITY_ERROR, SEVERITY_WARNING, SEVERITY_INFO,
@@ -27,6 +30,9 @@ from validation_engine.ai_accuracy import (
     check_suggestion_accuracy, check_optimization_suggestions, check_ai_plan_claims,
     designer_convergence,
 )
+from validation_engine.runner import (
+    build_design_dict, run_all_validation, export_report_json, build_render_dict,
+)
 
 __all__ = [
     'ValidationProblem', 'ValidationReport',
@@ -39,4 +45,5 @@ __all__ = [
     'check_gateway_conflicts', 'check_allocations',
     'check_suggestion_accuracy', 'check_optimization_suggestions', 'check_ai_plan_claims',
     'designer_convergence',
+    'build_design_dict', 'run_all_validation', 'export_report_json', 'build_render_dict',
 ]
