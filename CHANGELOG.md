@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [4.6.0] - 2026-09-02
+
+### 4.6 质量与测试体系
+
+- **测试覆盖率门禁**：后端 pytest-cov（fail_under=55，实测 85.18%）+ 前端 vitest coverage；CI 覆盖率门禁 + 阈值常量单源（quality_thresholds.json）+ 基线棘轮只升不降（coverage_baseline.json）
+- **测试数据资产**：6 个样例项目（64h100/128h100 多机柜/融合网/存储关闭/超节点/zcube）+ 清单 manifest + README，pytest/vitest 双端消费
+- **测试报告**：聚合 pytest/vitest/golden/bench/模板校验 → reports/quality_report.json + HTML
+- **质量仪表盘**：LogPanel「质量」tab（覆盖率/门禁/测试通过率/校验/性能基准，本地聚合）
+
 ## [4.5.0] - 2026-09-02
 
 ### 4.5 数据准确性与校验
