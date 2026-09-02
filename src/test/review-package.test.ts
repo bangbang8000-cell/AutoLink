@@ -61,7 +61,8 @@ describe('validateReviewPackage（评审包结构校验）', () => {
     expect(validateReviewPackage({ ...pkg, format: 'other' }).ok).toBe(false)
     expect(validateReviewPackage({ ...pkg, schemaVersion: 9 }).ok).toBe(false)
     expect(validateReviewPackage({ ...pkg, versionHistory: { versions: 'bad' } }).ok).toBe(false)
-    const { versionHistory: _vh, ...noHistory } = pkg
+    const noHistory = { ...pkg }
+    delete noHistory.versionHistory
     expect(validateReviewPackage(noHistory).ok).toBe(false)
   })
 })
