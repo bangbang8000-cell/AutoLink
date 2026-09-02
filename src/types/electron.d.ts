@@ -617,6 +617,21 @@ interface Window {
         maxResults?: number
       }) => Promise<import('@/api/search').LocalSearchHit[]>
     }
+    // 4.7.0（47-b/47-c/47-d）：部署运维——诊断中心 / 健康检查 / 本地遥测
+    diag: {
+      collect: (limit?: number) => Promise<import('@/types/ops').DiagnosticsReport>
+      exportBundle: (perfSnapshot?: unknown) => Promise<{ canceled: boolean; path: string }>
+    }
+    health: {
+      run: () => Promise<import('@/types/ops').HealthReport>
+      export: (report: unknown) => Promise<{ canceled: boolean; path: string }>
+    }
+    telemetry: {
+      get: () => Promise<{ entries: Array<Record<string, unknown>>; path: string; enabled: boolean }>
+      setEnabled: (enabled: boolean) => Promise<{ enabled: boolean }>
+      clear: () => Promise<{ cleared: boolean }>
+      export: () => Promise<{ canceled: boolean; path: string }>
+    }
     onLogOutput: (callback: (data: { message: string; level?: string }) => void) => () => void
     versions: {
       node: string

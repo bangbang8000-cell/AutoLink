@@ -64,7 +64,9 @@
     "tabs": {
       "log": "로그",
       "performance": "성능",
-      "quality": "품질"
+      "quality": "품질",
+      "health": "건강",
+      "diagnostics": "진단"
     }
   },
   "performancePanel": {
@@ -156,6 +158,54 @@
     "benchmarkSource": "scripts/bench_perf.py 달성 임계값",
     "benchmarkThreshold": "달성 임계값",
     "noData": "데이터 없음"
+  },
+  "diagnosticsPanel": {
+    "title": "진단 센터",
+    "exportBundle": "지원 패키지 내보내기",
+    "exported": "진단 지원 패키지를 내보냈습니다",
+    "refresh": "새로고침",
+    "empty": "진단 데이터 없음",
+    "system": {
+      "title": "시스템 정보",
+      "appVersion": "앱 버전",
+      "os": "운영 체제",
+      "runtime": "런타임",
+      "memory": "메모리",
+      "disk": "userData 디스크",
+      "diskUnavailable": "사용 불가"
+    },
+    "crash": {
+      "title": "오류 및 크래시",
+      "hasIssue": "크래시/오류 기록 있음",
+      "errorsLog": "메인 프로세스 오류 로그",
+      "dumps": "Crashpad 덤프",
+      "renderer": "렌더러 크래시",
+      "noError": "오류 로그 없음"
+    },
+    "audit": {
+      "title": "명령 감사",
+      "empty": "감사 기록 없음"
+    },
+    "perf": {
+      "title": "성능 스냅샷",
+      "hint": "지원 패키지에 포함",
+      "ops": "작업 기록",
+      "render": "렌더링 긴 작업",
+      "jsHeap": "JS 힙"
+    }
+  },
+  "healthPanel": {
+    "title": "건강 검사",
+    "export": "건강 보고서 JSON 내보내기",
+    "exported": "건강 보고서를 내보냈습니다",
+    "run": "자가 진단 실행",
+    "running": "확인 중…",
+    "empty": "「자가 진단 실행」을 클릭하여 환경/엔진/네트워크/종속성을 확인하세요",
+    "env": "환경",
+    "ok": "정상",
+    "warn": "경고",
+    "fail": "이상",
+    "skip": "건너뜀"
   },
   "project": {
     "duplicate": "프로젝트 복제",
@@ -412,6 +462,8 @@
     "newVersion": "새 버전이 있습니다",
     "releaseNotes": "릴리스 노트",
     "newVersionAvailable": "새 버전 v{{version}}을 발견했습니다. 오른쪽 상단 아이콘을 클릭하여 확인하세요",
+    "integrityOk": "다운로드 무결성 검사 통과, 오프라인 설치 가능",
+    "offlineHint": "오프라인/네트워크 없는 환경에서는 온라인 업데이트를 건너뛸 수 있습니다. 설치 프로그램은 오프라인 지원이며 설치 후 오프라인으로 사용할 수 있습니다",
     "download": "업데이트 다운로드",
     "downloading": "다운로드 중",
     "downloadFailed": "다운로드 실패",
@@ -655,7 +707,15 @@
         "autoCheckUpdate": "업데이트 자동 확인",
         "proxyServer": "프록시 서버",
         "host": "호스트",
-        "port": "포트"
+        "port": "포트",
+        "telemetry": "로컬 텔레메트리",
+        "telemetryHint": "기본적으로 꺼짐. 켜면 시작/크래시/작업 시간/오류 이벤트를 로컬에서 수집(마스킹됨), 업로드하지 않습니다",
+        "telemetryEnabledHint": "로컬 텔레메트리 활성화 (로컬 전용, 네트워크 없음)",
+        "telemetryExport": "내보내기",
+        "telemetryExported": "텔레메트리 데이터 내보냄",
+        "telemetryClear": "지우기",
+        "telemetryCleared": "텔레메트리 데이터 지움",
+        "telemetryCount": "레코드"
       },
       "data": {
         "title": "데이터 관리",

@@ -369,6 +369,22 @@ const electronAPI = {
     local: (params: { query: string; scope?: 'project' | 'device' | 'template' | 'all'; maxResults?: number }) =>
       ipcRenderer.invoke('search:local', params),
   },
+  // 4.7.0（47-b/47-c/47-d）：部署运维——诊断中心 / 健康检查 / 本地遥测
+  diag: {
+    collect: (limit?: number) => ipcRenderer.invoke('diag:collect', limit),
+    exportBundle: (perfSnapshot?: unknown) =>
+      ipcRenderer.invoke('diag:exportBundle', { perfSnapshot }),
+  },
+  health: {
+    run: () => ipcRenderer.invoke('health:run'),
+    export: (report: unknown) => ipcRenderer.invoke('health:export', report),
+  },
+  telemetry: {
+    get: () => ipcRenderer.invoke('telemetry:get'),
+    setEnabled: (enabled: boolean) => ipcRenderer.invoke('telemetry:setEnabled', enabled),
+    clear: () => ipcRenderer.invoke('telemetry:clear'),
+    export: () => ipcRenderer.invoke('telemetry:export'),
+  },
   onLogOutput: (callback: (data: { message: string; level?: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { message: string; level?: string }) => callback(data)
     ipcRenderer.on('log:output', handler)

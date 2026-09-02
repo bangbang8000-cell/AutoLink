@@ -104,8 +104,12 @@ function isPathInShellWhitelist(filePath: string): boolean {
 }
 import { updateService } from '../services/update.service.js'
 import { redactSensitive } from '../utils/redact.js'
+// 47-d（F7-4）：本地遥测（IPC 错误/动作耗时留痕，脱敏，默认关）
+import { telemetryService } from '../services/telemetry.service.js'
 import { registerCloudIpcHandlers } from './cloud.handlers.js'
 import { registerSearchIpcHandlers } from './search.handlers.js'
+// 47-b/47-c（F7-2/F7-3）：诊断中心 + 健康检查 IPC 分包
+import { registerDiagnosticsIpcHandlers } from './diagnostics.handlers.js'
 
 // V3.4.1-L7: app:getStackVersions 进程级缓存（Python 探测 execSync 阻塞主进程，只跑一次）
 let cachedStackVersions: Record<string, string> | null = null
@@ -211,16 +215,55 @@ function sanitizeProjectPath(name: string, ...segments: string[]): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function wrapHandler<T>(handler: (...args: any[]) => Promise<T>) {
   return async (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => {
+    const start = Date.now()
+    const channel = (event as { channel?: string })?.channel ?? 'unknown'
     try {
-      return await handler(event, ...args)
+      const result = await handler(event, ...args)
+      // 47-d（F7-4）：长任务动作耗时留痕（遥测默认关，开启才采集）
+      if (TELEMETRY_ACTION_CHANNELS.has(channel)) {
+        telemetryService.recordAction(channel, Date.now() - start, true)
+      }
+      return result
     } catch (err) {
       // V3.2.2-R11.1: 错误日志脱敏后再输出，避免 apiKey/token 等凭据泄漏
       // （事件对象不可模板插值，只记录通道名，避免打印 [object Object]）
-      console.error('[IPC Error]', redactSensitive(err instanceof Error ? err.message : String(err)))
+      const safeMsg = redactSensitive(err instanceof Error ? err.message : String(err))
+      console.error('[IPC Error]', safeMsg)
+      // 47-d（F7-4）：IPC 失败留痕（脱敏 message，遥测默认关）
+      telemetryService.recordError(channel, safeMsg)
       throw err
     }
   }
 }
+
+/**
+ * 47-d（F7-4）：遥测记录的长任务 IPC 通道白名单。
+ * 仅记录计算/IO 密集通道的动作耗时，避免读文件/列表等高频轻量通道刷屏遥测。
+ */
+const TELEMETRY_ACTION_CHANNELS = new Set([
+  'design:generate',
+  'design:validate',
+  'design:estimate',
+  'design:report',
+  'render:exportConnections',
+  'plan:aidc',
+  'plan:aidc:export',
+  'optimize:suggest',
+  'optimize:apply',
+  'repair:plan',
+  'repair:apply',
+  'room:optimize',
+  'rack:optimize',
+  'project:exportZip',
+  'project:batchExportZip',
+  'project:importZip',
+  'template:importZip',
+  'template:exportZip',
+  'capacity:recommend',
+  'atop:recommend',
+  'aidc:project:create',
+  'aidc:project:save',
+])
 
 // ===== Device Library =====
 function getDeviceLibraryPath(): string {
@@ -430,6 +473,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   registerCloudIpcHandlers()
   // ===== 本地搜索（V3.3.1: 项目文件 / 设备库 / 模板） =====
   registerSearchIpcHandlers()
+  // ===== 部署运维（47-b 诊断 / 47-c 健康检查 / 47-d 本地遥测） =====
+  registerDiagnosticsIpcHandlers()
   // ===== Project Management =====
   // U1: project:list 扩展返回 status/fileCount/updatedAt/description
   ipcMain.handle('project:list', wrapHandler(async () => {

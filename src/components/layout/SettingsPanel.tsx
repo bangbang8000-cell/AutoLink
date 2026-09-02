@@ -43,7 +43,7 @@ const GROUP_LOCALSTORAGE_KEYS: Record<string, string[]> = {
   output: ['autolink-output-format', 'autolink-output-dir', 'autolink-autosave-interval'],
   keyboard: [],
   deviceLibrary: ['autolink-device-data-dir', 'autolink-device-auto-update', 'autolink-device-tab-reuse'],
-  network: ['autolink-auto-update-check', 'autolink-proxy-host', 'autolink-proxy-port'],
+  network: ['autolink-auto-update-check', 'autolink-proxy-host', 'autolink-proxy-port', 'autolink-telemetry-enabled'],
   explorer: [],
   data: [],
   configPresets: [],
@@ -301,6 +301,45 @@ function NetworkSettings() {
   const [autoCheck, setAutoCheck] = useLocalStorage('autolink-auto-update-check', true)
   const [proxyHost, setProxyHost] = useLocalStorage('autolink-proxy-host', '')
   const [proxyPort, setProxyPort] = useLocalStorage('autolink-proxy-port', '')
+  // 47-d（F7-4）：本地遥测开关（默认关，localStorage）
+  const [telemetryEnabled, setTelemetryEnabled] = useLocalStorage('autolink-telemetry-enabled', false)
+  const [telemetryCount, setTelemetryCount] = useState(0)
+  const addToast = useToastStore((s) => s.addToast)
+
+  // 挂载时同步主进程遥测状态 + 记录数
+  useEffect(() => {
+    let cancelled = false
+    window.electron?.telemetry?.get().then((res) => {
+      if (cancelled) return
+      setTelemetryEnabled(res.enabled)
+      setTelemetryCount(res.entries.length)
+    }).catch(() => { /* 静默 */ })
+    return () => { cancelled = true }
+  }, [setTelemetryEnabled])
+
+  const handleTelemetryToggle = (enabled: boolean) => {
+    setTelemetryEnabled(enabled)
+    void window.electron?.telemetry?.setEnabled(enabled)
+    if (enabled) {
+      addToast('info', t('common:explorer.settings.network.telemetryEnabledHint', '本地遥测已开启（仅本地采集，不联网）'), 4000)
+    }
+  }
+
+  const handleTelemetryExport = async () => {
+    try {
+      const res = await window.electron?.telemetry?.export()
+      if (res?.canceled) return
+      addToast('success', t('common:explorer.settings.network.telemetryExported', '遥测数据已导出'), 3000)
+    } catch (e) {
+      addToast('error', e instanceof Error ? e.message : String(e), 4000)
+    }
+  }
+
+  const handleTelemetryClear = async () => {
+    await window.electron?.telemetry?.clear()
+    setTelemetryCount(0)
+    addToast('success', t('common:explorer.settings.network.telemetryCleared', '遥测数据已清空'), 3000)
+  }
 
   return (
     <SettingsSection title={t('common:explorer.settings.network.title')}>
@@ -318,6 +357,33 @@ function NetworkSettings() {
             className={clsx('w-20', INPUT_CLASS)} />
         </div>
       </SettingsRow>
+
+      {/* 47-d（F7-4）：本地遥测（默认关 / 本地化 / 脱敏 / 可导出） */}
+      <div className="pt-3 mt-2 border-t border-gray-200 dark:border-edge-subtle">
+        <SettingsRow label={t('common:explorer.settings.network.telemetry', '本地遥测')}>
+          <Toggle checked={telemetryEnabled} onChange={handleTelemetryToggle} />
+        </SettingsRow>
+        <p className="text-2xs text-gray-400 px-4 pb-2 -mt-1">
+          {t('common:explorer.settings.network.telemetryHint', '默认关闭。开启后仅在本机采集启动/崩溃/动作耗时/错误事件（脱敏），不联网上报')}
+        </p>
+        {telemetryEnabled && (
+          <div className="flex items-center gap-1.5 px-4 pb-2">
+            <button
+              onClick={() => void handleTelemetryExport()}
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover"
+            >
+              <Download size={11} />{t('common:explorer.settings.network.telemetryExport', '导出')}
+            </button>
+            <button
+              onClick={() => void handleTelemetryClear()}
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-200 dark:border-error-800 text-error-500 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/10"
+            >
+              <RotateCcw size={11} />{t('common:explorer.settings.network.telemetryClear', '清空')}
+            </button>
+            <span className="text-2xs text-gray-400">{t('common:explorer.settings.network.telemetryCount', '记录')} {telemetryCount}</span>
+          </div>
+        )}
+      </div>
       <GroupReset group="network" />
     </SettingsSection>
   )

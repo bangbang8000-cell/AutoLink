@@ -68,6 +68,21 @@ const mockElectron = {
     downloadUpdate: vi.fn(),
     quitAndInstall: vi.fn(),
   },
+  // 4.7.0（47-b/47-c/47-d）：部署运维 IPC
+  diag: {
+    collect: vi.fn(),
+    exportBundle: vi.fn(),
+  },
+  health: {
+    run: vi.fn(),
+    export: vi.fn(),
+  },
+  telemetry: {
+    get: vi.fn(),
+    setEnabled: vi.fn(),
+    clear: vi.fn(),
+    export: vi.fn(),
+  },
 }
 
 // 非 jsdom 环境（如 node 环境的 zip-crypto 测试）没有 window

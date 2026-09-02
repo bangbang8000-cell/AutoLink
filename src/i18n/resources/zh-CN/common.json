@@ -64,7 +64,9 @@
     "tabs": {
       "log": "日志",
       "performance": "性能",
-      "quality": "质量"
+      "quality": "质量",
+      "health": "健康",
+      "diagnostics": "诊断"
     }
   },
   "performancePanel": {
@@ -156,6 +158,54 @@
     "benchmarkSource": "引用 scripts/bench_perf.py 达标阈值",
     "benchmarkThreshold": "达标阈值",
     "noData": "暂无数据"
+  },
+  "diagnosticsPanel": {
+    "title": "诊断中心",
+    "exportBundle": "导出支持包",
+    "exported": "诊断支持包已导出",
+    "refresh": "刷新",
+    "empty": "暂无诊断数据",
+    "system": {
+      "title": "系统信息",
+      "appVersion": "应用版本",
+      "os": "操作系统",
+      "runtime": "运行时",
+      "memory": "内存",
+      "disk": "userData 磁盘",
+      "diskUnavailable": "不可用"
+    },
+    "crash": {
+      "title": "错误与崩溃",
+      "hasIssue": "存在崩溃/错误记录",
+      "errorsLog": "主进程错误日志",
+      "dumps": "Crashpad dump",
+      "renderer": "渲染崩溃",
+      "noError": "无错误日志"
+    },
+    "audit": {
+      "title": "命令审计",
+      "empty": "暂无审计记录"
+    },
+    "perf": {
+      "title": "性能快照",
+      "hint": "随支持包导出",
+      "ops": "操作记录",
+      "render": "渲染长任务",
+      "jsHeap": "JS 堆"
+    }
+  },
+  "healthPanel": {
+    "title": "健康检查",
+    "export": "导出健康报告 JSON",
+    "exported": "健康报告已导出",
+    "run": "运行自检",
+    "running": "自检中…",
+    "empty": "点击「运行自检」检查环境/引擎/网络/依赖",
+    "env": "环境",
+    "ok": "正常",
+    "warn": "警告",
+    "fail": "异常",
+    "skip": "跳过"
   },
   "project": {
     "duplicate": "复制项目",
@@ -420,7 +470,9 @@
     "retry": "重试",
     "manualDownload": "手动下载",
     "releaseNotes": "更新日志",
-    "newVersionAvailable": "发现新版本 v{{version}}，点击右上角图标查看"
+    "newVersionAvailable": "发现新版本 v{{version}}，点击右上角图标查看",
+    "integrityOk": "下载完整性校验通过，可离线安装使用",
+    "offlineHint": "若处于无网络/离线环境，可跳过在线更新——安装包为离线安装包，安装后离线可用"
   },
   "about": {
     "title": "关于 AutoLink",
@@ -655,7 +707,15 @@
         "autoCheckUpdate": "自动检查更新",
         "proxyServer": "代理服务器",
         "host": "主机",
-        "port": "端口"
+        "port": "端口",
+        "telemetry": "本地遥测",
+        "telemetryHint": "默认关闭。开启后仅在本机采集启动/崩溃/动作耗时/错误事件（脱敏），不联网上报",
+        "telemetryEnabledHint": "本地遥测已开启（仅本地采集，不联网）",
+        "telemetryExport": "导出",
+        "telemetryExported": "遥测数据已导出",
+        "telemetryClear": "清空",
+        "telemetryCleared": "遥测数据已清空",
+        "telemetryCount": "记录"
       },
       "data": {
         "title": "数据管理",

@@ -64,7 +64,9 @@
     "tabs": {
       "log": "ログ",
       "performance": "パフォーマンス",
-      "quality": "品質"
+      "quality": "品質",
+      "health": "ヘルス",
+      "diagnostics": "診断"
     }
   },
   "performancePanel": {
@@ -156,6 +158,54 @@
     "benchmarkSource": "scripts/bench_perf.py の達成しきい値",
     "benchmarkThreshold": "達成しきい値",
     "noData": "データなし"
+  },
+  "diagnosticsPanel": {
+    "title": "診断センター",
+    "exportBundle": "サポートパックをエクスポート",
+    "exported": "診断サポートパックをエクスポートしました",
+    "refresh": "更新",
+    "empty": "診断データはありません",
+    "system": {
+      "title": "システム情報",
+      "appVersion": "アプリバージョン",
+      "os": "オペレーティングシステム",
+      "runtime": "ランタイム",
+      "memory": "メモリ",
+      "disk": "userData ディスク",
+      "diskUnavailable": "利用不可"
+    },
+    "crash": {
+      "title": "エラーとクラッシュ",
+      "hasIssue": "クラッシュ/エラーレコードあり",
+      "errorsLog": "メインプロセスエラーログ",
+      "dumps": "Crashpad ダンプ",
+      "renderer": "レンダラークラッシュ",
+      "noError": "エラーログなし"
+    },
+    "audit": {
+      "title": "コマンド監査",
+      "empty": "監査レコードなし"
+    },
+    "perf": {
+      "title": "パフォーマンススナップショット",
+      "hint": "サポートパックに含まれます",
+      "ops": "操作記録",
+      "render": "レンダリング長タスク",
+      "jsHeap": "JS ヒープ"
+    }
+  },
+  "healthPanel": {
+    "title": "ヘルスチェック",
+    "export": "ヘルスレポート JSON をエクスポート",
+    "exported": "ヘルスレポートをエクスポートしました",
+    "run": "セルフチェックを実行",
+    "running": "チェック中…",
+    "empty": "「セルフチェックを実行」をクリックして環境/エンジン/ネットワーク/依存関係を確認",
+    "env": "環境",
+    "ok": "正常",
+    "warn": "警告",
+    "fail": "異常",
+    "skip": "スキップ"
   },
   "project": {
     "duplicate": "プロジェクト複製",
@@ -412,6 +462,8 @@
     "newVersion": "新しいバージョンがあります",
     "releaseNotes": "更新履歴",
     "newVersionAvailable": "新しいバージョン v{{version}} が見つかりました。右上のアイコンをクリックして確認してください",
+    "integrityOk": "ダウンロードの整合性チェックに合格しました。オフラインインストールできます",
+    "offlineHint": "オフライン/ネットワークがない環境ではオンライン更新をスキップできます。インストーラーはオフライン対応で、インストール後はオフラインで使用できます",
     "download": "更新をダウンロード",
     "downloading": "ダウンロード中",
     "downloadFailed": "ダウンロードに失敗しました",
@@ -655,7 +707,15 @@
         "autoCheckUpdate": "更新を自動確認",
         "proxyServer": "プロキシサーバー",
         "host": "ホスト",
-        "port": "ポート"
+        "port": "ポート",
+        "telemetry": "ローカルテレメトリ",
+        "telemetryHint": "初期はオフ。有効にすると起動/クラッシュ/操作時間/エラーをローカルで収集（マスク済み）、アップロードはしません",
+        "telemetryEnabledHint": "ローカルテレメトリを有効化（ローカルのみ、ネットワークなし）",
+        "telemetryExport": "エクスポート",
+        "telemetryExported": "テレメトリデータをエクスポートしました",
+        "telemetryClear": "クリア",
+        "telemetryCleared": "テレメトリデータをクリアしました",
+        "telemetryCount": "レコード"
       },
       "data": {
         "title": "データ管理",

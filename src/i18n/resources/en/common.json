@@ -64,7 +64,9 @@
     "tabs": {
       "log": "Log",
       "performance": "Performance",
-      "quality": "Quality"
+      "quality": "Quality",
+      "health": "Health",
+      "diagnostics": "Diagnostics"
     }
   },
   "performancePanel": {
@@ -156,6 +158,54 @@
     "benchmarkSource": "Thresholds from scripts/bench_perf.py",
     "benchmarkThreshold": "Threshold",
     "noData": "No data"
+  },
+  "diagnosticsPanel": {
+    "title": "Diagnostics Center",
+    "exportBundle": "Export Bundle",
+    "exported": "Diagnostics bundle exported",
+    "refresh": "Refresh",
+    "empty": "No diagnostics data",
+    "system": {
+      "title": "System Info",
+      "appVersion": "App Version",
+      "os": "Operating System",
+      "runtime": "Runtime",
+      "memory": "Memory",
+      "disk": "userData Disk",
+      "diskUnavailable": "Unavailable"
+    },
+    "crash": {
+      "title": "Errors & Crashes",
+      "hasIssue": "Crash/error records found",
+      "errorsLog": "Main Process Error Log",
+      "dumps": "Crashpad dumps",
+      "renderer": "Renderer crashes",
+      "noError": "No error logs"
+    },
+    "audit": {
+      "title": "Command Audit",
+      "empty": "No audit records"
+    },
+    "perf": {
+      "title": "Performance Snapshot",
+      "hint": "Included in bundle",
+      "ops": "Operations",
+      "render": "Render long tasks",
+      "jsHeap": "JS Heap"
+    }
+  },
+  "healthPanel": {
+    "title": "Health Check",
+    "export": "Export health report JSON",
+    "exported": "Health report exported",
+    "run": "Run Self-Check",
+    "running": "Checking…",
+    "empty": "Click \"Run Self-Check\" to verify environment / engine / network / dependencies",
+    "env": "Environment",
+    "ok": "OK",
+    "warn": "Warning",
+    "fail": "Failed",
+    "skip": "Skipped"
   },
   "project": {
     "duplicate": "Duplicate Project",
@@ -420,7 +470,9 @@
     "retry": "Retry",
     "manualDownload": "Manual Download",
     "releaseNotes": "Release Notes",
-    "newVersionAvailable": "New version v{{version}} available. Click the icon in the top right to view."
+    "newVersionAvailable": "New version v{{version}} available. Click the icon in the top right to view.",
+    "integrityOk": "Download integrity check passed, ready for offline install",
+    "offlineHint": "In offline / no-network environments you can skip online updates — the installer is offline-capable and works without network after install"
   },
   "about": {
     "title": "About AutoLink",
@@ -655,7 +707,15 @@
         "autoCheckUpdate": "Auto-check Updates",
         "proxyServer": "Proxy Server",
         "host": "Host",
-        "port": "Port"
+        "port": "Port",
+        "telemetry": "Local Telemetry",
+        "telemetryHint": "Off by default. When enabled, startup / crash / action timing / error events are collected locally (redacted), never uploaded",
+        "telemetryEnabledHint": "Local telemetry enabled (local only, no network)",
+        "telemetryExport": "Export",
+        "telemetryExported": "Telemetry data exported",
+        "telemetryClear": "Clear",
+        "telemetryCleared": "Telemetry data cleared",
+        "telemetryCount": "Records"
       },
       "data": {
         "title": "Data Management",

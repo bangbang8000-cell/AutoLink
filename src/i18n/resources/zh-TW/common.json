@@ -64,7 +64,9 @@
     "tabs": {
       "log": "日誌",
       "performance": "效能",
-      "quality": "品質"
+      "quality": "品質",
+      "health": "健康",
+      "diagnostics": "診斷"
     }
   },
   "performancePanel": {
@@ -156,6 +158,54 @@
     "benchmarkSource": "引用 scripts/bench_perf.py 達標閾值",
     "benchmarkThreshold": "達標閾值",
     "noData": "暫無資料"
+  },
+  "diagnosticsPanel": {
+    "title": "診斷中心",
+    "exportBundle": "匯出支援包",
+    "exported": "診斷支援包已匯出",
+    "refresh": "重新整理",
+    "empty": "暫無診斷資料",
+    "system": {
+      "title": "系統資訊",
+      "appVersion": "應用程式版本",
+      "os": "作業系統",
+      "runtime": "執行階段",
+      "memory": "記憶體",
+      "disk": "userData 磁碟",
+      "diskUnavailable": "不可用"
+    },
+    "crash": {
+      "title": "錯誤與崩潰",
+      "hasIssue": "存在崩潰/錯誤記錄",
+      "errorsLog": "主程序錯誤日誌",
+      "dumps": "Crashpad dump",
+      "renderer": "渲染崩潰",
+      "noError": "無錯誤日誌"
+    },
+    "audit": {
+      "title": "命令稽核",
+      "empty": "暫無稽核記錄"
+    },
+    "perf": {
+      "title": "效能快照",
+      "hint": "隨支援包匯出",
+      "ops": "操作記錄",
+      "render": "渲染長任務",
+      "jsHeap": "JS 堆"
+    }
+  },
+  "healthPanel": {
+    "title": "健康檢查",
+    "export": "匯出健康報告 JSON",
+    "exported": "健康報告已匯出",
+    "run": "執行自我檢查",
+    "running": "檢查中…",
+    "empty": "點擊「執行自我檢查」檢查環境/引擎/網路/依賴",
+    "env": "環境",
+    "ok": "正常",
+    "warn": "警告",
+    "fail": "異常",
+    "skip": "略過"
   },
   "project": {
     "duplicate": "複製專案",
@@ -412,6 +462,8 @@
     "newVersion": "發現新版本",
     "releaseNotes": "更新日誌",
     "newVersionAvailable": "發現新版本 v{{version}}，點擊右上角圖示檢視",
+    "integrityOk": "下載完整性驗證通過，可離線安裝使用",
+    "offlineHint": "若處於無網路/離線環境，可略過線上更新——安裝包為離線安裝包，安裝後離線可用",
     "download": "下載更新",
     "downloading": "正在下載",
     "downloadFailed": "下載失敗",
@@ -655,7 +707,15 @@
         "autoCheckUpdate": "自動檢查更新",
         "proxyServer": "代理伺服器",
         "host": "主機",
-        "port": "連接埠"
+        "port": "連接埠",
+        "telemetry": "本機遙測",
+        "telemetryHint": "預設關閉。開啟後僅在本機採集啟動/崩潰/動作耗時/錯誤事件（脫敏），不聯網上報",
+        "telemetryEnabledHint": "本機遙測已開啟（僅本機採集，不聯網）",
+        "telemetryExport": "匯出",
+        "telemetryExported": "遙測資料已匯出",
+        "telemetryClear": "清空",
+        "telemetryCleared": "遙測資料已清空",
+        "telemetryCount": "記錄"
       },
       "data": {
         "title": "資料管理",
