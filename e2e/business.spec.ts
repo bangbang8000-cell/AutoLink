@@ -100,13 +100,7 @@ test('业务链路：新建项目 → 生成拓扑 → 一键渲染 → 机房�
     // ── 3. 一键渲染（导出连接关系表/上机表/拓扑图/设备清单等 9 类材料）──
     await window.keyboard.press('Control+Shift+W')
     await window.getByRole('button', { name: '一键渲染' }).click()
-    try {
-      await expect(window.getByText('渲染完成')).toBeVisible({ timeout: 120_000 })
-    } catch (err) {
-      const spans = await window.locator('span').filter({ hasText: '批量渲染完成' }).allTextContents()
-      console.log('DIAG-RENDER-ERR:', JSON.stringify(spans, null, 2))
-      throw err
-    }
+    await expect(window.getByText('渲染完成')).toBeVisible({ timeout: 120_000 })
     await expect(window.getByText('渲染结果', { exact: true })).toBeVisible()
     // v1.5/v1.6：渲染结果在工作台结果卡展示材料标签（连接关系表/拓扑图 等）
     for (const label of ['连接关系表', '拓扑图']) {
