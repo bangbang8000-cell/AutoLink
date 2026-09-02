@@ -150,7 +150,6 @@ export function WorkbenchActionCard() {
           setProgress({ message: `[${projectName}] 生成上机表...` })
           try {
             const filePath = await exportToExcel(projectName, batchName)
-            if (!filePath) projectErrors.push('上机表导出失败')
             addResult({
               type: 'rackTable',
               file: filePath || batchRel(batchName, '上机表.xlsx'),
@@ -159,7 +158,6 @@ export function WorkbenchActionCard() {
               timestamp: nowIso(),
             })
           } catch (err) {
-            projectErrors.push((err as Error).message)
             addResult({ type: 'rackTable', file: batchRel(batchName, '上机表.xlsx'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
@@ -172,10 +170,8 @@ export function WorkbenchActionCard() {
             const base64 = await exportTopologyViewPng(topology.nodes, topology.edges, savedLayout)
             const fileName = '组网拓扑图.png'
             const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, fileName), base64)
-            if (!filePath) projectErrors.push('拓扑图保存失败')
             addResult({ type: 'topology', file: filePath || batchRel(batchName, fileName), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
           } catch (err) {
-            projectErrors.push((err as Error).message)
             addResult({ type: 'topology', file: batchRel(batchName, '组网拓扑图.png'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
@@ -187,16 +183,13 @@ export function WorkbenchActionCard() {
           try {
             const art = roomLayoutArt()
             if (!art) {
-              projectErrors.push('未定义机房矩阵')
               addResult({ type: 'roomLayout', file: batchRel(batchName, '机房布局图.png'), status: 'error', error: '未定义机房矩阵', timestamp: nowIso() })
             } else {
               const base64 = await svgToPngBase64(art.svg, art.width, art.height)
               const filePath = await window.electron.render.saveOutputFile(projectName, batchRel(batchName, '机房布局图.png'), base64)
-              if (!filePath) projectErrors.push('布局图保存失败')
               addResult({ type: 'roomLayout', file: filePath || batchRel(batchName, '机房布局图.png'), status: filePath ? 'success' : 'error', error: filePath ? undefined : '保存失败', timestamp: nowIso() })
             }
           } catch (err) {
-            projectErrors.push((err as Error).message)
             addResult({ type: 'roomLayout', file: batchRel(batchName, '机房布局图.png'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
@@ -215,10 +208,8 @@ export function WorkbenchActionCard() {
               await window.electron.render.saveOutputFile(projectName, batchRel(batchName, `racks/${safeName}.png`), base64)
               saved++
             }
-            if (saved === 0) projectErrors.push('无柜可导出')
             addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: saved > 0 ? 'success' : 'error', error: saved > 0 ? undefined : '无柜可导出', timestamp: nowIso() })
           } catch (err) {
-            projectErrors.push((err as Error).message)
             addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: 'error', error: (err as Error).message, timestamp: nowIso() })
           }
           updateProgress()
