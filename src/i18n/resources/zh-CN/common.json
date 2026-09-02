@@ -939,7 +939,11 @@
       "project": "项目",
       "design": "设计",
       "template": "模板",
-      "common": "常用"
+      "common": "常用",
+      "render": "渲染/导出",
+      "batch": "批量",
+      "pipeline": "一键管线",
+      "recent": "最近/收藏"
     },
     "commands": {
       "newProject": "新建项目",
@@ -970,7 +974,39 @@
       "exportFailed": "导出失败: {{error}}",
       "snapshotSaved": "设计快照已保存",
       "snapshotNoData": "当前没有可保存的设计数据（请先定义机柜矩阵）",
-      "snapshotTooLarge": "设计快照过大，已跳过保存"
+      "snapshotTooLarge": "设计快照过大，已跳过保存",
+      "importProject": "导入项目",
+      "imported": "已导入项目: {{name}}",
+      "favoriteCurrent": "收藏当前项目",
+      "unfavoriteCurrent": "取消收藏当前项目",
+      "favorited": "已收藏: {{name}}",
+      "unfavorited": "已取消收藏: {{name}}",
+      "generateTopology": "生成组网拓扑",
+      "topologyGenerated": "组网拓扑已生成",
+      "saveConfig": "保存设计配置",
+      "configSaved": "设计配置已保存",
+      "renderCurrent": "渲染当前项目",
+      "exportDelivery": "导出 MC 交付包",
+      "deliveryNoPlan": "当前项目未生成 AIDC 规划，无法导出交付包",
+      "deliveryFailed": "MC 交付包导出失败: {{error}}",
+      "deliveryExported": "MC 交付包已导出 → {{path}}",
+      "exportOutput": "导出渲染结果",
+      "outputExported": "渲染结果已导出 → {{path}}",
+      "batchRender": "批量渲染",
+      "batchRenderHint": "请在工作台「渲染操作」中开启批量模式进行批量渲染",
+      "batchExport": "批量导出项目包",
+      "batchExported": "已批量导出 {{count}} 个项目包",
+      "batchExportPartial": "批量导出完成：成功 {{success}} / 失败 {{fail}}",
+      "pipelineRun": "运行一键管线（规划→设计→渲染→导出）",
+      "pipelineTemplate": "模板批处理一键管线",
+      "pipelineTemplateHint": "请在工作台「一键管线」中选择模板进行批量处理",
+      "openRecent": "打开最近项目",
+      "openedRecent": "已打开最近项目",
+      "openFavorite": "打开收藏项目",
+      "openedFavorite": "已打开收藏项目",
+      "favoriteEmpty": "暂无收藏项目（在项目浏览器点击星标收藏）",
+      "favoriteEmptyHint": "已打开项目浏览器，点击项目行星标即可收藏",
+      "themeToggled": "主题已切换"
     }
   }
 }

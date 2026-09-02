@@ -939,7 +939,11 @@
       "project": "프로젝트",
       "design": "설계",
       "template": "템플릿",
-      "common": "일반"
+      "common": "일반",
+      "render": "렌더링/내보내기",
+      "batch": "일괄",
+      "pipeline": "원클릭 파이프라인",
+      "recent": "최근/즐겨찾기"
     },
     "commands": {
       "newProject": "새 프로젝트",
@@ -970,7 +974,39 @@
       "exportFailed": "내보내기 실패: {{error}}",
       "snapshotSaved": "설계 스냅샷 저장됨",
       "snapshotNoData": "저장할 설계 데이터가 없습니다 (먼저 랙룸 행렬 정의)",
-      "snapshotTooLarge": "설계 스냅샷이 너무 커서 건너뜀"
+      "snapshotTooLarge": "설계 스냅샷이 너무 커서 건너뜀",
+      "importProject": "프로젝트 가져오기",
+      "imported": "프로젝트를 가져왔습니다: {{name}}",
+      "favoriteCurrent": "현재 프로젝트 즐겨찾기",
+      "unfavoriteCurrent": "현재 프로젝트 즐겨찾기 해제",
+      "favorited": "즐겨찾기 추가됨: {{name}}",
+      "unfavorited": "즐겨찾기 해제됨: {{name}}",
+      "generateTopology": "네트워크 토폴로지 생성",
+      "topologyGenerated": "네트워크 토폴로지가 생성되었습니다",
+      "saveConfig": "설계 설정 저장",
+      "configSaved": "설계 설정이 저장되었습니다",
+      "renderCurrent": "현재 프로젝트 렌더링",
+      "exportDelivery": "MC 납품 패키지 내보내기",
+      "deliveryNoPlan": "AIDC 플랜이 생성되지 않아 납품 패키지를 내보낼 수 없습니다",
+      "deliveryFailed": "납품 패키지 내보내기 실패: {{error}}",
+      "deliveryExported": "납품 패키지 내보냄 → {{path}}",
+      "exportOutput": "렌더링 결과 내보내기",
+      "outputExported": "렌더링 결과 내보냄 → {{path}}",
+      "batchRender": "일괄 렌더링",
+      "batchRenderHint": "워크벤치의 \"렌더링 작업\"에서 일괄 모드를 켜고 여러 프로젝트를 렌더링하세요",
+      "batchExport": "프로젝트 패키지 일괄 내보내기",
+      "batchExported": "프로젝트 패키지 {{count}}개를 내보냈습니다",
+      "batchExportPartial": "일괄 내보내기 완료: 성공 {{success}} / 실패 {{fail}}",
+      "pipelineRun": "원클릭 파이프라인 실행(계획→설계→렌더링→내보내기)",
+      "pipelineTemplate": "템플릿 일괄 원클릭 파이프라인",
+      "pipelineTemplateHint": "워크벤치의 \"원클릭 파이프라인\"에서 템플릿을 선택해 일괄 처리하세요",
+      "openRecent": "최근 프로젝트 열기",
+      "openedRecent": "최근 프로젝트를 열었습니다",
+      "openFavorite": "즐겨찾기 프로젝트 열기",
+      "openedFavorite": "즐겨찾기 프로젝트를 열었습니다",
+      "favoriteEmpty": "즐겨찾기 없음(프로젝트 탐색기에서 별표를 클릭해 추가)",
+      "favoriteEmptyHint": "프로젝트 탐색기를 열었습니다. 행의 별표를 클릭해 즐겨찾기에 추가",
+      "themeToggled": "테마가 전환되었습니다"
     }
   }
 }

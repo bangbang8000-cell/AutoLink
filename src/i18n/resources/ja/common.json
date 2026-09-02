@@ -939,7 +939,11 @@
       "project": "プロジェクト",
       "design": "設計",
       "template": "テンプレート",
-      "common": "共通"
+      "common": "共通",
+      "render": "レンダリング/エクスポート",
+      "batch": "一括",
+      "pipeline": "ワンクリックパイプライン",
+      "recent": "最近/お気に入り"
     },
     "commands": {
       "newProject": "新規プロジェクト",
@@ -970,7 +974,39 @@
       "exportFailed": "エクスポートに失敗しました: {{error}}",
       "snapshotSaved": "設計スナップショットを保存しました",
       "snapshotNoData": "保存できる設計データがありません（先にラックルーム行列を定義）",
-      "snapshotTooLarge": "設計スナップショットが大きすぎるため、保存をスキップしました"
+      "snapshotTooLarge": "設計スナップショットが大きすぎるため、保存をスキップしました",
+      "importProject": "プロジェクトをインポート",
+      "imported": "プロジェクトをインポートしました: {{name}}",
+      "favoriteCurrent": "現在のプロジェクトをお気に入りに追加",
+      "unfavoriteCurrent": "現在のプロジェクトのお気に入りを解除",
+      "favorited": "お気に入りに追加しました: {{name}}",
+      "unfavorited": "お気に入りを解除しました: {{name}}",
+      "generateTopology": "ネットワークトポロジーを生成",
+      "topologyGenerated": "ネットワークトポロジーを生成しました",
+      "saveConfig": "設計設定を保存",
+      "configSaved": "設計設定を保存しました",
+      "renderCurrent": "現在のプロジェクトをレンダリング",
+      "exportDelivery": "MC 納品パッケージをエクスポート",
+      "deliveryNoPlan": "AIDC プランが生成されていません。納品パッケージをエクスポートできません",
+      "deliveryFailed": "納品パッケージのエクスポートに失敗しました: {{error}}",
+      "deliveryExported": "納品パッケージをエクスポートしました → {{path}}",
+      "exportOutput": "レンダリング結果をエクスポート",
+      "outputExported": "レンダリング結果をエクスポートしました → {{path}}",
+      "batchRender": "一括レンダリング",
+      "batchRenderHint": "ワークベンチの「レンダリング操作」で一括モードを有効にして複数プロジェクトをレンダリング",
+      "batchExport": "プロジェクトパッケージを一括エクスポート",
+      "batchExported": "{{count}} 個のプロジェクトパッケージをエクスポートしました",
+      "batchExportPartial": "一括エクスポート完了：成功 {{success}} / 失敗 {{fail}}",
+      "pipelineRun": "ワンクリックパイプラインを実行（計画→設計→レンダリング→エクスポート）",
+      "pipelineTemplate": "テンプレート一括ワンクリックパイプライン",
+      "pipelineTemplateHint": "ワークベンチの「ワンクリックパイプライン」でテンプレートを選択して一括処理",
+      "openRecent": "最近のプロジェクトを開く",
+      "openedRecent": "最近のプロジェクトを開きました",
+      "openFavorite": "お気に入りのプロジェクトを開く",
+      "openedFavorite": "お気に入りのプロジェクトを開きました",
+      "favoriteEmpty": "お気に入りがありません（プロジェクトエクスプローラーでスターをクリックして追加）",
+      "favoriteEmptyHint": "プロジェクトエクスプローラーを開きました。行のスターをクリックしてお気に入りに追加",
+      "themeToggled": "テーマを切り替えました"
     }
   }
 }

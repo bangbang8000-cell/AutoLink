@@ -1,7 +1,8 @@
 /**
  * 4.3 F3-1a: 命令面板命令注册表（集中管理 + 本地化）
+ * 4.4 F4-5（测试计划 E-5）：命令全集——项目/设计/渲染导出/批量/一键管线/最近收藏/模板/设置/快捷键全集
  *
- * buildCommandPaletteCommands(t) 生成命令列表（含动态项目/模板子命令），
+ * buildCommandPaletteCommands(t) 生成命令列表（含动态项目/模板/最近子命令），
  * CommandPalette 据此渲染搜索/执行；命令动作统一走既有 store action，
  * 并给出 toast 反馈（命令执行有反馈）。
  */
@@ -12,6 +13,8 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useSnapshotStore } from '@/stores/snapshot.store'
+import { usePipelineStore } from '@/stores/pipeline.store'
+import { exportDeliveryZip } from '@/utils/aidcDelivery'
 
 export interface CommandItem {
   id: string
@@ -29,7 +32,15 @@ function openAIChat(): void {
 
 /** 打开工作台并聚焦子视图 */
 function openWorkbenchSubview(
-  view: 'aidc' | 'design' | 'main' | 'visualization' | 'roomdesign' | 'rackdesign' | 'results' | 'export',
+  view:
+    | 'aidc'
+    | 'design'
+    | 'main'
+    | 'visualization'
+    | 'roomdesign'
+    | 'rackdesign'
+    | 'results'
+    | 'export',
 ): void {
   useUIStore.getState().setActiveActivity('workbench')
   useUIStore.getState().setWorkbenchSubview(view)
@@ -41,6 +52,11 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
   const catDesign = t('common:commandPalette.categories.design')
   const catTemplate = t('common:commandPalette.categories.template')
   const catCommon = t('common:commandPalette.categories.common')
+  // 4.4 F4-5：命令全集新增分类
+  const catRender = t('common:commandPalette.categories.render')
+  const catBatch = t('common:commandPalette.categories.batch')
+  const catPipeline = t('common:commandPalette.categories.pipeline')
+  const catRecent = t('common:commandPalette.categories.recent')
 
   const projectStore = useProjectStore.getState()
   const toast = useToastStore.getState()
@@ -69,9 +85,12 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
       const r = await useProjectStore.getState().exportProject(projectName)
       toast.addToast('success', t('common:commandPalette.commands.exported', { path: r.zipPath }))
     } catch (e) {
-      toast.addToast('error', t('common:commandPalette.commands.exportFailed', {
-        error: e instanceof Error ? e.message : String(e),
-      }))
+      toast.addToast(
+        'error',
+        t('common:commandPalette.commands.exportFailed', {
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      )
     }
   }
 
@@ -96,6 +115,24 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     action: () => useUIStore.getState().setShowCreateProjectWizard(true),
   })
   commands.push({
+    id: 'project.import',
+    label: t('common:commandPalette.commands.importProject'),
+    category: catProject,
+    action: () => {
+      void useProjectStore
+        .getState()
+        .importProject()
+        .then((r) => {
+          if (!r.canceled && r.projectName) {
+            toast.addToast(
+              'success',
+              t('common:commandPalette.commands.imported', { name: r.projectName }),
+            )
+          }
+        })
+    },
+  })
+  commands.push({
     id: 'project.render',
     label: t('common:commandPalette.commands.renderProject'),
     category: catProject,
@@ -106,6 +143,32 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     label: t('common:commandPalette.commands.exportProject'),
     category: catProject,
     action: () => void exportCurrentProject(),
+  })
+  commands.push({
+    id: 'project.favorite',
+    label: (() => {
+      const name = useProjectStore.getState().selectedProjectName
+      const fav = name ? useProjectStore.getState().favoriteProjects.includes(name) : false
+      return fav
+        ? t('common:commandPalette.commands.unfavoriteCurrent')
+        : t('common:commandPalette.commands.favoriteCurrent')
+    })(),
+    category: catProject,
+    action: () => {
+      const name = useProjectStore.getState().selectedProjectName
+      if (!name) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      const fav = useProjectStore.getState().favoriteProjects.includes(name)
+      useProjectStore.getState().toggleFavorite(name)
+      toast.addToast(
+        'success',
+        fav
+          ? t('common:commandPalette.commands.unfavorited', { name })
+          : t('common:commandPalette.commands.favorited', { name }),
+      )
+    },
   })
   // 动态：每个项目一个「打开项目」子命令
   for (const p of projectStore.projects) {
@@ -136,6 +199,39 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     action: () => openWorkbenchSubview('rackdesign'),
   })
   commands.push({
+    id: 'design.generate',
+    label: t('common:commandPalette.commands.generateTopology'),
+    category: catDesign,
+    action: () => {
+      const name = useProjectStore.getState().selectedProjectName
+      if (!name) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      openWorkbenchSubview('design')
+      void designGenerate(name)
+        .then(() =>
+          toast.addToast('success', t('common:commandPalette.commands.topologyGenerated')),
+        )
+        .catch((e) => toast.addToast('error', String(e instanceof Error ? e.message : e)))
+    },
+  })
+  commands.push({
+    id: 'design.saveConfig',
+    label: t('common:commandPalette.commands.saveConfig'),
+    category: catDesign,
+    action: () => {
+      const name = useProjectStore.getState().selectedProjectName
+      if (!name) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      void designSaveConfig(name)
+        .then(() => toast.addToast('success', t('common:commandPalette.commands.configSaved')))
+        .catch((e) => toast.addToast('error', String(e instanceof Error ? e.message : e)))
+    },
+  })
+  commands.push({
     id: 'design.snapshot',
     label: t('common:commandPalette.commands.snapshot'),
     category: catDesign,
@@ -147,6 +243,203 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     category: catDesign,
     action: () => openWorkbenchSubview('aidc'),
   })
+
+  // ============ 渲染/导出 ============
+  commands.push({
+    id: 'render.current',
+    label: t('common:commandPalette.commands.renderCurrent'),
+    category: catRender,
+    shortcut: 'Ctrl+Enter',
+    action: renderCurrentProject,
+  })
+  commands.push({
+    id: 'export.delivery',
+    label: t('common:commandPalette.commands.exportDelivery'),
+    category: catRender,
+    action: () => {
+      const name = useProjectStore.getState().selectedProjectName
+      if (!name) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      void exportDeliveryZip(name)
+        .then((r) => {
+          if (r.noPlan) {
+            toast.addToast('warning', t('common:commandPalette.commands.deliveryNoPlan'))
+          } else if (r.error) {
+            toast.addToast(
+              'error',
+              t('common:commandPalette.commands.deliveryFailed', { error: r.error }),
+            )
+          } else {
+            toast.addToast(
+              'success',
+              t('common:commandPalette.commands.deliveryExported', { path: r.path ?? '' }),
+            )
+          }
+        })
+        .catch((e) => {
+          toast.addToast(
+            'error',
+            t('common:commandPalette.commands.deliveryFailed', {
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          )
+        })
+    },
+  })
+  commands.push({
+    id: 'export.output',
+    label: t('common:commandPalette.commands.exportOutput'),
+    category: catRender,
+    action: () => {
+      const name = useProjectStore.getState().selectedProjectName
+      if (!name) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      void window.electron.render
+        .exportOutput(name)
+        .then((r) => {
+          if (r?.canceled) return
+          if (r?.ok) {
+            toast.addToast(
+              'success',
+              t('common:commandPalette.commands.outputExported', { path: r.path ?? '' }),
+            )
+          }
+        })
+        .catch((e) => {
+          toast.addToast(
+            'error',
+            t('common:commandPalette.commands.exportFailed', {
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          )
+        })
+    },
+  })
+
+  // ============ 批量 ============
+  commands.push({
+    id: 'batch.render',
+    label: t('common:commandPalette.commands.batchRender'),
+    category: catBatch,
+    action: () => {
+      openWorkbenchSubview('main')
+      toast.addToast('info', t('common:commandPalette.commands.batchRenderHint'))
+    },
+  })
+  commands.push({
+    id: 'batch.export',
+    label: t('common:commandPalette.commands.batchExport'),
+    category: catBatch,
+    action: () => {
+      const all = useProjectStore.getState().projects.map((p) => p.name)
+      if (all.length === 0) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      void useProjectStore
+        .getState()
+        .batchExportProjects(all)
+        .then((r) => {
+          if (!r.canceled && r.result) {
+            const { successes, failures } = r.result
+            if (failures.length === 0) {
+              toast.addToast(
+                'success',
+                t('common:commandPalette.commands.batchExported', { count: successes.length }),
+              )
+            } else {
+              toast.addToast(
+                'warning',
+                t('common:commandPalette.commands.batchExportPartial', {
+                  success: successes.length,
+                  fail: failures.length,
+                }),
+              )
+            }
+          }
+        })
+        .catch((e) => {
+          toast.addToast(
+            'error',
+            t('common:commandPalette.commands.exportFailed', {
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          )
+        })
+    },
+  })
+
+  // ============ 一键管线 ============
+  commands.push({
+    id: 'pipeline.run',
+    label: t('common:commandPalette.commands.pipelineRun'),
+    category: catPipeline,
+    action: () => {
+      const name = useProjectStore.getState().selectedProjectName
+      if (!name) {
+        toast.addToast('warning', t('common:commandPalette.commands.noProject'))
+        return
+      }
+      openWorkbenchSubview('main')
+      void usePipelineStore.getState().runProjectPipeline(name)
+    },
+  })
+  commands.push({
+    id: 'pipeline.template',
+    label: t('common:commandPalette.commands.pipelineTemplate'),
+    category: catPipeline,
+    action: () => {
+      openWorkbenchSubview('main')
+      toast.addToast('info', t('common:commandPalette.commands.pipelineTemplateHint'))
+    },
+  })
+
+  // ============ 最近/收藏 ============
+  // 动态：最近使用项目
+  for (const name of projectStore.recentProjects) {
+    if (!projectStore.projects.some((p) => p.name === name)) continue
+    commands.push({
+      id: `recent.open.${name}`,
+      label: `${t('common:commandPalette.commands.openRecent')}: ${name}`,
+      category: catRecent,
+      action: () => {
+        const st = useProjectStore.getState()
+        const p = st.projects.find((x) => x.name === name)
+        if (p) st.selectProject(p)
+        toast.addToast('success', `${t('common:commandPalette.commands.openedRecent')}: ${name}`)
+      },
+    })
+  }
+  // 动态：收藏项目
+  for (const name of projectStore.favoriteProjects) {
+    if (!projectStore.projects.some((p) => p.name === name)) continue
+    commands.push({
+      id: `favorite.open.${name}`,
+      label: `${t('common:commandPalette.commands.openFavorite')}: ${name}`,
+      category: catRecent,
+      action: () => {
+        const st = useProjectStore.getState()
+        const p = st.projects.find((x) => x.name === name)
+        if (p) st.selectProject(p)
+        toast.addToast('success', `${t('common:commandPalette.commands.openedFavorite')}: ${name}`)
+      },
+    })
+  }
+  if (projectStore.favoriteProjects.length === 0) {
+    commands.push({
+      id: 'recent.favoriteEmpty',
+      label: t('common:commandPalette.commands.favoriteEmpty'),
+      category: catRecent,
+      action: () => {
+        useUIStore.getState().setActiveActivity('project')
+        toast.addToast('info', t('common:commandPalette.commands.favoriteEmptyHint'))
+      },
+    })
+  }
 
   // ============ 模板 ============
   commands.push({
@@ -174,7 +467,7 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     })
   }
 
-  // ============ 常用操作 ============
+  // ============ 常用操作（设置/快捷键全集） ============
   commands.push({
     id: 'common.ai',
     label: t('common:commandPalette.commands.ai'),
@@ -187,7 +480,9 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     category: catCommon,
     action: () => {
       useUIStore.getState().setActiveActivity('device_library')
-      useWorkspaceStore.getState().openTab({ type: 'deviceLibrary', title: '设备库', closable: true })
+      useWorkspaceStore
+        .getState()
+        .openTab({ type: 'deviceLibrary', title: '设备库', closable: true })
     },
   })
   commands.push({
@@ -206,6 +501,7 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     id: 'common.settings',
     label: t('common:commandPalette.commands.settings'),
     category: catCommon,
+    shortcut: 'Ctrl+,',
     action: () => useUIStore.getState().setActiveActivity('settings'),
   })
   commands.push({
@@ -228,14 +524,30 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     id: 'common.toggleTheme',
     label: t('common:commandPalette.commands.toggleTheme'),
     category: catCommon,
-    action: () => useUIStore.getState().toggleTheme(),
+    action: () => {
+      useUIStore.getState().toggleTheme()
+      toast.addToast('info', t('common:commandPalette.commands.themeToggled'))
+    },
   })
   commands.push({
     id: 'common.shortcuts',
     label: t('common:commandPalette.commands.shortcuts'),
     category: catCommon,
+    shortcut: 'F1',
     action: () => useUIStore.getState().setShowShortcutsDialog(true),
   })
 
   return commands
+}
+
+/** 惰性加载设计 store 的 generate（避免顶层依赖循环） */
+async function designGenerate(projectName: string): Promise<void> {
+  const { useDesignStore } = await import('@/stores/design.store')
+  await useDesignStore.getState().generate(projectName)
+}
+
+/** 惰性加载设计 store 的 saveConfig */
+async function designSaveConfig(projectName: string): Promise<void> {
+  const { useDesignStore } = await import('@/stores/design.store')
+  await useDesignStore.getState().saveConfig(projectName)
 }

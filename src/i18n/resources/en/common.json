@@ -939,7 +939,11 @@
       "project": "Project",
       "design": "Design",
       "template": "Template",
-      "common": "Common"
+      "common": "Common",
+      "render": "Render/Export",
+      "batch": "Batch",
+      "pipeline": "One-Click Pipeline",
+      "recent": "Recent/Favorites"
     },
     "commands": {
       "newProject": "New Project",
@@ -970,7 +974,39 @@
       "exportFailed": "Export failed: {{error}}",
       "snapshotSaved": "Design snapshot saved",
       "snapshotNoData": "No design data to save (define a rack matrix first)",
-      "snapshotTooLarge": "Design snapshot too large, skipped"
+      "snapshotTooLarge": "Design snapshot too large, skipped",
+      "importProject": "Import Project",
+      "imported": "Project imported: {{name}}",
+      "favoriteCurrent": "Favorite Current Project",
+      "unfavoriteCurrent": "Unfavorite Current Project",
+      "favorited": "Favorited: {{name}}",
+      "unfavorited": "Unfavorited: {{name}}",
+      "generateTopology": "Generate Network Topology",
+      "topologyGenerated": "Network topology generated",
+      "saveConfig": "Save Design Config",
+      "configSaved": "Design config saved",
+      "renderCurrent": "Render Current Project",
+      "exportDelivery": "Export MC Delivery Package",
+      "deliveryNoPlan": "No AIDC plan generated; cannot export delivery package",
+      "deliveryFailed": "Delivery package export failed: {{error}}",
+      "deliveryExported": "Delivery package exported → {{path}}",
+      "exportOutput": "Export Render Output",
+      "outputExported": "Render output exported → {{path}}",
+      "batchRender": "Batch Render",
+      "batchRenderHint": "Enable batch mode in the workbench \"Render Actions\" to render multiple projects",
+      "batchExport": "Batch Export Project Packages",
+      "batchExported": "Exported {{count}} project packages",
+      "batchExportPartial": "Batch export done: {{success}} succeeded / {{fail}} failed",
+      "pipelineRun": "Run One-Click Pipeline (Plan→Design→Render→Export)",
+      "pipelineTemplate": "Template Batch One-Click Pipeline",
+      "pipelineTemplateHint": "Select templates in the workbench \"One-Click Pipeline\" to process in batch",
+      "openRecent": "Open Recent Project",
+      "openedRecent": "Recent project opened",
+      "openFavorite": "Open Favorite Project",
+      "openedFavorite": "Favorite project opened",
+      "favoriteEmpty": "No favorite projects (star a project in the explorer to favorite)",
+      "favoriteEmptyHint": "Project explorer opened; click the star on a project row to favorite it",
+      "themeToggled": "Theme toggled"
     }
   }
 }

@@ -939,7 +939,11 @@
       "project": "專案",
       "design": "設計",
       "template": "範本",
-      "common": "常用"
+      "common": "常用",
+      "render": "渲染/匯出",
+      "batch": "批次",
+      "pipeline": "一鍵管線",
+      "recent": "最近/收藏"
     },
     "commands": {
       "newProject": "新建專案",
@@ -970,7 +974,39 @@
       "exportFailed": "匯出失敗: {{error}}",
       "snapshotSaved": "設計快照已儲存",
       "snapshotNoData": "目前沒有可儲存的設計資料（請先定義機櫃矩陣）",
-      "snapshotTooLarge": "設計快照過大，已跳過儲存"
+      "snapshotTooLarge": "設計快照過大，已跳過儲存",
+      "importProject": "匯入專案",
+      "imported": "已匯入專案: {{name}}",
+      "favoriteCurrent": "收藏目前專案",
+      "unfavoriteCurrent": "取消收藏目前專案",
+      "favorited": "已收藏: {{name}}",
+      "unfavorited": "已取消收藏: {{name}}",
+      "generateTopology": "產生網路拓撲",
+      "topologyGenerated": "網路拓撲已產生",
+      "saveConfig": "儲存設計設定",
+      "configSaved": "設計設定已儲存",
+      "renderCurrent": "渲染目前專案",
+      "exportDelivery": "匯出 MC 交付包",
+      "deliveryNoPlan": "目前專案未產生 AIDC 規劃，無法匯出交付包",
+      "deliveryFailed": "MC 交付包匯出失敗: {{error}}",
+      "deliveryExported": "MC 交付包已匯出 → {{path}}",
+      "exportOutput": "匯出渲染結果",
+      "outputExported": "渲染結果已匯出 → {{path}}",
+      "batchRender": "批次渲染",
+      "batchRenderHint": "請在工作台「渲染操作」中開啟批次模式進行批次渲染",
+      "batchExport": "批次匯出專案包",
+      "batchExported": "已批次匯出 {{count}} 個專案包",
+      "batchExportPartial": "批次匯出完成：成功 {{success}} / 失敗 {{fail}}",
+      "pipelineRun": "執行一鍵管線（規劃→設計→渲染→匯出）",
+      "pipelineTemplate": "模板批次一鍵管線",
+      "pipelineTemplateHint": "請在工作台「一鍵管線」中選擇模板進行批次處理",
+      "openRecent": "開啟最近專案",
+      "openedRecent": "已開啟最近專案",
+      "openFavorite": "開啟收藏專案",
+      "openedFavorite": "已開啟收藏專案",
+      "favoriteEmpty": "暫無收藏專案（在專案瀏覽器點擊星號收藏）",
+      "favoriteEmptyHint": "已開啟專案瀏覽器，點擊專案行星號即可收藏",
+      "themeToggled": "主題已切換"
     }
   }
 }
