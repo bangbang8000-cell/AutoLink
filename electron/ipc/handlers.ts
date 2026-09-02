@@ -2094,7 +2094,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     })
     if (result.canceled || !result.filePath) return { canceled: true, path: '' }
     const r = await pythonService.call('skills:export', { filepath: result.filePath })
-    return { canceled: false, ...r }
+    return { canceled: false, ...(r as Record<string, unknown>) }
   }))
   ipcMain.handle('skills:import', wrapHandler(async (_event, opts?: { overwrite?: boolean }) => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -2104,7 +2104,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     })
     if (result.canceled || result.filePaths.length === 0) return { canceled: true, imported: 0, skipped: 0 }
     const r = await pythonService.call('skills:import', { zipPath: result.filePaths[0], overwrite: opts?.overwrite === true })
-    return { canceled: false, ...r }
+    return { canceled: false, ...(r as Record<string, unknown>) }
   }))
 
   // ===== Template =====

@@ -44,6 +44,14 @@ function readJson(p: string): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(p, 'utf-8'))
 }
 
+interface PlanJson {
+  meta: { projectId?: string; projectName?: string; planVersion?: number; planHash?: string }
+  aidc_meta?: { projectId?: string; projectName?: string; planVersion?: number }
+}
+function readPlan(p: string): PlanJson {
+  return readJson(p) as unknown as PlanJson
+}
+
 function projectMeta(name: string): Record<string, unknown> {
   return readJson(path.join(workspace(), name, 'project.json'))
 }
@@ -134,7 +142,7 @@ describe('48-a projectId 幂等导入', () => {
     expect(listProjectDirs()).toEqual(['A'])
     // 身份一致
     expect(projectMeta('A').projectId).toBe(pid)
-    expect(readJson(path.join(workspace(), 'A', 'plan.json')).meta.projectId).toBe(pid)
+    expect(readPlan(path.join(workspace(), 'A', 'plan.json')).meta.projectId).toBe(pid)
   })
 
   it('skip 模式：命中既有身份时跳过且不改写本地文件', async () => {
@@ -149,7 +157,7 @@ describe('48-a projectId 幂等导入', () => {
     expect(r.projectName).toBe('B')
     expect(fs.readFileSync(path.join(workspace(), 'B', 'project.json'), 'utf-8')).toBe(before)
     // plan 未被覆盖（仍是本地 v1）
-    const plan = readJson(path.join(workspace(), 'B', 'plan.json'))
+    const plan = readPlan(path.join(workspace(), 'B', 'plan.json'))
     expect(plan.meta.planVersion).toBe(1)
     expect(listProjectDirs()).toEqual(['B'])
   })
@@ -168,7 +176,7 @@ describe('48-a projectId 幂等导入', () => {
     expect(r.mode).toBe('updated')
     expect(r.projectId).toBe(pid)
 
-    const plan = readJson(path.join(workspace(), 'C', 'plan.json'))
+    const plan = readPlan(path.join(workspace(), 'C', 'plan.json'))
     expect(plan.meta.planVersion).toBe(3)
     // 历史合并：v1 保留本地（未覆盖），v2/v3 新增
     const hdir = path.join(workspace(), 'C', 'plan_history')
@@ -176,7 +184,7 @@ describe('48-a projectId 幂等导入', () => {
     expect(historyFiles).toContain('v1.plan.json')
     expect(historyFiles).toContain('v2.plan.json')
     expect(historyFiles).toContain('v3.plan.json')
-    expect(readJson(path.join(hdir, 'v1.plan.json')).meta.planHash).toBe('local-v1')
+    expect(readPlan(path.join(hdir, 'v1.plan.json')).meta.planHash).toBe('local-v1')
     // 新产物落盘
     expect(fs.existsSync(path.join(workspace(), 'C', 'output', 'report.pdf'))).toBe(true)
     // 身份一致
@@ -199,7 +207,7 @@ describe('48-a projectId 幂等导入', () => {
     expect(listProjectDirs().sort()).toEqual(['D', 'D_导入'])
     // 落盘身份与包内一致
     expect(projectMeta('D_导入').projectId).toBe(pkgId)
-    expect(readJson(path.join(workspace(), 'D_导入', 'plan.json')).meta.projectId).toBe(pkgId)
+    expect(readPlan(path.join(workspace(), 'D_导入', 'plan.json')).meta.projectId).toBe(pkgId)
   })
 
   it('旧格式包（无 projectId）：导入时 mint 新身份并同步 plan/project_config 一致', async () => {
@@ -214,8 +222,8 @@ describe('48-a projectId 幂等导入', () => {
     expect(meta.projectId).toBe(r.projectId)
     expect(meta.projectName).toBe('Legacy')
     // 身份同步到 plan.json / project_config.json
-    expect(readJson(path.join(workspace(), 'Legacy', 'plan.json')).meta.projectId).toBe(r.projectId)
-    expect(readJson(path.join(workspace(), 'Legacy', 'project_config.json')).aidc_meta.projectId).toBe(r.projectId)
+    expect(readPlan(path.join(workspace(), 'Legacy', 'plan.json')).meta.projectId).toBe(r.projectId)
+    expect(readPlan(path.join(workspace(), 'Legacy', 'project_config.json')).aidc_meta?.projectId).toBe(r.projectId)
   })
 
   it('往返：exportProjectZip → import 幂等（不产生副本）', async () => {
