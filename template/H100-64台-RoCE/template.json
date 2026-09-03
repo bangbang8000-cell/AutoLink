@@ -1,0 +1,16 @@
+{
+  "id": "H100-64台-RoCE",
+  "name": "H100-64台-RoCE（示例）",
+  "description": "64台H100 DGX 单POD RoCE（400G，H3C S9825/S9827 2:1收敛）示例项目",
+  "scenario": "H100-64台-RoCE",
+  "tags": [
+    "H100",
+    "64台",
+    "RoCE",
+    "示例项目",
+    "单POD"
+  ],
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
+}

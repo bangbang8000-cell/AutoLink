@@ -1,0 +1,6532 @@
+{
+  "meta": {
+    "project": "aidc_64",
+    "site": "BJ01",
+    "version": "1.2",
+    "schema": "plan:table/1.2",
+    "generatedAt": "2026-09-03T02:20:11+00:00",
+    "source": "autolink",
+    "projectType": "aidc",
+    "bridgeVersion": "1.0",
+    "projectId": "49a-64-ib-0001",
+    "planHash": "6ee68390a273435186d9724347feac54bae50b980e87c6284806bd80a847ff3d",
+    "planVersion": 1,
+    "projectName": "H100-64台-IB"
+  },
+  "macro": {
+    "site": "BJ01",
+    "gpuCount": 64,
+    "protocol": "IB",
+    "pfcQueue": 3,
+    "cnpQueue": 6,
+    "bgpMaxPaths": 16,
+    "convergence": 1.0,
+    "rails": 8,
+    "naming": {
+      "format": "{site}-R{rack:02d}-AIDC-{vendor}-{abbr}-{seq:02d}",
+      "abbr": {
+        "SPINE": "P-Spine",
+        "LEAF": "P-Leaf",
+        "STO_SPINE": "S-Spine",
+        "STO_LEAF": "S-Leaf",
+        "BIZAGG": "BIZ-AGG",
+        "BIZACC": "BIZ-ACC",
+        "OOBAGG": "OOB-AGG",
+        "OOBACC": "OOB-ACC"
+      }
+    },
+    "ipSegments": {
+      "loopback": "10.1.0.0/20",
+      "compute": "10.1.16.0/20",
+      "storage": "10.1.32.0/20",
+      "biz": "10.1.48.0/20",
+      "oob": "10.1.64.0/21",
+      "interconnect": "10.1.72.0/21"
+    },
+    "vlanRanges": {
+      "compute": [
+        100,
+        199
+      ],
+      "storage": [
+        200,
+        299
+      ],
+      "biz": [
+        300,
+        399
+      ],
+      "oob": [
+        400,
+        499
+      ]
+    },
+    "asRange": [
+      65001,
+      65500
+    ],
+    "ospf": {
+      "process": 10,
+      "area": "0.0.0.0"
+    },
+    "deviceModels": {
+      "SPINE": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "LEAF": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "STO_SPINE": "H3C S9825-128B",
+      "STO_LEAF": "H3C S9825-128B",
+      "BIZ_AGG": "H3C S9850-32H",
+      "BIZ_ACCESS": "H3C S6850-56HF",
+      "OOB_AGG": "H3C S6805-56HF-G",
+      "OOB_ACCESS": "H3C S5560X-54C-EI"
+    }
+  },
+  "topology": {
+    "layers": 2,
+    "spines": 2,
+    "leaves": 8,
+    "pods": null,
+    "scale": {
+      "gpuCount": 64,
+      "spine": 2,
+      "leaf": 8
+    }
+  },
+  "deviceList": [
+    {
+      "role": "SPINE",
+      "scenario": "SPINE",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R01-AIDC-H3C-P-Spine-01",
+      "asn": 65111,
+      "rack": 1
+    },
+    {
+      "role": "SPINE",
+      "scenario": "SPINE",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R02-AIDC-H3C-P-Spine-02",
+      "asn": 65112,
+      "rack": 2
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "asn": 65101,
+      "gateways": [
+        "10.1.16.1",
+        "10.1.16.2"
+      ],
+      "rack": 3
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "asn": 65102,
+      "gateways": [
+        "10.1.16.3",
+        "10.1.16.4"
+      ],
+      "rack": 4
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "asn": 65103,
+      "gateways": [
+        "10.1.16.5",
+        "10.1.16.6"
+      ],
+      "rack": 5
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "asn": 65104,
+      "gateways": [
+        "10.1.16.7",
+        "10.1.16.8"
+      ],
+      "rack": 6
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "asn": 65105,
+      "gateways": [
+        "10.1.16.9",
+        "10.1.16.10"
+      ],
+      "rack": 7
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "asn": 65106,
+      "gateways": [
+        "10.1.16.11",
+        "10.1.16.12"
+      ],
+      "rack": 8
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "asn": 65107,
+      "gateways": [
+        "10.1.16.13",
+        "10.1.16.14"
+      ],
+      "rack": 9
+    },
+    {
+      "role": "LEAF",
+      "scenario": "LEAF",
+      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "name": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "asn": 65108,
+      "gateways": [
+        "10.1.16.15",
+        "10.1.16.16"
+      ],
+      "rack": 10
+    },
+    {
+      "role": "STO_SPINE",
+      "scenario": "STO_SPINE",
+      "model": "H3C S9825-128B",
+      "name": "BJ01-R11-AIDC-H3C-S-Spine-01",
+      "asn": 65121,
+      "rack": 11
+    },
+    {
+      "role": "STO_LEAF",
+      "scenario": "STO_LEAF",
+      "model": "H3C S9825-128B",
+      "name": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "asn": 65131,
+      "rack": 12
+    },
+    {
+      "role": "STO_LEAF",
+      "scenario": "STO_LEAF",
+      "model": "H3C S9825-128B",
+      "name": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "asn": 65132,
+      "rack": 13
+    },
+    {
+      "role": "BIZ_AGG",
+      "scenario": "BIZAGG",
+      "model": "H3C S9850-32H",
+      "name": "BJ01-R14-AIDC-H3C-BIZ-AGG-01",
+      "asn": 65151,
+      "rack": 14
+    },
+    {
+      "role": "BIZ_AGG",
+      "scenario": "BIZAGG",
+      "model": "H3C S9850-32H",
+      "name": "BJ01-R15-AIDC-H3C-BIZ-AGG-02",
+      "asn": 65152,
+      "rack": 15
+    },
+    {
+      "role": "BIZ_ACCESS",
+      "scenario": "BIZACC",
+      "model": "H3C S6850-56HF",
+      "name": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "asn": 65141,
+      "mlag_pair": 1,
+      "mlag_system_number": 1,
+      "rack": 16
+    },
+    {
+      "role": "BIZ_ACCESS",
+      "scenario": "BIZACC",
+      "model": "H3C S6850-56HF",
+      "name": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "asn": 65142,
+      "mlag_pair": 1,
+      "mlag_system_number": 2,
+      "rack": 17
+    },
+    {
+      "role": "BIZ_ACCESS",
+      "scenario": "BIZACC",
+      "model": "H3C S6850-56HF",
+      "name": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "asn": 65143,
+      "mlag_pair": 2,
+      "mlag_system_number": 1,
+      "rack": 18
+    },
+    {
+      "role": "BIZ_ACCESS",
+      "scenario": "BIZACC",
+      "model": "H3C S6850-56HF",
+      "name": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "asn": 65144,
+      "mlag_pair": 2,
+      "mlag_system_number": 2,
+      "rack": 19
+    },
+    {
+      "role": "OOB_AGG",
+      "scenario": "OOBAGG",
+      "model": "H3C S6805-56HF-G",
+      "name": "BJ01-R20-AIDC-H3C-OOB-AGG-01",
+      "asn": 65161,
+      "rack": 20
+    },
+    {
+      "role": "OOB_ACCESS",
+      "scenario": "OOBACC",
+      "model": "H3C S5560X-54C-EI",
+      "name": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "asn": 65171,
+      "rack": 21
+    },
+    {
+      "role": "OOB_ACCESS",
+      "scenario": "OOBACC",
+      "model": "H3C S5560X-54C-EI",
+      "name": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "asn": 65172,
+      "rack": 22
+    }
+  ],
+  "connections": [
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/33",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/34",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/35",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/36",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/37",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/38",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/39",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/40",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/41",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/42",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/43",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/44",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/45",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/46",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/47",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/48",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/49",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/50",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/51",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/52",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/53",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/54",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/55",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/56",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/57",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/58",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/59",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/60",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/61",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/62",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/63",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "FourHundredGigE1/0/64",
+      "dst": "SPINE",
+      "rate": "400G",
+      "desc": "to-P-Spine-2"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/33",
+      "dst": "STO_SPINE",
+      "rate": "200G",
+      "desc": "to-S-Spine"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/33",
+      "dst": "STO_SPINE",
+      "rate": "200G",
+      "desc": "to-S-Spine"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "HundredGigE1/0/1",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-1"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "HundredGigE1/0/2",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-2"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "HundredGigE1/0/1",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-1"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "HundredGigE1/0/2",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-2"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "HundredGigE1/0/1",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-1"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "HundredGigE1/0/2",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-2"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "HundredGigE1/0/1",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-1"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "HundredGigE1/0/2",
+      "dst": "BIZ_AGG",
+      "rate": "100G",
+      "desc": "to-BIZ-AGG-2"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/25",
+      "dst": "OOB_AGG",
+      "rate": "1G",
+      "desc": "to-OOB-AGG",
+      "trunk": true
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/25",
+      "dst": "OOB_AGG",
+      "rate": "1G",
+      "desc": "to-OOB-AGG",
+      "trunk": true
+    }
+  ],
+  "terminals": [
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 100,
+      "desc": "GPU-R1-1"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 101,
+      "desc": "GPU-R1-2"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 100,
+      "desc": "GPU-R1-3"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 101,
+      "desc": "GPU-R1-4"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 100,
+      "desc": "GPU-R1-5"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 101,
+      "desc": "GPU-R1-6"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 100,
+      "desc": "GPU-R1-7"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 101,
+      "desc": "GPU-R1-8"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 100,
+      "desc": "GPU-R1-9"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 101,
+      "desc": "GPU-R1-10"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 100,
+      "desc": "GPU-R1-11"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 101,
+      "desc": "GPU-R1-12"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 100,
+      "desc": "GPU-R1-13"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 101,
+      "desc": "GPU-R1-14"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 100,
+      "desc": "GPU-R1-15"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 101,
+      "desc": "GPU-R1-16"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 100,
+      "desc": "GPU-R1-17"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 101,
+      "desc": "GPU-R1-18"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 100,
+      "desc": "GPU-R1-19"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 101,
+      "desc": "GPU-R1-20"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 100,
+      "desc": "GPU-R1-21"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 101,
+      "desc": "GPU-R1-22"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 100,
+      "desc": "GPU-R1-23"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 101,
+      "desc": "GPU-R1-24"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 100,
+      "desc": "GPU-R1-25"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 101,
+      "desc": "GPU-R1-26"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 100,
+      "desc": "GPU-R1-27"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 101,
+      "desc": "GPU-R1-28"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 100,
+      "desc": "GPU-R1-29"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 101,
+      "desc": "GPU-R1-30"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 100,
+      "desc": "GPU-R1-31"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 101,
+      "desc": "GPU-R1-32"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 100,
+      "desc": "GPU-R1-33"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 101,
+      "desc": "GPU-R1-34"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 100,
+      "desc": "GPU-R1-35"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 101,
+      "desc": "GPU-R1-36"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 100,
+      "desc": "GPU-R1-37"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 101,
+      "desc": "GPU-R1-38"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 100,
+      "desc": "GPU-R1-39"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 101,
+      "desc": "GPU-R1-40"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 100,
+      "desc": "GPU-R1-41"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 101,
+      "desc": "GPU-R1-42"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 100,
+      "desc": "GPU-R1-43"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 101,
+      "desc": "GPU-R1-44"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 100,
+      "desc": "GPU-R1-45"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 101,
+      "desc": "GPU-R1-46"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 100,
+      "desc": "GPU-R1-47"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 101,
+      "desc": "GPU-R1-48"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 100,
+      "desc": "GPU-R1-49"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 101,
+      "desc": "GPU-R1-50"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 100,
+      "desc": "GPU-R1-51"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 101,
+      "desc": "GPU-R1-52"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 100,
+      "desc": "GPU-R1-53"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 101,
+      "desc": "GPU-R1-54"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 100,
+      "desc": "GPU-R1-55"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 101,
+      "desc": "GPU-R1-56"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 100,
+      "desc": "GPU-R1-57"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 101,
+      "desc": "GPU-R1-58"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 100,
+      "desc": "GPU-R1-59"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 101,
+      "desc": "GPU-R1-60"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 100,
+      "desc": "GPU-R1-61"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 101,
+      "desc": "GPU-R1-62"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 100,
+      "desc": "GPU-R1-63"
+    },
+    {
+      "src": "BJ01-R03-AIDC-H3C-P-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 101,
+      "desc": "GPU-R1-64"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 102,
+      "desc": "GPU-R2-1"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 103,
+      "desc": "GPU-R2-2"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 102,
+      "desc": "GPU-R2-3"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 103,
+      "desc": "GPU-R2-4"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 102,
+      "desc": "GPU-R2-5"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 103,
+      "desc": "GPU-R2-6"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 102,
+      "desc": "GPU-R2-7"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 103,
+      "desc": "GPU-R2-8"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 102,
+      "desc": "GPU-R2-9"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 103,
+      "desc": "GPU-R2-10"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 102,
+      "desc": "GPU-R2-11"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 103,
+      "desc": "GPU-R2-12"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 102,
+      "desc": "GPU-R2-13"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 103,
+      "desc": "GPU-R2-14"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 102,
+      "desc": "GPU-R2-15"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 103,
+      "desc": "GPU-R2-16"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 102,
+      "desc": "GPU-R2-17"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 103,
+      "desc": "GPU-R2-18"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 102,
+      "desc": "GPU-R2-19"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 103,
+      "desc": "GPU-R2-20"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 102,
+      "desc": "GPU-R2-21"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 103,
+      "desc": "GPU-R2-22"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 102,
+      "desc": "GPU-R2-23"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 103,
+      "desc": "GPU-R2-24"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 102,
+      "desc": "GPU-R2-25"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 103,
+      "desc": "GPU-R2-26"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 102,
+      "desc": "GPU-R2-27"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 103,
+      "desc": "GPU-R2-28"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 102,
+      "desc": "GPU-R2-29"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 103,
+      "desc": "GPU-R2-30"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 102,
+      "desc": "GPU-R2-31"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 103,
+      "desc": "GPU-R2-32"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 102,
+      "desc": "GPU-R2-33"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 103,
+      "desc": "GPU-R2-34"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 102,
+      "desc": "GPU-R2-35"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 103,
+      "desc": "GPU-R2-36"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 102,
+      "desc": "GPU-R2-37"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 103,
+      "desc": "GPU-R2-38"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 102,
+      "desc": "GPU-R2-39"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 103,
+      "desc": "GPU-R2-40"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 102,
+      "desc": "GPU-R2-41"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 103,
+      "desc": "GPU-R2-42"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 102,
+      "desc": "GPU-R2-43"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 103,
+      "desc": "GPU-R2-44"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 102,
+      "desc": "GPU-R2-45"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 103,
+      "desc": "GPU-R2-46"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 102,
+      "desc": "GPU-R2-47"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 103,
+      "desc": "GPU-R2-48"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 102,
+      "desc": "GPU-R2-49"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 103,
+      "desc": "GPU-R2-50"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 102,
+      "desc": "GPU-R2-51"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 103,
+      "desc": "GPU-R2-52"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 102,
+      "desc": "GPU-R2-53"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 103,
+      "desc": "GPU-R2-54"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 102,
+      "desc": "GPU-R2-55"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 103,
+      "desc": "GPU-R2-56"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 102,
+      "desc": "GPU-R2-57"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 103,
+      "desc": "GPU-R2-58"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 102,
+      "desc": "GPU-R2-59"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 103,
+      "desc": "GPU-R2-60"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 102,
+      "desc": "GPU-R2-61"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 103,
+      "desc": "GPU-R2-62"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 102,
+      "desc": "GPU-R2-63"
+    },
+    {
+      "src": "BJ01-R04-AIDC-H3C-P-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 103,
+      "desc": "GPU-R2-64"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 104,
+      "desc": "GPU-R3-1"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 105,
+      "desc": "GPU-R3-2"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 104,
+      "desc": "GPU-R3-3"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 105,
+      "desc": "GPU-R3-4"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 104,
+      "desc": "GPU-R3-5"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 105,
+      "desc": "GPU-R3-6"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 104,
+      "desc": "GPU-R3-7"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 105,
+      "desc": "GPU-R3-8"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 104,
+      "desc": "GPU-R3-9"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 105,
+      "desc": "GPU-R3-10"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 104,
+      "desc": "GPU-R3-11"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 105,
+      "desc": "GPU-R3-12"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 104,
+      "desc": "GPU-R3-13"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 105,
+      "desc": "GPU-R3-14"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 104,
+      "desc": "GPU-R3-15"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 105,
+      "desc": "GPU-R3-16"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 104,
+      "desc": "GPU-R3-17"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 105,
+      "desc": "GPU-R3-18"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 104,
+      "desc": "GPU-R3-19"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 105,
+      "desc": "GPU-R3-20"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 104,
+      "desc": "GPU-R3-21"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 105,
+      "desc": "GPU-R3-22"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 104,
+      "desc": "GPU-R3-23"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 105,
+      "desc": "GPU-R3-24"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 104,
+      "desc": "GPU-R3-25"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 105,
+      "desc": "GPU-R3-26"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 104,
+      "desc": "GPU-R3-27"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 105,
+      "desc": "GPU-R3-28"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 104,
+      "desc": "GPU-R3-29"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 105,
+      "desc": "GPU-R3-30"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 104,
+      "desc": "GPU-R3-31"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 105,
+      "desc": "GPU-R3-32"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 104,
+      "desc": "GPU-R3-33"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 105,
+      "desc": "GPU-R3-34"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 104,
+      "desc": "GPU-R3-35"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 105,
+      "desc": "GPU-R3-36"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 104,
+      "desc": "GPU-R3-37"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 105,
+      "desc": "GPU-R3-38"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 104,
+      "desc": "GPU-R3-39"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 105,
+      "desc": "GPU-R3-40"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 104,
+      "desc": "GPU-R3-41"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 105,
+      "desc": "GPU-R3-42"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 104,
+      "desc": "GPU-R3-43"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 105,
+      "desc": "GPU-R3-44"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 104,
+      "desc": "GPU-R3-45"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 105,
+      "desc": "GPU-R3-46"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 104,
+      "desc": "GPU-R3-47"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 105,
+      "desc": "GPU-R3-48"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 104,
+      "desc": "GPU-R3-49"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 105,
+      "desc": "GPU-R3-50"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 104,
+      "desc": "GPU-R3-51"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 105,
+      "desc": "GPU-R3-52"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 104,
+      "desc": "GPU-R3-53"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 105,
+      "desc": "GPU-R3-54"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 104,
+      "desc": "GPU-R3-55"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 105,
+      "desc": "GPU-R3-56"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 104,
+      "desc": "GPU-R3-57"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 105,
+      "desc": "GPU-R3-58"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 104,
+      "desc": "GPU-R3-59"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 105,
+      "desc": "GPU-R3-60"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 104,
+      "desc": "GPU-R3-61"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 105,
+      "desc": "GPU-R3-62"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 104,
+      "desc": "GPU-R3-63"
+    },
+    {
+      "src": "BJ01-R05-AIDC-H3C-P-Leaf-03",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 105,
+      "desc": "GPU-R3-64"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 106,
+      "desc": "GPU-R4-1"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 107,
+      "desc": "GPU-R4-2"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 106,
+      "desc": "GPU-R4-3"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 107,
+      "desc": "GPU-R4-4"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 106,
+      "desc": "GPU-R4-5"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 107,
+      "desc": "GPU-R4-6"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 106,
+      "desc": "GPU-R4-7"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 107,
+      "desc": "GPU-R4-8"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 106,
+      "desc": "GPU-R4-9"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 107,
+      "desc": "GPU-R4-10"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 106,
+      "desc": "GPU-R4-11"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 107,
+      "desc": "GPU-R4-12"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 106,
+      "desc": "GPU-R4-13"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 107,
+      "desc": "GPU-R4-14"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 106,
+      "desc": "GPU-R4-15"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 107,
+      "desc": "GPU-R4-16"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 106,
+      "desc": "GPU-R4-17"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 107,
+      "desc": "GPU-R4-18"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 106,
+      "desc": "GPU-R4-19"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 107,
+      "desc": "GPU-R4-20"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 106,
+      "desc": "GPU-R4-21"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 107,
+      "desc": "GPU-R4-22"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 106,
+      "desc": "GPU-R4-23"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 107,
+      "desc": "GPU-R4-24"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 106,
+      "desc": "GPU-R4-25"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 107,
+      "desc": "GPU-R4-26"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 106,
+      "desc": "GPU-R4-27"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 107,
+      "desc": "GPU-R4-28"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 106,
+      "desc": "GPU-R4-29"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 107,
+      "desc": "GPU-R4-30"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 106,
+      "desc": "GPU-R4-31"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 107,
+      "desc": "GPU-R4-32"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 106,
+      "desc": "GPU-R4-33"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 107,
+      "desc": "GPU-R4-34"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 106,
+      "desc": "GPU-R4-35"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 107,
+      "desc": "GPU-R4-36"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 106,
+      "desc": "GPU-R4-37"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 107,
+      "desc": "GPU-R4-38"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 106,
+      "desc": "GPU-R4-39"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 107,
+      "desc": "GPU-R4-40"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 106,
+      "desc": "GPU-R4-41"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 107,
+      "desc": "GPU-R4-42"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 106,
+      "desc": "GPU-R4-43"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 107,
+      "desc": "GPU-R4-44"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 106,
+      "desc": "GPU-R4-45"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 107,
+      "desc": "GPU-R4-46"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 106,
+      "desc": "GPU-R4-47"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 107,
+      "desc": "GPU-R4-48"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 106,
+      "desc": "GPU-R4-49"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 107,
+      "desc": "GPU-R4-50"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 106,
+      "desc": "GPU-R4-51"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 107,
+      "desc": "GPU-R4-52"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 106,
+      "desc": "GPU-R4-53"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 107,
+      "desc": "GPU-R4-54"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 106,
+      "desc": "GPU-R4-55"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 107,
+      "desc": "GPU-R4-56"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 106,
+      "desc": "GPU-R4-57"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 107,
+      "desc": "GPU-R4-58"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 106,
+      "desc": "GPU-R4-59"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 107,
+      "desc": "GPU-R4-60"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 106,
+      "desc": "GPU-R4-61"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 107,
+      "desc": "GPU-R4-62"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 106,
+      "desc": "GPU-R4-63"
+    },
+    {
+      "src": "BJ01-R06-AIDC-H3C-P-Leaf-04",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 107,
+      "desc": "GPU-R4-64"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 108,
+      "desc": "GPU-R5-1"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 109,
+      "desc": "GPU-R5-2"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 108,
+      "desc": "GPU-R5-3"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 109,
+      "desc": "GPU-R5-4"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 108,
+      "desc": "GPU-R5-5"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 109,
+      "desc": "GPU-R5-6"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 108,
+      "desc": "GPU-R5-7"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 109,
+      "desc": "GPU-R5-8"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 108,
+      "desc": "GPU-R5-9"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 109,
+      "desc": "GPU-R5-10"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 108,
+      "desc": "GPU-R5-11"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 109,
+      "desc": "GPU-R5-12"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 108,
+      "desc": "GPU-R5-13"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 109,
+      "desc": "GPU-R5-14"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 108,
+      "desc": "GPU-R5-15"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 109,
+      "desc": "GPU-R5-16"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 108,
+      "desc": "GPU-R5-17"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 109,
+      "desc": "GPU-R5-18"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 108,
+      "desc": "GPU-R5-19"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 109,
+      "desc": "GPU-R5-20"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 108,
+      "desc": "GPU-R5-21"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 109,
+      "desc": "GPU-R5-22"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 108,
+      "desc": "GPU-R5-23"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 109,
+      "desc": "GPU-R5-24"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 108,
+      "desc": "GPU-R5-25"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 109,
+      "desc": "GPU-R5-26"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 108,
+      "desc": "GPU-R5-27"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 109,
+      "desc": "GPU-R5-28"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 108,
+      "desc": "GPU-R5-29"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 109,
+      "desc": "GPU-R5-30"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 108,
+      "desc": "GPU-R5-31"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 109,
+      "desc": "GPU-R5-32"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 108,
+      "desc": "GPU-R5-33"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 109,
+      "desc": "GPU-R5-34"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 108,
+      "desc": "GPU-R5-35"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 109,
+      "desc": "GPU-R5-36"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 108,
+      "desc": "GPU-R5-37"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 109,
+      "desc": "GPU-R5-38"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 108,
+      "desc": "GPU-R5-39"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 109,
+      "desc": "GPU-R5-40"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 108,
+      "desc": "GPU-R5-41"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 109,
+      "desc": "GPU-R5-42"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 108,
+      "desc": "GPU-R5-43"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 109,
+      "desc": "GPU-R5-44"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 108,
+      "desc": "GPU-R5-45"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 109,
+      "desc": "GPU-R5-46"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 108,
+      "desc": "GPU-R5-47"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 109,
+      "desc": "GPU-R5-48"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 108,
+      "desc": "GPU-R5-49"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 109,
+      "desc": "GPU-R5-50"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 108,
+      "desc": "GPU-R5-51"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 109,
+      "desc": "GPU-R5-52"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 108,
+      "desc": "GPU-R5-53"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 109,
+      "desc": "GPU-R5-54"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 108,
+      "desc": "GPU-R5-55"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 109,
+      "desc": "GPU-R5-56"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 108,
+      "desc": "GPU-R5-57"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 109,
+      "desc": "GPU-R5-58"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 108,
+      "desc": "GPU-R5-59"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 109,
+      "desc": "GPU-R5-60"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 108,
+      "desc": "GPU-R5-61"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 109,
+      "desc": "GPU-R5-62"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 108,
+      "desc": "GPU-R5-63"
+    },
+    {
+      "src": "BJ01-R07-AIDC-H3C-P-Leaf-05",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 109,
+      "desc": "GPU-R5-64"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 110,
+      "desc": "GPU-R6-1"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 111,
+      "desc": "GPU-R6-2"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 110,
+      "desc": "GPU-R6-3"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 111,
+      "desc": "GPU-R6-4"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 110,
+      "desc": "GPU-R6-5"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 111,
+      "desc": "GPU-R6-6"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 110,
+      "desc": "GPU-R6-7"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 111,
+      "desc": "GPU-R6-8"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 110,
+      "desc": "GPU-R6-9"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 111,
+      "desc": "GPU-R6-10"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 110,
+      "desc": "GPU-R6-11"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 111,
+      "desc": "GPU-R6-12"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 110,
+      "desc": "GPU-R6-13"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 111,
+      "desc": "GPU-R6-14"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 110,
+      "desc": "GPU-R6-15"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 111,
+      "desc": "GPU-R6-16"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 110,
+      "desc": "GPU-R6-17"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 111,
+      "desc": "GPU-R6-18"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 110,
+      "desc": "GPU-R6-19"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 111,
+      "desc": "GPU-R6-20"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 110,
+      "desc": "GPU-R6-21"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 111,
+      "desc": "GPU-R6-22"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 110,
+      "desc": "GPU-R6-23"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 111,
+      "desc": "GPU-R6-24"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 110,
+      "desc": "GPU-R6-25"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 111,
+      "desc": "GPU-R6-26"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 110,
+      "desc": "GPU-R6-27"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 111,
+      "desc": "GPU-R6-28"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 110,
+      "desc": "GPU-R6-29"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 111,
+      "desc": "GPU-R6-30"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 110,
+      "desc": "GPU-R6-31"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 111,
+      "desc": "GPU-R6-32"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 110,
+      "desc": "GPU-R6-33"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 111,
+      "desc": "GPU-R6-34"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 110,
+      "desc": "GPU-R6-35"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 111,
+      "desc": "GPU-R6-36"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 110,
+      "desc": "GPU-R6-37"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 111,
+      "desc": "GPU-R6-38"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 110,
+      "desc": "GPU-R6-39"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 111,
+      "desc": "GPU-R6-40"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 110,
+      "desc": "GPU-R6-41"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 111,
+      "desc": "GPU-R6-42"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 110,
+      "desc": "GPU-R6-43"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 111,
+      "desc": "GPU-R6-44"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 110,
+      "desc": "GPU-R6-45"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 111,
+      "desc": "GPU-R6-46"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 110,
+      "desc": "GPU-R6-47"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 111,
+      "desc": "GPU-R6-48"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 110,
+      "desc": "GPU-R6-49"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 111,
+      "desc": "GPU-R6-50"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 110,
+      "desc": "GPU-R6-51"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 111,
+      "desc": "GPU-R6-52"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 110,
+      "desc": "GPU-R6-53"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 111,
+      "desc": "GPU-R6-54"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 110,
+      "desc": "GPU-R6-55"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 111,
+      "desc": "GPU-R6-56"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 110,
+      "desc": "GPU-R6-57"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 111,
+      "desc": "GPU-R6-58"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 110,
+      "desc": "GPU-R6-59"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 111,
+      "desc": "GPU-R6-60"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 110,
+      "desc": "GPU-R6-61"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 111,
+      "desc": "GPU-R6-62"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 110,
+      "desc": "GPU-R6-63"
+    },
+    {
+      "src": "BJ01-R08-AIDC-H3C-P-Leaf-06",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 111,
+      "desc": "GPU-R6-64"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 112,
+      "desc": "GPU-R7-1"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 113,
+      "desc": "GPU-R7-2"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 112,
+      "desc": "GPU-R7-3"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 113,
+      "desc": "GPU-R7-4"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 112,
+      "desc": "GPU-R7-5"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 113,
+      "desc": "GPU-R7-6"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 112,
+      "desc": "GPU-R7-7"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 113,
+      "desc": "GPU-R7-8"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 112,
+      "desc": "GPU-R7-9"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 113,
+      "desc": "GPU-R7-10"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 112,
+      "desc": "GPU-R7-11"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 113,
+      "desc": "GPU-R7-12"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 112,
+      "desc": "GPU-R7-13"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 113,
+      "desc": "GPU-R7-14"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 112,
+      "desc": "GPU-R7-15"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 113,
+      "desc": "GPU-R7-16"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 112,
+      "desc": "GPU-R7-17"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 113,
+      "desc": "GPU-R7-18"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 112,
+      "desc": "GPU-R7-19"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 113,
+      "desc": "GPU-R7-20"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 112,
+      "desc": "GPU-R7-21"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 113,
+      "desc": "GPU-R7-22"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 112,
+      "desc": "GPU-R7-23"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 113,
+      "desc": "GPU-R7-24"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 112,
+      "desc": "GPU-R7-25"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 113,
+      "desc": "GPU-R7-26"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 112,
+      "desc": "GPU-R7-27"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 113,
+      "desc": "GPU-R7-28"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 112,
+      "desc": "GPU-R7-29"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 113,
+      "desc": "GPU-R7-30"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 112,
+      "desc": "GPU-R7-31"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 113,
+      "desc": "GPU-R7-32"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 112,
+      "desc": "GPU-R7-33"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 113,
+      "desc": "GPU-R7-34"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 112,
+      "desc": "GPU-R7-35"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 113,
+      "desc": "GPU-R7-36"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 112,
+      "desc": "GPU-R7-37"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 113,
+      "desc": "GPU-R7-38"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 112,
+      "desc": "GPU-R7-39"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 113,
+      "desc": "GPU-R7-40"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 112,
+      "desc": "GPU-R7-41"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 113,
+      "desc": "GPU-R7-42"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 112,
+      "desc": "GPU-R7-43"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 113,
+      "desc": "GPU-R7-44"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 112,
+      "desc": "GPU-R7-45"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 113,
+      "desc": "GPU-R7-46"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 112,
+      "desc": "GPU-R7-47"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 113,
+      "desc": "GPU-R7-48"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 112,
+      "desc": "GPU-R7-49"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 113,
+      "desc": "GPU-R7-50"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 112,
+      "desc": "GPU-R7-51"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 113,
+      "desc": "GPU-R7-52"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 112,
+      "desc": "GPU-R7-53"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 113,
+      "desc": "GPU-R7-54"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 112,
+      "desc": "GPU-R7-55"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 113,
+      "desc": "GPU-R7-56"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 112,
+      "desc": "GPU-R7-57"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 113,
+      "desc": "GPU-R7-58"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 112,
+      "desc": "GPU-R7-59"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 113,
+      "desc": "GPU-R7-60"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 112,
+      "desc": "GPU-R7-61"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 113,
+      "desc": "GPU-R7-62"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 112,
+      "desc": "GPU-R7-63"
+    },
+    {
+      "src": "BJ01-R09-AIDC-H3C-P-Leaf-07",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 113,
+      "desc": "GPU-R7-64"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/1:1",
+      "vlan": 114,
+      "desc": "GPU-R8-1"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/1:2",
+      "vlan": 115,
+      "desc": "GPU-R8-2"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/2:1",
+      "vlan": 114,
+      "desc": "GPU-R8-3"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/2:2",
+      "vlan": 115,
+      "desc": "GPU-R8-4"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/3:1",
+      "vlan": 114,
+      "desc": "GPU-R8-5"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/3:2",
+      "vlan": 115,
+      "desc": "GPU-R8-6"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/4:1",
+      "vlan": 114,
+      "desc": "GPU-R8-7"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/4:2",
+      "vlan": 115,
+      "desc": "GPU-R8-8"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/5:1",
+      "vlan": 114,
+      "desc": "GPU-R8-9"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/5:2",
+      "vlan": 115,
+      "desc": "GPU-R8-10"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/6:1",
+      "vlan": 114,
+      "desc": "GPU-R8-11"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/6:2",
+      "vlan": 115,
+      "desc": "GPU-R8-12"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/7:1",
+      "vlan": 114,
+      "desc": "GPU-R8-13"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/7:2",
+      "vlan": 115,
+      "desc": "GPU-R8-14"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/8:1",
+      "vlan": 114,
+      "desc": "GPU-R8-15"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/8:2",
+      "vlan": 115,
+      "desc": "GPU-R8-16"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/9:1",
+      "vlan": 114,
+      "desc": "GPU-R8-17"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/9:2",
+      "vlan": 115,
+      "desc": "GPU-R8-18"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/10:1",
+      "vlan": 114,
+      "desc": "GPU-R8-19"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/10:2",
+      "vlan": 115,
+      "desc": "GPU-R8-20"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/11:1",
+      "vlan": 114,
+      "desc": "GPU-R8-21"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/11:2",
+      "vlan": 115,
+      "desc": "GPU-R8-22"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/12:1",
+      "vlan": 114,
+      "desc": "GPU-R8-23"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/12:2",
+      "vlan": 115,
+      "desc": "GPU-R8-24"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/13:1",
+      "vlan": 114,
+      "desc": "GPU-R8-25"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/13:2",
+      "vlan": 115,
+      "desc": "GPU-R8-26"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/14:1",
+      "vlan": 114,
+      "desc": "GPU-R8-27"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/14:2",
+      "vlan": 115,
+      "desc": "GPU-R8-28"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/15:1",
+      "vlan": 114,
+      "desc": "GPU-R8-29"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/15:2",
+      "vlan": 115,
+      "desc": "GPU-R8-30"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/16:1",
+      "vlan": 114,
+      "desc": "GPU-R8-31"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/16:2",
+      "vlan": 115,
+      "desc": "GPU-R8-32"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/17:1",
+      "vlan": 114,
+      "desc": "GPU-R8-33"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/17:2",
+      "vlan": 115,
+      "desc": "GPU-R8-34"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/18:1",
+      "vlan": 114,
+      "desc": "GPU-R8-35"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/18:2",
+      "vlan": 115,
+      "desc": "GPU-R8-36"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/19:1",
+      "vlan": 114,
+      "desc": "GPU-R8-37"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/19:2",
+      "vlan": 115,
+      "desc": "GPU-R8-38"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/20:1",
+      "vlan": 114,
+      "desc": "GPU-R8-39"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/20:2",
+      "vlan": 115,
+      "desc": "GPU-R8-40"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/21:1",
+      "vlan": 114,
+      "desc": "GPU-R8-41"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/21:2",
+      "vlan": 115,
+      "desc": "GPU-R8-42"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/22:1",
+      "vlan": 114,
+      "desc": "GPU-R8-43"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/22:2",
+      "vlan": 115,
+      "desc": "GPU-R8-44"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/23:1",
+      "vlan": 114,
+      "desc": "GPU-R8-45"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/23:2",
+      "vlan": 115,
+      "desc": "GPU-R8-46"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/24:1",
+      "vlan": 114,
+      "desc": "GPU-R8-47"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/24:2",
+      "vlan": 115,
+      "desc": "GPU-R8-48"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/25:1",
+      "vlan": 114,
+      "desc": "GPU-R8-49"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/25:2",
+      "vlan": 115,
+      "desc": "GPU-R8-50"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/26:1",
+      "vlan": 114,
+      "desc": "GPU-R8-51"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/26:2",
+      "vlan": 115,
+      "desc": "GPU-R8-52"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/27:1",
+      "vlan": 114,
+      "desc": "GPU-R8-53"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/27:2",
+      "vlan": 115,
+      "desc": "GPU-R8-54"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/28:1",
+      "vlan": 114,
+      "desc": "GPU-R8-55"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/28:2",
+      "vlan": 115,
+      "desc": "GPU-R8-56"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/29:1",
+      "vlan": 114,
+      "desc": "GPU-R8-57"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/29:2",
+      "vlan": 115,
+      "desc": "GPU-R8-58"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/30:1",
+      "vlan": 114,
+      "desc": "GPU-R8-59"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/30:2",
+      "vlan": 115,
+      "desc": "GPU-R8-60"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/31:1",
+      "vlan": 114,
+      "desc": "GPU-R8-61"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/31:2",
+      "vlan": 115,
+      "desc": "GPU-R8-62"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/32:1",
+      "vlan": 114,
+      "desc": "GPU-R8-63"
+    },
+    {
+      "src": "BJ01-R10-AIDC-H3C-P-Leaf-08",
+      "src_port": "TwoHundredGigE1/0/32:2",
+      "vlan": 115,
+      "desc": "GPU-R8-64"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/1",
+      "vlan": 201,
+      "desc": "STO-1-1"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/2",
+      "vlan": 202,
+      "desc": "STO-1-2"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/3",
+      "vlan": 203,
+      "desc": "STO-1-3"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/4",
+      "vlan": 204,
+      "desc": "STO-1-4"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/5",
+      "vlan": 205,
+      "desc": "STO-1-5"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/6",
+      "vlan": 206,
+      "desc": "STO-1-6"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/7",
+      "vlan": 207,
+      "desc": "STO-1-7"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/8",
+      "vlan": 208,
+      "desc": "STO-1-8"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/9",
+      "vlan": 209,
+      "desc": "STO-1-9"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/10",
+      "vlan": 200,
+      "desc": "STO-1-10"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/11",
+      "vlan": 201,
+      "desc": "STO-1-11"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/12",
+      "vlan": 202,
+      "desc": "STO-1-12"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/13",
+      "vlan": 203,
+      "desc": "STO-1-13"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/14",
+      "vlan": 204,
+      "desc": "STO-1-14"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/15",
+      "vlan": 205,
+      "desc": "STO-1-15"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/16",
+      "vlan": 206,
+      "desc": "STO-1-16"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/17",
+      "vlan": 207,
+      "desc": "STO-1-17"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/18",
+      "vlan": 208,
+      "desc": "STO-1-18"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/19",
+      "vlan": 209,
+      "desc": "STO-1-19"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/20",
+      "vlan": 200,
+      "desc": "STO-1-20"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/21",
+      "vlan": 201,
+      "desc": "STO-1-21"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/22",
+      "vlan": 202,
+      "desc": "STO-1-22"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/23",
+      "vlan": 203,
+      "desc": "STO-1-23"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/24",
+      "vlan": 204,
+      "desc": "STO-1-24"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/25",
+      "vlan": 205,
+      "desc": "STO-1-25"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/26",
+      "vlan": 206,
+      "desc": "STO-1-26"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/27",
+      "vlan": 207,
+      "desc": "STO-1-27"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/28",
+      "vlan": 208,
+      "desc": "STO-1-28"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/29",
+      "vlan": 209,
+      "desc": "STO-1-29"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/30",
+      "vlan": 200,
+      "desc": "STO-1-30"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/31",
+      "vlan": 201,
+      "desc": "STO-1-31"
+    },
+    {
+      "src": "BJ01-R12-AIDC-H3C-S-Leaf-01",
+      "src_port": "TwoHundredGigE1/0/32",
+      "vlan": 202,
+      "desc": "STO-1-32"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/1",
+      "vlan": 201,
+      "desc": "STO-2-1"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/2",
+      "vlan": 202,
+      "desc": "STO-2-2"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/3",
+      "vlan": 203,
+      "desc": "STO-2-3"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/4",
+      "vlan": 204,
+      "desc": "STO-2-4"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/5",
+      "vlan": 205,
+      "desc": "STO-2-5"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/6",
+      "vlan": 206,
+      "desc": "STO-2-6"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/7",
+      "vlan": 207,
+      "desc": "STO-2-7"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/8",
+      "vlan": 208,
+      "desc": "STO-2-8"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/9",
+      "vlan": 209,
+      "desc": "STO-2-9"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/10",
+      "vlan": 200,
+      "desc": "STO-2-10"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/11",
+      "vlan": 201,
+      "desc": "STO-2-11"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/12",
+      "vlan": 202,
+      "desc": "STO-2-12"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/13",
+      "vlan": 203,
+      "desc": "STO-2-13"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/14",
+      "vlan": 204,
+      "desc": "STO-2-14"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/15",
+      "vlan": 205,
+      "desc": "STO-2-15"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/16",
+      "vlan": 206,
+      "desc": "STO-2-16"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/17",
+      "vlan": 207,
+      "desc": "STO-2-17"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/18",
+      "vlan": 208,
+      "desc": "STO-2-18"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/19",
+      "vlan": 209,
+      "desc": "STO-2-19"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/20",
+      "vlan": 200,
+      "desc": "STO-2-20"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/21",
+      "vlan": 201,
+      "desc": "STO-2-21"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/22",
+      "vlan": 202,
+      "desc": "STO-2-22"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/23",
+      "vlan": 203,
+      "desc": "STO-2-23"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/24",
+      "vlan": 204,
+      "desc": "STO-2-24"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/25",
+      "vlan": 205,
+      "desc": "STO-2-25"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/26",
+      "vlan": 206,
+      "desc": "STO-2-26"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/27",
+      "vlan": 207,
+      "desc": "STO-2-27"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/28",
+      "vlan": 208,
+      "desc": "STO-2-28"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/29",
+      "vlan": 209,
+      "desc": "STO-2-29"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/30",
+      "vlan": 200,
+      "desc": "STO-2-30"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/31",
+      "vlan": 201,
+      "desc": "STO-2-31"
+    },
+    {
+      "src": "BJ01-R13-AIDC-H3C-S-Leaf-02",
+      "src_port": "TwoHundredGigE1/0/32",
+      "vlan": 202,
+      "desc": "STO-2-32"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/1",
+      "vlan": 301,
+      "desc": "BIZ-1-1"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/2",
+      "vlan": 301,
+      "desc": "BIZ-1-2"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/3",
+      "vlan": 301,
+      "desc": "BIZ-1-3"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/4",
+      "vlan": 301,
+      "desc": "BIZ-1-4"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/5",
+      "vlan": 301,
+      "desc": "BIZ-1-5"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/6",
+      "vlan": 301,
+      "desc": "BIZ-1-6"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/7",
+      "vlan": 301,
+      "desc": "BIZ-1-7"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/8",
+      "vlan": 301,
+      "desc": "BIZ-1-8"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/9",
+      "vlan": 301,
+      "desc": "BIZ-1-9"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/10",
+      "vlan": 301,
+      "desc": "BIZ-1-10"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/11",
+      "vlan": 301,
+      "desc": "BIZ-1-11"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/12",
+      "vlan": 301,
+      "desc": "BIZ-1-12"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/13",
+      "vlan": 301,
+      "desc": "BIZ-1-13"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/14",
+      "vlan": 301,
+      "desc": "BIZ-1-14"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/15",
+      "vlan": 301,
+      "desc": "BIZ-1-15"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/16",
+      "vlan": 301,
+      "desc": "BIZ-1-16"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/17",
+      "vlan": 301,
+      "desc": "BIZ-1-17"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/18",
+      "vlan": 301,
+      "desc": "BIZ-1-18"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/19",
+      "vlan": 301,
+      "desc": "BIZ-1-19"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/20",
+      "vlan": 301,
+      "desc": "BIZ-1-20"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/21",
+      "vlan": 301,
+      "desc": "BIZ-1-21"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/22",
+      "vlan": 301,
+      "desc": "BIZ-1-22"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/23",
+      "vlan": 301,
+      "desc": "BIZ-1-23"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/24",
+      "vlan": 301,
+      "desc": "BIZ-1-24"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/25",
+      "vlan": 301,
+      "desc": "BIZ-1-25"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/26",
+      "vlan": 301,
+      "desc": "BIZ-1-26"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/27",
+      "vlan": 301,
+      "desc": "BIZ-1-27"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/28",
+      "vlan": 301,
+      "desc": "BIZ-1-28"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/29",
+      "vlan": 301,
+      "desc": "BIZ-1-29"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/30",
+      "vlan": 301,
+      "desc": "BIZ-1-30"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/31",
+      "vlan": 301,
+      "desc": "BIZ-1-31"
+    },
+    {
+      "src": "BJ01-R16-AIDC-H3C-BIZ-ACC-01",
+      "src_port": "Twenty-FiveGigE1/0/32",
+      "vlan": 301,
+      "desc": "BIZ-1-32"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/1",
+      "vlan": 300,
+      "desc": "BIZ-2-1"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/2",
+      "vlan": 300,
+      "desc": "BIZ-2-2"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/3",
+      "vlan": 300,
+      "desc": "BIZ-2-3"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/4",
+      "vlan": 300,
+      "desc": "BIZ-2-4"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/5",
+      "vlan": 300,
+      "desc": "BIZ-2-5"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/6",
+      "vlan": 300,
+      "desc": "BIZ-2-6"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/7",
+      "vlan": 300,
+      "desc": "BIZ-2-7"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/8",
+      "vlan": 300,
+      "desc": "BIZ-2-8"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/9",
+      "vlan": 300,
+      "desc": "BIZ-2-9"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/10",
+      "vlan": 300,
+      "desc": "BIZ-2-10"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/11",
+      "vlan": 300,
+      "desc": "BIZ-2-11"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/12",
+      "vlan": 300,
+      "desc": "BIZ-2-12"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/13",
+      "vlan": 300,
+      "desc": "BIZ-2-13"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/14",
+      "vlan": 300,
+      "desc": "BIZ-2-14"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/15",
+      "vlan": 300,
+      "desc": "BIZ-2-15"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/16",
+      "vlan": 300,
+      "desc": "BIZ-2-16"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/17",
+      "vlan": 300,
+      "desc": "BIZ-2-17"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/18",
+      "vlan": 300,
+      "desc": "BIZ-2-18"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/19",
+      "vlan": 300,
+      "desc": "BIZ-2-19"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/20",
+      "vlan": 300,
+      "desc": "BIZ-2-20"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/21",
+      "vlan": 300,
+      "desc": "BIZ-2-21"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/22",
+      "vlan": 300,
+      "desc": "BIZ-2-22"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/23",
+      "vlan": 300,
+      "desc": "BIZ-2-23"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/24",
+      "vlan": 300,
+      "desc": "BIZ-2-24"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/25",
+      "vlan": 300,
+      "desc": "BIZ-2-25"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/26",
+      "vlan": 300,
+      "desc": "BIZ-2-26"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/27",
+      "vlan": 300,
+      "desc": "BIZ-2-27"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/28",
+      "vlan": 300,
+      "desc": "BIZ-2-28"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/29",
+      "vlan": 300,
+      "desc": "BIZ-2-29"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/30",
+      "vlan": 300,
+      "desc": "BIZ-2-30"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/31",
+      "vlan": 300,
+      "desc": "BIZ-2-31"
+    },
+    {
+      "src": "BJ01-R17-AIDC-H3C-BIZ-ACC-02",
+      "src_port": "Twenty-FiveGigE1/0/32",
+      "vlan": 300,
+      "desc": "BIZ-2-32"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/1",
+      "vlan": 301,
+      "desc": "BIZ-3-1"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/2",
+      "vlan": 301,
+      "desc": "BIZ-3-2"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/3",
+      "vlan": 301,
+      "desc": "BIZ-3-3"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/4",
+      "vlan": 301,
+      "desc": "BIZ-3-4"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/5",
+      "vlan": 301,
+      "desc": "BIZ-3-5"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/6",
+      "vlan": 301,
+      "desc": "BIZ-3-6"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/7",
+      "vlan": 301,
+      "desc": "BIZ-3-7"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/8",
+      "vlan": 301,
+      "desc": "BIZ-3-8"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/9",
+      "vlan": 301,
+      "desc": "BIZ-3-9"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/10",
+      "vlan": 301,
+      "desc": "BIZ-3-10"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/11",
+      "vlan": 301,
+      "desc": "BIZ-3-11"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/12",
+      "vlan": 301,
+      "desc": "BIZ-3-12"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/13",
+      "vlan": 301,
+      "desc": "BIZ-3-13"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/14",
+      "vlan": 301,
+      "desc": "BIZ-3-14"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/15",
+      "vlan": 301,
+      "desc": "BIZ-3-15"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/16",
+      "vlan": 301,
+      "desc": "BIZ-3-16"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/17",
+      "vlan": 301,
+      "desc": "BIZ-3-17"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/18",
+      "vlan": 301,
+      "desc": "BIZ-3-18"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/19",
+      "vlan": 301,
+      "desc": "BIZ-3-19"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/20",
+      "vlan": 301,
+      "desc": "BIZ-3-20"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/21",
+      "vlan": 301,
+      "desc": "BIZ-3-21"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/22",
+      "vlan": 301,
+      "desc": "BIZ-3-22"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/23",
+      "vlan": 301,
+      "desc": "BIZ-3-23"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/24",
+      "vlan": 301,
+      "desc": "BIZ-3-24"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/25",
+      "vlan": 301,
+      "desc": "BIZ-3-25"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/26",
+      "vlan": 301,
+      "desc": "BIZ-3-26"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/27",
+      "vlan": 301,
+      "desc": "BIZ-3-27"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/28",
+      "vlan": 301,
+      "desc": "BIZ-3-28"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/29",
+      "vlan": 301,
+      "desc": "BIZ-3-29"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/30",
+      "vlan": 301,
+      "desc": "BIZ-3-30"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/31",
+      "vlan": 301,
+      "desc": "BIZ-3-31"
+    },
+    {
+      "src": "BJ01-R18-AIDC-H3C-BIZ-ACC-03",
+      "src_port": "Twenty-FiveGigE1/0/32",
+      "vlan": 301,
+      "desc": "BIZ-3-32"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/1",
+      "vlan": 300,
+      "desc": "BIZ-4-1"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/2",
+      "vlan": 300,
+      "desc": "BIZ-4-2"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/3",
+      "vlan": 300,
+      "desc": "BIZ-4-3"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/4",
+      "vlan": 300,
+      "desc": "BIZ-4-4"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/5",
+      "vlan": 300,
+      "desc": "BIZ-4-5"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/6",
+      "vlan": 300,
+      "desc": "BIZ-4-6"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/7",
+      "vlan": 300,
+      "desc": "BIZ-4-7"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/8",
+      "vlan": 300,
+      "desc": "BIZ-4-8"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/9",
+      "vlan": 300,
+      "desc": "BIZ-4-9"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/10",
+      "vlan": 300,
+      "desc": "BIZ-4-10"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/11",
+      "vlan": 300,
+      "desc": "BIZ-4-11"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/12",
+      "vlan": 300,
+      "desc": "BIZ-4-12"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/13",
+      "vlan": 300,
+      "desc": "BIZ-4-13"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/14",
+      "vlan": 300,
+      "desc": "BIZ-4-14"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/15",
+      "vlan": 300,
+      "desc": "BIZ-4-15"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/16",
+      "vlan": 300,
+      "desc": "BIZ-4-16"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/17",
+      "vlan": 300,
+      "desc": "BIZ-4-17"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/18",
+      "vlan": 300,
+      "desc": "BIZ-4-18"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/19",
+      "vlan": 300,
+      "desc": "BIZ-4-19"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/20",
+      "vlan": 300,
+      "desc": "BIZ-4-20"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/21",
+      "vlan": 300,
+      "desc": "BIZ-4-21"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/22",
+      "vlan": 300,
+      "desc": "BIZ-4-22"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/23",
+      "vlan": 300,
+      "desc": "BIZ-4-23"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/24",
+      "vlan": 300,
+      "desc": "BIZ-4-24"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/25",
+      "vlan": 300,
+      "desc": "BIZ-4-25"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/26",
+      "vlan": 300,
+      "desc": "BIZ-4-26"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/27",
+      "vlan": 300,
+      "desc": "BIZ-4-27"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/28",
+      "vlan": 300,
+      "desc": "BIZ-4-28"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/29",
+      "vlan": 300,
+      "desc": "BIZ-4-29"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/30",
+      "vlan": 300,
+      "desc": "BIZ-4-30"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/31",
+      "vlan": 300,
+      "desc": "BIZ-4-31"
+    },
+    {
+      "src": "BJ01-R19-AIDC-H3C-BIZ-ACC-04",
+      "src_port": "Twenty-FiveGigE1/0/32",
+      "vlan": 300,
+      "desc": "BIZ-4-32"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/1",
+      "vlan": 400,
+      "desc": "OOB-1-1"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/2",
+      "vlan": 400,
+      "desc": "OOB-1-2"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/3",
+      "vlan": 400,
+      "desc": "OOB-1-3"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/4",
+      "vlan": 400,
+      "desc": "OOB-1-4"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/5",
+      "vlan": 400,
+      "desc": "OOB-1-5"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/6",
+      "vlan": 400,
+      "desc": "OOB-1-6"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/7",
+      "vlan": 400,
+      "desc": "OOB-1-7"
+    },
+    {
+      "src": "BJ01-R21-AIDC-H3C-OOB-ACC-01",
+      "src_port": "GigabitEthernet1/0/8",
+      "vlan": 400,
+      "desc": "OOB-1-8"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/1",
+      "vlan": 400,
+      "desc": "OOB-2-1"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/2",
+      "vlan": 400,
+      "desc": "OOB-2-2"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/3",
+      "vlan": 400,
+      "desc": "OOB-2-3"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/4",
+      "vlan": 400,
+      "desc": "OOB-2-4"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/5",
+      "vlan": 400,
+      "desc": "OOB-2-5"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/6",
+      "vlan": 400,
+      "desc": "OOB-2-6"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/7",
+      "vlan": 400,
+      "desc": "OOB-2-7"
+    },
+    {
+      "src": "BJ01-R22-AIDC-H3C-OOB-ACC-02",
+      "src_port": "GigabitEthernet1/0/8",
+      "vlan": 400,
+      "desc": "OOB-2-8"
+    }
+  ],
+  "protocols": {
+    "ospf": {
+      "process": 10,
+      "area": "0.0.0.0"
+    },
+    "bgp": {
+      "asRange": [
+        65001,
+        65500
+      ],
+      "ecmp": 16
+    }
+  },
+  "convergence": {
+    "compute": 1.0,
+    "storage": 1.0,
+    "biz": 1.0
+  }
+}

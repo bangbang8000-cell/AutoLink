@@ -1,0 +1,16 @@
+{
+  "id": "H100-64台-IB",
+  "name": "H100-64台-IB（示例）",
+  "description": "64台H100 DGX 单POD IB（NDR 400G，NVIDIA Quantum-2 无阻塞）示例项目",
+  "scenario": "H100-64台-IB",
+  "tags": [
+    "H100",
+    "64台",
+    "IB",
+    "示例项目",
+    "单POD"
+  ],
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
+}

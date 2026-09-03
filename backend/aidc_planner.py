@@ -42,6 +42,7 @@ def plan_hash(macro: dict) -> str:
 # ---------------- 默认值（F10/F14/F16） ----------------
 DEFAULTS = {
     'site': 'BJ01',
+    'protocol': 'RoCE',       # 参数网协议（49-a：IB/RoCE 示例库，plan:table 自描述）
     'gpu_count': 64,          # 试点 64 台
     'pfc_queue': 3,           # F16
     'cnp_queue': 6,           # F16
@@ -119,6 +120,8 @@ def validate_macro(macro: dict) -> str | None:
     gpu = int(macro.get('gpu_count', macro.get('gpuCount', DEFAULTS['gpu_count'])))
     if gpu not in _SCALE:
         return f'GPU 规模 {gpu} 不在支持档位（{sorted(_SCALE)}）'
+    if 'protocol' in macro and str(macro['protocol']) not in ('IB', 'RoCE', 'UEC'):
+        return '协议仅支持 IB/RoCE/UEC'
     if 'convergence' in macro and not (0 < float(macro['convergence']) <= 4):
         return '收敛比须在 (0,4]'
     if 'rails' in macro and not (1 <= int(macro['rails']) <= 16):
@@ -241,6 +244,7 @@ def plan_aidc(macro: dict) -> dict:
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
     macro = {
         'site': site, 'gpuCount': gpu,
+        'protocol': m['protocol'],
         'pfcQueue': pfc, 'cnpQueue': cnp, 'bgpMaxPaths': m['bgp_max_paths'],
         'convergence': m['convergence'], 'rails': m['rails'],
         'naming': {'format': m['naming_format'], 'abbr': SCN_ABBR},

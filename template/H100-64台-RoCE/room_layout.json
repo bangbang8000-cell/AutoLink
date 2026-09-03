@@ -1,0 +1,588 @@
+{
+  "schemaVersion": 1,
+  "name": "H100-64台-RoCE机房",
+  "rows": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+  ],
+  "cols": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "cells": [
+    {
+      "row": "A",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 9,
+      "type": "network",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "A",
+      "col": 10,
+      "type": "network",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 9,
+      "type": "network",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "B",
+      "col": 10,
+      "type": "network",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 9,
+      "type": "storage",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "C",
+      "col": 10,
+      "type": "storage",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 9,
+      "type": "storage",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "D",
+      "col": 10,
+      "type": "storage",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 9,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "E",
+      "col": 10,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 9,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "F",
+      "col": 10,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 9,
+      "type": "empty",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "G",
+      "col": 10,
+      "type": "empty",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 9,
+      "type": "empty",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "H",
+      "col": 10,
+      "type": "empty",
+      "placeholder": null,
+      "cabinetId": null
+    }
+  ]
+}
