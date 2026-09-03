@@ -8,6 +8,9 @@
   E006 产物文件命名与设计模式匹配
   E007 设备清单/BOM 条目非空
   E008 批次完整性（manifest.files 逐文件：缺失/漂移/哈希不符）——48-e（F8-5）
+  E009 导出表头契约（设备清单/布线/BOM 表头与 exporter 列定义一致）——5.0.1-501-d
+  E010 设备清单「合计」数量 vs 设计设备总数——5.0.1-501-d
+  E011 布线指导表行数 vs 设计连接数——5.0.1-501-d
 
 collect_batch_stats 读取 output/<batch> 目录（manifest.json + xlsx 产物行数），
 供 check_export_batch 与门禁脚本复用。纯标准库 + openpyxl/pandas 读取，只读不改产物。
@@ -30,6 +33,30 @@ _FILE_PREFIXES = {
     'bom': 'BOM成本估算',
     'pdfReport': '设计报告',
 }
+
+# 5.0.1-501-d: 导出内容表头契约（与 backend/exporter.py 各导出函数列定义对齐，
+# 表头漂移即 E009 报错——保证渲染产物内容 schema 与设计器输出一致）
+_HEADER_CONTRACTS = {
+    'deviceList': {
+        'sheet': '设备清单',
+        'headers': ['设备类型', '厂商', '型号', '数量', '单机功耗(W)', 'U位高度', '总功耗(W)', '总U位'],
+    },
+    'cablingGuide': {
+        'sheet': '布线指导表',
+        'headers': ['网络类型', 'A端设备', 'A端端口', 'A端机柜', 'A端U位', 'Z端设备', 'Z端端口',
+                    'Z端机柜', 'Z端U位', '速率', '线缆类型', '1分2扇出', '光模块型号', '封装',
+                    '规格', '光纤类型', '支持距离(m)', '估算长度(m)', '价格区间', '估价低(元)',
+                    '估价高(元)', '描述'],
+    },
+    'bom': {
+        'sheet': 'BOM清单',
+        'headers': ['类别', '设备名称', '设备型号', '描述', '数量', '单位功率(W)', '价格区间',
+                    '供货周期', '估价低(元)', '估价高(元)', '估价低小计', '估价高小计'],
+    },
+}
+
+# 连接表为多 sheet 结构（exporter.export_all_connections），E009 校验关键 sheet 存在性
+_CONNECTIONS_REQUIRED_SHEETS = ('网络设计摘要', '服务器连接表', '参数网络连接表')
 
 
 def _read_json_file(path: str) -> Optional[Dict]:
@@ -57,6 +84,199 @@ def _xlsx_data_rows(path: str) -> int:
         return count
     except Exception:
         return -1
+
+
+def _xlsx_connection_rows(path: str) -> int:
+    """统计连接表多 sheet 总行数（5.0.1-501-d：E005 按连接 sheet 全量对账）。
+
+    连接表（exporter.export_all_connections）为多 sheet 结构：跨全部 sheet 求和，
+    排除「网络设计摘要」（摘要非连接）与「*汇聚视角」（反向视角为连接镜像，避免重复计数）。
+    异常返回 -1。
+    """
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True, data_only=True)
+        total = 0
+        try:
+            for sn in wb.sheetnames:
+                if sn == '网络设计摘要' or sn.endswith('视角'):
+                    continue
+                ws = wb[sn]
+                for i, row in enumerate(ws.iter_rows(values_only=True)):
+                    if i == 0:
+                        continue
+                    if any(v is not None and v != '' for v in row):
+                        total += 1
+            return total
+        finally:
+            wb.close()
+    except Exception:
+        return -1
+
+
+# ---------------- 5.0.1-501-d: 导出内容级校验（E009 表头 / E010 关键值 / E011 行数） ----------------
+
+def _read_sheet_headers(path: str, sheet_name: str) -> Optional[List[str]]:
+    """读取指定 sheet 首行表头；sheet 缺失返回 None，读取异常返回 None"""
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True, data_only=True)
+        try:
+            if sheet_name not in wb.sheetnames:
+                return None
+            ws = wb[sheet_name]
+            for row in ws.iter_rows(values_only=True):
+                return ['' if v is None else str(v) for v in row]
+            return []
+        finally:
+            wb.close()
+    except Exception:
+        return None
+
+
+def _xlsx_sheet_names(path: str) -> Optional[List[str]]:
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True)
+        try:
+            return list(wb.sheetnames)
+        finally:
+            wb.close()
+    except Exception:
+        return None
+
+
+def _device_list_total_qty(path: str) -> Optional[int]:
+    """读取设备清单「合计」行数量（关键值校验用）；异常返回 None"""
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True, data_only=True)
+        try:
+            ws = wb['设备清单']
+            rows = ws.iter_rows(values_only=True)
+            header = next(rows, None)
+            if not header:
+                return None
+            col = next((i for i, h in enumerate(header) if h == '设备类型'), None)
+            qty_col = next((i for i, h in enumerate(header) if h == '数量'), None)
+            if col is None or qty_col is None:
+                return None
+            for row in rows:
+                if row[col] == '合计':
+                    try:
+                        return int(row[qty_col])
+                    except (TypeError, ValueError):
+                        return None
+            return None
+        finally:
+            wb.close()
+    except Exception:
+        return None
+
+
+def check_export_content(batch_dir: str, design: Optional[Dict] = None) -> List[ValidationProblem]:
+    """5.0.1-501-d: 导出内容级校验——表头契约（E009）/关键值（E010）/行数一致（E011）。
+
+    在 E005（连接表行数）与 E007（非空）基础上补内容准确性：
+      - E009 表头契约：设备清单/布线指导/BOM 表头与 exporter 列定义一致；连接表关键 sheet 存在
+      - E010 关键值：设备清单「合计」数量 == 设计设备总数（servers + 各网交换机）
+      - E011 行数一致：布线指导表行数 == 设计连接数（与 E005 同口径）
+    """
+    problems: List[ValidationProblem] = []
+    if not os.path.isdir(batch_dir):
+        return problems
+    files = [f for f in os.listdir(batch_dir) if os.path.isfile(os.path.join(batch_dir, f))]
+
+    by_type: Dict[str, str] = {}
+    for key, prefix in _FILE_PREFIXES.items():
+        for f in files:
+            if f.startswith(prefix) and f.lower().endswith('.xlsx'):
+                by_type[key] = os.path.join(batch_dir, f)
+                break
+
+    # --- E009 表头契约 ---
+    for key, contract in _HEADER_CONTRACTS.items():
+        path = by_type.get(key)
+        if not path:
+            continue
+        hdr = _read_sheet_headers(path, contract['sheet'])
+        if hdr is None:
+            problems.append(ValidationProblem(
+                rule_id='E009',
+                severity=SEVERITY_ERROR,
+                category=CATEGORY_EXPORT,
+                location=f'{os.path.basename(path)} → sheet「{contract["sheet"]}」',
+                message=f'导出表头缺失：{os.path.basename(path)} 缺少 sheet「{contract["sheet"]}」',
+                suggestion='核对导出实现是否变更了 sheet 结构',
+                data={'file': os.path.basename(path), 'sheet': contract['sheet']},
+            ))
+        elif hdr != contract['headers']:
+            problems.append(ValidationProblem(
+                rule_id='E009',
+                severity=SEVERITY_ERROR,
+                category=CATEGORY_EXPORT,
+                location=f'{os.path.basename(path)} → sheet「{contract["sheet"]}」表头',
+                message=f'导出表头与契约不一致：{os.path.basename(path)}',
+                suggestion='导出列定义（exporter.py）变更后需同步 _HEADER_CONTRACTS，或核对渲染产物来源',
+                data={'file': os.path.basename(path), 'expected': contract['headers'], 'actual': hdr},
+            ))
+    conn_path = by_type.get('connections')
+    if conn_path:
+        sheet_names = _xlsx_sheet_names(conn_path) or []
+        missing = [s for s in _CONNECTIONS_REQUIRED_SHEETS if s not in sheet_names]
+        if missing:
+            problems.append(ValidationProblem(
+                rule_id='E009',
+                severity=SEVERITY_ERROR,
+                category=CATEGORY_EXPORT,
+                location=f'{os.path.basename(conn_path)}',
+                message=f'连接表缺少关键 sheet: {", ".join(missing)}',
+                suggestion='核对连接表导出是否完整生成各网络 sheet',
+                data={'file': os.path.basename(conn_path), 'missing': missing},
+            ))
+
+    # --- E010 设备清单「合计」数量 vs 设计设备总数 ---
+    if isinstance(design, dict):
+        nd = design.get('network_devices')
+        if isinstance(nd, dict) and nd:
+            try:
+                total = int(design.get('servers') or 0) + sum(
+                    int(v) for v in nd.values() if isinstance(v, (int, float, str)))
+            except (TypeError, ValueError):
+                total = None
+            path = by_type.get('deviceList')
+            if total is not None and path:
+                qty = _device_list_total_qty(path)
+                if qty is not None and qty != total:
+                    problems.append(ValidationProblem(
+                        rule_id='E010',
+                        severity=SEVERITY_ERROR,
+                        category=CATEGORY_EXPORT,
+                        location=f'{os.path.basename(path)}「合计」数量',
+                        message=f'设备清单合计数量（{qty}）与设计设备总数（{total}）不一致',
+                        suggestion='核对设备清单导出是否与当前设计一致，必要时重新渲染',
+                        data={'file': os.path.basename(path), 'total_qty': qty, 'design_total': total},
+                    ))
+
+    # --- E011 布线指导表行数 vs 设计连接数 ---
+    if isinstance(design, dict):
+        conns = design.get('connections')
+        if isinstance(conns, list) and conns:
+            path = by_type.get('cablingGuide')
+            if path:
+                rows = _xlsx_data_rows(path)
+                if rows >= 0 and rows != len(conns):
+                    problems.append(ValidationProblem(
+                        rule_id='E011',
+                        severity=SEVERITY_ERROR,
+                        category=CATEGORY_EXPORT,
+                        location=f'{os.path.basename(path)} 行数',
+                        message=f'布线指导表行数（{rows}）与设计连接数（{len(conns)}）不一致',
+                        suggestion='核对布线指导表导出是否完整，或设计变更后重新渲染',
+                        data={'file': os.path.basename(path), 'xlsx_rows': rows, 'design_connections': len(conns)},
+                    ))
+
+    return problems
 
 
 def collect_batch_stats(batch_dir: str) -> Dict[str, Any]:
@@ -103,7 +323,10 @@ def collect_batch_stats(batch_dir: str) -> Dict[str, Any]:
     for key, prefix in _FILE_PREFIXES.items():
         for f in stats['files']:
             if f.startswith(prefix) and f.lower().endswith('.xlsx'):
-                rows = _xlsx_data_rows(os.path.join(batch_dir, f))
+                # 5.0.1-501-d: 连接表按多 sheet 全量求和（排除摘要/反向视角），其余按活动 sheet
+                rows = (_xlsx_connection_rows(os.path.join(batch_dir, f))
+                        if key == 'connections'
+                        else _xlsx_data_rows(os.path.join(batch_dir, f)))
                 if key == 'connections':
                     stats['connection_rows'] = rows
                 elif key == 'deviceList':
@@ -360,5 +583,8 @@ def check_export_batch(batch_dir: str,
     # --- E008 批次完整性（48-e F8-5）：manifest.files 逐文件校验（缺失/漂移/哈希不符） ---
     if stats.get('has_files_manifest'):
         problems.extend(check_batch_integrity(batch_dir))
+
+    # --- 5.0.1-501-d: E009 表头契约 / E010 关键值 / E011 行数一致（导出内容级校验） ---
+    problems.extend(check_export_content(batch_dir, design))
 
     return problems

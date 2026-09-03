@@ -1,9 +1,9 @@
-"""4.5 D-2 导出数据核对测试（F5-2：渲染批次产物 vs 设计/规划漂移）"""
+"""4.5 D-2 导出数据核对测试（F5-2：渲染批次产物 vs 设计/规划漂移）+ 5.0.1-501-d 导出内容级校验"""
 import json
 
 import pytest
 
-from validation_engine import check_export_batch, collect_batch_stats
+from validation_engine import check_export_batch, collect_batch_stats, check_export_content
 
 
 def _write_xlsx(path, rows):
@@ -12,6 +12,63 @@ def _write_xlsx(path, rows):
     wb = Workbook()
     ws = wb.active
     ws.append(['A端设备', 'A端接口', 'Z端设备'])
+    for r in rows:
+        ws.append(list(r))
+    wb.save(path)
+    return path
+
+
+def _write_content_valid_xlsx(path, rows, sheets=('网络设计摘要', '服务器连接表', '参数网络连接表')):
+    """写入连接表（多 sheet，5.0.1-501-d E009 契约；摘要 sheet 仅表头，与真实导出一致）"""
+    from openpyxl import Workbook
+    wb = Workbook()
+    wb.remove(wb.active)
+    wrote_rows = False
+    for name in sheets:
+        ws = wb.create_sheet(name)
+        if name == '网络设计摘要':
+            ws.append(['项目', '值'])
+            continue  # 摘要不含连接行（与 exporter.export_all_connections 一致）
+        ws.append(['A端设备', 'A端接口', 'Z端设备'])
+        if not wrote_rows:
+            for r in rows:
+                ws.append(list(r))
+            wrote_rows = True  # 连接行集中第一个连接 sheet，保证总行数 = len(rows)
+    wb.save(path)
+    return path
+
+
+_DEVICE_LIST_HEADERS = ['设备类型', '厂商', '型号', '数量', '单机功耗(W)', 'U位高度', '总功耗(W)', '总U位']
+
+
+def _write_device_list_xlsx(path, group_rows=(), total_qty=None):
+    """写入设备清单（5.0.1-501-d E009/E010 契约）"""
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '设备清单'
+    ws.append(_DEVICE_LIST_HEADERS)
+    for r in group_rows:
+        ws.append(list(r))
+    if total_qty is not None:
+        ws.append(['合计', '', '', total_qty, '', '', 0, 0])
+    wb.save(path)
+    return path
+
+
+_CABLING_HEADERS = ['网络类型', 'A端设备', 'A端端口', 'A端机柜', 'A端U位', 'Z端设备', 'Z端端口',
+                    'Z端机柜', 'Z端U位', '速率', '线缆类型', '1分2扇出', '光模块型号', '封装',
+                    '规格', '光纤类型', '支持距离(m)', '估算长度(m)', '价格区间', '估价低(元)',
+                    '估价高(元)', '描述']
+
+
+def _write_cabling_xlsx(path, rows):
+    """写入布线指导表（5.0.1-501-d E009/E011 契约）"""
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '布线指导表'
+    ws.append(_CABLING_HEADERS)
     for r in rows:
         ws.append(list(r))
     wb.save(path)
@@ -148,12 +205,16 @@ class TestCheckExportBatch:
         batch.mkdir()
         (batch / 'manifest.json').write_text(
             json.dumps(_manifest(servers=64, param_leaves=8, param_spines=2)), encoding='utf-8')
-        _write_xlsx(batch / 'AI智算网络_full模式_1.xlsx', [('a', 'p1', 'b')] * 5)
-        _write_xlsx(batch / '设备清单_full模式_1.xlsx', [('gpu', 'h3c', 'x')] * 3)
+        # 5.0.1-501-d: 连接表/设备清单采用内容契约（多 sheet + 表头 + 合计数量）
+        _write_content_valid_xlsx(batch / 'AI智算网络_full模式_1.xlsx', [('a', 'p1', 'b')] * 5)
+        _write_device_list_xlsx(batch / '设备清单_full模式_1.xlsx',
+                                group_rows=[('GPU服务器', 'NVIDIA', 'DGX-H100', 64, 2000, 4, 0, 0)],
+                                total_qty=74)
         design = _design(servers=64, nets={'param_leaves': 8, 'param_spines': 2},
                          connections=[{'source': 'a', 'target': 'b'}] * 5)
         issues = check_export_batch(str(batch), design)
         assert not [i for i in issues if i.severity == 'error']
+        assert not [i for i in issues if i.rule_id in ('E009', 'E010', 'E011')]
 
 
 class TestBatchIntegrity:
@@ -224,3 +285,90 @@ class TestBatchIntegrity:
         problems = check_batch_integrity(str(batch))
         assert any(p.rule_id == 'E008' and '哈希不符' in p.message for p in problems)
         assert all(p.rule_id == 'E008' for p in problems)
+
+
+class TestExportContent:
+    """5.0.1-501-d: 导出内容级校验（E009 表头契约 / E010 关键值 / E011 行数一致）"""
+
+    _DESIGN = {
+        'servers': 64,
+        'network_devices': {'param_leaves': 8, 'param_spines': 2},
+        'connections': [{'source': 'a', 'target': 'b'}] * 5,
+    }
+
+    def test_clean_content_no_e009_e010_e011(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        _write_content_valid_xlsx(batch / 'AI智算网络_full模式_1.xlsx', [('a', 'p1', 'b')] * 5)
+        _write_device_list_xlsx(batch / '设备清单_full模式_1.xlsx', total_qty=74)
+        _write_cabling_xlsx(batch / '布线指导表_full模式_1.xlsx', [('param', 'a', 'p1', 'b', 'p2')] * 5)
+        problems = check_export_content(str(batch), self._DESIGN)
+        assert not [p for p in problems if p.rule_id in ('E009', 'E010', 'E011')]
+
+    def test_device_list_header_drift_e009(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        _write_content_valid_xlsx(batch / 'AI智算网络_full模式_1.xlsx', [])
+        _write_xlsx(batch / '设备清单_full模式_1.xlsx', [('gpu', 'h3c', 'x')])
+        problems = check_export_content(str(batch), self._DESIGN)
+        e009 = [p for p in problems if p.rule_id == 'E009']
+        assert any('表头' in p.message for p in e009)
+
+    def test_missing_device_list_sheet_e009(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        from openpyxl import Workbook
+        wb = Workbook()
+        wb.active.append(['设备类型', '厂商', '型号', '数量'])
+        wb.save(batch / '设备清单_full模式_1.xlsx')
+        problems = check_export_content(str(batch), self._DESIGN)
+        e009 = [p for p in problems if p.rule_id == 'E009']
+        assert any('缺少 sheet' in p.message or '表头' in p.message for p in e009)
+
+    def test_missing_connections_sheet_e009(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        _write_xlsx(batch / 'AI智算网络_full模式_1.xlsx', [('a', 'p1', 'b')])
+        problems = check_export_content(str(batch), self._DESIGN)
+        e009 = [p for p in problems if p.rule_id == 'E009']
+        assert any('关键 sheet' in p.message for p in e009)
+
+    def test_device_list_total_mismatch_e010(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        _write_device_list_xlsx(batch / '设备清单_full模式_1.xlsx', total_qty=60)
+        problems = check_export_content(str(batch), self._DESIGN)
+        e010 = [p for p in problems if p.rule_id == 'E010']
+        assert len(e010) == 1
+        assert '60' in e010[0].message and '74' in e010[0].message
+
+    def test_cabling_rows_mismatch_e011(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        _write_cabling_xlsx(batch / '布线指导表_full模式_1.xlsx', [('param', 'a', 'p1', 'b', 'p2')] * 3)
+        problems = check_export_content(str(batch), self._DESIGN)
+        e011 = [p for p in problems if p.rule_id == 'E011']
+        assert len(e011) == 1
+        assert '3' in e011[0].message and '5' in e011[0].message
+
+    def test_cabling_missing_sheet_e009(self, tmp_path):
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        from openpyxl import Workbook
+        wb = Workbook()
+        wb.active.append(['x'])
+        wb.save(batch / '布线指导表_full模式_1.xlsx')
+        problems = check_export_content(str(batch), self._DESIGN)
+        e009 = [p for p in problems if p.rule_id == 'E009']
+        assert any('布线指导表' in p.message or '表头' in p.message for p in e009)
+
+    def test_check_export_batch_runs_content_checks(self, tmp_path):
+        """check_export_batch 自动聚合 E009/E010/E011（5.0.1-501-d 接入门禁）"""
+        batch = tmp_path / 'v1_ts'
+        batch.mkdir()
+        (batch / 'manifest.json').write_text(json.dumps(_manifest()), encoding='utf-8')
+        _write_xlsx(batch / 'AI智算网络_full模式_1.xlsx', [('a', 'p1', 'b')])  # 缺关键 sheet → E009
+        _write_device_list_xlsx(batch / '设备清单_full模式_1.xlsx', total_qty=60)  # 合计不符 → E010
+        issues = check_export_batch(str(batch), self._DESIGN)
+        assert 'E009' in {i.rule_id for i in issues}
+        assert 'E010' in {i.rule_id for i in issues}

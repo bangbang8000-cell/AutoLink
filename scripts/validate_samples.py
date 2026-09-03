@@ -12,7 +12,9 @@
   7. room_layout.json：validate_room_layout 通过，gpu 分区格数 ≥ GPU 服务器数
   8. 导出：plan zip 交付包 + excel + json 可落盘；zip 内 plan.json 导入回灌
      往返一致（planHash 不变）
-  9. 协议差异：IB 收敛比 < RoCE 收敛比、设备型号不同、param_protocol 正确
+  9. 5.0.1-501-d：设计级导出（连接表/设备清单/布线/BOM）+ 内容级校验——E008 批次完整性、
+     E009 表头契约、E010 设备清单合计数量、E011 布线行数与设计一致
+  10. 协议差异：IB 收敛比 < RoCE 收敛比、设备型号不同、param_protocol 正确
 
 用法：
   python scripts/validate_samples.py
@@ -241,6 +243,29 @@ def validate_sample(name, tpl_dir):
                 problems.append('json 导出失败')
     except Exception as e:  # noqa: BLE001
         problems.append(f'导出/往返失败: {e}')
+
+    # 9. 5.0.1-501-d: 设计级导出 + 内容级校验（E008 批次完整性 + E009 表头 + E010 关键值 + E011 行数）
+    try:
+        from engine import handle_export
+        from validation_engine import build_design_dict, check_export_batch
+        with tempfile.TemporaryDirectory() as tmp:
+            exp = handle_export({
+                'configFile': os.path.join(tpl_dir, 'project_config.json'),
+                'outputDir': os.path.join(tmp, 'out'),
+                'outputTypes': ['connections', 'deviceList', 'cablingGuide', 'bom'],
+            })
+            batch = exp.get('outputDir')
+            if not batch or not os.path.isdir(batch):
+                problems.append('设计级导出失败：未生成批次目录')
+            else:
+                d_exp = d_json or NetworkDesignerV2(os.path.join(tpl_dir, 'project_config.json'))
+                export_errs = [i for i in check_export_batch(batch, build_design_dict(d_exp))
+                               if i.severity == 'error']
+                if export_errs:
+                    problems.append('导出内容校验: ' + '; '.join(
+                        f'{i.rule_id}:{i.message}' for i in export_errs[:8]))
+    except Exception as e:  # noqa: BLE001
+        problems.append(f'设计级导出/内容校验失败: {e}')
 
     return problems
 

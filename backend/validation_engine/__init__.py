@@ -21,7 +21,9 @@ from validation_engine.consistency import (
     check_render_consistency, run_consistency_checks,
     plan_gpu_count, plan_role_counts,
 )
-from validation_engine.export_check import collect_batch_stats, check_export_batch
+from validation_engine.export_check import (
+    collect_batch_stats, check_export_batch, check_export_content,
+)
 from validation_engine.ip_check import (
     check_ip_plan, validate_subnet, check_subnet_overlap,
     check_gateway_conflicts, check_allocations,
@@ -40,7 +42,7 @@ __all__ = [
     'check_plan_design_consistency', 'check_design_internal_consistency',
     'check_render_consistency', 'run_consistency_checks',
     'plan_gpu_count', 'plan_role_counts',
-    'collect_batch_stats', 'check_export_batch',
+    'collect_batch_stats', 'check_export_batch', 'check_export_content',
     'check_ip_plan', 'validate_subnet', 'check_subnet_overlap',
     'check_gateway_conflicts', 'check_allocations',
     'check_suggestion_accuracy', 'check_optimization_suggestions', 'check_ai_plan_claims',
