@@ -55,11 +55,11 @@ export function ChatPanel() {
       (aiConfig.providers[aiConfig.defaultProvider]?.apiKey || aiKeyConfigured[aiConfig.defaultProvider]),
   )
 
-  const handleSend = (content: string) => {
+  const handleSend = (content: string, workflow?: boolean) => {
     const store = useChatStore.getState()
     const mode = store.currentMode
     const attachments = [...store.pendingAttachments]
-    sendMessage(store, content, mode, attachments)
+    sendMessage(store, content, mode, attachments, undefined, workflow)
   }
 
   // 4.3 F3-2: 会话重命名提交

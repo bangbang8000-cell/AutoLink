@@ -44,6 +44,21 @@
     "confirmCard": "Operation `{{tool}}` requires confirmation. Continue?",
     "result": "Tool result"
   },
+  "workflow": {
+    "progressTitle": "Multi-step Task Progress",
+    "stepOf": "Step {{step}}/{{total}}",
+    "status": {
+      "planning": "Planning",
+      "executing": "Executing",
+      "awaitingStep": "Awaiting Approval",
+      "verifying": "Verifying",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "confirmCard": "Execute plan step {{step}}?",
+    "enableTitle": "Multi-step orchestration: Plan → Execute → Verify"
+  },
   "mock": {
     "general": "Hi! I'm the AutoLink AI assistant. I can help you with:\n\n- Automatic network topology design (IB / RoCE / UEC)\n- Scale estimation and convergence ratio checks\n- Data center room matrix planning and layout validation\n- Design config validation and fix suggestions\n- Deliverable export (connection tables / device lists / cabling guides / BOM / reports)\n\nConfigure a model service and API Key in Settings → AI for full capability.",
     "template": "Template help mode. Configure a model service in Settings → AI to get started.",

@@ -44,6 +44,21 @@
     "confirmCard": "操作「{{tool}}」需要确认，是否继续？",
     "result": "工具执行结果"
   },
+  "workflow": {
+    "progressTitle": "多步任务进度",
+    "stepOf": "步骤 {{step}}/{{total}}",
+    "status": {
+      "planning": "规划中",
+      "executing": "执行中",
+      "awaitingStep": "等待确认",
+      "verifying": "校验中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "confirmCard": "执行计划步骤 {{step}}，是否继续？",
+    "enableTitle": "多步任务编排：计划 → 执行 → 校验"
+  },
   "mock": {
     "general": "您好！我是 AutoLink AI 助手，可以帮助您：\n\n- 网络拓扑自动设计（IB / RoCE / UEC）\n- 规模估算与收敛比校验\n- 机房矩阵规划与布局校验\n- 设计配置校验与修复建议\n- 交付物导出（连接表/设备清单/布线指南/BOM/报告）\n\n请在「设置 → AI」中配置模型服务与 API Key 后获得完整能力。",
     "template": "当前处于模板帮助模式，可协助您查看与使用场景模板。请先在「设置 → AI」中配置模型服务。",

@@ -1,13 +1,14 @@
 /**
  * V3.1.1-T5-5: AI 对话输入框（附件 + textarea + 发送）
  */
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Paperclip, Send, Loader2, X } from 'lucide-react'
+import clsx from 'clsx'
+import { Paperclip, Send, Loader2, X, ListChecks } from 'lucide-react'
 import { useChatStore } from '@/stores/chat.store'
 
 interface Props {
-  onSend: (content: string) => void
+  onSend: (content: string, workflow?: boolean) => void
   disabled?: boolean
 }
 
@@ -20,12 +21,14 @@ export function ChatInput({ onSend, disabled }: Props) {
   const addAttachment = useChatStore((s) => s.addAttachment)
   const removeAttachment = useChatStore((s) => s.removeAttachment)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // 5.0.3-503-a: 多步任务编排开关（workflow 模式）
+  const [workflowEnabled, setWorkflowEnabled] = useState(false)
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (inputValue.trim() && !isSending) {
-        onSend(inputValue.trim())
+        onSend(inputValue.trim(), workflowEnabled)
       }
     }
   }
@@ -54,6 +57,20 @@ export function ChatInput({ onSend, disabled }: Props) {
       )}
 
       <div className="flex items-end gap-2">
+        {/* 5.0.3-503-a: 多步任务编排开关（workflow 模式） */}
+        <button
+          onClick={() => setWorkflowEnabled((v) => !v)}
+          className={clsx(
+            'p-2 rounded transition-colors',
+            workflowEnabled
+              ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-app-hover',
+          )}
+          title={t('chat:workflow.enableTitle')}
+          disabled={disabled || isSending}
+        >
+          <ListChecks size={16} />
+        </button>
         <button
           onClick={() => fileInputRef.current?.click()}
           className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-app-hover rounded transition-colors"
@@ -82,7 +99,7 @@ export function ChatInput({ onSend, disabled }: Props) {
           className="flex-1 resize-none rounded-md border border-edge-subtle bg-gray-50 dark:bg-app-hover px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary-400 max-h-[120px] min-h-[36px]"
         />
         <button
-          onClick={() => inputValue.trim() && onSend(inputValue.trim())}
+          onClick={() => inputValue.trim() && onSend(inputValue.trim(), workflowEnabled)}
           disabled={disabled || isSending || !inputValue.trim()}
           className="p-2 rounded-md bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title={t('chat:input.send')}

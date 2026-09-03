@@ -38,6 +38,8 @@ class AgentSession:
         self.engine: str = "own"
         # 4.3 F3-2: 待用户确认的工具调用（CONFIRM 权限分级，等待下一条回复确认/取消）
         self.pending_confirmation: dict | None = None
+        # 5.0.3-503-a: 会话进行中的多步任务（Plan→Execute→Verify 状态机，与引擎隔离兼容）
+        self.active_workflow: object | None = None
 
     def set_provider(self, name: Optional[str] = None):
         self.provider = registry.get(name)
@@ -207,6 +209,12 @@ class AgentSession:
 
             if not result.get("success", False):
                 error_msg = str(result.get("error", "未知错误"))
+                # 5.0.3-503-b: 技能工具失败 → 采集失败反馈（自学习）
+                try:
+                    from autolink_hub.skills.engine import record_tool_outcome
+                    record_tool_outcome(tool_name, tool_args, False, error_msg)
+                except Exception:  # noqa: BLE001
+                    pass
                 recovery = analyze_error(tool_name, tool_args, error_msg, available_tools)
                 yield f"\n> {recovery.message}\n\n"
                 if recovery.action == "retry" and retry_count < max_retries:
@@ -215,6 +223,13 @@ class AgentSession:
                 return
 
             tool_result = result.get("result")
+
+            # === 5.0.3-503-b: 技能自学习——工具执行成功后记录使用 + 采集反馈 ===
+            try:
+                from autolink_hub.skills.engine import record_tool_outcome
+                record_tool_outcome(tool_name, tool_args, True)
+            except Exception:  # noqa: BLE001
+                pass
 
             # === Agent v2: 更新上下文和记忆 ===
             if self.current_project:
@@ -426,3 +441,9 @@ def clear_session(session_id: str, engine: str = "own"):
     engine = (engine or "own").strip().lower()
     _sessions.pop((engine, session_id), None)
     clear_project_context(session_id)
+    # 5.0.3-503-a: 同步清空该会话的多步任务（懒加载避免循环依赖）
+    try:
+        from autolink_hub.agent.workflow import get_workflow_manager
+        get_workflow_manager().clear(session_id, engine)
+    except Exception:  # noqa: BLE001
+        pass

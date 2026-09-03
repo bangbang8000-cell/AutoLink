@@ -44,6 +44,21 @@
     "confirmCard": "작업 '{{tool}}'에 확인이 필요합니다. 계속하시겠습니까?",
     "result": "도구 실행 결과"
   },
+  "workflow": {
+    "progressTitle": "멀티스텝 작업 진행률",
+    "stepOf": "단계 {{step}}/{{total}}",
+    "status": {
+      "planning": "계획 중",
+      "executing": "실행 중",
+      "awaitingStep": "승인 대기",
+      "verifying": "검증 중",
+      "completed": "완료",
+      "failed": "실패",
+      "cancelled": "취소됨"
+    },
+    "confirmCard": "계획 단계 {{step}}을(를) 실행할까요?",
+    "enableTitle": "멀티스텝 오케스트레이션: 계획 → 실행 → 검증"
+  },
   "mock": {
     "general": "안녕하세요! AutoLink AI 어시스턴트입니다. 다음을 지원합니다:\n\n- 네트워크 토폴로지 자동 설계 (IB / RoCE / UEC)\n- 규모 추정 및 수렴비 검사\n- 데이터센터 룸 매트릭스 계획 및 레이아웃 검증\n- 설계 구성 검증 및 수정 제안\n- 결과물 내보내기 (연결표/장치 목록/배선 가이드/BOM/보고서)\n\n전체 기능을 사용하려면 설정 → AI에서 모델 서비스와 API Key를 구성하세요.",
     "template": "템플릿 도움말 모드입니다. 설정 → AI에서 모델 서비스를 구성하세요.",

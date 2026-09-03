@@ -357,6 +357,7 @@ export async function sendMessage(
   mode: ChatMode,
   attachments: ChatAttachment[],
   projectName?: string,
+  workflow?: boolean,
 ) {
   const sessionId = store.activeSessionId
   if (!sessionId) return
@@ -463,6 +464,8 @@ export async function sendMessage(
       autonomyMode: aiConfig.autonomyMode,
       projectName,
       engine: aiConfig.aiEngine,
+      // 5.0.3-503-a: 多步自主任务编排模式（own 引擎 Plan→Execute→Verify）
+      workflow: Boolean(workflow),
       attachments: attachments.length > 0
         ? attachments.map((a) => ({ id: a.id, name: a.name, type: a.type, path: a.path, size: a.size }))
         : undefined,
@@ -599,6 +602,54 @@ export function sendConfirmationReply(reply: '确认' | '取消', projectName?: 
       await sendMessage(store, reply, mode, [], projectName)
     } catch (e) {
       console.error('[chat.store] 确认/取消回复发送失败', e)
+    }
+  })()
+  return true
+}
+
+// ===== 5.0.3-503-a: 多步任务进度 + 步骤确认卡片（标记解析与回灌） =====
+
+/** 后端产出的任务进度标记行：---WORKFLOW:{json}---（取最后一个，即最新状态） */
+export function parseWorkflowMarker(content: string): Record<string, unknown> | null {
+  const rx = /---WORKFLOW:(.*?)---/g
+  let latest: Record<string, unknown> | null = null
+  let m: RegExpExecArray | null
+  while ((m = rx.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1])
+      if (parsed && typeof parsed === 'object' && typeof parsed.task_id === 'string') {
+        latest = parsed as Record<string, unknown>
+      }
+    } catch {
+      /* 忽略解析失败标记 */
+    }
+  }
+  return latest
+}
+
+/** 步骤审批标记：---STEP_CONFIRM:<task_id>:<step>---（渲染确认卡片时剥离标记行） */
+export function parseStepConfirmMarker(content: string): { taskId: string; step: number; displayContent: string } | null {
+  const rx = /(^|\n)---STEP_CONFIRM:([a-f0-9]+):(\d+)---(\n|$)/
+  const m = content.match(rx)
+  if (!m) return null
+  const displayContent = content.replace(rx, '\n').trim()
+  return { taskId: m[2], step: Number(m[3]), displayContent }
+}
+
+/**
+ * 5.0.3-503-a: 步骤审批回复回灌（workflow 模式，供后端 awaiting_step 任务续跑）。
+ * 以用户身份发送「确认」/「取消」并带 workflow=true；仅在空闲时发起，fire-and-forget。
+ */
+export function sendStepConfirmationReply(reply: '确认' | '取消', projectName?: string): boolean {
+  const store = useChatStore.getState()
+  if (store.isSending) return false
+  const session = store.getActiveSession()
+  const mode = session?.mode || store.currentMode
+  void (async () => {
+    try {
+      await sendMessage(store, reply, mode, [], projectName, true)
+    } catch (e) {
+      console.error('[chat.store] 步骤确认回复发送失败', e)
     }
   })()
   return true

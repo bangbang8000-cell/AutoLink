@@ -28,6 +28,7 @@ class ChatRequest(BaseModel):
     autonomy_mode: str = "semi_auto"
     project_name: Optional[str] = None
     engine: Optional[str] = None  # 5.0.2-502-b: AI 引擎（own/hermes/auto，缺省用配置）
+    workflow: bool = False  # 5.0.3-503-a: 多步自主任务编排模式（own 引擎驱动）
 
 
 class ProviderInfo(BaseModel):
@@ -114,15 +115,31 @@ async def send_message(req: ChatRequest):
 
     async def event_generator():
         try:
-            async for chunk in agent.stream_chat(
-                session_id=req.session_id,
-                message=req.message,
-                mode=req.mode,
-                provider=req.provider,
-                attachments=req.attachments,
-                autonomy_mode=req.autonomy_mode,
-                project_name=req.project_name,
-            ):
+            # 5.0.3-503-a: workflow 模式（own 引擎内部驱动 Plan→Execute→Verify 状态机，
+            # 不扩展 AgentProvider 抽象接口；hermes 引擎回退普通 stream_chat）
+            if req.workflow and agent.engine_name == ENGINE_OWN:
+                from autolink_hub.agent.workflow import run_workflow_chat
+                chunks = run_workflow_chat(
+                    session_id=req.session_id,
+                    message=req.message,
+                    mode=req.mode,
+                    provider=req.provider,
+                    attachments=req.attachments,
+                    autonomy_mode=req.autonomy_mode,
+                    project_name=req.project_name,
+                    engine=ENGINE_OWN,
+                )
+            else:
+                chunks = agent.stream_chat(
+                    session_id=req.session_id,
+                    message=req.message,
+                    mode=req.mode,
+                    provider=req.provider,
+                    attachments=req.attachments,
+                    autonomy_mode=req.autonomy_mode,
+                    project_name=req.project_name,
+                )
+            async for chunk in chunks:
                 yield {
                     "event": "message",
                     "data": json.dumps({"content": chunk}, ensure_ascii=False),
@@ -134,9 +151,17 @@ async def send_message(req: ChatRequest):
                 "data": json.dumps({"error": str(e)}, ensure_ascii=False),
             }
         finally:
+            # 5.0.3-503-a: done 事件附带会话任务状态（前端进度水合，含已完成/失败任务）
+            task = None
+            try:
+                from autolink_hub.agent.workflow import get_workflow_manager
+                task = get_workflow_manager().get(req.session_id, ENGINE_OWN)
+                task = task.snapshot() if task is not None else None
+            except Exception:  # noqa: BLE001
+                task = None
             yield {
                 "event": "done",
-                "data": json.dumps({"status": "completed"}, ensure_ascii=False),
+                "data": json.dumps({"status": "completed", "task": task}, ensure_ascii=False),
             }
 
     return EventSourceResponse(event_generator())
@@ -180,6 +205,78 @@ async def set_engine(req: SetEngineRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class WorkflowStatusResponse(BaseModel):
+    task: Optional[dict] = None
+
+
+@router.get("/workflow/status", response_model=WorkflowStatusResponse)
+async def workflow_status(session_id: str, engine: Optional[str] = None):
+    """5.0.3-503-a: 查询会话进行中的多步任务状态（Plan→Execute→Verify）"""
+    from autolink_hub.agent.provider import ENGINE_OWN
+    from autolink_hub.agent.workflow import get_workflow_manager
+    eng = (engine or ENGINE_OWN).strip().lower()
+    task = get_workflow_manager().get(session_id, eng)
+    return WorkflowStatusResponse(task=task.snapshot() if task is not None else None)
+
+
+# ============================================================
+# 5.0.3-503-c: MCP 工具接入管理端点（配置 CRUD + 工具同步状态）
+# ============================================================
+
+class McpAddRequest(BaseModel):
+    name: str
+    command: str
+    args: Optional[list] = None
+    env: Optional[dict] = None
+    enabled: bool = True
+    permission: str = "confirm"
+
+
+class McpNameRequest(BaseModel):
+    name: str
+
+
+@router.get("/mcp")
+async def mcp_list():
+    """MCP server 清单（配置 + 已发现工具 + 状态）"""
+    from autolink_hub.mcp.manager import get_mcp_manager, mcp_available
+    return {
+        "ok": True,
+        "sdk_installed": mcp_available(),
+        "servers": get_mcp_manager().list_servers(),
+    }
+
+
+@router.post("/mcp/add")
+async def mcp_add(req: McpAddRequest):
+    """新增/更新 MCP server 配置（持久化 + 同步工具）"""
+    from autolink_hub.mcp.manager import get_mcp_manager
+    result = await get_mcp_manager().add_server(
+        req.name, req.command, args=req.args, env=req.env,
+        enabled=req.enabled, permission=req.permission,
+    )
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("error", "添加 MCP server 失败"))
+    return result
+
+
+@router.post("/mcp/remove")
+async def mcp_remove(req: McpNameRequest):
+    """删除 MCP server 配置（取消注册其工具）"""
+    from autolink_hub.mcp.manager import get_mcp_manager
+    result = get_mcp_manager().remove_server(req.name)
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("error", "删除 MCP server 失败"))
+    return result
+
+
+@router.post("/mcp/reload")
+async def mcp_reload():
+    """重新同步全部 MCP server 工具（配置变更后调用）"""
+    from autolink_hub.mcp.manager import get_mcp_manager
+    return await get_mcp_manager().sync_all()
+
+
 class SaveSkillRequest(BaseModel):
     name: str
     content: str
@@ -207,6 +304,10 @@ async def clear_chat(session_id: str, engine: Optional[str] = None):
         agent = None
     if agent is not None:
         agent.clear_session(session_id)
+    # 5.0.3-503-a: 清除会话同时清空其多步任务（own 引擎）
+    from autolink_hub.agent.workflow import get_workflow_manager
+    eng = (engine_mode or "own").strip().lower()
+    get_workflow_manager().clear(session_id, eng)
     return {"status": "ok"}
 
 
