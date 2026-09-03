@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [4.9.0] - 2026-09-03
+
+### 4.9 示例资产与收官（4.0 系列收官版）
+
+- **四示例项目**：H100-64台-IB / H100-64台-RoCE / H100-128台-IB / H100-128台-RoCE（template.json + project_config.json + network_config.ini + plan.json + room_layout.json 五件套；IB 收敛比 1:1、RoCE 2:1；机房矩阵/机柜/宏观参数全配）
+- **模板中心整合**：isSample 徽标 + 摘要行 + 基于示例创建（room_layout 随建项目复制，5 语言）
+- **示例自动化验收**：validate_samples.py 门禁 + pytest 门禁 + E2E 建项目渲染 + golden 基线
+- **文档收官**：用户指南示例项目章节 + README 模板清单 23 套（含 4 套 H100 示例）
+
 ## [4.8.0] - 2026-09-02
 
 ### 4.8 互操作与交付强化
