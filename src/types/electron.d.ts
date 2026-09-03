@@ -51,6 +51,8 @@ interface Window {
       getConfig: (templateName: string) => Promise<import('@/types/project-config').ProjectConfig | null>
       list: () => Promise<Array<{
         id: string; name: string; description: string; scenario: string; tags: string[]; updatedAt: string; isBuiltin: boolean
+        // 49-c（示例资产）：isSample=true 标记内置示例模板（模板中心高亮）
+        isSample?: boolean
         summary: {
           numGpuServers: number; numAllFlashStorage: number; numHybridFlashStorage: number; numComputeServers: number
           paramProtocol: string; paramSpeed: string; storageSpeed: string; powerLimitPerRack: number

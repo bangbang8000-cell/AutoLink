@@ -216,6 +216,7 @@
     "batchExport": "Batch Export Projects"
   },
   "template": {
+    "sample": "Sample",
     "edit": "Edit Template",
     "name": "Template Name",
     "description": "Description",

@@ -574,6 +574,11 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       if (fs.existsSync(tplPlan)) {
         fs.copyFileSync(tplPlan, path.join(projectDir, 'plan.json'))
       }
+      // 49-a（示例资产）：模板带 room_layout.json 时一并复制（机房矩阵默认布局）
+      const tplRoom = path.join(tplDir, 'room_layout.json')
+      if (fs.existsSync(tplRoom)) {
+        fs.copyFileSync(tplRoom, path.join(projectDir, 'room_layout.json'))
+      }
     } else {
       const defaultConfig = path.join(getBackendPath(), 'network_config.ini')
       if (fs.existsSync(defaultConfig)) {
@@ -2152,6 +2157,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     scenario?: string
     tags?: string[]
     isBuiltin?: boolean
+    // 49-c（示例资产）：isSample=true 标记内置示例模板
+    isSample?: boolean
     createdAt?: string
     updatedAt?: string
     sourceProject?: string
@@ -2203,6 +2210,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
             tags: meta.tags || [],
             updatedAt: meta.updatedAt || meta.createdAt || '',
             isBuiltin: isBuiltin || !!meta.isBuiltin,
+            // 49-c（示例资产）：isSample=true 模板中心高亮「示例」徽标
+            isSample: !!meta.isSample,
             summary: readSummary(path.join(tplDir, e.name)),
           }
         })

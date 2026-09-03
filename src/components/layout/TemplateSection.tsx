@@ -34,6 +34,8 @@ interface TemplateItem {
   scenario?: string
   tags?: string[]
   isBuiltin?: boolean
+  // 49-c（示例资产）：isSample=true 内置示例模板（高亮「示例」徽标）
+  isSample?: boolean
   summary?: TemplateSummary | null
 }
 
@@ -260,6 +262,11 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
                   <span className="flex flex-col min-w-0">
                     <span className="flex items-center gap-1.5 min-w-0">
                       <span className="truncate">{tpl.name}</span>
+                      {tpl.isSample && (
+                        <span className="shrink-0 text-3xs bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-1 rounded">
+                          {t('common:template.sample', '示例')}
+                        </span>
+                      )}
                       {tpl.isBuiltin && (
                         <span className="shrink-0 text-3xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1 rounded">
                           {t('common:template.builtin', '内置')}

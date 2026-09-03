@@ -216,6 +216,7 @@
     "batchExport": "批量导出项目"
   },
   "template": {
+    "sample": "示例",
     "edit": "编辑模板",
     "name": "模板名称",
     "description": "描述",

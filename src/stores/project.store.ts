@@ -30,6 +30,8 @@ export interface TemplateInfo {
   tags: string[]
   updatedAt: string
   isBuiltin?: boolean
+  // 49-c（示例资产）：isSample=true 标记内置示例模板（模板中心高亮）
+  isSample?: boolean
   // V2.9.7-T1: 模板规模摘要（无 project_config.json 时为 null）
   summary?: {
     numGpuServers: number

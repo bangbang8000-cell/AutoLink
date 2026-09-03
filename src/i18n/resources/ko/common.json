@@ -216,6 +216,7 @@
     "batchExport": "프로젝트 일괄 내보내기"
   },
   "template": {
+    "sample": "예시",
     "edit": "템플릿 편집",
     "name": "템플릿 이름",
     "description": "설명",

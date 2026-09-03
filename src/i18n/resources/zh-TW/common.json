@@ -216,6 +216,7 @@
     "batchExport": "批量匯出專案"
   },
   "template": {
+    "sample": "範例",
     "edit": "編輯範本",
     "name": "範本名稱",
     "description": "描述",

@@ -216,6 +216,7 @@
     "batchExport": "プロジェクト一括エクスポート"
   },
   "template": {
+    "sample": "サンプル",
     "edit": "テンプレート編集",
     "name": "テンプレート名",
     "description": "説明",
