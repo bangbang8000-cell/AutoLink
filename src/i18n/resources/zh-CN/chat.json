@@ -30,7 +30,12 @@
       "noModel": "请先在「设置 → AI」中配置模型服务与 API Key",
       "hubFailed": "AI 服务启动失败",
       "timeout": "连接超时",
-      "unknown": "发生未知错误"
+      "unknown": "发生未知错误",
+      "hermesNotInstalled": "Hermes 引擎未安装，无法使用该引擎对话。请按下方指引安装后重试。"
+    },
+    "hint": {
+      "hermesTitle": "Hermes 安装指引",
+      "hermesInstallGuide": "请在终端执行：\n\n```bash\npip install hermes-agent\n```\n\n项目地址：https://github.com/NousResearch/hermes-agent\n\n安装完成后重启 AI Hub 即可启用 Hermes。"
     }
   },
   "tool": {

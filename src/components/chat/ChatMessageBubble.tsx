@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import type { ChatMessage } from '@/types/chat'
-import { useChatStore, parseConfirmationMarker, sendConfirmationReply } from '@/stores/chat.store'
+import { useChatStore, parseConfirmationMarker, sendConfirmationReply, parseHermesInstallMarker } from '@/stores/chat.store'
 import { useProjectStore } from '@/stores/project.store'
 import { PlanDisplay, parsePlanSteps } from './PlanDisplay'
 import { ProjectConfigPreview, parseProjectConfigBlock } from './ProjectConfigPreview'
@@ -35,7 +35,12 @@ export function ChatMessageBubble({ message }: Props) {
     () => (isUser || isSystem ? null : parseConfirmationMarker(message.content)),
     [message.content, isUser, isSystem],
   )
-  const displayContent = confirmation ? confirmation.displayContent : message.content
+  // 5.0.2-502-c: 解析 Hermes 安装指引标记（渲染提示卡片时剥离标记行）
+  const hermesHint = useMemo(
+    () => (isUser || isSystem ? null : parseHermesInstallMarker(message.content)),
+    [message.content, isUser, isSystem],
+  )
+  const displayContent = confirmation ? confirmation.displayContent : hermesHint ? hermesHint.displayContent : message.content
   const isSending = useChatStore((s) => s.isSending)
 
   // 4.3 F3-2: 确认/取消按钮回灌；空闲时才发送，发送后卡片立即消失
@@ -132,6 +137,24 @@ export function ChatMessageBubble({ message }: Props) {
               <X size={12} />
               {t('common:cancel')}
             </button>
+          </div>
+        )}
+
+        {/* 5.0.2-502-c: Hermes 未安装安装指引卡片 */}
+        {hermesHint && (
+          <div
+            className={clsx(
+              'mt-2 w-full px-3 py-2.5 rounded-lg border text-xs',
+              'border-fuchsia-300 dark:border-fuchsia-700 bg-fuchsia-50 dark:bg-fuchsia-900/20',
+            )}
+          >
+            <div className="flex items-center gap-1.5 font-medium text-fuchsia-800 dark:text-fuchsia-200">
+              <Bot size={12} />
+              {t('chat:aihub.hint.hermesTitle')}
+            </div>
+            <div className="mt-1.5 whitespace-pre-wrap text-fuchsia-700 dark:text-fuchsia-300">
+              {t('chat:aihub.hint.hermesInstallGuide')}
+            </div>
           </div>
         )}
       </div>

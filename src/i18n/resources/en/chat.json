@@ -30,7 +30,12 @@
       "noModel": "Configure a model service and API Key in Settings → AI first",
       "hubFailed": "Failed to start AI service",
       "timeout": "Connection timed out",
-      "unknown": "Unknown error"
+      "unknown": "Unknown error",
+      "hermesNotInstalled": "The Hermes engine is not installed, so this engine cannot be used for chat. Install it using the guide below and retry."
+    },
+    "hint": {
+      "hermesTitle": "Hermes Installation Guide",
+      "hermesInstallGuide": "Run the following in your terminal:\n\n```bash\npip install hermes-agent\n```\n\nProject: https://github.com/NousResearch/hermes-agent\n\nRestart AI Hub after installing to enable Hermes."
     }
   },
   "tool": {

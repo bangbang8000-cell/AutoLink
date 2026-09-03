@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useChatStore, sendMessage, resetSyncedProviderConfigs } from '@/stores/chat.store'
+import {
+  useChatStore, sendMessage, resetSyncedProviderConfigs,
+  isHermesNotInstalledError, buildHermesNotInstalledMessage, parseHermesInstallMarker,
+} from '@/stores/chat.store'
 import { useUIStore } from '@/stores/ui.store'
 
 /** 构造 aihub 桥接 mock（chat/onStream/config/configDefault） */
@@ -283,6 +286,47 @@ describe('ChatStore', () => {
       // 再发一次（配置未再变）→ 不再下发
       await sendMessage(useChatStore.getState(), 'c', 'general', [])
       expect(mock.config).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('Hermes 未安装提示（5.0.2-502-c）', () => {
+    it('isHermesNotInstalledError 识别后端友好错误（含 pip install / 未安装）', () => {
+      expect(isHermesNotInstalledError('AI Hub 请求失败: 400 {"detail":"Hermes 引擎未安装。请先执行 `pip install hermes-agent` 安装"}')).toBe(true)
+      expect(isHermesNotInstalledError('hermes is not installed, run pip install hermes-agent')).toBe(true)
+      // 其他错误不误判
+      expect(isHermesNotInstalledError('Provider 不可用，请先配置 API Key')).toBe(false)
+      expect(isHermesNotInstalledError('')).toBe(false)
+    })
+
+    it('buildHermesNotInstalledMessage 含安装指引卡片标记与友好文案', () => {
+      const msg = buildHermesNotInstalledMessage()
+      expect(msg).toContain('---HERMES_INSTALL_HINT---')
+      expect(msg).toContain('Hermes')
+      expect(msg).toContain('未安装')
+    })
+
+    it('parseHermesInstallMarker 剥离标记行并保留展示内容', () => {
+      const content = `---HERMES_INSTALL_HINT---\n\n> ⚠️ Hermes 引擎未安装`
+      const parsed = parseHermesInstallMarker(content)
+      expect(parsed).not.toBeNull()
+      expect(parsed!.displayContent).toContain('Hermes 引擎未安装')
+      expect(parsed!.displayContent).not.toContain('---HERMES_INSTALL_HINT---')
+      expect(parseHermesInstallMarker('普通回复')).toBeNull()
+      expect(parseHermesInstallMarker('')).toBeNull()
+    })
+
+    it('选 Hermes 但未安装 → 友好错误 + 提示卡片（不降级 mock）', async () => {
+      const mock = makeAiHubMock(async () => {
+        throw new Error('AI Hub 请求失败: 400 {"detail":"Hermes 引擎未安装。请先执行 `pip install hermes-agent` 安装"}')
+      })
+      globalThis.window.electron = { aihub: mock } as never
+      useChatStore.getState().createSession()
+      await sendMessage(useChatStore.getState(), '你好', 'general', [])
+      const aiMsg = useChatStore.getState().getActiveSession()!.messages.find((m) => m.role === 'assistant')
+      expect(aiMsg).toBeDefined()
+      expect(aiMsg!.content).toContain('---HERMES_INSTALL_HINT---')
+      expect(aiMsg!.content).not.toBe('')  // 不降级为空
+      expect(useChatStore.getState().isSending).toBe(false)
     })
   })
 })

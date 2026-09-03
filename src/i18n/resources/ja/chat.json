@@ -30,7 +30,12 @@
       "noModel": "設定 → AI でモデルサービスと API Key を先に設定してください",
       "hubFailed": "AI サービスの起動に失敗しました",
       "timeout": "接続タイムアウト",
-      "unknown": "不明なエラー"
+      "unknown": "不明なエラー",
+      "hermesNotInstalled": "Hermes エンジンがインストールされていないため、このエンジンで会話できません。下記の手順でインストールしてから再試行してください。"
+    },
+    "hint": {
+      "hermesTitle": "Hermes インストール手順",
+      "hermesInstallGuide": "ターミナルで実行してください：\n\n```bash\npip install hermes-agent\n```\n\nプロジェクト：https://github.com/NousResearch/hermes-agent\n\nインストール後に AI Hub を再起動すると Hermes が有効になります。"
     }
   },
   "tool": {
