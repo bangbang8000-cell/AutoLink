@@ -4,12 +4,12 @@
     "site": "BJ01",
     "version": "1.2",
     "schema": "plan:table/1.2",
-    "generatedAt": "2026-09-03T02:20:11+00:00",
+    "generatedAt": "2026-09-03T10:02:12+00:00",
     "source": "autolink",
     "projectType": "aidc",
     "bridgeVersion": "1.0",
     "projectId": "49a-64-ib-0001",
-    "planHash": "6ee68390a273435186d9724347feac54bae50b980e87c6284806bd80a847ff3d",
+    "planHash": "2facc0067fabc376ab13ffa5cc171027c5a56a1602fec53fb3c1f59cff487d01",
     "planVersion": 1,
     "projectName": "H100-64台-IB"
   },
@@ -70,8 +70,8 @@
       "area": "0.0.0.0"
     },
     "deviceModels": {
-      "SPINE": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
-      "LEAF": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "SPINE": "NVIDIA MQM9700-NS2F (Quantum-2)",
+      "LEAF": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "STO_SPINE": "H3C S9825-128B",
       "STO_LEAF": "H3C S9825-128B",
       "BIZ_AGG": "H3C S9850-32H",
@@ -95,7 +95,7 @@
     {
       "role": "SPINE",
       "scenario": "SPINE",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R01-AIDC-H3C-P-Spine-01",
       "asn": 65111,
       "rack": 1
@@ -103,7 +103,7 @@
     {
       "role": "SPINE",
       "scenario": "SPINE",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R02-AIDC-H3C-P-Spine-02",
       "asn": 65112,
       "rack": 2
@@ -111,7 +111,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R03-AIDC-H3C-P-Leaf-01",
       "asn": 65101,
       "gateways": [
@@ -123,7 +123,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R04-AIDC-H3C-P-Leaf-02",
       "asn": 65102,
       "gateways": [
@@ -135,7 +135,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R05-AIDC-H3C-P-Leaf-03",
       "asn": 65103,
       "gateways": [
@@ -147,7 +147,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R06-AIDC-H3C-P-Leaf-04",
       "asn": 65104,
       "gateways": [
@@ -159,7 +159,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R07-AIDC-H3C-P-Leaf-05",
       "asn": 65105,
       "gateways": [
@@ -171,7 +171,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R08-AIDC-H3C-P-Leaf-06",
       "asn": 65106,
       "gateways": [
@@ -183,7 +183,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R09-AIDC-H3C-P-Leaf-07",
       "asn": 65107,
       "gateways": [
@@ -195,7 +195,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)",
+      "model": "NVIDIA MQM9700-NS2F (Quantum-2)",
       "name": "BJ01-R10-AIDC-H3C-P-Leaf-08",
       "asn": 65108,
       "gateways": [

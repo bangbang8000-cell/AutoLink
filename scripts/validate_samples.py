@@ -37,6 +37,18 @@ BASE = os.path.join(os.path.dirname(__file__), '..', 'template')
 PLAN_REQUIRED_SECTIONS = ('meta', 'macro', 'deviceList', 'connections', 'terminals',
                           'protocols', 'convergence')
 
+# 5.0.1-501-a: plan 角色 → device_refs 键（deviceModels 须与实际引用设备严格一致）
+ROLE_DEVICE_REF = {
+    'SPINE': 'param_spine_switch',
+    'LEAF': 'param_leaf_switch',
+    'STO_SPINE': 'storage_spine_switch',
+    'STO_LEAF': 'storage_leaf_switch',
+    'BIZ_AGG': 'biz_agg_switch',
+    'BIZ_ACCESS': 'biz_access_switch',
+    'OOB_AGG': 'oob_agg_switch',
+    'OOB_ACCESS': 'oob_access_switch',
+}
+
 
 def discover_samples(base=BASE):
     """自动发现 isSample=true 的模板目录"""
@@ -174,6 +186,20 @@ def validate_sample(name, tpl_dir):
                         f'num_gpu_servers({topo.get("num_gpu_servers")})')
     if macro.get('protocol') not in ('IB', 'RoCE'):
         problems.append(f'plan.macro.protocol 非法: {macro.get("protocol")}')
+
+    # 6b. 5.0.1-501-a: plan.macro.deviceModels 与实际 device_refs 解析设备（vendor+model）严格一致
+    plan_models = macro.get('deviceModels') or {}
+    for role, ref_key in ROLE_DEVICE_REF.items():
+        ref = config.get('device_refs', {}).get(ref_key)
+        if not ref:
+            continue
+        dev = lib.resolve_ref(ref)
+        if dev is None:
+            continue  # device_refs 解析失败已在步骤 2 报告
+        expected = f"{dev.vendor} {dev.model}".strip()
+        if plan_models.get(role) != expected:
+            problems.append(f'plan.macro.deviceModels.{role}({plan_models.get(role)!r}) != '
+                            f'device_refs.{ref_key} 实际型号({expected!r})')
 
     # 7. room_layout.json
     layout = _read_json(os.path.join(tpl_dir, 'room_layout.json'))

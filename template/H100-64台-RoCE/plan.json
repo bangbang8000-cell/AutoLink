@@ -4,12 +4,12 @@
     "site": "BJ01",
     "version": "1.2",
     "schema": "plan:table/1.2",
-    "generatedAt": "2026-09-03T02:20:11+00:00",
+    "generatedAt": "2026-09-03T10:02:12+00:00",
     "source": "autolink",
     "projectType": "aidc",
     "bridgeVersion": "1.0",
     "projectId": "49a-64-roce-0001",
-    "planHash": "48b1a8ee054d1c3ba8f8568d1dc49ca4524d4660e02de72da2ce9f69e8305b10",
+    "planHash": "1d08ac84f2c81b6755fb236cf157aaeb87d9317332a61f4c63fa80576b1909b9",
     "planVersion": 1,
     "projectName": "H100-64台-RoCE"
   },
@@ -71,7 +71,7 @@
     },
     "deviceModels": {
       "SPINE": "H3C S9827",
-      "LEAF": "H3C S9827",
+      "LEAF": "H3C S9825-64D",
       "STO_SPINE": "H3C S9825-128B",
       "STO_LEAF": "H3C S9825-128B",
       "BIZ_AGG": "H3C S9850-32H",
@@ -111,7 +111,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R03-AIDC-H3C-P-Leaf-01",
       "asn": 65101,
       "gateways": [
@@ -123,7 +123,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R04-AIDC-H3C-P-Leaf-02",
       "asn": 65102,
       "gateways": [
@@ -135,7 +135,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R05-AIDC-H3C-P-Leaf-03",
       "asn": 65103,
       "gateways": [
@@ -147,7 +147,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R06-AIDC-H3C-P-Leaf-04",
       "asn": 65104,
       "gateways": [
@@ -159,7 +159,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R07-AIDC-H3C-P-Leaf-05",
       "asn": 65105,
       "gateways": [
@@ -171,7 +171,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R08-AIDC-H3C-P-Leaf-06",
       "asn": 65106,
       "gateways": [
@@ -183,7 +183,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R09-AIDC-H3C-P-Leaf-07",
       "asn": 65107,
       "gateways": [
@@ -195,7 +195,7 @@
     {
       "role": "LEAF",
       "scenario": "LEAF",
-      "model": "H3C S9827",
+      "model": "H3C S9825-64D",
       "name": "BJ01-R10-AIDC-H3C-P-Leaf-08",
       "asn": 65108,
       "gateways": [

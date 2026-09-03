@@ -47,13 +47,13 @@
       "library_id": "h3c_s9825_64d"
     },
     "storage_leaf_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "h3c_s9825_128b"
     },
     "storage_spine_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "h3c_s9825_128b"
     },
     "storage_switch": {
-      "library_id": "huawei_ce6881_48s6cq"
+      "library_id": "h3c_s9825_128b"
     },
     "all_flash_storage_server": {
       "library_id": "generic_all_flash"
@@ -68,16 +68,16 @@
       "library_id": "h3c_s6850_56hf"
     },
     "biz_agg_switch": {
-      "library_id": "h3c_s6520x_54qc_ei"
+      "library_id": "h3c_s9850_32h"
     },
     "compute_server": {
       "library_id": "generic_2u_compute"
     },
     "oob_access_switch": {
-      "library_id": "h3c_s5130s_52p_ei"
+      "library_id": "h3c_s5560x_54c_ei"
     },
     "oob_agg_switch": {
-      "library_id": "h3c_s5120v3_52p_ei"
+      "library_id": "h3c_s6805_56hf_g"
     }
   },
   "rack_config": {

@@ -79,7 +79,26 @@ def test_ib_roce_differences_correct():
     ib_model = by_proto['IB'][0]['macro']['deviceModels']['LEAF']
     roce_model = by_proto['RoCE'][0]['macro']['deviceModels']['LEAF']
     assert ib_model != roce_model
-    assert 'Quantum' in ib_model and 'H3C' in roce_model
+    # 5.0.1-501-a: IB 参数网 Leaf 为 NVIDIA Quantum-2（MQM9700），RoCE Leaf 为 H3C S9825-64D
+    assert 'Quantum' in ib_model
+    assert 'S9825' in roce_model or 'S9827' in roce_model
+
+
+@pytest.mark.parametrize('sample_id', sorted(EXPECTED_SAMPLE_IDS))
+def test_plan_device_models_match_device_refs(sample_id):
+    """5.0.1-501-a: plan.macro.deviceModels 与 project_config.device_refs 解析型号严格一致"""
+    from device_library import get_device_library
+    from validate_samples import ROLE_DEVICE_REF
+    lib = get_device_library()
+    plan = _read_json(os.path.join(BASE, sample_id, 'plan.json'))
+    config = _read_json(os.path.join(BASE, sample_id, 'project_config.json'))
+    for role, ref_key in ROLE_DEVICE_REF.items():
+        ref = config['device_refs'][ref_key]
+        dev = lib.resolve_ref(ref)
+        assert dev is not None, f'{sample_id}: {ref_key} 无法解析'
+        expected = f"{dev.vendor} {dev.model}".strip()
+        assert plan['macro']['deviceModels'][role] == expected, \
+            f'{sample_id}: plan {role}={plan["macro"]["deviceModels"][role]!r} != {expected!r}'
 
 
 def test_room_layout_gpu_capacity():

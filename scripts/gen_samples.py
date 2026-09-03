@@ -37,28 +37,18 @@ BASE = os.path.join(os.path.dirname(__file__), '..', 'template')
 # 收敛比：IB NDR 无阻塞 1:1；RoCE 2:1 收敛（示例演示过订阅）
 CONVERGENCE_BY_PROTOCOL = {'IB': 1.0, 'RoCE': 2.0}
 
-# 参数网设备型号（plan.macro.deviceModels；设计层 device_refs 另行映射到设备库 id）
-IB_DEVICE_MODELS = {
-    'SPINE': 'NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)',
-    'LEAF': 'NVIDIA Quantum-2 MQM9700-NS2F (NDR 400G)',
-    'STO_SPINE': 'H3C S9825-128B',
-    'STO_LEAF': 'H3C S9825-128B',
-    'BIZ_AGG': 'H3C S9850-32H',
-    'BIZ_ACCESS': 'H3C S6850-56HF',
-    'OOB_AGG': 'H3C S6805-56HF-G',
-    'OOB_ACCESS': 'H3C S5560X-54C-EI',
+# plan 角色 → project_config.device_refs 键（5.0.1-501-a：plan.macro.deviceModels 与
+# device_refs 严格一致，杜绝示例库“plan 型号 ↔ 设计引用”漂移）
+ROLE_DEVICE_REF = {
+    'SPINE': 'param_spine_switch',
+    'LEAF': 'param_leaf_switch',
+    'STO_SPINE': 'storage_spine_switch',
+    'STO_LEAF': 'storage_leaf_switch',
+    'BIZ_AGG': 'biz_agg_switch',
+    'BIZ_ACCESS': 'biz_access_switch',
+    'OOB_AGG': 'oob_agg_switch',
+    'OOB_ACCESS': 'oob_access_switch',
 }
-ROCE_DEVICE_MODELS = {
-    'SPINE': 'H3C S9827',
-    'LEAF': 'H3C S9827',
-    'STO_SPINE': 'H3C S9825-128B',
-    'STO_LEAF': 'H3C S9825-128B',
-    'BIZ_AGG': 'H3C S9850-32H',
-    'BIZ_ACCESS': 'H3C S6850-56HF',
-    'OOB_AGG': 'H3C S6805-56HF-G',
-    'OOB_ACCESS': 'H3C S5560X-54C-EI',
-}
-DEVICE_MODELS_BY_PROTOCOL = {'IB': IB_DEVICE_MODELS, 'RoCE': ROCE_DEVICE_MODELS}
 
 # 参数网设备库 id（IB → NVIDIA Quantum-2；RoCE → H3C S9825-64D / S9827）
 PARAM_SWITCH_BY_PROTOCOL = {
@@ -201,17 +191,19 @@ def build_project_config(sample):
             'param_spine_switch': {'library_id': sw['spine']},
             'param_core_switch': {'library_id': sw['spine']},
             'param_switch': {'library_id': sw['leaf']},
-            'storage_leaf_switch': {'library_id': 'huawei_ce6881_48s6cq'},
-            'storage_spine_switch': {'library_id': 'huawei_ce6881_48s6cq'},
-            'storage_switch': {'library_id': 'huawei_ce6881_48s6cq'},
+            # 5.0.1-501-a: 存储网 200G → S9825-128B(200G)；业务汇聚 100G 上联 → S9850-32H(100G)；
+            # OOB 汇聚 10G 上联 → S6805-56HF-G(10G)；OOB 接入 1G → S5560X-54C-EI(1G)
+            'storage_leaf_switch': {'library_id': 'h3c_s9825_128b'},
+            'storage_spine_switch': {'library_id': 'h3c_s9825_128b'},
+            'storage_switch': {'library_id': 'h3c_s9825_128b'},
             'all_flash_storage_server': {'library_id': 'generic_all_flash'},
             'hybrid_flash_storage_server': {'library_id': 'generic_hybrid_flash'},
             'storage_server': {'library_id': 'generic_all_flash'},
             'biz_access_switch': {'library_id': 'h3c_s6850_56hf'},
-            'biz_agg_switch': {'library_id': 'h3c_s6520x_54qc_ei'},
+            'biz_agg_switch': {'library_id': 'h3c_s9850_32h'},
             'compute_server': {'library_id': 'generic_2u_compute'},
-            'oob_access_switch': {'library_id': 'h3c_s5130s_52p_ei'},
-            'oob_agg_switch': {'library_id': 'h3c_s5120v3_52p_ei'},
+            'oob_access_switch': {'library_id': 'h3c_s5560x_54c_ei'},
+            'oob_agg_switch': {'library_id': 'h3c_s6805_56hf_g'},
         },
         'rack_config': dict(RACK_CONFIG),
         'scale_up': {},
@@ -273,13 +265,29 @@ def build_network_ini(sample):
     return '\n'.join(lines) + '\n'
 
 
+def device_models_for(sample):
+    """5.0.1-501-a: plan.macro.deviceModels 从 device_refs 实际解析的库设备派生
+    （vendor + model，与 aidc_planner.DEFAULTS / 仓库既有约定一致），
+    保证示例库 plan 型号与设计引用严格一致（单一事实来源 = 设备库）。"""
+    config = build_project_config(sample)
+    lib = get_device_library()
+    models = {}
+    for role, ref_key in ROLE_DEVICE_REF.items():
+        ref = config['device_refs'][ref_key]
+        dev = lib.resolve_ref(ref)
+        if dev is None:
+            raise RuntimeError(f"{sample['id']}: device_refs.{ref_key} 无法解析: {ref}")
+        models[role] = f"{dev.vendor} {dev.model}".strip()
+    return models
+
+
 def build_plan(sample):
     """plan.json（plan:table v1.2，自包含；IB/RoCE 差异：protocol/convergence/deviceModels）"""
     plan = plan_aidc({
         'gpu_count': sample['gpu_count'],
         'protocol': sample['protocol'],
         'convergence': CONVERGENCE_BY_PROTOCOL[sample['protocol']],
-        'device_models': DEVICE_MODELS_BY_PROTOCOL[sample['protocol']],
+        'device_models': device_models_for(sample),
         'project_id': sample['project_id'],
         'project_name': sample['id'],
         'plan_version': 1,
