@@ -1,30 +1,30 @@
 # CHANGELOG
 
-## \[5.0.1] - 2026-09-03
+## [5.0.1] - 2026-09-03
 
 ### 5.0.1 内容与渲染准确性攻坚（5.0 系列第 1 版）
 
-- **四示例复核修正**：plan.deviceModels 与 device\_refs 严格一致（存储 200G→S9825-128B、业务汇聚 100G→S9850-32H、OOB 汇聚 10G→S6805-56HF-G），消除「plan 型号 ↔ 设计引用」漂移；plan.deviceModels 从设备库 vendor+model 派生
+- **四示例复核修正**：plan.deviceModels 与 device_refs 严格一致（存储 200G→S9825-128B、业务汇聚 100G→S9850-32H、OOB 汇聚 10G→S6805-56HF-G），消除「plan 型号 ↔ 设计引用」漂移；plan.deviceModels 从设备库 vendor+model 派生
 
-- **模板库门禁强化**：新增 template\_gate（rack\_config 完整性 cooling\_method/gpu\_dedicated 强制、协议兼容性、参数合理性、旧设备 id 门禁）；3 套模板（L20-推理-64/hygon\_dcu\_cluster/cambricon\_mlu\_cluster）补齐字段
+- **模板库门禁强化**：新增 template_gate（rack_config 完整性 cooling_method/gpu_dedicated 强制、协议兼容性、参数合理性、旧设备 id 门禁）；3 套模板（L20-推理-64/hygon_dcu_cluster/cambricon_mlu_cluster）补齐字段
 
-- **设备库对账**：注册 optical\_modules 9 个死文件（索引↔目录 35/35 一致）；新增 validate\_device\_library.py 对账门禁（索引↔目录/id 唯一/字段完整/分类合法/可互灌）+ CI
+- **设备库对账**：注册 optical_modules 9 个死文件（索引↔目录 35/35 一致）；新增 validate_device_library.py 对账门禁（索引↔目录/id 唯一/字段完整/分类合法/可互灌）+ CI
 
-- **导出内容校验**：新增 E009 表头契约 / E010 设备清单合计数量 / E011 布线行数与设计一致；修复 E005 连接表多 sheet 行数统计；validate\_samples 接入设计级导出+内容校验
+- **导出内容校验**：新增 E009 表头契约 / E010 设备清单合计数量 / E011 布线行数与设计一致；修复 E005 连接表多 sheet 行数统计；validate_samples 接入设计级导出+内容校验
 
-## \[4.9.0] - 2026-09-03
+## [4.9.0] - 2026-09-03
 
 ### 4.9 示例资产与收官（4.0 系列收官版）
 
-- **四示例项目**：H100-64台-IB / H100-64台-RoCE / H100-128台-IB / H100-128台-RoCE（template.json + project\_config.json + network\_config.ini + plan.json + room\_layout.json 五件套；IB 收敛比 1:1、RoCE 2:1；机房矩阵/机柜/宏观参数全配）
+- **四示例项目**：H100-64台-IB / H100-64台-RoCE / H100-128台-IB / H100-128台-RoCE（template.json + project_config.json + network_config.ini + plan.json + room_layout.json 五件套；IB 收敛比 1:1、RoCE 2:1；机房矩阵/机柜/宏观参数全配）
 
-- **模板中心整合**：isSample 徽标 + 摘要行 + 基于示例创建（room\_layout 随建项目复制，5 语言）
+- **模板中心整合**：isSample 徽标 + 摘要行 + 基于示例创建（room_layout 随建项目复制，5 语言）
 
-- **示例自动化验收**：validate\_samples.py 门禁 + pytest 门禁 + E2E 建项目渲染 + golden 基线
+- **示例自动化验收**：validate_samples.py 门禁 + pytest 门禁 + E2E 建项目渲染 + golden 基线
 
 - **文档收官**：用户指南示例项目章节 + README 模板清单 23 套（含 4 套 H100 示例）
 
-## \[4.8.0] - 2026-09-02
+## [4.8.0] - 2026-09-02
 
 ### 4.8 互操作与交付强化
 
@@ -38,7 +38,7 @@
 
 - **交付物清单与校验**：批次 manifest 逐文件 sha256 + 完整性校验（E008）
 
-## \[4.7.0] - 2026-09-02
+## [4.7.0] - 2026-09-02
 
 ### 4.7 部署运维与可观测
 
@@ -50,19 +50,19 @@
 
 - **安装/升级体验**：三平台离线安装包 + 版本化 artifactName 打包配置校验 + 更新 UI 离线友好提示 + 下载完整性校验显示
 
-## \[4.6.0] - 2026-09-02
+## [4.6.0] - 2026-09-02
 
 ### 4.6 质量与测试体系
 
-- **测试覆盖率门禁**：后端 pytest-cov（fail\_under=55，实测 85.18%）+ 前端 vitest coverage；CI 覆盖率门禁 + 阈值常量单源（quality\_thresholds.json）+ 基线棘轮只升不降（coverage\_baseline.json）
+- **测试覆盖率门禁**：后端 pytest-cov（fail_under=55，实测 85.18%）+ 前端 vitest coverage；CI 覆盖率门禁 + 阈值常量单源（quality_thresholds.json）+ 基线棘轮只升不降（coverage_baseline.json）
 
 - **测试数据资产**：6 个样例项目（64h100/128h100 多机柜/融合网/存储关闭/超节点/zcube）+ 清单 manifest + README，pytest/vitest 双端消费
 
-- **测试报告**：聚合 pytest/vitest/golden/bench/模板校验 → reports/quality\_report.json + HTML
+- **测试报告**：聚合 pytest/vitest/golden/bench/模板校验 → reports/quality_report.json + HTML
 
 - **质量仪表盘**：LogPanel「质量」tab（覆盖率/门禁/测试通过率/校验/性能基准，本地聚合）
 
-## \[4.5.0] - 2026-09-02
+## [4.5.0] - 2026-09-02
 
 ### 4.5 数据准确性与校验
 
@@ -76,13 +76,13 @@
 
 - **校验报告**：校验面板（一键校验/严重度分组/定位/导出 JSON）+ 脚本门禁
 
-## \[4.4.1] - 2026-09-02
+## [4.4.1] - 2026-09-02
 
 ### 修复
 
-- **存储网络关闭/融合网导出崩溃**：`NetworkDesignerV2.storage_servers_per_group` 仅在存储网启用分支赋值，存储网关闭或融合网（eth\_combined）项目导出连接表时抛 `AttributeError`（该缺陷此前被无条件成功提示掩盖）。修复：默认值与融合网分支补 `storage_servers_per_group=0`；新增 3 例回归测试（默认值 / 存储关闭 / 融合网）。
+- **存储网络关闭/融合网导出崩溃**：`NetworkDesignerV2.storage_servers_per_group` 仅在存储网启用分支赋值，存储网关闭或融合网（eth_combined）项目导出连接表时抛 `AttributeError`（该缺陷此前被无条件成功提示掩盖）。修复：默认值与融合网分支补 `storage_servers_per_group=0`；新增 3 例回归测试（默认值 / 存储关闭 / 融合网）。
 
-## \[4.4.0] - 2026-09-01
+## [4.4.0] - 2026-09-01
 
 ### 4.4 效率与自动化工作流
 
@@ -96,13 +96,13 @@
 
 - **命令面板命令全集**（项目/设计/渲染/导出/批量/管线/最近收藏/模板/设置/快捷键）
 
-## \[4.3.0] - 2026-09-01
+## [4.3.0] - 2026-09-01
 
 ### 4.3 AI 智能体验深化（不含 Hermes）
 
 - **命令面板**：Ctrl+K 命令面板（项目/设计/模板/常用，动态子命令，搜索/键盘导航/执行反馈）
 
-- **AI 项目/模板操作工具**：list/create/update/delete/import/export/create\_from\_template/preview（8 工具，权限分级 + 校验 + 可读错误，对话内闭环）
+- **AI 项目/模板操作工具**：list/create/update/delete/import/export/create_from_template/preview（8 工具，权限分级 + 校验 + 可读错误，对话内闭环）
 
 - **对话深化**：摘要衔接、会话重命名/清理、确认卡片确认/取消闭环
 
@@ -110,7 +110,7 @@
 
 - **AI 能力矩阵标准化**（8 维度）+ 无 Hermes/外部 Agent 平台审计
 
-## \[4.2.0] - 2026-09-01
+## [4.2.0] - 2026-09-01
 
 ### 4.2 稳定性与数据安全
 
@@ -118,7 +118,7 @@
 
 - **性能仪表盘**：LogPanel 新增「性能」标签（内存 / 操作耗时分类 / 渲染长任务 / bench 基准对比），本地采集不遥测
 
-## \[4.1.0] - 2026-09-01
+## [4.1.0] - 2026-09-01
 
 ### 4.1 视觉与品牌统一
 
@@ -130,7 +130,7 @@
 
 - **空态/加载/错误态统一**：新增 Loading/ErrorState 公共组件，EmptyState 收敛 token
 
-## \[4.0.0] - 2026-08-29
+## [4.0.0] - 2026-08-29
 
 ### 4.0 系列启动 · 工程基座与质量门禁
 
@@ -138,33 +138,33 @@
 
 - **五门禁对等确认全绿**：E2E（Playwright 3 例）/ golden 19/19 / 模板 19/19 / 性能门禁 / 渲染安全基线
 
-- **设计 token 契约对齐**（按《双端设计Token契约\_v1.0》）：语义色/中性/surface/圆角/阴影/间距/动效/字体 + 断言单测防漂移
+- **设计 token 契约对齐**（按《双端设计Token契约_v1.0》）：语义色/中性/surface/圆角/阴影/间距/动效/字体 + 断言单测防漂移
 
 - **组件行为契约**：Modal/Popover/Toast/ContextMenu/Select/Tabs/Dropdown 行为契约测试（补齐 Popover 基础组件）
 
-## \[3.7.7] - 2026-08-29
+## [3.7.7] - 2026-08-29
 
 ### 双端最终打磨（v3.6：版本历史与评审 / 复用增强）
 
-- **版本历史与评审（F1-1/2/3）**：基于 plan\_history 的宏观参数**版本差异高亮**（`diffPlans` 字段级 diff）+ **历史版本对比/一键回滚**（回滚前自动存档当前版本为 `v{N+1}`、当前置为 `v{N+2}`，同步 project\_config）+"本项目输出"**评审 PDF 导出**（A4 printToPDF，含宏观参数/拓扑摘要/设备清单/接线终端计数）
+- **版本历史与评审（F1-1/2/3）**：基于 plan_history 的宏观参数**版本差异高亮**（`diffPlans` 字段级 diff）+ **历史版本对比/一键回滚**（回滚前自动存档当前版本为 `v{N+1}`、当前置为 `v{N+2}`，同步 project_config）+"本项目输出"**评审 PDF 导出**（A4 printToPDF，含宏观参数/拓扑摘要/设备清单/接线终端计数）
 
 - **跨项目复制粘贴（F2-1）**：剪贴板升级为应用级（localStorage 序列化 + 256KB 守卫），复制机柜/设备后可**切换项目粘贴**；跨项目启用类型/总U/设备域兼容校验（冲突明细），入撤销栈可回退
 
 - **撤销跨会话持久化（F2-2）**：撤销/重做栈持久化到 `<project>/output/undo_history.json`（rack）与 `undo_room.json`（room），防抖 800ms 写盘、容量受控（最近 20 条/1MB），重启后恢复可回退（fallback localStorage）
 
-## \[3.7.6] - 2026-08-29
+## [3.7.6] - 2026-08-29
 
 ### 双端打磨增强（v3.5：设计快照）
 
 - **设计快照（AL-SNAP1/2/3）**：设计工具栏「保存快照」（命名，默认时间戳）+「快照列表」恢复/删除，恢复后矩阵↔柜内/功率一致且可撤销；快照序列化/恢复带版本校验（v1），会话内 localStorage 持久化（单快照 >2MB 跳过提示）；「本项目输出」导出设计快照 JSON（落 output/snapshots/ 出现在批次树）与导入（结构/版本校验、失败友好提示、导入前自动备份当前设计）
 
-## \[3.7.5] - 2026-08-29
+## [3.7.5] - 2026-08-29
 
 ### 双端打磨增强（v3.4：3D 增强）
 
 - **等距视图旋转/缩放（AL-3D1/2/3）**：机柜等距视图支持旋转（左/右 90° + 连续微调 ±5°，0-359 环绕）与缩放（滚轮 + 按钮，0.5-2.0，变换原点居中）；视角状态按机柜会话内保持（`isometricView` store，切柜互不污染）；旋转后设备/高度/深度偏移随角度映射（等距风格，不引入 Three.js）
 
-## \[3.7.4] - 2026-08-28
+## [3.7.4] - 2026-08-28
 
 ### 双端打磨增强（v3.3：编辑撤销/重做 + 复制粘贴）
 
@@ -172,7 +172,7 @@
 
 - **复制/粘贴（AL-CP1/CP2）**：应用内剪贴板复制/粘贴机柜（设备 U 位映射 + 冲突明细 + 新柜「-副本」后缀）与设备（U 位校验 / 自动找位）；机房机柜格/空格、柜内 Header/设备行/空 U 位槽右键入口；粘贴纳入撤销栈
 
-## \[3.7.3] - 2026-08-28
+## [3.7.3] - 2026-08-28
 
 ### 双端打磨修订（v3.2：设计入口/步骤状态/导出收敛 + GPU 柜修复）
 
@@ -180,11 +180,11 @@
 
 - **步骤状态（AL-N2）**：中栏条目右侧由静态 ①-⑤ 徽标改为动态状态（已完成/待操作/进行中），随设计就绪度/机柜就绪度/输出批次变化
 
-- **导出收敛（AL-N3）**：移除机房设计/机柜设计子视图内导出按钮，统一到「本项目输出」导出（机房设计 Excel 三 sheet / 机柜设计 Excel 两 sheet，落 output/ 根目录 \[根目录] 批次）
+- **导出收敛（AL-N3）**：移除机房设计/机柜设计子视图内导出按钮，统一到「本项目输出」导出（机房设计 Excel 三 sheet / 机柜设计 Excel 两 sheet，落 output/ 根目录 [根目录] 批次）
 
 - **GPU 柜修复（AL-N4）**：机柜设计选中 GPU 柜不再触发「工作区 加载失败」（`loadRackLayout` 补 `totalU/device.type` 默认 + 设备类型容错 + 联动 `cabinetId` 校验）
 
-## \[3.7.2] - 2026-08-27
+## [3.7.2] - 2026-08-27
 
 ### 机房/机柜设计拆分 + 强编辑能力（v3.1 打磨）
 
@@ -198,7 +198,7 @@
 
 - **决策**：本版不做 WebGL 3D（保留 2D + isometric 等距立体；真实 3D 列 v3.2+ 可选增强）
 
-## \[3.7.1] - 2026-08-27
+## [3.7.1] - 2026-08-27
 
 ### 打磨收口（v3.0 验收审计补齐）
 
@@ -206,27 +206,27 @@
 
 - **项目输出保真（M5 补齐）**：交付包拓扑图优先用设计拓扑渲染（plan 兜底）；plan→设计映射补齐端口数/网络开关/收敛比
 
-- **AI 能力（M6 补齐）**：模型自动拉取（保存配置后 30s 节流 + 失败静默降级静态目录）+ 模型下拉最新（本次拉取 > 已持久化 > 静态目录）；AI 对话内新增模板/项目导入导出工具（template\_export/import、project\_export/import，含 zip-slip 防护）
+- **AI 能力（M6 补齐）**：模型自动拉取（保存配置后 30s 节流 + 失败静默降级静态目录）+ 模型下拉最新（本次拉取 > 已持久化 > 静态目录）；AI 对话内新增模板/项目导入导出工具（template_export/import、project_export/import，含 zip-slip 防护）
 
 - **双端一致性（M7 补齐）**：更新图标 ArrowUpCircle → RefreshCw 对齐 MC（保留更新蓝点）
 
-## \[3.7.0] - 2026-08-26
+## [3.7.0] - 2026-08-26
 
 ### AIDC 双产品打磨优化 v3.0（机柜规划流程 / 拓扑展示 / 项目输出保真 / AI 能力扩展与独立进程 / 双端一致性）
 
-- **机柜规划清晰操作逻辑（M4）**：① 机房布局定稿状态机——定稿后进入柜内规划，可撤销；② 柜内默认参数——每柜 GPU 数量可配置（非超节点默认 1）、默认上架 U 位（`top_reserved_u` 项目配置联动）、逐柜功率可编辑；③ 改布局处理——一键清空柜内设计 / 归档并清空（机柜设计导出到 项目名-版本-时间 版本目录）；④ 导出机柜设计 Excel（机柜平面图 + 每机柜设计 + 上机表 三 sheet）；⑤ NVL72 超节点上架调研（top\_reserved\_u=2 + gpu\_per\_cabinet=1 并入模板中心）
+- **机柜规划清晰操作逻辑（M4）**：① 机房布局定稿状态机——定稿后进入柜内规划，可撤销；② 柜内默认参数——每柜 GPU 数量可配置（非超节点默认 1）、默认上架 U 位（`top_reserved_u` 项目配置联动）、逐柜功率可编辑；③ 改布局处理——一键清空柜内设计 / 归档并清空（机柜设计导出到 项目名-版本-时间 版本目录）；④ 导出机柜设计 Excel（机柜平面图 + 每机柜设计 + 上机表 三 sheet）；⑤ NVL72 超节点上架调研（top_reserved_u=2 + gpu_per_cabinet=1 并入模板中心）
 
 - **工作台拓扑展示修复（M1）**：子视图包装层补 h-full 恢复高度链（画布不再坍缩 0）、fit 包围盒未测量节点用估算尺寸、saved layout 极端坐标清洗
 
-- **项目输出保真（M5）**：`plan_history` 版本历史入项目包往返；交付包扩大为设计级（plan.json + README + 拓扑图 + topology.json + rack\_layout.json + plan\_version 透传）；交付包可导入 AL（兼容仅 plan.json）；plan→设计映射增强（参数速率从设备模型推断 800G/400G/200G）
+- **项目输出保真（M5）**：`plan_history` 版本历史入项目包往返；交付包扩大为设计级（plan.json + README + 拓扑图 + topology.json + rack_layout.json + plan_version 透传）；交付包可导入 AL（兼容仅 plan.json）；plan→设计映射增强（参数速率从设备模型推断 800G/400G/200G）
 
-- **AI 助手修复与能力扩展（M3a/M3b/M6）**：Provider 显式超时 + max\_retries=0（聊天无反馈根因）；**AI 改独立进程**——`al_ai_hub` FastAPI+SSE（端口 18722 + 本地鉴权 + 端口回收/运行守卫/401 重启重试，对齐 MC）；AI 对话内实现项目/模板 CRUD（创建/删除/更新/基于模板创建/文件读写/模板推荐 9 新工具 + 权限分级 + 别名）；完整工具清单提示词
+- **AI 助手修复与能力扩展（M3a/M3b/M6）**：Provider 显式超时 + max_retries=0（聊天无反馈根因）；**AI 改独立进程**——`al_ai_hub` FastAPI+SSE（端口 18722 + 本地鉴权 + 端口回收/运行守卫/401 重启重试，对齐 MC）；AI 对话内实现项目/模板 CRUD（创建/删除/更新/基于模板创建/文件读写/模板推荐 9 新工具 + 权限分级 + 别名）；完整工具清单提示词
 
 - **双端一致性（M7）**：顶部图标顺序 Language→Theme→…→Update + 语言文字徽章；侧边栏 AI/output 图标对齐 MC（MessageSquare/FileCheck）+ 激活条 glow；AI 对话 markdown 改 prose 排版
 
-- 后端新增 fastapi/uvicorn/sse-starlette/pydantic 依赖；PyInstaller 第二入口 `al_ai_hub`；测试新增 al\_ai\_hub 服务器/SSE Chat/aiHub.service 单测
+- 后端新增 fastapi/uvicorn/sse-starlette/pydantic 依赖；PyInstaller 第二入口 `al_ai_hub`；测试新增 al_ai_hub 服务器/SSE Chat/aiHub.service 单测
 
-## \[3.6.3] - 2026-08-25
+## [3.6.3] - 2026-08-25
 
 ### 发布后体验打磨（v2.0）
 
@@ -240,7 +240,7 @@
 
 - **文案一致性**：工作台第③步统一为「校对与输出」（与 MC 对齐）
 
-## \[3.6.2] - 2026-08-25
+## [3.6.2] - 2026-08-25
 
 ### 设备库 400G/800G 接口形态修正
 
@@ -248,11 +248,11 @@
 
 - **800G 接口统一为 OSFP**（原 QSFP-DD 修正）
 
-- 覆盖 gpu\_servers / storage\_servers / switches 下共 18 处设备库 JSON + 前端默认接口模型
+- 覆盖 gpu_servers / storage_servers / switches 下共 18 处设备库 JSON + 前端默认接口模型
 
 - 设备库表单 placeholder 同步更新为「如 OSFP/QSFP112」
 
-## \[3.6.1] - 2026-08-25
+## [3.6.1] - 2026-08-25
 
 ### 导出收敛 + 拓扑子视图视口修复
 
@@ -270,7 +270,7 @@
 
 - e2e 新增「拓扑全量节点中心点在画布内」断言；端到端验证 AL 交付包 → MC 导入成功（22 台设备）
 
-## \[3.6.0] - 2026-08-25
+## [3.6.0] - 2026-08-25
 
 ### 打磨优化 M1–M6：安全 / i18n / 性能 / 便捷 / 联合回归
 
@@ -282,13 +282,13 @@ v3.6.0 为 AIDC 双产品打磨优化里程碑（AL+MC 联合）：安全加固�
 
 - API Key 不再落 localStorage：前端存引用，密钥落后端 safeStorage
 
-- 审计日志落盘前脱敏（api\_key/token/password）；`shell:openPath/showItemInFolder` 调用面收敛
+- 审计日志落盘前脱敏（api_key/token/password）；`shell:openPath/showItemInFolder` 调用面收敛
 
 #### 国际化收官（M2）
 
 - Toast 消息化（`messageKey+params`，ToastContainer 统一翻译）+ 高频路径中文 fallback 补齐
 
-- 工作台二级页签 SUBVIEW\_LABELS 7 项全量 i18n + 新建/空态/导出 18 处硬编码接入
+- 工作台二级页签 SUBVIEW_LABELS 7 项全量 i18n + 新建/空态/导出 18 处硬编码接入
 
 - i18n 门禁：缺 key 即失败（对新增 key 生效，存量登记豁免）；导出文件名 ASCII fallback
 
@@ -322,7 +322,7 @@ v3.6.0 为 AIDC 双产品打磨优化里程碑（AL+MC 联合）：安全加固�
 
 - 双端全量回归：AL vitest 520 + pytest 1010 + e2e 3 全绿；MC vitest 152 + pytest 197 全绿
 
-## \[3.5.0] - 2026-08-21
+## [3.5.0] - 2026-08-21
 
 ### AIDC 智算中心规划 v1.2–v1.6
 
@@ -380,7 +380,7 @@ v3.5.0 为 AIDC（AI 智算中心）规划能力的大版本：自 v3.4.3 起完
 
 - 前端单测 / 后端单测（991 用例基线）/ typecheck / lint 全绿；e2e 业务链路含机柜设计步骤，渲染结果断言改工作台结果卡材料标签
 
-## \[3.4.3] - 2026-08-13
+## [3.4.3] - 2026-08-13
 
 ### Logo 全渠道一致性修复
 
@@ -394,7 +394,7 @@ v3.4.3 为品牌一致性修复版：安装包/桌面/任务栏图标与启动�
 
 #### 修复
 
-- 重新执行 `scripts/generate-icons.mjs`：从增强版 `build/logo.svg` 重新生成 `build/icon.png`(1024²) / `build/icon.ico`(16\~256 多尺寸,文件头合法) / `public/icons/icon.png`(512²)
+- 重新执行 `scripts/generate-icons.mjs`：从增强版 `build/logo.svg` 重新生成 `build/icon.png`(1024²) / `build/icon.ico`(16~256 多尺寸,文件头合法) / `public/icons/icon.png`(512²)
 
 - `public/splash.html` 内嵌 SVG 替换为增强版（三色渐变背景 + 玻璃高光 + 内描边 + 腿/横线渐变 + 腿/节点辉光 + 5 高光圆点），版本号 `v2.5.0` → `v3.4.3`
 
@@ -410,7 +410,7 @@ v3.4.3 为品牌一致性修复版：安装包/桌面/任务栏图标与启动�
 
 - 前端 473 / 后端 991 / typecheck / lint 沿用 v3.4.2 全绿基线
 
-## \[3.4.2] - 2026-08-11
+## [3.4.2] - 2026-08-11
 
 ### 交付修复与版本对齐
 
@@ -424,11 +424,11 @@ v3.4.2 为 3.4.1 的交付修复版：修复 PDF 报告图表中文标签缺字�
 
 #### 平台更新检查对齐
 
-- `versions.json` 3.4.0 → 3.4.2（客户端更新检查提示与下载目标对齐；client.py 回退默认值 / test\_api.py 断言同步）
+- `versions.json` 3.4.0 → 3.4.2（客户端更新检查提示与下载目标对齐；client.py 回退默认值 / test_api.py 断言同步）
 
 #### 文档与清理
 
-- 计划文档状态同步：客户端 `docs/v3.0/v3.0.X_开发计划.md` 标记 3.3/3.4 完成并补 3.4 路线图；平台 PRD / DEVELOPMENT\_PLAN\_V2 / PHASE8\_OPS\_PLAN / WEBSITE\_OPTIMIZATION\_PLAN 状态「待审批」→「已完成」
+- 计划文档状态同步：客户端 `docs/v3.0/v3.0.X_开发计划.md` 标记 3.3/3.4 完成并补 3.4 路线图；平台 PRD / DEVELOPMENT_PLAN_V2 / PHASE8_OPS_PLAN / WEBSITE_OPTIMIZATION_PLAN 状态「待审批」→「已完成」
 
 - 清理平台 `api/.uploads/` 分片上传残留（14 个 .part，目录已 gitignore）
 
@@ -436,7 +436,7 @@ v3.4.2 为 3.4.1 的交付修复版：修复 PDF 报告图表中文标签缺字�
 
 - 平台端 112 用例全绿；客户端后端 991 用例全绿（含 exporter 变更）；前端 473 用例全绿（v3.4.1 基线，本轮无前端改动）
 
-## \[3.4.1] - 2026-08-10
+## [3.4.1] - 2026-08-10
 
 ### 安全加固与性能优化
 
@@ -466,7 +466,7 @@ v3.4.1 对客户端与云平台做整体安全加固与性能优化：平台端�
 
 - 高频面板全部接入 i18n：机柜视图 / 智能修复 / 机房智能落位 / 批量优化 / 容量规划推荐 + ui 通用组件（Modal / Dropdown）
 
-- 新增 5 命名空间 \~95 key，en / ja / ko / zh-TW 同步补齐（i18n 完整性测试强制 5 语言 key 集合一致）
+- 新增 5 命名空间 ~95 key，en / ja / ko / zh-TW 同步补齐（i18n 完整性测试强制 5 语言 key 集合一致）
 
 #### 后端性能
 
@@ -480,11 +480,11 @@ v3.4.1 对客户端与云平台做整体安全加固与性能优化：平台端�
 
 ***
 
-## \[3.4.0] - 2026-08-10
+## [3.4.0] - 2026-08-10
 
 ### 云端协作与官网品牌化（v3.4）
 
-v3.4 在 3.3 云端底座之上补齐协作运营能力（服务端 S3 平台增强）与官网品牌化，客户端随服务端就绪分批联动（V4-1\~V4-4）。
+v3.4 在 3.3 云端底座之上补齐协作运营能力（服务端 S3 平台增强）与官网品牌化，客户端随服务端就绪分批联动（V4-1~V4-4）。
 
 #### 服务端 S3 平台增强
 
@@ -526,7 +526,7 @@ v3.4 在 3.3 云端底座之上补齐协作运营能力（服务端 S3 平台增
 
 ***
 
-## \[3.3.3] - 2026-08-08
+## [3.3.3] - 2026-08-08
 
 ### 3.X 收官发布
 
@@ -570,13 +570,13 @@ v3.3.3 收官 3.X 系列云端集成：登录 → 云中心/全局搜索 → 分
 
 - 全量回归：前端 473 用例全绿、后端 991 用例全绿、平台端 94 用例全绿、E2E 3 条全绿、模板 19/19 + golden 一致、性能基准达标、安全断言（渲染层 0 直接网络 / 0 Node 访问）
 
-- 用户指南新增「3.X 特性矩阵」（v3.0.0 \~ v3.3.3 全版本能力归属）
+- 用户指南新增「3.X 特性矩阵」（v3.0.0 ~ v3.3.3 全版本能力归属）
 
 - 版本号 3.2.3 → 3.3.3（package.json / package-lock.json / VERSION / README / 部署指南 / 用户指南）
 
 ***
 
-## \[3.2.3] - 2026-08-06
+## [3.2.3] - 2026-08-06
 
 ### 质量闭环
 
@@ -602,7 +602,7 @@ v3.2.3 收官 3.2 系列质量闭环：3.X 本地能力全量回归（前端 467
 
 ***
 
-## \[3.2.2] - 2026-08-06
+## [3.2.2] - 2026-08-06
 
 ### 安全与性能加固
 
@@ -634,7 +634,7 @@ v3.2.2 落地纵深安全与质量门禁：Electron 沙箱 + CSP、IPC 运行时
 
 #### 自动更新与签名（T11-5）
 
-- 双通道自动更新保持（electron-updater 主路径 + GitHub 直下 fallback）；build.yml 预留 Windows 代码签名（secrets CSC\_LINK / CSC\_KEY\_PASSWORD 可选启用，未配置时保持未签名——SmartScreen 提示为已知限制，latest.yml 哈希保证下载完整性）
+- 双通道自动更新保持（electron-updater 主路径 + GitHub 直下 fallback）；build.yml 预留 Windows 代码签名（secrets CSC_LINK / CSC_KEY_PASSWORD 可选启用，未配置时保持未签名——SmartScreen 提示为已知限制，latest.yml 哈希保证下载完整性）
 
 #### 版本与回归
 
@@ -644,7 +644,7 @@ v3.2.2 落地纵深安全与质量门禁：Electron 沙箱 + CSP、IPC 运行时
 
 ***
 
-## \[3.2.1] - 2026-08-06
+## [3.2.1] - 2026-08-06
 
 ### 品牌主题色 + Electron E2E 门禁 + AI 入口修复
 
@@ -674,11 +674,11 @@ v3.2.1 落地品牌化与质量门禁增强：可切换的品牌主题色（4 �
 
 - 版本号 3.2.0 → 3.2.1（package.json / package-lock.json / VERSION / README / 部署指南 / 用户指南）
 
-- 回归：前端 467 用例全绿（28 文件），后端 991 用例全绿，typecheck / lint（0 error）通过；GitHub Releases/Tags 精简至每大版本首个发布（v2.7.0\~v3.2.0 共 6 个）
+- 回归：前端 467 用例全绿（28 文件），后端 991 用例全绿，typecheck / lint（0 error）通过；GitHub Releases/Tags 精简至每大版本首个发布（v2.7.0~v3.2.0 共 6 个）
 
 ***
 
-## \[3.2.0] - 2026-08-06
+## [3.2.0] - 2026-08-06
 
 ### 智能化增强（容量规划 v2 + ATOP 拓扑优化 + 批量优化/智能修复闭环 + 国产档案库）
 
@@ -692,13 +692,13 @@ v3.2.0 落地智能化增强全链路：FP8 精确容量计算与 TCO 成本估�
 
 - 新增 `cost_estimator.py`：TCO 全口径（交换机/网卡/光模块硬件 + 电力含 PUE + 机柜空间分项 + 单价覆盖）
 
-- `presets.py` 支持自定义档案（`register_preset` / 工作区 capacity\_presets.json 加载）；`capacity:recommend` 返回 `{exact, pipeline, cost}`；前端 `CapacityRecommendModal` 增 FP8 精确通信量（误差对照）/ Pipeline 分段显存 / TCO 分项展示
+- `presets.py` 支持自定义档案（`register_preset` / 工作区 capacity_presets.json 加载）；`capacity:recommend` 返回 `{exact, pipeline, cost}`；前端 `CapacityRecommendModal` 增 FP8 精确通信量（误差对照）/ Pipeline 分段显存 / TCO 分项展示
 
 #### ATOP 式自动拓扑优化（T9-2）
 
 - 新建 `backend/atop/`：`features.py`（模型通信特征：AllReduce/All-to-All/P2P + 通信占比提取）+ `recommender.py`（特征 → ZCube 2D/3D cube 尺寸/分组/拓扑推荐 + V020 校验接入）
 
-- `zcube_topology.py` 新增 `build_cube_topology_data`：GPU 按 cube\_rank 编号、A/B 组均衡分组着色（zcube\_group/plane\_id）、双向边链路元数据，输出前端拓扑 schema
+- `zcube_topology.py` 新增 `build_cube_topology_data`：GPU 按 cube_rank 编号、A/B 组均衡分组着色（zcube_group/plane_id）、双向边链路元数据，输出前端拓扑 schema
 
 - action `atop:recommend` + AIHUB 工具 `atop_recommend`（AUTO）+ CLI schema + IPC 桥接
 
@@ -714,11 +714,11 @@ v3.2.0 落地智能化增强全链路：FP8 精确容量计算与 TCO 成本估�
 
 #### 智能修复（T9-4）
 
-- 新建 `backend/fixit.py`：7 个 rule\_id 级修复器（V002 机柜功率 / V007 Rail / V010 收敛比 / V016 网卡容量 / V018 Scale-Up 域 / V019 供电 / V020 ZCube）
+- 新建 `backend/fixit.py`：7 个 rule_id 级修复器（V002 机柜功率 / V007 Rail / V010 收敛比 / V016 网卡容量 / V018 Scale-Up 域 / V019 供电 / V020 ZCube）
 
 - `repair:plan`（只读：校验 → 可自动修复项生成 patch）+ `repair:apply`（写：应用 patch → 落盘 → **复核** remainingErrors 下降闭环）
 
-- 修复预存 bug：V001/V010 收敛比规则读取 snake\_case 而 engine 输出 camelCase → 收敛比 error 从未触发；新增 `_cv` 双键兼容读取恢复生效
+- 修复预存 bug：V001/V010 收敛比规则读取 snake_case 而 engine 输出 camelCase → 收敛比 error 从未触发；新增 `_cv` 双键兼容读取恢复生效
 
 - 前端 `ChatPanel` 工具栏「智能修复」+ `RepairPanel`（错误项列表 + 修复 patch 预览 + 需人工处理分组 + 全选/逐条 → 一键修复 → 显示复核结果）
 
@@ -740,7 +740,7 @@ v3.2.0 落地智能化增强全链路：FP8 精确容量计算与 TCO 成本估�
 
 ***
 
-## \[3.1.4] - 2026-08-06
+## [3.1.4] - 2026-08-06
 
 ### AI 智能落位 + 质量闭环
 
@@ -754,9 +754,9 @@ v3.1.4 落地机房智能落位全链路：约束满足 + 多目标优化内核�
 
 - 算法：全局互斥候选格 + 贪心分簇（类型簇中心 + 功率降序 + 区域负载最低优先 + 离簇近）+ 时间预算内迭代重分配；**约束最多优先**排序修复类型互斥挤占（225 柜 100% 落位）
 
-- 四维可配置目标评分：功率均衡（区域功率变异系数）/ 散热分区（高功率柜至空调柱距离）/ 网络就近（网络簇聚度）/ 布线最短（同类型簇内聚度），0\~1 + 加权总分；225 柜实测 <120ms ≤5s
+- 四维可配置目标评分：功率均衡（区域功率变异系数）/ 散热分区（高功率柜至空调柱距离）/ 网络就近（网络簇聚度）/ 布线最短（同类型簇内聚度），0~1 + 加权总分；225 柜实测 <120ms ≤5s
 
-- 输出 `{placements, scores, issues, stats}`；`engine.py` 注册 `room:optimize`（matrix dict 优先，缺省按 project 读 room\_layout.json）
+- 输出 `{placements, scores, issues, stats}`；`engine.py` 注册 `room:optimize`（matrix dict 优先，缺省按 project 读 room_layout.json）
 
 #### 落位结果可视化 + 手动调整（T8-2）
 
@@ -774,13 +774,13 @@ v3.1.4 落地机房智能落位全链路：约束满足 + 多目标优化内核�
 
 - 版本号 3.1.3 → 3.1.4（VERSION / package.json / package-lock.json / README）
 
-- 回归：后端 916 用例全绿（新增 room\_optimizer 22 + room\_edit 18 + AIHUB 工具/权限 5），前端 457 用例全绿（room.store +18、RoomOptimizeModal 组件 5），typecheck / electron tsc / lint 通过
+- 回归：后端 916 用例全绿（新增 room_optimizer 22 + room_edit 18 + AIHUB 工具/权限 5），前端 457 用例全绿（room.store +18、RoomOptimizeModal 组件 5），typecheck / electron tsc / lint 通过
 
 - PRD §5.11 验收标准 4 项全部达标；用户指南新增 6.5「机房智能落位」章节
 
 ***
 
-## \[3.1.3] - 2026-08-05
+## [3.1.3] - 2026-08-05
 
 ### 对话管理 + 需求/示例生成 + 容量规划内核（AI 能力增强）
 
@@ -788,13 +788,13 @@ v3.1.3 落地 AIHUB 管理域对话工具集与"轨道 B"需求生成闭环：�
 
 #### 对话管理工具集（T7-1）
 
-- 后端新增管理域只读 action：`device:list`（复用 device\_library.py）/ `template:list` / `template:view` / `project:list` / `project:info`
+- 后端新增管理域只读 action：`device:list`（复用 device_library.py）/ `template:list` / `template:view` / `project:list` / `project:info`
 
 - AIHUB 注册 5 工具（权限 AUTO）：`device_query` / `template_list` / `template_view` / `project_list` / `project_info` ——"有哪些 H100 服务器？""列出可用模板""打开项目 X"四类管理对话闭环
 
 #### 需求生成（T7-2）
 
-- `project:generate`：migrate\_config → `_deep_merge` 默认值补全缺失键 → `validate_config(strict=False)` 宽松校验 → `_annotate` 置信度/缺失字段标注（只预览不落盘）
+- `project:generate`：migrate_config → `_deep_merge` 默认值补全缺失键 → `validate_config(strict=False)` 宽松校验 → `_annotate` 置信度/缺失字段标注（只预览不落盘）
 
 - AIHUB 工具 `generate_project`（NOTIFY）+ 技能 `requirements-generation.md`（规模/协议/速率/网络/机柜要素抽取 + `project-config` 预览输出块约定）
 
@@ -804,7 +804,7 @@ v3.1.3 落地 AIHUB 管理域对话工具集与"轨道 B"需求生成闭环：�
 
 - 新增 `backend/file_parser.py`：Excel(pandas)/JSON(project-config 结构识别)/CSV/文本 → 结构化数据（只读 + 截断）
 
-- AIHUB 工具 `parse_file`（AUTO）+ agent 附件路径注入（parse\_file 前置）+ 技能 `parse-examples.md`（示例 → 要素 → generate\_project 闭环）
+- AIHUB 工具 `parse_file`（AUTO）+ agent 附件路径注入（parse_file 前置）+ 技能 `parse-examples.md`（示例 → 要素 → generate_project 闭环）
 
 #### 容量规划内核（T7-4）
 
@@ -812,7 +812,7 @@ v3.1.3 落地 AIHUB 管理域对话工具集与"轨道 B"需求生成闭环：�
 
 - `capacity:recommend` / `capacity:list-presets` action + AIHUB 工具 `capacity_recommend`（AUTO）+ CLI schema
 
-- 前端 `CapacityRecommendModal`：模型/GPU/预算 → 推荐结果 → 一键应用映射（param\_speed/param\_protocol/num\_servers）+ DesignTab 顶部入口
+- 前端 `CapacityRecommendModal`：模型/GPU/预算 → 推荐结果 → 一键应用映射（param_speed/param_protocol/num_servers）+ DesignTab 顶部入口
 
 #### 预估值/置信度标注（T7-5）
 
@@ -836,13 +836,13 @@ v3.1.3 落地 AIHUB 管理域对话工具集与"轨道 B"需求生成闭环：�
 
 ***
 
-## \[3.1.2] - 2026-08-05
+## [3.1.2] - 2026-08-05
 
 ### AIHUB 响应延迟优化（纯性能版 · 不加新功能）
 
-v3.1.2 聚焦 AIHUB 对话链路响应延迟：首字延迟 TTFT / 工具执行前延迟 TTA / 流式渲染流畅度 / 长任务可靠性。本地 mock 基准实测（同一脚本在 v3.1.1 tag 与 v3.1.2 对比）：**TTA 降 57.3%（1.087s → 0.464s）**、本地链路口径 **TTFT 降 62.5%（0.419s → 0.157s）**、配置同步固定开销 **-99.3%（\~264ms → \~1.9ms/次）**。
+v3.1.2 聚焦 AIHUB 对话链路响应延迟：首字延迟 TTFT / 工具执行前延迟 TTA / 流式渲染流畅度 / 长任务可靠性。本地 mock 基准实测（同一脚本在 v3.1.1 tag 与 v3.1.2 对比）：**TTA 降 57.3%（1.087s → 0.464s）**、本地链路口径 **TTFT 降 62.5%（0.419s → 0.157s）**、配置同步固定开销 **-99.3%（~264ms → ~1.9ms/次）**。
 
-#### TTFT 优化（T6-1 \~ T6-4）
+#### TTFT 优化（T6-1 ~ T6-4）
 
 - Provider 配置去重同步：前端记录配置指纹（apiKey/model/baseURL），仅首次/变更时下发；后端 `configure_provider`/`set_default_provider` diff 更新，无变化跳过写文件与全量重建（幂等，返回 `changed`）——连续对话仅首次同步
 
@@ -854,7 +854,7 @@ v3.1.2 聚焦 AIHUB 对话链路响应延迟：首字延迟 TTFT / 工具执行�
 
 #### TTA 优化（T6-5）
 
-- 工具调用流式早停：`run_stream` 增量检测完整闭合的 tool call（\`\`\`tool\_call JSON / 独立 JSON / XML `<invoke>`），完整即终止生成并立即执行（`stream.aclose()` 清理）——不再等 LLM 完整输出，工具执行前延迟显著下降（实测 -57.3%）
+- 工具调用流式早停：`run_stream` 增量检测完整闭合的 tool call（\`\`\`tool_call JSON / 独立 JSON / XML `<invoke>`），完整即终止生成并立即执行（`stream.aclose()` 清理）——不再等 LLM 完整输出，工具执行前延迟显著下降（实测 -57.3%）
 
 #### 流式渲染流畅度（T6-6）
 
@@ -882,27 +882,27 @@ v3.1.2 聚焦 AIHUB 对话链路响应延迟：首字延迟 TTFT / 工具执行�
 
 ***
 
-## \[3.1.1] - 2026-08-05
+## [3.1.1] - 2026-08-05
 
 ### AIHUB 对话框架 + 命令审计日志（3.X 系列 · AI 能力）
 
 v3.1.1 落地 AIHUB 对话框架移植（复用 engine 进程，零新增子进程）：Agent 循环 / 工具白名单 / 9 厂商 LLM Provider / 前端对话与智能答疑闭环；AI 每次工具调用经 `cli.execute` 自动落审计日志（R5.7 留轨迹）。
 
-#### AIHUB 后端移植（T5-1 \~ T5-3）
+#### AIHUB 后端移植（T5-1 ~ T5-3）
 
-- 新增 `backend/autolink_hub/`：config（secrets 落 `$AUTOLINK_USER_DATA/ai_secrets.json`，键名脱敏）、llm/provider（9 厂商 OpenAI 兼容 + reasoning\_content 收集）、agent（run\_stream 循环 + validator + recovery + planner + context + 权限分级表）、memory / skills / prompts（JSON 持久化 + md 拼接 system prompt）
+- 新增 `backend/autolink_hub/`：config（secrets 落 `$AUTOLINK_USER_DATA/ai_secrets.json`，键名脱敏）、llm/provider（9 厂商 OpenAI 兼容 + reasoning_content 收集）、agent（run_stream 循环 + validator + recovery + planner + context + 权限分级表）、memory / skills / prompts（JSON 持久化 + md 拼接 system prompt）
 
 - 工具层白名单：13 工具（设计/导出/机房/配置/项目配置域）经 `cli.execute(action, params, argv=["ai:..."])` 同进程直调 —— UI / CLI / AI 三入口同一执行路径，权限分级 AUTO🟢/NOTIFY🟡/CONFIRM🔴
 
 - 引擎注册 7 个 `ai:*` action（chat/providers/config/config-default/test/models/clear），流式回复复用 `emit_event` 通道；`ai:*` 自动映射为 CLI `ai` 域
 
-#### 智能答疑 + 审计（T5-6 \~ T5-7）
+#### 智能答疑 + 审计（T5-6 ~ T5-7）
 
 - 统一校验管线 `_run_validation`：`validate` action 现返回 `{valid, errors, validationIssues}` —— validation 引擎 22 条规则（V001-V022）每条含 `recommendation` 修复建议，供 AI 直接引用答疑
 
 - 命令审计日志：每次执行写 `userData/audit/cli-audit.jsonl`（时间/action/命令/参数脱敏/结果）；设置新增「诊断」分类，展示 CLI 能力信息 + 审计日志（AI 调用以 AI 徽标标记）
 
-#### 前端对话（T5-4 \~ T5-5）
+#### 前端对话（T5-4 ~ T5-5）
 
 - IPC 桥接：`ai:chat` 独立通道（流式 `aihub:stream` 带 sessionId）+ preload `aihub` 命名空间 + 类型完备
 
@@ -914,7 +914,7 @@ v3.1.1 落地 AIHUB 对话框架移植（复用 engine 进程，零新增子进�
 
 #### 测试与打包（T5-8）
 
-- 新增 `tests/backend/test_autolink_hub.py` 23 用例（provider 注册/工具白名单/权限分级/validator/recovery/tool\_call 3 格式解析/agent 循环 mock LLM/审计留痕与脱敏）
+- 新增 `tests/backend/test_autolink_hub.py` 23 用例（provider 注册/工具白名单/权限分级/validator/recovery/tool_call 3 格式解析/agent 循环 mock LLM/审计留痕与脱敏）
 
 - 新增 `src/test/chat.store.test.ts` 12 用例（会话/消息/模式/附件/流式追加/mock 降级）
 
@@ -924,15 +924,15 @@ v3.1.1 落地 AIHUB 对话框架移植（复用 engine 进程，零新增子进�
 
 - 版本号 3.1.0 → 3.1.1（package.json / VERSION / package-lock.json / README）
 
-- 回归：后端 784 用例（+23 test\_autolink\_hub）全绿，前端 413 用例（+12 chat.store + i18n 完整性）全绿，typecheck 通过
+- 回归：后端 784 用例（+23 test_autolink_hub）全绿，前端 413 用例（+12 chat.store + i18n 完整性）全绿，typecheck 通过
 
-## \[3.1.0] - 2026-08-05
+## [3.1.0] - 2026-08-05
 
 ### CLI 显式能力层（3.X 系列 · 对外接口）
 
 v3.1.0 落地 CLI 显式能力层：全部后端能力经 `autolink-cli` 命令行对外暴露，UI 与 CLI 共用同一执行路径（engine 路由经 `cli.execute()`），行为完全一致，并为 v3.1.1 AIHUB 的 AI 留轨迹（R5.7）铺路。
 
-#### CLI 能力层（T4-1 \~ T4-2）
+#### CLI 能力层（T4-1 ~ T4-2）
 
 - 新增 `backend/cli.py`：注册表驱动 argparse 子命令树（`a:b` → `a b`，新增 action 零改动自动获得 CLI）、9 域 14 action、`ACTION_PARAM_SCHEMA` flag 定义 + 通用 `--json '<params>'` 兜底（无 schema 新 action 自动降级可用）
 
@@ -946,7 +946,7 @@ v3.1.0 落地 CLI 显式能力层：全部后端能力经 `autolink-cli` 命令�
 
 - python.service.ts spawn 注入 `AUTOLINK_USER_DATA`，每次执行写 `userData/audit/cli-audit.jsonl`（时间/action/命令/参数脱敏/结果，失败留痕），v3.1.1 AI 留轨迹直接复用
 
-#### 测试与文档（T4-4 \~ T4-5）
+#### 测试与文档（T4-4 ~ T4-5）
 
 - 新增 `tests/backend/test_cli.py` 25 用例（自动映射/参数解析/输出格式/命令级 golden/审计脱敏），并入后端 pytest 门禁
 
@@ -956,17 +956,17 @@ v3.1.0 落地 CLI 显式能力层：全部后端能力经 `autolink-cli` 命令�
 
 - 版本号 3.0.4 → 3.1.0（package.json / VERSION / package-lock.json）
 
-- 回归：后端 768 用例（+25 test\_cli）全绿，typecheck 通过
+- 回归：后端 768 用例（+25 test_cli）全绿，typecheck 通过
 
-## \[3.0.4] - 2026-08-05
+## [3.0.4] - 2026-08-05
 
 ### 机房矩阵可视化 + 配置体系重构 + 质量闭环（3.X 系列 · 引擎与组网基础）
 
 v3.0.4 落地原 v3.0.3 规划的两大能力：机房矩阵可视化（矩阵定义/占位类型标记/手动落位约束校验）与配置体系重构（四类配置统一 schema/预设/导入导出），并完成用户指南补充与全量回归。
 
-#### 机房矩阵数据层与可视化（T3-1 \~ T3-3）
+#### 机房矩阵数据层与可视化（T3-1 ~ T3-3）
 
-- 新增 `backend/room.py`：`RoomMatrix`（行×列命名自定义、如 A15\~O15=225 柜）、`RoomCell`（占位/类型/机柜关联）、`RoomConstraints`（占位阻止/类型设备域/功率上限）、`room_layout.json` 持久化（schema 版本化 + 校验）
+- 新增 `backend/room.py`：`RoomMatrix`（行×列命名自定义、如 A15~O15=225 柜）、`RoomCell`（占位/类型/机柜关联）、`RoomConstraints`（占位阻止/类型设备域/功率上限）、`room_layout.json` 持久化（schema 版本化 + 校验）
 
 - 引擎新增 `room:create` / `room:validate` action；IPC 桥接（handlers/preload/electron.d.ts）
 
@@ -988,17 +988,17 @@ v3.0.4 落地原 v3.0.3 规划的两大能力：机房矩阵可视化（矩阵�
 
 - `SettingsPanel` 重构：设置搜索框（过滤分类）、各分组「重置为默认」、新增「配置模板」分类（预设套用 + 导入/导出）
 
-#### 质量闭环（T3-5 \~ T3-6）
+#### 质量闭环（T3-5 ~ T3-6）
 
 - 用户指南新增「6.4 机房矩阵」与「10.6 配置模板与预设」章节
 
-- 全量回归：后端 743 用例（+31 config\_schema / room 24）与前端 401 用例（+39 room.store / i18n 完整性）全绿，typecheck 通过
+- 全量回归：后端 743 用例（+31 config_schema / room 24）与前端 401 用例（+39 room.store / i18n 完整性）全绿，typecheck 通过
 
 #### 版本与回归
 
 - 版本号 3.0.3 → 3.0.4（package.json / VERSION / package-lock.json）
 
-## \[3.0.3] - 2026-08-05
+## [3.0.3] - 2026-08-05
 
 ### Release 说明自动更新与发布体验（3.X 系列 · 发布链路）
 
@@ -1018,7 +1018,7 @@ v3.0.3 聚焦发布链路体验：GitHub Release 页面说明文档从 CHANGELOG
 
 - 提取脚本本地验证：v3.0.0/v3.0.1/v3.0.2/v3.0.3 段落提取正确、边界无泄漏，缺失版本报错退出码 1
 
-## \[3.0.2] - 2026-08-05
+## [3.0.2] - 2026-08-05
 
 ### 三合一融合网与 1 分 2 扇出 + ZCube/华为超节点（3.X 系列迭代）
 
@@ -1044,7 +1044,7 @@ v3.0.2 在 v3.0.1 双平面基础上补齐 3.X 组网能力：三合一融合网
 
 - 华为超节点：UB 域内全对等 + 域间 800G Scale-Out 上联，V021 校验，HuaweiSuperNodePlugin
 
-- 昇腾 CloudMatrix 模板升级 huawei\_supernode、新增 cloudmatrix\_512 双域；华为方案全系华为设备（昇腾 256 / CloudMatrix 四网改用华为交换机 + CE6885H 档案）
+- 昇腾 CloudMatrix 模板升级 huawei_supernode、新增 cloudmatrix_512 双域；华为方案全系华为设备（昇腾 256 / CloudMatrix 四网改用华为交换机 + CE6885H 档案）
 
 #### 版本与回归
 
@@ -1052,13 +1052,13 @@ v3.0.2 在 v3.0.1 双平面基础上补齐 3.X 组网能力：三合一融合网
 
 - 全量回归：vitest 362 passed、pytest 688 passed、golden 基线（GB300-NVL72 三合一）重新生成
 
-## \[3.0.1] - 2026-08-04
+## [3.0.1] - 2026-08-04
 
 ### 双平面与超大规模拓扑（3.X 重构 · 组网能力落地）
 
 v3.0.1 落地双平面 16 Leaf 组网与超大规模降载（PRD 见 `docs/v3.0/v3.0.X_PRD.md` 4.1.1）。
 
-#### 双平面 16 Leaf（T1-1\~T1-8）
+#### 双平面 16 Leaf（T1-1~T1-8）
 
 - `param_planes` 双平面后端：每平面独立 Leaf/Spine（共 16 Leaf），服务器双口网卡逐平面接入
 
@@ -1068,17 +1068,17 @@ v3.0.1 落地双平面 16 Leaf 组网与超大规模降载（PRD 见 `docs/v3.0/
 
 #### 超大规模与模板
 
-- 超大规模拓扑降载：EDGE\_LIMIT 边裁剪 + 折叠粒度归一化，2048 台全量报告无失真
+- 超大规模拓扑降载：EDGE_LIMIT 边裁剪 + 折叠粒度归一化，2048 台全量报告无失真
 
 - `loadConfig` JSON 优先；B300 默认 Leaf 自动选型 Q3400；DP3Tier-1024 模板与 golden 基线
 
-## \[3.0.0] - 2026-08-03
+## [3.0.0] - 2026-08-03
 
 ### 引擎重构与发布体系（3.X 系列 · 基础重构）
 
 v3.0.0 是 3.X 系列基础重构版本：架构改为「渲染层（0 网络）+ 主进程 + Python 引擎」，后端 PyInstaller 打包免 Python 运行，CI 全量门禁 + tag 自动发布（PRD 见 `docs/v3.0/v3.0.X_PRD.md`）。
 
-#### 基础重构（T0-1\~T0-6）
+#### 基础重构（T0-1~T0-6）
 
 - 版本切换 + schema 版本化迁移链 + 统一访问器 + golden 基线
 
@@ -1092,7 +1092,7 @@ v3.0.0 是 3.X 系列基础重构版本：架构改为「渲染层（0 网络）
 
 - requirements 拆分 + PyInstaller 后端打包（`dist/backend-dist`，免 Python 运行）
 
-- CI 全量门禁：typecheck / lint / vitest / build / validate\_templates / golden / pytest
+- CI 全量门禁：typecheck / lint / vitest / build / validate_templates / golden / pytest
 
 - CI 发布编译 job：tag 触发三平台（Win NSIS / macOS dmg / Linux AppImage+deb）构建并自动发布 Release
 
@@ -1100,11 +1100,11 @@ v3.0.0 是 3.X 系列基础重构版本：架构改为「渲染层（0 网络）
 
 - 项目浏览器右键菜单功能丢失（ContextMenu 遮罩拦截右键事件）
 
-## \[2.9.9] - 2026-08-02
+## [2.9.9] - 2026-08-02
 
 ### 收口与发布（项目模板生命周期打通 · 最终阶段）
 
-v2.9.9 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列收官版本：验证导出回归（TypeError 历史遗留修复确认）、全量质量门禁、用户指南模板全流程 5 章节、CI 手动触发支持（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+v2.9.9 是 v2.9.4~2.9.9「项目模板生命周期打通」系列收官版本：验证导出回归（TypeError 历史遗留修复确认）、全量质量门禁、用户指南模板全流程 5 章节、CI 手动触发支持（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
 
 #### 导出回归验证（T1）
 
@@ -1132,11 +1132,11 @@ v2.9.9 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列收官版本�
 
 - commit + tag v2.9.9 推送，触发 CI 验证
 
-## \[2.9.8] - 2026-08-02
+## [2.9.8] - 2026-08-02
 
 ### 模板生命周期管理（项目模板生命周期打通 · 第五阶段）
 
-v2.9.8 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第五阶段：导入强校验、模板健康检查、列表筛选增强、模板验证纳入 CI（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+v2.9.8 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第五阶段：导入强校验、模板健康检查、列表筛选增强、模板验证纳入 CI（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
 
 #### 模板 ZIP 导入强校验（T1）
 
@@ -1146,7 +1146,7 @@ v2.9.8 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第五阶段�
 
 #### 模板健康检查（T2）
 
-- 新增 `template:healthCheck` IPC：扫描内置+用户全部模板，逐项检查缺 JSON / JSON 非法 / 配置语义非法（validate\_config）/ 选型引用失效（device\_refs 引用的设备不在设备库）
+- 新增 `template:healthCheck` IPC：扫描内置+用户全部模板，逐项检查缺 JSON / JSON 非法 / 配置语义非法（validate_config）/ 选型引用失效（device_refs 引用的设备不在设备库）
 
 - 前端工具栏新增 ❤ 健康检查按钮 + `TemplateHealthModal` 结果弹窗：健康/异常汇总 + 逐项错误详情（含内置徽标）
 
@@ -1176,11 +1176,11 @@ v2.9.8 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第五阶段�
 
 - 全量回归：pytest 560 passed、vitest 354 passed（+4）、tsc 0 error、eslint 0 error（38 个既有 warning）、模板验证 16/16 通过
 
-## \[2.9.7] - 2026-08-02
+## [2.9.7] - 2026-08-02
 
 ### 模板预览与派生文件（项目模板生命周期打通 · 第四阶段）
 
-v2.9.7 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第四阶段：模板列表展示规模摘要，新增"预览方案"能力——以临时目录即时执行设计引擎，弹窗呈现校验状态与统计摘要，不落盘任何派生文件（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+v2.9.7 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第四阶段：模板列表展示规模摘要，新增"预览方案"能力——以临时目录即时执行设计引擎，弹窗呈现校验状态与统计摘要，不落盘任何派生文件（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
 
 #### 模板规模摘要（T1）
 
@@ -1216,15 +1216,15 @@ v2.9.7 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第四阶段�
 
 - 全量回归：pytest 560 passed、vitest 350 passed、tsc 0 error、eslint 0 error（37 个既有 warning）、模板验证 16/16 通过
 
-## \[2.9.6] - 2026-08-02
+## [2.9.6] - 2026-08-02
 
 ### 模板可视化编辑（项目模板生命周期打通 · 第三阶段）
 
-v2.9.6 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第三阶段：将模板编辑从纯 INI 文本升级为可视化表单，支持规模/网络/选型/机柜全量编辑，JSON+INI 双文件同步（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+v2.9.6 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第三阶段：将模板编辑从纯 INI 文本升级为可视化表单，支持规模/网络/选型/机柜全量编辑，JSON+INI 双文件同步（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
 
 #### 后端：JSON→INI 反向序列化（T1/T2）
 
-- `migration.project_config_to_ini`：project\_config.json 全字段映射回模板 `[DEFAULT]` 段 INI（与 designer `_load_common_ini_config` 键一一对应）；含 `[rack]` 段（冷却/GPU 独占）与 `[scale_up]` 段（非空才输出）
+- `migration.project_config_to_ini`：project_config.json 全字段映射回模板 `[DEFAULT]` 段 INI（与 designer `_load_common_ini_config` 键一一对应）；含 `[rack]` 段（冷却/GPU 独占）与 `[scale_up]` 段（非空才输出）
 
 - 存储合并：全闪+混闪 → `additional_storage_servers` 单键（往返按 1/2 拆分，总量一致）
 
@@ -1252,7 +1252,7 @@ v2.9.6 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第三阶段�
 
 - 新增 5 语言 `common.template.editForm.*`（37 keys）
 
-- `test_migration.py` 新增 8 个用例：往返一致性/rack/scale\_up/存储合并/网络开关/空 scale\_up/action 校验（合法/非法/非字典）
+- `test_migration.py` 新增 8 个用例：往返一致性/rack/scale_up/存储合并/网络开关/空 scale_up/action 校验（合法/非法/非字典）
 
 #### 版本与回归
 
@@ -1260,11 +1260,11 @@ v2.9.6 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第三阶段�
 
 - 全量回归：pytest 560 passed（+8）、vitest 345 passed、tsc 0 error、eslint 0 error（37 个既有 warning）、模板验证 16/16 通过
 
-## \[2.9.5] - 2026-08-02
+## [2.9.5] - 2026-08-02
 
 ### 从模板创建项目（项目模板生命周期打通 · 第二阶段）
 
-v2.9.5 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第二阶段：打通"模板 → 项目"完整链路——模板右键入口、向导预加载、后端双路径查找、前端死代码清理（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+v2.9.5 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第二阶段：打通"模板 → 项目"完整链路——模板右键入口、向导预加载、后端双路径查找、前端死代码清理（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
 
 #### 后端：project:create 模板支持（T1）
 
@@ -1274,7 +1274,7 @@ v2.9.5 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第二阶段�
 
 #### 后端：template:getConfig IPC（T2）
 
-- 新增 `template:getConfig` IPC：返回模板的 project\_config.json 内容，供向导预加载
+- 新增 `template:getConfig` IPC：返回模板的 project_config.json 内容，供向导预加载
 
 #### 向导：模板配置预加载（T3）
 
@@ -1308,11 +1308,11 @@ v2.9.5 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第二阶段�
 
 - 全量回归：pytest 552 passed、vitest 345 passed、tsc 0 error、eslint 0 error（36 个既有 warning）、模板验证 16/16 通过
 
-## \[2.9.4] - 2026-08-02
+## [2.9.4] - 2026-08-02
 
 ### 模板数据模型与库治理（项目模板生命周期打通 · 第一阶段）
 
-v2.9.4 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第一阶段：为每个内置模板补齐 `project_config.json`（规模/选型/机柜/网络的唯一权威载体），并升级模板生成与验证脚本，为"从模板创建项目"打好数据地基（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
+v2.9.4 是 v2.9.4~2.9.9「项目模板生命周期打通」系列第一阶段：为每个内置模板补齐 `project_config.json`（规模/选型/机柜/网络的唯一权威载体），并升级模板生成与验证脚本，为"从模板创建项目"打好数据地基（PRD 见 `docs/v2.9/v2.9.4-2.9.9_项目模板生命周期_PRD.md`）。
 
 #### 迁移引擎支持模板 INI（T1）
 
@@ -1320,11 +1320,11 @@ v2.9.4 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第一阶段�
 
 - 新增映射：`additional_storage_servers`（拆分为全闪/混闪）、`additional_compute_servers`、`rail_mode`/`rail_count`/`param_protocol`/`biz_chassis_threshold`
 
-- `[rack]` 段支持 `cooling_method`/`gpu_dedicated`（V2.9.1 rack\_config 扩展）；存储数量为 0 时正确拆分为 0+0
+- `[rack]` 段支持 `cooling_method`/`gpu_dedicated`（V2.9.1 rack_config 扩展）；存储数量为 0 时正确拆分为 0+0
 
 #### 模板预生成脚本（T2）
 
-- 新建 `scripts/prepare_templates.py`：INI → JSON 批量生成 + 按模板语义覆盖 GPU 选型 + 校验（validate\_config + 设备库解析）；幂等，`--force` 覆盖，`--check` dry-run
+- 新建 `scripts/prepare_templates.py`：INI → JSON 批量生成 + 按模板语义覆盖 GPU 选型 + 校验（validate_config + 设备库解析）；幂等，`--force` 覆盖，`--check` dry-run
 
 #### 选型规则收敛（T3）
 
@@ -1338,13 +1338,13 @@ v2.9.4 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第一阶段�
 
 - 16 个内置模板全部生成并人工校准 `project_config.json`（GPU 选型：H100/L20/GB300 NVL72/MLU590/昇腾 910C/海光 K100/B200 等）
 
-- 11 个模板补充 `[rack]` 段机柜配置（功率上限 8K\~18KW、液冷-H100-256 为 cold\_plate、GPU 独占）
+- 11 个模板补充 `[rack]` 段机柜配置（功率上限 8K~18KW、液冷-H100-256 为 cold_plate、GPU 独占）
 
-- `template.json` 增加 `templateVersion: 2`；修复 cambricon\_mlu\_cluster 缺失的 template.json
+- `template.json` 增加 `templateVersion: 2`；修复 cambricon_mlu_cluster 缺失的 template.json
 
 #### 模板验证升级（T5）
 
-- `validate_templates.py` 升级：project\_config.json 完整性、device\_refs 全量解析、INI/JSON 设计拓扑等价、机柜功率/U 位/上架检查
+- `validate_templates.py` 升级：project_config.json 完整性、device_refs 全量解析、INI/JSON 设计拓扑等价、机柜功率/U 位/上架检查
 
 - 全量结果：`prepare_templates.py` 16/16 OK，`validate_templates.py` 16/16 通过
 
@@ -1354,7 +1354,7 @@ v2.9.4 是 v2.9.4\~2.9.9「项目模板生命周期打通」系列第一阶段�
 
 - 全量回归：pytest 552 passed（新增 12 个迁移/别名用例）、vitest 341 passed、tsc 0 error、eslint 0 error（37 个既有 warning）
 
-## \[2.9.3] - 2026-08-02
+## [2.9.3] - 2026-08-02
 
 ### 能力补强收口（3.0 前收官 · 第三阶段）
 
@@ -1364,9 +1364,9 @@ v2.9.3 是 3.0 前收官最后阶段：Scale-Up 双栈转正、校验硬规则�
 
 - JSON 顶层 `scale_up` 段 + INI `[scale_up]` section，`bandwidth` 兼容旧命名 `bandwidth_per_link_gbps`
 
-- 旧配置缺失该段 → `scale_up_config=None` 不报错；INI→JSON 迁移保留 scale\_up
+- 旧配置缺失该段 → `scale_up_config=None` 不报错；INI→JSON 迁移保留 scale_up
 
-- `project_config.validate_config` 新增可选 scale\_up 校验（protocol 枚举 + 数值类型）
+- `project_config.validate_config` 新增可选 scale_up 校验（protocol 枚举 + 数值类型）
 
 #### Scale-Up 生成层（T2）
 
@@ -1378,11 +1378,11 @@ v2.9.3 是 3.0 前收官最后阶段：Scale-Up 双栈转正、校验硬规则�
 
 - RackAllocator 新增 `CABINET_TYPE_SCALEUP`，GPU 节点 1 台/柜独占，域内柜号相邻
 
-- engine 输出 scale\_up 节点（domainId/protocol/networkType）与 summary.scaleUp
+- engine 输出 scale_up 节点（domainId/protocol/networkType）与 summary.scaleUp
 
 #### Scale-Up 前端与报告（T4）
 
-- TopologyTab/RackTab 消费 scale\_up 数据：拓扑边渲染、机柜类型 scaleup（琥珀色）
+- TopologyTab/RackTab 消费 scale_up 数据：拓扑边渲染、机柜类型 scaleup（琥珀色）
 
 - 报告概览/架构/机柜章节含 Scale-Up 汇总
 
@@ -1406,7 +1406,7 @@ v2.9.3 是 3.0 前收官最后阶段：Scale-Up 双栈转正、校验硬规则�
 
 - `validate_config` 接受 UEC 协议（IB/RoCE/UEC），与 designer 自动选型一致
 
-- ualink\_1\_0\_1024 / cloudmatrix\_384 / NVL72-单架 三模板补 scale\_up 配置（名实相符：UALink 1024 / UB 384 / NVLink 72 单域）
+- ualink_1_0_1024 / cloudmatrix_384 / NVL72-单架 三模板补 scale_up 配置（名实相符：UALink 1024 / UB 384 / NVLink 72 单域）
 
 #### 版本与回归（T9）
 
@@ -1414,7 +1414,7 @@ v2.9.3 是 3.0 前收官最后阶段：Scale-Up 双栈转正、校验硬规则�
 
 - 全量回归：pytest（新增 15 个用例）、tsc、eslint、vitest 全绿
 
-## \[2.9.2] - 2026-08-02
+## [2.9.2] - 2026-08-02
 
 ### 体验精细打磨（3.0 前收官 · 第二阶段）
 
@@ -1474,7 +1474,7 @@ v2.9.2 聚焦使用体验的精细打磨：统一空态/弹窗/组件、工作�
 
 - 版本号 2.9.1 → 2.9.2（package.json / VERSION / package-lock.json）
 
-## \[2.9.1] - 2026-08-02
+## [2.9.1] - 2026-08-02
 
 ### 质量工程闭环（3.0 前收官 · 第一阶段）
 
@@ -1512,7 +1512,7 @@ v2.9.1 是 3.0 前"质量工程闭环"首个子版本，聚焦工程质量与性
 
 - `test_validation.py` 追加 V011（PUE≤1.3 合规）/V012（OCP 冷板接口）/V013（信创比例≥50%）正反例（9 用例）
 
-- `test_scaleup_and_plugin.py` 追加 biz/oob 插件 generate\_topology 用例
+- `test_scaleup_and_plugin.py` 追加 biz/oob 插件 generate_topology 用例
 
 - `test_designer_integration.py` 追加超大-2048（3-tier）集成用例：16 Pod×128 台、三层 Core 存在、拓扑自检通过
 
@@ -1534,7 +1534,7 @@ v2.9.1 是 3.0 前"质量工程闭环"首个子版本，聚焦工程质量与性
 
 - tsc 0 errors、eslint 0 errors、vitest 335 passed、pytest 495 passed、16/16 模板验证通过
 
-## \[2.9.0] - 2026-08-02
+## [2.9.0] - 2026-08-02
 
 ### 机柜规划与上架逻辑重构
 
@@ -1554,7 +1554,7 @@ v2.9.0 系列让机柜规划从"简单轮转"升级为"物理约束装箱"，贴
 
 #### 机柜配置与报告（v2.9.1）
 
-- `rack_config` 扩展：`cooling_method`（air/cold\_plate/immersion）、`gpu_dedicated`（独占开关）、`power_preset`（功率预设）
+- `rack_config` 扩展：`cooling_method`（air/cold_plate/immersion）、`gpu_dedicated`（独占开关）、`power_preset`（功率预设）
 
 - `WizardStepRack` 增强：功率预设快速按钮（6/12/16/30/60KW）、散热方式选择、GPU 独占开关
 
@@ -1578,11 +1578,11 @@ v2.9.0 系列让机柜规划从"简单轮转"升级为"物理约束装箱"，贴
 
 - 回归测试: tsc 0 errors、eslint 0 errors、vitest 335 passed、pytest 456 passed
 
-## \[2.8.0] - 2026-08-02
+## [2.8.0] - 2026-08-02
 
 ### 体验与性能
 
-v2.8.0 系列聚焦文件加载、拓扑持久化与交互编辑三大体验升级，按 v2.8.0\~v2.8.3 四个子版本交付（PRD 见 `docs/v2.8/v2.8.X_PRD.md`）。
+v2.8.0 系列聚焦文件加载、拓扑持久化与交互编辑三大体验升级，按 v2.8.0~v2.8.3 四个子版本交付（PRD 见 `docs/v2.8/v2.8.X_PRD.md`）。
 
 #### v2.8.0 文件加载与查看
 
@@ -1622,7 +1622,7 @@ v2.8.0 系列聚焦文件加载、拓扑持久化与交互编辑三大体验升�
 
 - 回归测试: tsc 0 errors、eslint 0 errors、vitest 330 passed
 
-## \[2.7.7] - 2026-08-02
+## [2.7.7] - 2026-08-02
 
 ### 修复
 
@@ -1636,7 +1636,7 @@ v2.8.0 系列聚焦文件加载、拓扑持久化与交互编辑三大体验升�
 
 - 回归测试: tsc 0 errors、eslint 0 errors、vitest 323 passed、pytest 424 passed
 
-## \[2.7.6] - 2026-08-02
+## [2.7.6] - 2026-08-02
 
 ### 双栈与标准
 
@@ -1656,7 +1656,7 @@ v2.7.6 支持 Scale-Up/Scale-Out 双栈规划，预置 UEC/UALink 新标准，�
 
 #### 插件化架构 (T6-T8)
 
-- **T6**: 网络类型插件化接口（`backend/network_plugin.py`），定义 `NetworkPlugin` 抽象接口，内置 param/storage/biz/oob/scale\_up 5 个插件
+- **T6**: 网络类型插件化接口（`backend/network_plugin.py`），定义 `NetworkPlugin` 抽象接口，内置 param/storage/biz/oob/scale_up 5 个插件
 
 - **T7**: `engine.py` action 注册表化，action 处理改为 decorator 注册（`@register_action`），新增 action 无需改主逻辑
 
@@ -1676,7 +1676,7 @@ v2.7.6 支持 Scale-Up/Scale-Out 双栈规划，预置 UEC/UALink 新标准，�
 
 - 回归测试: tsc 0 errors、eslint 0 errors、vitest 313 passed、pytest 424 passed
 
-## \[2.7.5] - 2026-08-02
+## [2.7.5] - 2026-08-02
 
 ### 国产生态与信创
 
@@ -1710,9 +1710,9 @@ v2.7.5 构建国产算力生态壁垒，支持昇腾/海光/寒武纪国产设�
 
 - `DeviceProfile` 新增 `origin`（国产/进口/混合）和 `lead_time`（供货周期）字段
 
-- 设备库总数从 114 增至 117（新增 ascend\_910c、h3c\_s12500r\_cpo\_51\_2t、ruijie\_s6910\_32oc2vs\_1\_6t）
+- 设备库总数从 114 增至 117（新增 ascend_910c、h3c_s12500r_cpo_51_2t、ruijie_s6910_32oc2vs_1_6t）
 
-## \[2.7.4] - 2026-08-02
+## [2.7.4] - 2026-08-02
 
 ### 专业能力增强
 
@@ -1742,7 +1742,7 @@ v2.7.4 增强光模块/液冷/PUE/PDF 的专业度，对标行业最新标准，
 
 #### 设备清单与算法优化 (T9-T11)
 
-- **T9**: `generate_device_list` 从 device\_library 拉取 vendor/model 填充设备清单
+- **T9**: `generate_device_list` 从 device_library 拉取 vendor/model 填充设备清单
 
 - **T10**: 收敛比计算增加 Spine fanout，提供 Leaf 级和全局两级收敛比（3-tier CLOS）
 
@@ -1752,7 +1752,7 @@ v2.7.4 增强光模块/液冷/PUE/PDF 的专业度，对标行业最新标准，
 
 - 设备 schema 新增 `tech_route`（技术路线）、`origin`（国产/进口）、`lead_time`（供货周期）字段
 
-## \[2.7.3] - 2026-08-02
+## [2.7.3] - 2026-08-02
 
 ### 体验与性能
 
@@ -1796,7 +1796,7 @@ v2.7.3 修复前端体验痛点，优化大规模拓扑性能，完成 15 项任
 
 - **T15**: Toast 优化，容器位置调整 + 悬停暂停计时
 
-## \[2.7.2] - 2026-08-02
+## [2.7.2] - 2026-08-02
 
 ### 算法可用性
 
@@ -1856,7 +1856,7 @@ v2.7.2 让 validation 引擎与 Rail-Optimized 算法真正生效,统一配置�
 
 ***
 
-## \[2.7.1] - 2026-08-01
+## [2.7.1] - 2026-08-01
 
 ### 质量基线
 
@@ -1900,7 +1900,7 @@ v2.7.1 建立质量门禁,补齐核心算法测试,修复 VERSION 同步问题�
 
 ***
 
-## \[2.7.0] - 2026-08-01
+## [2.7.0] - 2026-08-01
 
 ### 三项核心修复
 
@@ -1964,7 +1964,7 @@ v2.7.1 建立质量门禁,补齐核心算法测试,修复 VERSION 同步问题�
 
 ***
 
-## \[2.6.5] - 2026-07-31
+## [2.6.5] - 2026-07-31
 
 ### 更新检查机制修复
 
@@ -2010,7 +2010,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.6.4] - 2026-07-31
+## [2.6.4] - 2026-07-31
 
 ### v2.6.3 收尾:文档补齐与 U3 组件抽取
 
@@ -2022,7 +2022,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - **deployment.md**:重写为 V2.6 版本(自动更新机制/数据持久化/reportlab 依赖/V2.6 常见问题)
 
-- **user\_guide.md**:新增第 11 章「自动更新」,项目结构补充 topology.json/rack\_layout.json,输出类型补充 PDF 报告,设置补充「重置工作区」,常见问题补充 Q8-Q10
+- **user_guide.md**:新增第 11 章「自动更新」,项目结构补充 topology.json/rack_layout.json,输出类型补充 PDF 报告,设置补充「重置工作区」,常见问题补充 Q8-Q10
 
 - **v2.6.3 PRD**:状态更新为已完成,验收清单全部勾选
 
@@ -2038,7 +2038,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.6.3] - 2026-07-31
+## [2.6.3] - 2026-07-31
 
 ### UI 系统优化（U1-U9 全部完成）
 
@@ -2076,7 +2076,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.6.2] - 2026-07-31
+## [2.6.2] - 2026-07-31
 
 ### 核心功能修复与持久化
 
@@ -2136,7 +2136,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.6.1] - 2026-07-31
+## [2.6.1] - 2026-07-31
 
 ### 体验完善与死代码清理
 
@@ -2182,7 +2182,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.6.0] - 2026-07-30
+## [2.6.0] - 2026-07-30
 
 ### 紧急缺陷修复（用户反馈 8 项 + P0 隐藏 bug）
 
@@ -2224,9 +2224,9 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 #### R6 设备库数据纠正
 
-- 修正 `h3c_s6850_56hf.json`：从错误的 200G 存储交换机改为 25G 业务交换机（category/port\_speed/port\_type/description/tags 全字段修正，物理文件移目录）
+- 修正 `h3c_s6850_56hf.json`：从错误的 200G 存储交换机改为 25G 业务交换机（category/port_speed/port_type/description/tags 全字段修正，物理文件移目录）
 
-- 修正 `library_index.json` 中 `huawei_ce6860_48s6cq` 归属（switches\_storage → switches\_biz）
+- 修正 `library_index.json` 中 `huawei_ce6860_48s6cq` 归属（switches_storage → switches_biz）
 
 - `device_library.py` 加载时加一致性校验（category 字段与目录一致）
 
@@ -2242,7 +2242,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - "全部项目" TreeItem 改为可展开，调 `project:getStructure` 拉取目录树递归渲染
 
-- 新增"输入文件" Section（network\_config.ini / project\_config.json / project.json）
+- 新增"输入文件" Section（network_config.ini / project_config.json / project.json）
 
 - 展开状态提升到 `explorer.store`，关闭侧栏再开状态保留
 
@@ -2268,19 +2268,19 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.5.0] - 2026-07-30
+## [2.5.0] - 2026-07-30
 
 ### V2.4 系列延续与质量验收
 
 - 完成 V2.4 PRD 验收与质量评估（完成度 65% → 验收通过）
 
-- Logo 设计规范文档化（[docs/v2.5/logo\_specification.md](docs/v2.5/logo_specification.md)）
+- Logo 设计规范文档化（[docs/v2.5/logo_specification.md](docs/v2.5/logo_specification.md)）
 
 - 启动加载动画优化（粒子背景 + 旋转环 + 进度条）
 
 - 更新机制完善：版本号动态化、首次启动自动检测更新并 toast 通知、Release Notes 折叠展示、下载进度条优化
 
-- 项目复制/重命名/导出导入 ZIP（含安全校验：路径遍历检测、文件白名单、名称冲突自动追加 \_导入）
+- 项目复制/重命名/导出导入 ZIP（含安全校验：路径遍历检测、文件白名单、名称冲突自动追加 _导入）
 
 - 批量项目导出（工具栏按钮）
 
@@ -2300,7 +2300,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.4.6] - 2026-07-30
+## [2.4.6] - 2026-07-30
 
 ### 补齐半成品功能（V2.4 PRD 完成度 48% → 65%）
 
@@ -2308,9 +2308,9 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - NetworkObject 新增 `rail_id`/`rail_role` 字段（NVIDIA SuperPOD 8-Rail 标准）
 
-- rail\_topology.py 传递 Rail 字段到 Leaf/Spine
+- rail_topology.py 传递 Rail 字段到 Leaf/Spine
 
-- designer.py 新增 `rail_mode` 配置开关（standard / rail\_optimized）
+- designer.py 新增 `rail_mode` 配置开关（standard / rail_optimized）
 
 - 新增 `_create_rail_optimized_switches` 和 `_wire_rail_optimized` 方法
 
@@ -2352,7 +2352,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
   - 室外温度、负载率、UPS 效率、自然冷开关
 
-#### Phase J5: cluster\_512 模板
+#### Phase J5: cluster_512 模板
 
 - 新增"中型-512"模板：512 H100 GPU + 48 存储 + 24 通算
 
@@ -2366,7 +2366,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - 累计完成率：65%
 
-## \[2.4.5] - 2026-07-29
+## [2.4.5] - 2026-07-29
 
 ### 拓扑布局四象限分区 + 服务器组垂直居中
 
@@ -2380,7 +2380,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - 服务器组垂直居中：动态计算 verticalGap，使上方间距 ≈ 下方间距（差值 ≤ 20px）
 
-- topRegionHeight 包含 Y\_AGG 顶部边距，消除计算偏差
+- topRegionHeight 包含 Y_AGG 顶部边距，消除计算偏差
 
 - layoutBottomRegion 使用动态 verticalGap，确保底部间距与顶部间距相等
 
@@ -2400,15 +2400,15 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - TypeScript typecheck 无错误
 
-## \[2.4.1] - 2026-07-29
+## [2.4.1] - 2026-07-29
 
 ### 项目与模板生命周期管理完善
 
-- 新增项目复制功能（右键菜单 → 复制项目，自动追加 \_副本 后缀）
+- 新增项目复制功能（右键菜单 → 复制项目，自动追加 _副本 后缀）
 
 - 新增项目重命名功能（右键菜单 → 重命名）
 
-- 新增项目导出/导入 ZIP（含安全校验：路径遍历检测、文件白名单、名称冲突自动追加 \_导入）
+- 新增项目导出/导入 ZIP（含安全校验：路径遍历检测、文件白名单、名称冲突自动追加 _导入）
 
 - 新增批量项目导出（工具栏按钮，选择目录后批量打包）
 
@@ -2442,7 +2442,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - 下载进度条 + 错误提示优化
 
-## \[2.4.0] - 2026-07-29
+## [2.4.0] - 2026-07-29
 
 ### Phase A: 数据资产扩展
 
@@ -2506,7 +2506,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.3.0] - 2026-07-29
+## [2.3.0] - 2026-07-29
 
 ### 设计系统
 
@@ -2548,7 +2548,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.2.0] - 2026-07-29
+## [2.2.0] - 2026-07-29
 
 ### Bug 修复
 
@@ -2574,7 +2574,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 - 层级重排：业务/OOB 在上 → 服务器居中 → 参数/存储在下
 
-- 服务器按连接的 param\_leaf 自动分组，组间 80px 间隔
+- 服务器按连接的 param_leaf 自动分组，组间 80px 间隔
 
 - 水平间距从 90 增至 120
 
@@ -2586,7 +2586,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.1.0] - 2026-07-28
+## [2.1.0] - 2026-07-28
 
 ### 功能
 
@@ -2600,7 +2600,7 @@ v2.6.3 及之前版本的 `checkForUpdates` 在网络失败或 electron-updater 
 
 ***
 
-## \[2.0.0] - 2026-07-27
+## [2.0.0] - 2026-07-27
 
 ### 初始版本
 
