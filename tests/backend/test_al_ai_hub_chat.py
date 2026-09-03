@@ -33,8 +33,11 @@ class MockProvider(LLMProvider):
 @pytest.fixture(autouse=True)
 def clean_state(tmp_path):
     settings.user_data_dir = str(tmp_path)
+    old_engine = settings.ai_engine
+    settings.ai_engine = 'own'
     registry._providers.clear()
     yield
+    settings.ai_engine = old_engine
     registry._providers.clear()
 
 

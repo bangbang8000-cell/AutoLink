@@ -73,6 +73,13 @@ PROVIDER_CATALOG = {
     },
 }
 
+# ============================================================
+# AI 引擎模式（5.0.2-502-b：自有=默认 / Hermes / 自动）
+# ============================================================
+
+AI_ENGINE_VALUES = ("own", "hermes", "auto")
+AI_ENGINE_DEFAULT = "own"
+
 
 class ProviderConfig:
     """单个 Provider 配置"""
@@ -89,6 +96,8 @@ class AutoLinkAISettings:
 
     def __init__(self):
         self.default_provider: str = "deepseek"
+        # 5.0.2-502-b: AI 引擎模式（own=自有默认 / hermes / auto），持久化 ai_secrets.json
+        self.ai_engine: str = AI_ENGINE_DEFAULT
         # Provider 配置（动态字段，通过 secrets 文件加载）
         self.provider_configs: dict = {}
         # 用户数据目录（Electron spawn engine 时注入 AUTOLINK_USER_DATA）
@@ -175,9 +184,37 @@ def save_secrets(secrets: dict) -> None:
 def apply_secrets() -> None:
     """从文件加载密钥并应用到配置"""
     secrets = load_secrets()
-    settings.provider_configs = {k: v for k, v in secrets.items() if k != "default_provider"}
+    settings.provider_configs = {
+        k: v for k, v in secrets.items()
+        if k != "default_provider" and k != "ai_engine"
+    }
     if "default_provider" in secrets:
         settings.default_provider = secrets["default_provider"]
+    if "ai_engine" in secrets and secrets["ai_engine"] in AI_ENGINE_VALUES:
+        settings.ai_engine = secrets["ai_engine"]
+
+
+def get_ai_engine() -> str:
+    """当前配置的 AI 引擎模式（own/hermes/auto，默认 own）"""
+    engine = getattr(settings, "ai_engine", AI_ENGINE_DEFAULT)
+    return engine if engine in AI_ENGINE_VALUES else AI_ENGINE_DEFAULT
+
+
+def set_ai_engine(engine: str) -> dict:
+    """设置 AI 引擎模式（持久化 ai_secrets.json + 热应用；diff 幂等）
+
+    返回 {status, ai_engine, changed}：未变化跳过写文件（连续切换不重建）。
+    """
+    engine = (engine or AI_ENGINE_DEFAULT).strip().lower()
+    if engine not in AI_ENGINE_VALUES:
+        raise ValueError(f"未知 AI 引擎模式: {engine}，可选 {AI_ENGINE_VALUES}")
+    secrets = load_secrets()
+    if secrets.get("ai_engine") == engine and settings.ai_engine == engine:
+        return {"status": "ok", "ai_engine": engine, "changed": False}
+    secrets["ai_engine"] = engine
+    save_secrets(secrets)
+    apply_secrets()
+    return {"status": "ok", "ai_engine": engine, "changed": True}
 
 
 def get_provider_persisted_models(provider: str) -> list:

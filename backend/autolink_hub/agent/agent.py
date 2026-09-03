@@ -34,6 +34,8 @@ class AgentSession:
         self.autonomy_mode: str = "semi_auto"
         self.current_project: str = ""
         self.session_id: str = ""
+        # 5.0.2-502-b: 会话所属引擎命名空间（own/hermes，切换引擎保留旧会话）
+        self.engine: str = "own"
         # 4.3 F3-2: 待用户确认的工具调用（CONFIRM 权限分级，等待下一条回复确认/取消）
         self.pending_confirmation: dict | None = None
 
@@ -402,21 +404,25 @@ def _get_reasoning(provider) -> str:
     return reason.strip() if reason else ''
 
 
-# 全局会话缓存
-_sessions: dict[str, AgentSession] = {}
+# 全局会话缓存（5.0.2-502-b：按 (engine, session_id) 命名空间隔离，切换引擎保留旧会话）
+_sessions: dict[tuple[str, str], AgentSession] = {}
 
 
-def get_or_create_session(session_id: str) -> AgentSession:
-    """获取或创建 Agent 会话"""
-    if session_id not in _sessions:
+def get_or_create_session(session_id: str, engine: str = "own") -> AgentSession:
+    """获取或创建 Agent 会话（按 engine 维度隔离命名空间，切换保留旧会话）"""
+    engine = (engine or "own").strip().lower()
+    key = (engine, session_id)
+    if key not in _sessions:
         session = AgentSession()
         session.set_provider()
         session.session_id = session_id
-        _sessions[session_id] = session
-    return _sessions[session_id]
+        session.engine = engine
+        _sessions[key] = session
+    return _sessions[key]
 
 
-def clear_session(session_id: str):
-    """清除会话"""
-    _sessions.pop(session_id, None)
+def clear_session(session_id: str, engine: str = "own"):
+    """清除会话（按 engine 命名空间，默认自有引擎；向后兼容单参调用）"""
+    engine = (engine or "own").strip().lower()
+    _sessions.pop((engine, session_id), None)
     clear_project_context(session_id)
