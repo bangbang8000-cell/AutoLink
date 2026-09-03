@@ -15,8 +15,8 @@ import shutil
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from designer import NetworkDesignerV2
-from project_config import validate_config
 from device_library import get_device_library
+from template_gate import check_template_config
 
 base = os.path.join(os.path.dirname(__file__), '..', 'template')
 
@@ -104,32 +104,9 @@ for t in templates:
         except json.JSONDecodeError as e:
             problems.append(f'project_config.json 解析失败: {e}')
         if config is not None:
-            verr = validate_config(config)
-            if verr:
-                problems.append(f'validate_config: {verr}')
-            lib = get_device_library()
-            missing = [k for k, ref in config.get('device_refs', {}).items() if lib.resolve_ref(ref) is None]
-            if missing:
-                problems.append(f'device_refs 无法解析: {missing}')
-            # M4 门禁增强：
-            # ① 旧设备 id 检查（LEGACY_ALIASES 中的旧 id 不应出现在模板，应更新为新 id）
-            legacy_ids = ('h3c_s9850_64h', 'h3c_s6805_48p', 'h3c_s5820v2_24p', 'ruijie_s6910_32oc2vs_1_6t')
-            legacy_used = [k for k, ref in config.get('device_refs', {}).items()
-                           if ref.get('library_id') in legacy_ids]
-            if legacy_used:
-                problems.append(f'引用旧设备 id（应更新为新 id）: {legacy_used}')
-            # ② param_speed 与 param 交换机 port_speed 匹配
-            speed = config.get('topology', {}).get('param_speed')
-            if speed:
-                mismatched = []
-                for k, ref in config.get('device_refs', {}).items():
-                    if 'param' not in k:
-                        continue
-                    dev = lib.resolve_ref(ref)
-                    if dev and dev.port_speed and dev.port_speed != speed:
-                        mismatched.append(f'{k}={dev.id}({dev.port_speed})')
-                if mismatched:
-                    problems.append(f'param_speed({speed}) 与 param 交换机不匹配: {mismatched}')
+            # V5.0.1-501-b: 强化门禁——validate_config + device_refs 可解析 + 旧 id 门禁 +
+            # rack_config 完整性（cooling_method/gpu_dedicated）+ 协议兼容性 + 参数合理性
+            problems.extend(check_template_config(config, get_device_library(), tpl_dir))
 
     # 2. INI 设计 + 机柜检查（向后兼容；临时目录避免 JSON 抢占）
     stats_ini = None

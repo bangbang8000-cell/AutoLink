@@ -239,6 +239,23 @@ def _validate_clusters(config: dict) -> str | None:
     return None
 
 
+def _validate_rack_optional_fields(config: dict) -> str | None:
+    """V5.0.1-501-b: rack_config 散热/独占字段校验（存在时校验，缺失向后兼容）
+
+    - cooling_method ∈ {air, cold_plate, immersion}
+    - gpu_dedicated 必须是布尔值
+    模板库完整性（强制 presence）由 backend/template_gate.py 门禁承担。
+    """
+    rack = config.get('rack_config')
+    if not isinstance(rack, dict):
+        return None
+    if 'cooling_method' in rack and rack['cooling_method'] not in ('air', 'cold_plate', 'immersion'):
+        return "rack_config.cooling_method 必须是 'air' / 'cold_plate' / 'immersion'"
+    if 'gpu_dedicated' in rack and not isinstance(rack['gpu_dedicated'], bool):
+        return "rack_config.gpu_dedicated 必须是布尔值"
+    return None
+
+
 def validate_config(config: dict, strict: bool = True) -> str | None:
     """
     校验 project_config.json 格式完整性
@@ -264,6 +281,10 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
             return f"topology.param_protocol 必须是 'IB' / 'RoCE' / 'UEC'"
         if 'downlink_mode' in topo and topo.get('downlink_mode') not in ('full', 'custom'):
             return f"topology.downlink_mode 必须是 'full' 或 'custom'"
+        # V5.0.1-501-b: 宽松模式同样校验 rack_config 散热/独占字段（若存在；缺失不报错向后兼容）
+        rack_err = _validate_rack_optional_fields(config)
+        if rack_err:
+            return rack_err
         su = config.get('scale_up')
         if su is not None and not isinstance(su, dict):
             return "scale_up 必须是 JSON 对象"
@@ -327,6 +348,11 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
     missing_rack = REQUIRED_RACK_KEYS - set(rack.keys())
     if missing_rack:
         return f"rack_config 缺少字段: {', '.join(sorted(missing_rack))}"
+    # V5.0.1-501-b: rack_config 散热/独占字段（存在时校验类型/枚举；缺失兼容旧配置，
+    # 模板库完整性由 backend/template_gate.py 模板门禁强制）
+    rack_err = _validate_rack_optional_fields(config)
+    if rack_err:
+        return rack_err
 
     # V2.9.3-T1: 可选 scale_up 段校验 (缺失/为空对象视为未启用)
     su = config.get('scale_up')

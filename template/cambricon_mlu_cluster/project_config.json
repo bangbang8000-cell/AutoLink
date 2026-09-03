@@ -83,7 +83,9 @@
   "rack_config": {
     "rack_type": 42,
     "power_limit_per_rack": 6000,
-    "naming_prefix": "机柜"
+    "naming_prefix": "机柜",
+    "cooling_method": "air",
+    "gpu_dedicated": true
   },
   "scale_up": {}
 }

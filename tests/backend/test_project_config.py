@@ -163,6 +163,50 @@ class TestValidateConfig:
         assert error is not None
 
 
+class TestValidateRackOptionalFields:
+    """V5.0.1-501-b: rack_config 散热/独占字段（存在时校验类型/枚举；缺失兼容）"""
+
+    def _with_rack(self, **fields):
+        config = create_default_config('test')
+        config['rack_config'].update(fields)
+        return config
+
+    def test_valid_cooling_methods_pass(self):
+        for cooling in ('air', 'cold_plate', 'immersion'):
+            assert validate_config(self._with_rack(cooling_method=cooling)) is None
+
+    def test_invalid_cooling_method_fails(self):
+        config = self._with_rack(cooling_method='water')
+        error = validate_config(config)
+        assert error is not None
+        assert 'cooling_method' in error
+
+    def test_non_bool_gpu_dedicated_fails(self):
+        config = self._with_rack(gpu_dedicated='yes')
+        error = validate_config(config)
+        assert error is not None
+        assert 'gpu_dedicated' in error
+
+    def test_bool_gpu_dedicated_passes(self):
+        assert validate_config(self._with_rack(gpu_dedicated=False)) is None
+
+    def test_missing_fields_backward_compatible(self):
+        config = create_default_config('test')
+        del config['rack_config']['rack_type']  # 触发 REQUIRED 缺失
+        error = validate_config(config)
+        assert error is not None
+
+    def test_missing_optional_fields_still_valid(self):
+        config = create_default_config('test')
+        config['rack_config'] = {'rack_type': 42, 'power_limit_per_rack': 6000,
+                                 'naming_prefix': '机柜'}
+        assert validate_config(config) is None
+
+    def test_loose_mode_validates_present_fields(self):
+        config = self._with_rack(cooling_method='water')
+        assert validate_config(config, strict=False) is not None
+
+
 class TestFindConfigFile:
     def test_finds_json_first(self):
         with tempfile.TemporaryDirectory() as tmpdir:
