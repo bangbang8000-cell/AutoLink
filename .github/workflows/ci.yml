@@ -38,6 +38,8 @@ jobs:
           echo "PASS: renderer is isolated (IPC-only)"
       # V2.9.8-T3: 模板验证纳入 CI — 16 内置模板损坏时构建失败
       - run: python scripts/validate_templates.py
+      # V5.0.1-501-c: 设备库对账纳入 CI — 索引↔目录死文件/缺字段/重复 id/分类漂移即失败
+      - run: python scripts/validate_device_library.py
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
       - run: python scripts/gen_golden.py --check
       # V3.0.0-T0-8: 后端全量 pytest

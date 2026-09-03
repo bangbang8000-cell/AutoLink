@@ -3,9 +3,14 @@ import glob
 import io
 import json
 import os
+import shutil
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts'))
 
 from aidc_planner import DEFAULTS
 import device_defaults as dd
+from validate_device_library import check_device_library
 
 _LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'template', 'device_library')
 
@@ -71,3 +76,85 @@ def test_aidc_planner_models_match_library():
         dev = sw[did]
         expected = f"{dev['vendor']} {dev['model']}"
         assert DEFAULTS['device_models'][role] == expected, f'{role} 应 {expected}'
+
+
+class TestLibraryReconciliation:
+    """5.0.1-501-c: 设备库对账校验（scripts/validate_device_library.py）
+
+    索引 ↔ 目录一致性 / id 唯一 / 字段完整 / 分类合法 / 可互灌。
+    """
+
+    def _copy_lib(self, tmp_path):
+        target = tmp_path / 'lib'
+        shutil.copytree(_LIB, target)
+        return str(target)
+
+    def test_builtin_library_passes(self):
+        """内置设备库全量对账通过（索引↔目录一致、无死文件、id 唯一、字段完整、分类合法）"""
+        assert check_device_library(_LIB) == []
+
+    def test_dead_file_detected(self, tmp_path):
+        """目录存在但索引未注册的文件 → 死文件"""
+        lib = self._copy_lib(tmp_path)
+        with open(os.path.join(lib, 'optical_modules', 'om_dead_test.json'), 'w', encoding='utf-8') as f:
+            json.dump({'id': 'om_dead_test'}, f)
+        problems = check_device_library(lib)
+        assert any('死文件' in p for p in problems)
+
+    def test_missing_registered_file_detected(self, tmp_path):
+        """索引注册但目录文件缺失"""
+        lib = self._copy_lib(tmp_path)
+        os.remove(os.path.join(lib, 'switches', 'param', 'h3c_s9820_64h.json'))
+        problems = check_device_library(lib)
+        assert any('文件缺失' in p and 'h3c_s9820_64h' in p for p in problems)
+
+    def test_switch_missing_port_speed(self, tmp_path):
+        """交换机缺 port_speed → 字段不完整"""
+        lib = self._copy_lib(tmp_path)
+        p = os.path.join(lib, 'switches', 'param', 'h3c_s9820_64h.json')
+        data = json.load(open(p, encoding='utf-8'))
+        data.pop('port_speed', None)
+        json.dump(data, open(p, 'w', encoding='utf-8'))
+        problems = check_device_library(lib)
+        assert any('port_speed' in p_ for p_ in problems)
+
+    def test_optical_missing_form_factor(self, tmp_path):
+        """光模块缺 form_factor → 字段不完整"""
+        lib = self._copy_lib(tmp_path)
+        p = os.path.join(lib, 'optical_modules', 'om_400g_osfp_dr4_500m.json')
+        data = json.load(open(p, encoding='utf-8'))
+        data.pop('form_factor', None)
+        json.dump(data, open(p, 'w', encoding='utf-8'))
+        problems = check_device_library(lib)
+        assert any('form_factor' in p_ for p_ in problems)
+
+    def test_duplicate_id_detected(self, tmp_path):
+        """同一 id 跨分类重复注册"""
+        lib = self._copy_lib(tmp_path)
+        idx = json.load(open(os.path.join(lib, 'library_index.json'), encoding='utf-8'))
+        for cat in idx['categories']:
+            if cat['id'] == 'gpu_servers':
+                cat['device_ids'].append('nvidia_dgx_h100')
+        json.dump(idx, open(os.path.join(lib, 'library_index.json'), 'w', encoding='utf-8'))
+        problems = check_device_library(lib)
+        assert any('重复注册' in p for p in problems)
+
+    def test_category_mismatch_detected(self, tmp_path):
+        """设备 JSON 的 category 与索引分类不一致"""
+        lib = self._copy_lib(tmp_path)
+        p = os.path.join(lib, 'gpu_servers', 'nvidia_dgx_a100.json')
+        data = json.load(open(p, encoding='utf-8'))
+        data['category'] = 'switches_param'
+        json.dump(data, open(p, 'w', encoding='utf-8'))
+        problems = check_device_library(lib)
+        assert any('category' in p_ for p_ in problems)
+
+    def test_id_filename_mismatch_detected(self, tmp_path):
+        """JSON id 字段与文件名不一致"""
+        lib = self._copy_lib(tmp_path)
+        p = os.path.join(lib, 'compute_servers', 'generic_2u_compute.json')
+        data = json.load(open(p, encoding='utf-8'))
+        data['id'] = 'renamed_2u'
+        json.dump(data, open(p, 'w', encoding='utf-8'))
+        problems = check_device_library(lib)
+        assert any('id 字段' in p_ and 'renamed_2u' in p_ for p_ in problems)
