@@ -146,7 +146,12 @@ export const useChatStore = create<ChatState>()(
         }))
         try {
           const aiHub = window.electron?.aihub
-          if (aiHub?.clear) await aiHub.clear(id)
+          if (aiHub?.clear) {
+            // 5.0.2-502-b: 按当前 AI 引擎命名空间清除后端会话
+            const { useUIStore } = await import('@/stores/ui.store')
+            const engine = useUIStore.getState().aiConfig.aiEngine
+            await aiHub.clear(id, engine)
+          }
         } catch {
           /* 后端不可用时仅完成前端清空 */
         }
@@ -457,6 +462,7 @@ export async function sendMessage(
       provider,
       autonomyMode: aiConfig.autonomyMode,
       projectName,
+      engine: aiConfig.aiEngine,
       attachments: attachments.length > 0
         ? attachments.map((a) => ({ id: a.id, name: a.name, type: a.type, path: a.path, size: a.size }))
         : undefined,
@@ -497,6 +503,20 @@ export async function sendMessage(
       }))
     } else if (!currentMsg) {
       // 会话已删除等情况，忽略
+    } else if (isHermesNotInstalledError(errorMsg)) {
+      // 5.0.2-502-c: 选 Hermes 引擎但未安装 → 友好错误 + 安装指引卡片（不降级 mock）
+      useChatStore.setState((s) => ({
+        sessions: s.sessions.map((ses) =>
+          ses.id === sessionId
+            ? {
+                ...ses,
+                messages: ses.messages.map((m) =>
+                  m.id === aiMsgId ? { ...m, content: buildHermesNotInstalledMessage() } : m,
+                ),
+              }
+            : ses,
+        ),
+      }))
     } else {
       // 完全没有响应，降级为 mock 回复
       useChatStore.setState((s) => ({
@@ -521,6 +541,29 @@ export async function sendMessage(
 export function getMockResponse(mode: ChatMode): string {
   const key = mode === 'template' ? 'mock.template' : mode === 'config' ? 'mock.config' : 'mock.general'
   return i18n.t(`chat:${key}`)
+}
+
+// ===== 5.0.2-502-c: Hermes 未安装友好错误 + 安装指引卡片（不降级 mock） =====
+
+/** 是否 Hermes 未安装错误（后端 AgentNotAvailableError 友好提示经 IPC 透传） */
+export function isHermesNotInstalledError(msg: string): boolean {
+  return /hermes/i.test(msg) && /未安装|pip install|not installed/i.test(msg)
+}
+
+/** Hermes 未安装时 assistant 消息内容（含提示卡片标记，渲染时剥离） */
+export function buildHermesNotInstalledMessage(): string {
+  return (
+    '---HERMES_INSTALL_HINT---\n\n' +
+    `> ⚠️ ${i18n.t('chat:aihub.error.hermesNotInstalled')}`
+  )
+}
+
+/** 从 assistant 消息解析 Hermes 安装指引标记（渲染提示卡片时剥离标记行） */
+export function parseHermesInstallMarker(content: string): { displayContent: string } | null {
+  const rx = /(^|\n)---HERMES_INSTALL_HINT---(\n|$)/
+  const m = content.match(rx)
+  if (!m) return null
+  return { displayContent: content.replace(rx, '\n').trim() }
 }
 
 // ===== 4.3 F3-2: 确认卡片（确认流完善）的可测纯函数与回灌入口 =====

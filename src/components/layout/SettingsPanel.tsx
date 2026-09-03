@@ -663,6 +663,30 @@ function AISettings() {
     return () => { cancelled = true }
   }, [])
 
+  // 5.0.2-502-b: 挂载时从后端水合 AI 引擎配置与可用性（hermes 未安装展示安装指引）
+  const [engineInfo, setEngineInfo] = useState<{
+    engine: string
+    resolved: string
+    hermes_installed: boolean
+    install_hint: string
+  } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const aiHub = window.electron?.aihub
+    if (!aiHub?.getEngine) return
+    aiHub.getEngine()
+      .then((res) => {
+        if (cancelled) return
+        setEngineInfo(res)
+        const engine = (['own', 'hermes', 'auto'] as const).includes(res.engine as AIConfig['aiEngine'])
+          ? (res.engine as AIConfig['aiEngine'])
+          : 'own'
+        useUIStore.getState().setAIConfig({ aiEngine: engine })
+      })
+      .catch(() => { /* 水合失败静默，回退本地默认 */ })
+    return () => { cancelled = true }
+  }, [])
+
   const syncToHub = async (provider: string) => {
     const c = aiConfig.providers[provider]
     const aiHub = window.electron?.aihub
@@ -757,6 +781,18 @@ function AISettings() {
       await window.electron?.aihub?.configDefault(selected)
       toast('success', t('common:explorer.settings.ai.defaultSet'))
     } catch { /* ignore */ }
+  }
+
+  // 5.0.2-502-b: AI 引擎切换（own/hermes/auto）——立即保存到后端；会话按引擎隔离，切换保留旧会话
+  const handleEngineChange = async (engine: AIConfig['aiEngine']) => {
+    if (engine === aiConfig.aiEngine) return
+    setAIConfig({ aiEngine: engine })
+    try {
+      await window.electron?.aihub?.setEngine(engine)
+      toast('success', t('common:explorer.settings.ai.engineSaved'))
+    } catch {
+      toast('error', t('common:explorer.settings.ai.engineSaveFailed'))
+    }
   }
 
   // AI-3-T2: 下拉选项——本次拉取 > 已持久化 > 静态目录；无来源时保留自由输入
@@ -859,6 +895,26 @@ function AISettings() {
           <option value="semi_auto">Semi-auto</option>
           <option value="full_auto">Full auto</option>
         </select>
+      </SettingsRow>
+
+      {/* 5.0.2-502-b: AI 引擎三选一（自有=默认 / Hermes / 自动）；Hermes 未安装展示安装指引 */}
+      <SettingsRow label={t('common:explorer.settings.ai.engine')}>
+        <div className="flex flex-col gap-1 flex-1">
+          <select
+            value={aiConfig.aiEngine || 'own'}
+            onChange={(e) => handleEngineChange(e.target.value as AIConfig['aiEngine'])}
+            className={INPUT_CLASS}
+          >
+            <option value="own">{t('common:explorer.settings.ai.engineOwn')}</option>
+            <option value="hermes">{t('common:explorer.settings.ai.engineHermes')}</option>
+            <option value="auto">{t('common:explorer.settings.ai.engineAuto')}</option>
+          </select>
+          {aiConfig.aiEngine === 'hermes' && engineInfo && !engineInfo.hermes_installed && (
+            <span className="text-2xs text-amber-600 dark:text-amber-400 whitespace-pre-wrap">
+              {engineInfo.install_hint || t('common:explorer.settings.ai.engineHermesNotInstalled')}
+            </span>
+          )}
+        </div>
       </SettingsRow>
 
       {/* 操作按钮 */}

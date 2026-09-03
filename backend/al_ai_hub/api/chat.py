@@ -1,6 +1,7 @@
 """AutoLink AI Hub Chat API（M3b：复制改造 MC ai_hub/api/chat.py，SSE 流式）
 
 复用 autolink_hub 的 agent/llm/config/hub，端口 18722。
+5.0.2-502-b：/send 支持 engine 三选一（own/hermes/auto），新增 /engine get/set 端点。
 """
 import json
 import logging
@@ -10,9 +11,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from autolink_hub.agent.agent import get_or_create_session, clear_session
-from autolink_hub.llm.provider import registry
 from autolink_hub.config import settings
+from autolink_hub.llm.provider import registry
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class ChatRequest(BaseModel):
     attachments: Optional[list[dict]] = None
     autonomy_mode: str = "semi_auto"
     project_name: Optional[str] = None
+    engine: Optional[str] = None  # 5.0.2-502-b: AI 引擎（own/hermes/auto，缺省用配置）
 
 
 class ProviderInfo(BaseModel):
@@ -91,23 +92,37 @@ async def list_providers():
 
 @router.post("/send")
 async def send_message(req: ChatRequest):
-    """发送消息，SSE 流式响应"""
+    """发送消息，SSE 流式响应（5.0.2-502-b：按 AI 引擎路由 own/hermes/auto）"""
+    from autolink_hub.config import get_ai_engine
+    from autolink_hub.agent.provider import (
+        get_engine, resolve_engine, ENGINE_OWN, AgentNotAvailableError,
+    )
+
+    engine_mode = req.engine or get_ai_engine()
+    try:
+        agent = get_engine(engine_mode)
+    except AgentNotAvailableError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # LLM Provider 底座校验（own 引擎需要 OpenAI 兼容 Provider；hermes 引擎自带运行时）
     provider = registry.get(req.provider)
-    if not provider:
+    if not provider and agent.engine_name == ENGINE_OWN:
         raise HTTPException(
             status_code=400,
             detail=f"Provider '{req.provider or settings.default_provider}' 不可用，请先配置 API Key",
         )
 
-    session = get_or_create_session(req.session_id)
-    session.set_provider(req.provider)
-    session.set_mode(req.mode, req.project_name or "")
-    session.autonomy_mode = req.autonomy_mode
-    session.add_user_message(req.message, req.attachments)
-
     async def event_generator():
         try:
-            async for chunk in session.run_stream():
+            async for chunk in agent.stream_chat(
+                session_id=req.session_id,
+                message=req.message,
+                mode=req.mode,
+                provider=req.provider,
+                attachments=req.attachments,
+                autonomy_mode=req.autonomy_mode,
+                project_name=req.project_name,
+            ):
                 yield {
                     "event": "message",
                     "data": json.dumps({"content": chunk}, ensure_ascii=False),
@@ -127,6 +142,44 @@ async def send_message(req: ChatRequest):
     return EventSourceResponse(event_generator())
 
 
+class EngineInfo(BaseModel):
+    engine: str          # 当前配置的引擎模式（own/hermes/auto）
+    resolved: str        # 实际生效引擎（auto 解析后为 own/hermes）
+    hermes_installed: bool
+    install_hint: str = ""
+
+
+class SetEngineRequest(BaseModel):
+    engine: str
+
+
+@router.get("/engine", response_model=EngineInfo)
+async def get_engine_info():
+    """5.0.2-502-b: 获取 AI 引擎配置与可用性（供前端下拉 + 未安装提示）"""
+    from autolink_hub.config import get_ai_engine
+    from autolink_hub.agent.provider import (
+        resolve_engine, hermes_available, HERMES_INSTALL_HINT,
+    )
+    mode = get_ai_engine()
+    installed = hermes_available()
+    return EngineInfo(
+        engine=mode,
+        resolved=resolve_engine(mode),
+        hermes_installed=installed,
+        install_hint="" if installed else HERMES_INSTALL_HINT,
+    )
+
+
+@router.post("/engine")
+async def set_engine(req: SetEngineRequest):
+    """5.0.2-502-b: 设置 AI 引擎模式（own/hermes/auto，持久化 ai_secrets.json）"""
+    from autolink_hub.config import set_ai_engine
+    try:
+        return set_ai_engine(req.engine)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 class SaveSkillRequest(BaseModel):
     name: str
     content: str
@@ -142,9 +195,18 @@ async def save_skill(req: SaveSkillRequest):
 
 
 @router.post("/clear")
-async def clear_chat(session_id: str):
-    """清除会话"""
-    clear_session(session_id)
+async def clear_chat(session_id: str, engine: Optional[str] = None):
+    """清除会话（5.0.2-502-b：按引擎命名空间，经 AgentProvider 路由）"""
+    from autolink_hub.config import get_ai_engine
+    from autolink_hub.agent.provider import get_engine, AgentNotAvailableError
+    engine_mode = engine or get_ai_engine()
+    try:
+        agent = get_engine(engine_mode)
+    except AgentNotAvailableError:
+        # hermes 未安装时无可清会话（幂等返回 ok）
+        agent = None
+    if agent is not None:
+        agent.clear_session(session_id)
     return {"status": "ok"}
 
 

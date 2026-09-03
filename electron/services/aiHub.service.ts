@@ -309,6 +309,7 @@ export class AIHubService extends EventEmitter {
     autonomyMode: string = 'semi_auto',
     projectName?: string,
     onChunk?: (text: string) => void,
+    engine?: string,
   ): Promise<string> {
     await this.ensureRunning()
     return this.withRetry(async () => {
@@ -323,6 +324,7 @@ export class AIHubService extends EventEmitter {
           attachments,
           autonomy_mode: autonomyMode,
           project_name: projectName,
+          engine,
         }),
       })
       if (!response.ok) {
@@ -356,10 +358,11 @@ export class AIHubService extends EventEmitter {
     })
   }
 
-  /** 清除会话 */
-  async clearSession(sessionId: string): Promise<void> {
+  /** 清除会话（5.0.2-502-b：按引擎命名空间，engine 缺省用后端配置） */
+  async clearSession(sessionId: string, engine?: string): Promise<void> {
     await this.ensureRunning()
-    await fetch(`${this.baseUrl}/api/chat/clear?session_id=${encodeURIComponent(sessionId)}`, {
+    const qs = `session_id=${encodeURIComponent(sessionId)}` + (engine ? `&engine=${encodeURIComponent(engine)}` : '')
+    await fetch(`${this.baseUrl}/api/chat/clear?${qs}`, {
       method: 'POST',
       headers: this.authHeaders(),
     })
@@ -446,6 +449,38 @@ export class AIHubService extends EventEmitter {
       })
       return (await response.json()) as { status: string; models: string[]; message?: string }
     })
+  }
+
+  /** 5.0.2-502-b: 获取 AI 引擎配置与可用性（own/hermes/auto + hermes 是否安装 + 安装指引） */
+  async getEngine(): Promise<{
+    engine: string
+    resolved: string
+    hermes_installed: boolean
+    install_hint: string
+  }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/engine`, { headers: this.authHeaders() })
+    return (await response.json()) as {
+      engine: string
+      resolved: string
+      hermes_installed: boolean
+      install_hint: string
+    }
+  }
+
+  /** 5.0.2-502-b: 设置 AI 引擎模式（own/hermes/auto） */
+  async setEngine(engine: string): Promise<{ status: string; ai_engine: string; changed: boolean }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/engine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
+      body: JSON.stringify({ engine }),
+    })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`AI Hub 设置引擎失败: ${response.status} ${err}`)
+    }
+    return (await response.json()) as { status: string; ai_engine: string; changed: boolean }
   }
 }
 

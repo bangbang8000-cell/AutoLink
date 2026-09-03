@@ -19,14 +19,17 @@ from autolink_hub.llm.provider import registry  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def clean_state():
-    """隔离全局状态：清空 Provider 注册表 + 复位默认 provider + 隔离 secrets 目录"""
+    """隔离全局状态：清空 Provider 注册表 + 复位默认 provider/引擎 + 隔离 secrets 目录"""
     registry._providers.clear()
     old_default = settings.default_provider
     old_ud = settings.user_data_dir
+    old_engine = settings.ai_engine
     settings.default_provider = 'deepseek'
+    settings.ai_engine = 'own'
     yield
     settings.default_provider = old_default
     settings.user_data_dir = old_ud
+    settings.ai_engine = old_engine
     registry._providers.clear()
 
 
@@ -126,3 +129,74 @@ class TestAlAiHubModelsExposure:
         assert info['deepseek']['models'] == ['deepseek-v4-pro', 'deepseek-v4', 'deepseek-chat']
         assert 'key' in info['deepseek']
         assert 'models' in info['deepseek']
+
+
+class TestAlAiHubEngine:
+    """5.0.2-502-b/c：AI 引擎端点（/engine get/set）与 /send engine 路由"""
+
+    def test_get_engine_default_own(self, tmp_path):
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.get('/api/chat/engine')
+        assert r.status_code == 200
+        data = r.json()
+        assert data['engine'] == 'own'
+        assert data['resolved'] == 'own'
+        assert 'hermes_installed' in data
+        assert isinstance(data['install_hint'], str)
+
+    def test_set_engine_persists(self, tmp_path):
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.post('/api/chat/engine', json={'engine': 'hermes'})
+        assert r.status_code == 200
+        assert r.json()['ai_engine'] == 'hermes' and r.json()['changed'] is True
+        # 持久化到 ai_secrets.json
+        import json
+        secrets = json.loads((tmp_path / 'ai_secrets.json').read_text(encoding='utf-8'))
+        assert secrets['ai_engine'] == 'hermes'
+        # 重读生效
+        r2 = client.get('/api/chat/engine')
+        assert r2.json()['engine'] == 'hermes'
+        # 幂等（重复设置 changed=False）
+        r3 = client.post('/api/chat/engine', json={'engine': 'hermes'})
+        assert r3.json()['changed'] is False
+
+    def test_set_engine_invalid_400(self, tmp_path):
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.post('/api/chat/engine', json={'engine': 'bogus'})
+        assert r.status_code == 400
+
+    def test_send_hermes_not_installed_400(self, tmp_path, monkeypatch):
+        """显式 engine=hermes 且未安装 → 400 友好提示（pip install + 官网）"""
+        import autolink_hub.agent.provider as prov_mod
+        monkeypatch.setattr(prov_mod.importlib.util, 'find_spec', lambda name: None)
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.post('/api/chat/send', json={
+            'session_id': 's1', 'message': 'hi', 'engine': 'hermes',
+        })
+        assert r.status_code == 400
+        detail = r.json()['detail']
+        assert 'pip install hermes-agent' in detail
+        assert 'github.com/NousResearch' in detail
+
+    def test_send_auto_falls_back_own_without_provider_400(self, tmp_path, monkeypatch):
+        """engine=auto 且 hermes 未安装 → 解析为 own；无 provider 时仍 400（配置 API Key 提示）"""
+        import autolink_hub.agent.provider as prov_mod
+        monkeypatch.setattr(prov_mod.importlib.util, 'find_spec', lambda name: None)
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.post('/api/chat/send', json={
+            'session_id': 's1', 'message': 'hi', 'engine': 'auto', 'provider': '__no_such__',
+        })
+        assert r.status_code == 400
+        assert '不可用' in r.json()['detail']
+
+    def test_clear_with_engine_param(self, tmp_path):
+        settings.user_data_dir = str(tmp_path)
+        client = TestClient(create_app())
+        r = client.post('/api/chat/clear?session_id=s9&engine=own')
+        assert r.status_code == 200
+        assert r.json()['status'] == 'ok'

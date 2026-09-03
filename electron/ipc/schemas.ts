@@ -36,6 +36,8 @@ export const AI_ACTION_WHITELIST = [
   'ai:test',
   'ai:models',
   'ai:clear',
+  'ai:get-engine',
+  'ai:set-engine',
 ] as const
 export type AIAction = (typeof AI_ACTION_WHITELIST)[number]
 
@@ -53,6 +55,8 @@ export const aiChatSchema = z.object({
   autonomyMode: z.string().max(32).optional(),
   projectName: z.string().max(120).optional(),
   attachments: z.array(z.record(z.string(), z.unknown())).max(20).optional(),
+  // 5.0.2-502-b: AI 引擎（own/hermes/auto）
+  engine: z.enum(['own', 'hermes', 'auto']).optional(),
 })
 
 /** 批量优化应用载荷（suggestions 结构与前端 BatchOptimizePanel 一致） */

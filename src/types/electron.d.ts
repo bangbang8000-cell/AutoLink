@@ -443,6 +443,7 @@ interface Window {
         autonomyMode?: string
         projectName?: string
         attachments?: unknown[]
+        engine?: 'own' | 'hermes' | 'auto'
       }) => Promise<{ sessionId: string; status: string; messages: number; reply?: string | null }>
       onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => () => void
       providers: () => Promise<{
@@ -453,7 +454,15 @@ interface Window {
       configDefault: (provider: string) => Promise<{ status: string; default_provider: string }>
       test: (cfg: { provider: string; apiKey: string; baseUrl: string; model: string }) => Promise<{ status: string; message: string }>
       models: (cfg: { baseUrl: string; apiKey: string }) => Promise<{ status: string; models: string[]; message?: string }>
-      clear: (sessionId: string) => Promise<{ status: string }>
+      clear: (sessionId: string, engine?: 'own' | 'hermes' | 'auto') => Promise<{ status: string }>
+      // 5.0.2-502-b: AI 引擎三选一（own/hermes/auto）
+      getEngine: () => Promise<{
+        engine: string
+        resolved: string
+        hermes_installed: boolean
+        install_hint: string
+      }>
+      setEngine: (engine: 'own' | 'hermes' | 'auto') => Promise<{ status: string; ai_engine: string; changed: boolean }>
     }
     rack: {
       optimize: (params: {

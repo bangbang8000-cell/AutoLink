@@ -49,6 +49,8 @@ export interface AIProviderConfig {
 export interface AIConfig {
   defaultProvider: string
   autonomyMode: 'advisor' | 'semi_auto' | 'full_auto'
+  /** 5.0.2-502-b: AI 引擎（own=自有 / hermes / auto），与后端 ai_secrets.json 同步 */
+  aiEngine: 'own' | 'hermes' | 'auto'
   providers: Record<string, AIProviderConfig>
 }
 
@@ -132,6 +134,7 @@ export const useUIStore = create<UIState>()(
       aiConfig: {
         defaultProvider: 'deepseek',
         autonomyMode: 'semi_auto',
+        aiEngine: 'own',
         providers: {},
       },
       aiKeyConfigured: {},

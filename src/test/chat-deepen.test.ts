@@ -42,6 +42,7 @@ describe('对话深化（A-3）', () => {
       aiConfig: {
         defaultProvider: 'deepseek',
         autonomyMode: 'semi_auto',
+        aiEngine: 'own',
         providers: { deepseek: { apiKey: 'sk-test', model: 'deepseek-chat', baseUrl: '' } },
       },
     } as never)
@@ -78,7 +79,8 @@ describe('对话深化（A-3）', () => {
       useChatStore.getState().addMessage({ role: 'user', content: 'hi' })
       await useChatStore.getState().clearSessionContext(id)
       expect(useChatStore.getState().sessions.find((s) => s.id === id)?.messages).toHaveLength(0)
-      expect(mock.clear).toHaveBeenCalledWith(id)
+      // 5.0.2-502-b: 按当前 AI 引擎命名空间清除后端会话
+      expect(mock.clear).toHaveBeenCalledWith(id, 'own')
     })
 
     it('clearSessionContext 后端不可用时仅前端清空', async () => {

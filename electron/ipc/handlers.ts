@@ -1071,6 +1071,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
           p.provider as string | undefined,
           p.attachments as Array<{ id: string; name: string; type: string; path: string; size: number }> | undefined,
           String(p.autonomyMode ?? 'semi_auto'), p.projectName as string | undefined,
+          undefined, p.engine as string | undefined,
         )
         return { sessionId, status: 'completed', reply }
       }
@@ -1092,7 +1093,12 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       case 'ai:models':
         return aiHubService.fetchModels(String(p.baseUrl ?? ''), String(p.apiKey ?? ''))
       case 'ai:clear':
-        return aiHubService.clearSession(String(p.sessionId ?? 'default'))
+        return aiHubService.clearSession(String(p.sessionId ?? 'default'), p.engine as string | undefined)
+      // 5.0.2-502-b: AI 引擎三选一（own/hermes/auto）
+      case 'ai:get-engine':
+        return aiHubService.getEngine()
+      case 'ai:set-engine':
+        return aiHubService.setEngine(String(p.engine ?? 'own'))
       default:
         throw new Error(`未知 AI action: ${action}`)
     }
@@ -1118,6 +1124,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
           win.webContents.send('aihub:stream', { sessionId, chunk })
         }
       },
+      p.engine,
     )
     return { sessionId, status: 'completed', reply: result }
   }))
