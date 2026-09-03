@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [5.0.2] - 2026-09-03
+
+### 5.0.2 AI Agent 底座（Hermes 并存）（5.0 系列第 2 版）
+
+- **统一 AgentProvider 抽象**（会话/工具/技能/记忆四域接口，与 MC 端同构）：OwnAgentProvider（自有引擎适配）+ HermesAgentProvider（适配 NousResearch/hermes-agent，探测运行时是否安装）
+- **「AI 引擎」配置三选一**（自有=默认 / Hermes / 自动）：al_ai_hub /engine 端点 + Electron ai:get-engine/ai:set-engine + 前端「AI 引擎」下拉；配置持久化、切换不丢会话（会话按引擎命名空间隔离）；auto 模式 Hermes 可用则用 Hermes 否则回退自有
+- **Hermes 未安装友好提示**：chat 返回安装指引（pip install hermes-agent + 官网），前端提示卡片
+- **审计修订**：hermes 经 AgentProvider 并存（harness/langchain/langgraph/crewai/autogen 等其余平台仍拦截）
+
 ## [5.0.1] - 2026-09-03
 
 ### 5.0.1 内容与渲染准确性攻坚（5.0 系列第 1 版）
