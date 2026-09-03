@@ -1,0 +1,35 @@
+{
+  "cabinets": 72,
+  "connections": 3760,
+  "counts": {
+    "biz_access": 8,
+    "biz_agg": 2,
+    "combined_leaves": 0,
+    "huawei_npus": 0,
+    "huawei_scaleout_switches": 0,
+    "oob_access": 4,
+    "oob_agg": 1,
+    "param_cores": 0,
+    "param_leaves": 24,
+    "param_spines": 12,
+    "scale_up_gpus": 0,
+    "servers": 80,
+    "storage_cores": 0,
+    "storage_leaves": 4,
+    "storage_spines": 2
+  },
+  "downlink_mode": "custom",
+  "network_connections": {
+    "biz": 448,
+    "oob": 176,
+    "param": 2752,
+    "storage": 384
+  },
+  "param_protocol": "IB",
+  "param_speed": "400G",
+  "rail_count": 8,
+  "rail_mode": "standard",
+  "topology_hash": "23b5c9dcb633c894",
+  "total_power_w": 697490,
+  "valid": true
+}

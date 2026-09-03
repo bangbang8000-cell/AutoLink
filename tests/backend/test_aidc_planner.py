@@ -86,6 +86,27 @@ class TestPlanAidcContract:
         assert plan['protocols']['ospf']['process'] == 10
         assert plan['protocols']['bgp']['ecmp'] == 16
 
+    def test_protocol_default_and_override(self):
+        """49-a：macro.protocol 默认 RoCE；传入 IB 时自描述协议（示例库 IB/RoCE 区分）。"""
+        plan = plan_aidc({'gpu_count': 64})
+        assert plan['macro']['protocol'] == 'RoCE'
+        ib = plan_aidc({'gpu_count': 64, 'protocol': 'IB'})
+        assert ib['macro']['protocol'] == 'IB'
+        assert ib['macro']['gpuCount'] == 64
+
+    def test_protocol_affects_plan_hash(self):
+        """protocol 是 macro 组成部分 → 不同协议 planHash 不同（变更检测权威判据）。"""
+        roce = plan_aidc({'gpu_count': 64, 'protocol': 'RoCE'})
+        ib = plan_aidc({'gpu_count': 64, 'protocol': 'IB'})
+        assert roce['meta']['planHash'] != ib['meta']['planHash']
+
+    def test_validate_macro_protocol(self):
+        assert validate_macro({'gpu_count': 64, 'protocol': 'IB'}) is None
+        assert validate_macro({'gpu_count': 64, 'protocol': 'RoCE'}) is None
+        assert validate_macro({'gpu_count': 64, 'protocol': 'UEC'}) is None
+        err = validate_macro({'gpu_count': 64, 'protocol': 'FCoE'})
+        assert err and 'IB/RoCE/UEC' in err
+
     def test_device_list_has_rack(self):
         plan = plan_aidc({'gpu_count': 64})
         assert len(plan['deviceList']) == 22
