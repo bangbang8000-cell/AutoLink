@@ -31,6 +31,11 @@ def register_tool(name: str, description: str, parameters: dict,
     }
 
 
+def unregister_tool(name: str) -> bool:
+    """注销工具（MCP server 删除/停用时清理动态注册的工具）"""
+    return _tools.pop(name, None) is not None
+
+
 def get_tool_definitions() -> list[dict]:
     """输出 JSON-Schema 风格工具定义（注入 system prompt 供 LLM 参考）"""
     return [{"type": "function", "function": {
@@ -41,11 +46,74 @@ def get_tool_definitions() -> list[dict]:
     }} for t in _tools.values()]
 
 
+# 5.0.3-503-c: 参数校验（对齐 MC _validate_tool_args，宽松兼容既有工具）
+def _is_arg_present(arguments: dict, key: str) -> bool:
+    """参数存在且非 None（兼容 validator 的 PARAM_ALIASES 归一化：name ↔ projectName 等）。
+
+    空字符串视为「存在」交给 handler 自行校验（既有 handler 有专门的空值错误消息，
+    如「项目名不能为空」，避免重复报错）。
+    """
+    if key in arguments and arguments[key] is not None:
+        return True
+    from autolink_hub.agent.schemas import PARAM_ALIASES
+    for wrong, correct in PARAM_ALIASES.items():
+        if wrong == key and correct in arguments and arguments[correct] is not None:
+            return True
+        if correct == key and wrong in arguments and arguments[wrong] is not None:
+            return True
+    return False
+
+
+def _validate_tool_args(tool: dict, arguments: dict) -> list[str]:
+    """校验工具参数：必填存在 + 类型宽松匹配。
+
+    - 必填缺失 → 错误（execute_tool 返回可读失败）
+    - 类型检查仅对 array/object/number/integer/boolean 做宽松校验；
+      string 参数保持宽松（既有工具 string 参数常承载对象/数值，避免破坏兼容）
+    """
+    errors: list[str] = []
+    params = tool.get("parameters") or {}
+    if not isinstance(params, dict) or params.get("type") != "object":
+        return errors
+    properties = params.get("properties") or {}
+    if not isinstance(properties, dict):
+        properties = {}
+    required = params.get("required") or []
+    for key in required:
+        if not _is_arg_present(arguments, key):
+            errors.append(f"缺少必填参数: {key}")
+    for key, value in arguments.items():
+        prop = properties.get(key)
+        if not isinstance(prop, dict):
+            continue
+        ptype = prop.get("type")
+        if ptype == "array" and not isinstance(value, list):
+            errors.append(f"参数 {key} 应为数组")
+        elif ptype == "object" and not isinstance(value, dict):
+            errors.append(f"参数 {key} 应为对象")
+        elif ptype in ("number", "integer"):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                errors.append(f"参数 {key} 应为数值")
+        elif ptype == "boolean" and not isinstance(value, bool):
+            errors.append(f"参数 {key} 应为布尔值")
+    return errors
+
+
 async def execute_tool(name: str, arguments: dict) -> dict:
-    """执行工具：查表 → 调 handler → 统一包 {success, result/error}"""
+    """执行工具：查表 → 参数校验 → 调 handler → 统一包 {success, result/error}
+
+    参数校验失败按 handler 业务失败同构返回（外层 success=True + 内层 result.success=False），
+    与既有工具缺参返回约定一致（run_stream 会把内层错误回填 LLM 自愈）。
+    """
     tool = _tools.get(name)
     if tool is None:
         return {"success": False, "error": f"未知工具: {name}"}
+    # 5.0.3-503-c: 参数校验（必填缺失/类型错误 → 可读失败，不进入 handler）
+    arg_errors = _validate_tool_args(tool, arguments or {})
+    if arg_errors:
+        return {"success": True, "result": {
+            "success": False, "error": f"工具参数校验失败: {'；'.join(arg_errors)}",
+        }}
     try:
         result = tool["handler"](arguments)
         if hasattr(result, "__await__") or hasattr(result, "__aiter__"):
@@ -146,9 +214,10 @@ def _skill_list_handler(arguments: dict) -> dict:
 
 def _skill_view_handler(arguments: dict) -> dict:
     from autolink_hub.skills.engine import get_skills_engine
-    skill = get_skills_engine().get_skill(arguments.get("name") or "")
+    # validator 会把 name 归一为 projectName，两者都兼容
+    skill = get_skills_engine().get_skill(arguments.get("name") or arguments.get("projectName") or "")
     if skill is None:
-        return {"success": False, "error": f"技能不存在: {arguments.get('name') or ''}"}
+        return {"success": False, "error": f"技能不存在: {arguments.get('name') or arguments.get('projectName') or ''}"}
     return {
         "success": True,
         "skill": {
@@ -163,7 +232,7 @@ def _skill_view_handler(arguments: dict) -> dict:
 
 def _skill_set_enabled_handler(arguments: dict) -> dict:
     from autolink_hub.skills.engine import get_skills_engine
-    name = arguments.get("name") or ""
+    name = arguments.get("name") or arguments.get("projectName") or ""
     enabled = arguments.get("enabled")
     if enabled in (True, "true", "True", "1", 1):
         enabled = True
@@ -175,6 +244,38 @@ def _skill_set_enabled_handler(arguments: dict) -> dict:
     if not ok:
         return {"success": False, "error": f"技能不存在: {name}"}
     return {"success": True, "skill": name, "enabled": enabled}
+
+
+# 5.0.3-503-b: 写技能内容工具（skill_update/skill_save）——自学习写回通道（对齐 MC update_skill）
+def _skill_update_handler(arguments: dict) -> dict:
+    from autolink_hub.skills.engine import get_skills_engine
+    name = arguments.get("name") or arguments.get("projectName") or ""
+    content = arguments.get("content")
+    if not name:
+        return {"success": False, "error": "技能名不能为空"}
+    if not content or not str(content).strip():
+        return {"success": False, "error": "技能内容不能为空"}
+    try:
+        skill = get_skills_engine().save_skill(name, str(content))
+    except Exception as e:
+        return {"success": False, "error": f"技能写入失败: {e}"}
+    return {"success": True, "skill": skill.name, "updated": True,
+            "use_count": skill.use_count, "file": skill.file_path.name}
+
+
+# 5.0.3-503-b: 主动优化技能（skill_optimize）——基于反馈追加自学习改进记录
+def _skill_optimize_handler(arguments: dict) -> dict:
+    from autolink_hub.skills.engine import get_skills_engine
+    name = arguments.get("name") or arguments.get("projectName") or ""
+    notes = arguments.get("notes") or ""
+    if not name:
+        return {"success": False, "error": "技能名不能为空"}
+    r = get_skills_engine().maybe_optimize_skill(name, force=True, notes=str(notes))
+    if not r.get("ok"):
+        return {"success": False, "error": r.get("error", "技能不存在")}
+    return {"success": True, "skill": name, "optimized": bool(r.get("optimized")),
+            "learning": r.get("learning"),
+            "content": r.get("content", "")}
 
 
 def init_tools() -> None:
@@ -650,6 +751,35 @@ def init_tools() -> None:
             "enabled": _str_param("enabled", "是否启用（true/false）", True),
         }, required=["name", "enabled"]),
         _skill_set_enabled_handler,
+        permission="notify",
+    )
+
+    # ---- 5.0.3-503-b：技能自学习写回工具（对齐 MC update_skill / skill_optimize）----
+    register_tool(
+        "skill_update", "写入/更新技能内容：把技能的 markdown 定义（步骤/参数/注意事项）保存为 <name>.md，供自学习沉淀与人工修订。回答\"把这段流程存成技能/更新 XX 技能\"时调用。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "技能名", True),
+            "content": _str_param("content", "技能 markdown 全文", True),
+        }, required=["name", "content"]),
+        _skill_update_handler,
+        permission="notify",
+    )
+    register_tool(
+        "skill_save", "保存技能内容（skill_update 别名）：写入/更新技能 markdown 定义。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "技能名", True),
+            "content": _str_param("content", "技能 markdown 全文", True),
+        }, required=["name", "content"]),
+        _skill_update_handler,
+        permission="notify",
+    )
+    register_tool(
+        "skill_optimize", "主动优化技能：基于历史反馈追加结构化「自学习改进记录」（原因/措施/详情）到技能定义，并刷新技能级元数据。回答\"优化/改进 XX 技能\"时调用。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "技能名", True),
+            "notes": _str_param("notes", "优化要点/改进说明（可选）"),
+        }, required=["name"]),
+        _skill_optimize_handler,
         permission="notify",
     )
 

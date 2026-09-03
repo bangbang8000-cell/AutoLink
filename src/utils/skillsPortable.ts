@@ -6,6 +6,8 @@
  */
 export const SKILLS_MANIFEST_FORMAT = 'autolink-skills'
 export const SKILLS_MANIFEST_VERSION = 1
+/** 5.0.3-503-b: 可接受的 manifest 版本（v2 支持技能级元数据；读旧包兼容 v1） */
+export const SKILLS_MANIFEST_VERSIONS = [1, 2]
 
 export interface PortableSkill {
   name: string
@@ -54,7 +56,7 @@ export function parseSkillsManifest(jsonText: string): ParseSkillsManifestResult
   if (d.format !== SKILLS_MANIFEST_FORMAT) {
     return { ok: false, reason: '技能清单格式标识缺失/不符' }
   }
-  if (d.schemaVersion !== SKILLS_MANIFEST_VERSION) {
+  if (!SKILLS_MANIFEST_VERSIONS.includes(d.schemaVersion as number)) {
     return { ok: false, reason: `技能清单版本不兼容（当前 v${SKILLS_MANIFEST_VERSION}，文件 v${String(d.schemaVersion)}）` }
   }
   if (!Array.isArray(d.skills)) {

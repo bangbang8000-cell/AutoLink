@@ -78,9 +78,14 @@ class TestF34ProjectTemplateTools:
     def test_update_project_validation_errors(self, userdata):
         """update_project 缺参/项目不存在 → 可读错误（工具校验）"""
         init_tools()
-        r = asyncio.run(execute_tool('update_project', {'projectName': ''}))
+        # 空项目名 → handler 空值校验（5.0.3-503-c 参数校验不拦截空串，交 handler）
+        r = asyncio.run(execute_tool('update_project', {'projectName': '', 'config': {}}))
         assert r['success'] is True and r['result']['success'] is False
         assert '项目名不能为空' in r['result']['error']
+        # 5.0.3-503-c: 缺必填 config → execute_tool 参数校验拦截
+        r0 = asyncio.run(execute_tool('update_project', {'projectName': 'x'}))
+        assert r0['success'] is True and r0['result']['success'] is False
+        assert '缺少必填参数: config' in r0['result']['error']
         r = asyncio.run(execute_tool('update_project', {'projectName': '__no_such__', 'config': {'x': 1}}))
         assert r['success'] is True and r['result']['success'] is False
         assert '项目不存在' in r['result']['error']

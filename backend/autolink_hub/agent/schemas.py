@@ -82,6 +82,10 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "skill_list": ToolPermission.AUTO,
     "skill_view": ToolPermission.AUTO,
     "skill_set_enabled": ToolPermission.NOTIFY,
+    # 5.0.3-503-b：技能自学习写回工具（写操作 NOTIFY）
+    "skill_update": ToolPermission.NOTIFY,
+    "skill_save": ToolPermission.NOTIFY,
+    "skill_optimize": ToolPermission.NOTIFY,
 }
 
 TOOL_NAME_ALIASES: dict[str, str] = {
@@ -170,6 +174,12 @@ TOOL_NAME_ALIASES: dict[str, str] = {
     "skill_detail": "skill_view",
     "enable_skill": "skill_set_enabled",
     "disable_skill": "skill_set_enabled",
+    # 5.0.3-503-b：技能自学习写回工具别名
+    "update_skill": "skill_update",
+    "save_skill": "skill_save",
+    "write_skill": "skill_update",
+    "optimize_skill": "skill_optimize",
+    "improve_skill": "skill_optimize",
 }
 
 PARAM_ALIASES: dict[str, str] = {

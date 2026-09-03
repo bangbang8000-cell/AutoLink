@@ -22,11 +22,11 @@ def _isolate(tmp_path, monkeypatch):
     return fake
 
 
-def _write_pkg(zip_path, skills, disabled=()):
-    """构造可移植技能包 zip。"""
+def _write_pkg(zip_path, skills, disabled=(), schema_version=1):
+    """构造可移植技能包 zip（缺省 v1 旧包，验证版本兼容读旧包）。"""
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('manifest.json', __import__('json').dumps({
-            'format': 'autolink-skills', 'schemaVersion': 1,
+            'format': 'autolink-skills', 'schemaVersion': schema_version,
             'exportedAt': '2026-01-01T00:00:00', 'skills': skills,
         }, ensure_ascii=False))
         for s in skills:
@@ -48,9 +48,55 @@ class TestSkillsPortable:
             assert {'manifest.json', 'skills_state.json', 'skills/alpha.md', 'skills/beta.md'} <= names
             manifest = __import__('json').loads(z.read('manifest.json').decode('utf-8'))
             assert manifest['format'] == 'autolink-skills'
-            assert manifest['schemaVersion'] == 1
+            assert manifest['schemaVersion'] == 2
             assert {s['name'] for s in manifest['skills']} == {'alpha', 'beta'}
             assert z.read('skills/alpha.md').decode('utf-8') == '# Alpha 技能'
+
+    def test_export_includes_skill_metadata(self, tmp_path, monkeypatch):
+        """5.0.3-503-b：导出含技能级元数据（skills/<name>.metadata.json + manifest.metadata）"""
+        fake = _isolate(tmp_path, monkeypatch)
+        (fake / 'alpha.md').write_text('# Alpha 技能', encoding='utf-8')
+        (fake / 'alpha.metadata.json').write_text(
+            __import__('json').dumps({'name': 'alpha', 'learning_records': [{'ts': '2026-01-01T00:00:00', 'reason': '自学习触发'}]}),
+            encoding='utf-8',
+        )
+        out = tmp_path / 'skills_meta_export.zip'
+        r = skills_portable.export_skills_package(str(out))
+        assert r['ok'] is True and r['metadata_count'] == 1
+        with zipfile.ZipFile(out) as z:
+            assert 'skills/alpha.metadata.json' in set(z.namelist())
+            manifest = __import__('json').loads(z.read('manifest.json').decode('utf-8'))
+            assert manifest['metadata']['alpha']['learning_records'][0]['reason'] == '自学习触发'
+
+    def test_import_restores_metadata(self, tmp_path, monkeypatch):
+        """5.0.3-503-b：导入还原技能级元数据（v2 包）"""
+        fake = _isolate(tmp_path, monkeypatch)
+        pkg = tmp_path / 'pkg_meta.zip'
+        with zipfile.ZipFile(pkg, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.writestr('manifest.json', __import__('json').dumps({
+                'format': 'autolink-skills', 'schemaVersion': 2,
+                'exportedAt': '2026-01-01T00:00:00',
+                'skills': [{'name': 'meta-skill', 'enabled': True}],
+                'metadata': {'meta-skill': {'optimized_count': 1}},
+            }, ensure_ascii=False))
+            z.writestr('skills/meta-skill.md', '# Meta 技能')
+            z.writestr('skills/meta-skill.metadata.json',
+                       __import__('json').dumps({'optimized_count': 1}))
+            z.writestr('skills_state.json', '{"disabled": []}')
+        r = skills_portable.import_skills_package(str(pkg))
+        assert r['ok'] is True and r['imported'] == 1
+        assert (fake / 'meta-skill.metadata.json').exists()
+        engine = skills_engine.get_skills_engine()
+        assert engine.get_skill('meta-skill').metadata.get('optimized_count') == 1
+
+    def test_import_v1_legacy_package(self, tmp_path, monkeypatch):
+        """5.0.3-503-b：schemaVersion=1 旧包仍可正常导入（版本兼容读旧包）"""
+        fake = _isolate(tmp_path, monkeypatch)
+        pkg = tmp_path / 'legacy.zip'
+        _write_pkg(pkg, [{'name': 'legacy-skill', 'content': '# 旧包技能'}], schema_version=1)
+        r = skills_portable.import_skills_package(str(pkg))
+        assert r['ok'] is True and r['imported'] == 1
+        assert (fake / 'legacy-skill.md').exists()
 
     def test_import_installs_new_skills(self, tmp_path, monkeypatch):
         fake = _isolate(tmp_path, monkeypatch)
