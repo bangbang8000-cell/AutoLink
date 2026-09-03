@@ -310,6 +310,7 @@ export class AIHubService extends EventEmitter {
     projectName?: string,
     onChunk?: (text: string) => void,
     engine?: string,
+    workflow?: boolean,
   ): Promise<string> {
     await this.ensureRunning()
     return this.withRetry(async () => {
@@ -325,6 +326,8 @@ export class AIHubService extends EventEmitter {
           autonomy_mode: autonomyMode,
           project_name: projectName,
           engine,
+          // 5.0.3-503-a: 多步自主任务编排模式
+          workflow: Boolean(workflow),
         }),
       })
       if (!response.ok) {
@@ -481,6 +484,93 @@ export class AIHubService extends EventEmitter {
       throw new Error(`AI Hub 设置引擎失败: ${response.status} ${err}`)
     }
     return (await response.json()) as { status: string; ai_engine: string; changed: boolean }
+  }
+
+  /** 5.0.3-503-c: MCP server 清单（配置 + 已发现工具 + SDK 可用性） */
+  async mcpList(): Promise<{
+    ok: boolean
+    sdk_installed: boolean
+    servers: Array<{
+      name: string
+      command: string
+      args: string[]
+      enabled: boolean
+      permission: string
+      status: string
+      tools: string[]
+      error: string
+    }>
+  }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/mcp`, { headers: this.authHeaders() })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`AI Hub MCP 清单失败: ${response.status} ${err}`)
+    }
+    return (await response.json()) as {
+      ok: boolean
+      sdk_installed: boolean
+      servers: Array<{
+        name: string
+        command: string
+        args: string[]
+        enabled: boolean
+        permission: string
+        status: string
+        tools: string[]
+        error: string
+      }>
+    }
+  }
+
+  /** 5.0.3-503-c: 新增/更新 MCP server 配置 */
+  async mcpAdd(params: {
+    name: string
+    command: string
+    args?: string[]
+    enabled?: boolean
+    permission?: 'auto' | 'notify' | 'confirm'
+  }): Promise<{ ok: boolean; server: string; error?: string; sync?: unknown }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/mcp/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
+      body: JSON.stringify(params),
+    })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`AI Hub 添加 MCP server 失败: ${response.status} ${err}`)
+    }
+    return (await response.json()) as { ok: boolean; server: string; error?: string; sync?: unknown }
+  }
+
+  /** 5.0.3-503-c: 删除 MCP server 配置 */
+  async mcpRemove(name: string): Promise<{ ok: boolean; server: string; error?: string }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/mcp/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
+      body: JSON.stringify({ name }),
+    })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`AI Hub 删除 MCP server 失败: ${response.status} ${err}`)
+    }
+    return (await response.json()) as { ok: boolean; server: string; error?: string }
+  }
+
+  /** 5.0.3-503-c: 重新同步全部 MCP server 工具 */
+  async mcpReload(): Promise<{ ok: boolean; results: Record<string, unknown> }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/mcp/reload`, {
+      method: 'POST',
+      headers: { ...this.authHeaders() },
+    })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`AI Hub 同步 MCP 工具失败: ${response.status} ${err}`)
+    }
+    return (await response.json()) as { ok: boolean; results: Record<string, unknown> }
   }
 }
 

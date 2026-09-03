@@ -199,7 +199,7 @@ const electronAPI = {
   },
   // V3.1.1-T5-4: AI 对话专用桥接（chat 走 ai:chat 独立通道，其余复用 ai:call）
   aihub: {
-    chat: (params: { sessionId: string; message: string; mode?: string; provider?: string; autonomyMode?: string; projectName?: string; attachments?: unknown[]; engine?: 'own' | 'hermes' | 'auto' }) =>
+    chat: (params: { sessionId: string; message: string; mode?: string; provider?: string; autonomyMode?: string; projectName?: string; attachments?: unknown[]; engine?: 'own' | 'hermes' | 'auto'; workflow?: boolean }) =>
       ipcRenderer.invoke('ai:chat', params),
     onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { sessionId: string; chunk: string }) => callback(data)
@@ -221,6 +221,17 @@ const electronAPI = {
     getEngine: () => ipcRenderer.invoke('ai:call', 'ai:get-engine', {}),
     setEngine: (engine: 'own' | 'hermes' | 'auto') =>
       ipcRenderer.invoke('ai:call', 'ai:set-engine', { engine }),
+    // 5.0.3-503-c: MCP 工具接入管理（list/add/remove/reload）
+    mcpList: () => ipcRenderer.invoke('ai:call', 'ai:mcp-list', {}),
+    mcpAdd: (params: {
+      name: string
+      command: string
+      args?: string[]
+      enabled?: boolean
+      permission?: 'auto' | 'notify' | 'confirm'
+    }) => ipcRenderer.invoke('ai:call', 'ai:mcp-add', params),
+    mcpRemove: (name: string) => ipcRenderer.invoke('ai:call', 'ai:mcp-remove', { name }),
+    mcpReload: () => ipcRenderer.invoke('ai:call', 'ai:mcp-reload', {}),
   },
   render: {
     exportConnections: (projectName: string, outputTypes: string[]) =>

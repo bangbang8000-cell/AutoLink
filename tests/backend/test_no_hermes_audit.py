@@ -127,3 +127,22 @@ class TestNoHermesAudit:
         text = provider_file.read_text(encoding='utf-8')
         assert 'openai' in text.lower()  # openai 兼容客户端（BYO-Key 直连，非平台托管）
         assert 'hermes' not in text.lower()
+
+    def test_mcp_is_protocol_layer_allowed(self):
+        """5.0.3-503-c: MCP 是协议层（非 Agent 框架），允许作为依赖并硬声明于 requirements.txt"""
+        req = ROOT / 'backend' / 'requirements.txt'
+        text = req.read_text(encoding='utf-8')
+        assert 'mcp' in text.lower(), 'requirements.txt 应声明 mcp 依赖（协议层）'
+        # MCP import 仅允许出现在 autolink_hub/mcp 模块内（工具接入协议层），
+        # 不污染 LLM provider / Agent 适配器（AgentProvider 抽象不感知 MCP）
+        backend = ROOT / 'backend'
+        hits = []
+        for py in sorted(backend.rglob('*.py')):
+            if 'backend-dist' in str(py):
+                continue
+            rel = py.relative_to(ROOT).as_posix()
+            for i, line in enumerate(py.read_text(encoding='utf-8', errors='ignore').splitlines(), 1):
+                if re.match(r'^\s*(?:from\s+mcp(?:\s|\.)|import\s+mcp\b)', line):
+                    if not rel.startswith('backend/autolink_hub/mcp/'):
+                        hits.append(f'{rel}:{i}: {line.strip()}')
+        assert not hits, 'mcp import 应仅位于 autolink_hub/mcp 模块内（协议层工具接入）:\n' + '\n'.join(hits)

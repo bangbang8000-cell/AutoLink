@@ -33,6 +33,13 @@ def init_hub(user_data_dir: str = "") -> None:
         get_memory_engine().init_dir(base)
     except Exception as e:
         logger.warning(f"memory init failed: {e}")
+    # 5.0.3-503-c: 初始化时同步已配置的 MCP server 工具（惰性；未装 mcp SDK 静默跳过）
+    try:
+        from autolink_hub.mcp.manager import get_mcp_manager, mcp_available
+        if mcp_available():
+            get_mcp_manager().sync_all_blocking()
+    except Exception as e:
+        logger.warning(f"MCP sync failed: {e}")
     _hub_initialized = True
 
 

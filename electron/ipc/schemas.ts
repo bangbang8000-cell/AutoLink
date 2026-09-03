@@ -38,6 +38,11 @@ export const AI_ACTION_WHITELIST = [
   'ai:clear',
   'ai:get-engine',
   'ai:set-engine',
+  // 5.0.3-503-c: MCP 工具接入管理
+  'ai:mcp-list',
+  'ai:mcp-add',
+  'ai:mcp-remove',
+  'ai:mcp-reload',
 ] as const
 export type AIAction = (typeof AI_ACTION_WHITELIST)[number]
 
@@ -57,6 +62,23 @@ export const aiChatSchema = z.object({
   attachments: z.array(z.record(z.string(), z.unknown())).max(20).optional(),
   // 5.0.2-502-b: AI 引擎（own/hermes/auto）
   engine: z.enum(['own', 'hermes', 'auto']).optional(),
+  // 5.0.3-503-a: 多步自主任务编排模式（own 引擎 Plan→Execute→Verify）
+  workflow: z.boolean().optional(),
+})
+
+/** 5.0.3-503-c: MCP server 添加载荷（name/command 形状边界） */
+export const mcpAddSchema = z.object({
+  name: z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, 'MCP server 名仅允许字母/数字/-/_'),
+  command: z.string().min(1).max(500),
+  args: z.array(z.string().max(500)).max(64).optional(),
+  env: z.record(z.string().max(200), z.string().max(2000)).optional(),
+  enabled: z.boolean().optional(),
+  permission: z.enum(['auto', 'notify', 'confirm']).optional(),
+})
+
+/** 5.0.3-503-c: MCP server 名称载荷（删除） */
+export const mcpNameSchema = z.object({
+  name: z.string().min(1).max(64),
 })
 
 /** 批量优化应用载荷（suggestions 结构与前端 BatchOptimizePanel 一致） */

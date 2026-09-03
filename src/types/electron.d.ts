@@ -444,6 +444,7 @@ interface Window {
         projectName?: string
         attachments?: unknown[]
         engine?: 'own' | 'hermes' | 'auto'
+        workflow?: boolean
       }) => Promise<{ sessionId: string; status: string; messages: number; reply?: string | null }>
       onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => () => void
       providers: () => Promise<{
@@ -463,6 +464,30 @@ interface Window {
         install_hint: string
       }>
       setEngine: (engine: 'own' | 'hermes' | 'auto') => Promise<{ status: string; ai_engine: string; changed: boolean }>
+      // 5.0.3-503-c: MCP 工具接入管理
+      mcpList: () => Promise<{
+        ok: boolean
+        sdk_installed: boolean
+        servers: Array<{
+          name: string
+          command: string
+          args: string[]
+          enabled: boolean
+          permission: string
+          status: string
+          tools: string[]
+          error: string
+        }>
+      }>
+      mcpAdd: (params: {
+        name: string
+        command: string
+        args?: string[]
+        enabled?: boolean
+        permission?: 'auto' | 'notify' | 'confirm'
+      }) => Promise<{ ok: boolean; server: string; error?: string; sync?: unknown }>
+      mcpRemove: (name: string) => Promise<{ ok: boolean; server: string; error?: string }>
+      mcpReload: () => Promise<{ ok: boolean; results: Record<string, unknown> }>
     }
     rack: {
       optimize: (params: {

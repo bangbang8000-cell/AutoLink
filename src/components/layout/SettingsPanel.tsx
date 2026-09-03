@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Sun, Moon, Monitor, Globe, Palette,
   Cpu, Wifi, Download, Search, Settings as SettingsIcon,
   Upload, RotateCcw, Check,
   Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText, Cloud,
+  Plus, Trash2, Boxes,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useUIStore, type ThemeMode, type AccentColor, type AIConfig } from '@/stores/ui.store'
@@ -687,6 +688,59 @@ function AISettings() {
     return () => { cancelled = true }
   }, [])
 
+  // 5.0.3-503-c: MCP server 管理（最小：清单 / 添加 / 删除 / 重新同步）
+  const [mcpServers, setMcpServers] = useState<Array<{
+    name: string
+    command: string
+    args: string[]
+    enabled: boolean
+    permission: string
+    status: string
+    tools: string[]
+    error: string
+  }>>([])
+  const [mcpSdkInstalled, setMcpSdkInstalled] = useState(true)
+  const [mcpName, setMcpName] = useState('')
+  const [mcpCommand, setMcpCommand] = useState('')
+
+  const refreshMcp = useCallback(async () => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub?.mcpList) return
+    try {
+      const res = await aiHub.mcpList()
+      setMcpServers(res.servers || [])
+      setMcpSdkInstalled(res.sdk_installed !== false)
+    } catch { /* 后端不可用静默 */ }
+  }, [])
+
+  useEffect(() => {
+    void refreshMcp()
+  }, [refreshMcp])
+
+  const addMcp = async () => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub?.mcpAdd) return
+    try {
+      await aiHub.mcpAdd({ name: mcpName.trim(), command: mcpCommand.trim() })
+      setMcpName('')
+      setMcpCommand('')
+      await refreshMcp()
+    } catch (e) {
+      toast('error', e instanceof Error ? e.message : 'mcp add failed')
+    }
+  }
+
+  const removeMcp = async (name: string) => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub?.mcpRemove) return
+    try {
+      await aiHub.mcpRemove(name)
+      await refreshMcp()
+    } catch (e) {
+      toast('error', e instanceof Error ? e.message : 'mcp remove failed')
+    }
+  }
+
   const syncToHub = async (provider: string) => {
     const c = aiConfig.providers[provider]
     const aiHub = window.electron?.aihub
@@ -914,6 +968,77 @@ function AISettings() {
               {engineInfo.install_hint || t('common:explorer.settings.ai.engineHermesNotInstalled')}
             </span>
           )}
+        </div>
+      </SettingsRow>
+
+      {/* 5.0.3-503-c: MCP 工具接入管理（最小：清单 / 添加 / 删除 / 重新同步） */}
+      <SettingsRow label={t('common:explorer.settings.ai.mcp')}>
+        <div className="flex flex-col gap-2 flex-1">
+          <div className="flex items-center gap-1.5 text-2xs text-gray-500 dark:text-gray-400">
+            <Boxes size={12} />
+            <span>
+              {mcpSdkInstalled
+                ? t('common:explorer.settings.ai.mcpSdkReady')
+                : t('common:explorer.settings.ai.mcpSdkMissing')}
+            </span>
+            <button
+              onClick={refreshMcp}
+              className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover"
+            >
+              <RefreshCw size={10} />{t('common:explorer.settings.ai.mcpReload')}
+            </button>
+          </div>
+
+          {mcpServers.length === 0 ? (
+            <p className="text-2xs text-gray-400 dark:text-gray-500">
+              {t('common:explorer.settings.ai.mcpEmpty')}
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {mcpServers.map((s) => (
+                <li key={s.name} className="flex items-center gap-1.5 text-2xs border border-edge-subtle rounded px-2 py-1">
+                  <Boxes size={10} className="text-primary-500" />
+                  <span className="font-medium">{s.name}</span>
+                  <code className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{s.command}</code>
+                  {s.tools.length > 0 && (
+                    <span className="ml-auto text-[10px] text-primary-600 dark:text-primary-400">
+                      {s.tools.length} tools
+                    </span>
+                  )}
+                  {s.error && <span className="ml-auto text-[10px] text-danger-500">{s.error}</span>}
+                  <button
+                    onClick={() => removeMcp(s.name)}
+                    className="ml-1 text-gray-400 hover:text-danger-500"
+                    title={t('common:explorer.settings.ai.mcpRemove')}
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <input
+              value={mcpName}
+              onChange={(e) => setMcpName(e.target.value)}
+              placeholder={t('common:explorer.settings.ai.mcpNamePlaceholder')}
+              className={INPUT_CLASS + ' w-28'}
+            />
+            <input
+              value={mcpCommand}
+              onChange={(e) => setMcpCommand(e.target.value)}
+              placeholder={t('common:explorer.settings.ai.mcpCommandPlaceholder')}
+              className={INPUT_CLASS + ' flex-1'}
+            />
+            <button
+              onClick={addMcp}
+              disabled={!mcpName.trim() || !mcpCommand.trim()}
+              className="inline-flex items-center gap-0.5 px-2 py-1 text-2xs rounded bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40"
+            >
+              <Plus size={10} />{t('common:explorer.settings.ai.mcpAdd')}
+            </button>
+          </div>
         </div>
       </SettingsRow>
 

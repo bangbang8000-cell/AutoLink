@@ -12,3 +12,5 @@ fastapi>=0.110.0
 uvicorn>=0.27.0
 sse-starlette>=1.6.0
 pydantic>=2.5.0
+# 5.0.3-503-c: MCP 工具接入（Model Context Protocol，协议层非 Agent 框架；运行期惰性导入）
+mcp>=1.2.0

@@ -136,6 +136,8 @@ import {
   roomCreateSchema,
   roomOptimizeSchema,
   roomValidateSchema,
+  mcpAddSchema,
+  mcpNameSchema,
 } from './schemas.js'
 
 /**
@@ -1071,7 +1073,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
           p.provider as string | undefined,
           p.attachments as Array<{ id: string; name: string; type: string; path: string; size: number }> | undefined,
           String(p.autonomyMode ?? 'semi_auto'), p.projectName as string | undefined,
-          undefined, p.engine as string | undefined,
+          undefined, p.engine as string | undefined, Boolean(p.workflow),
         )
         return { sessionId, status: 'completed', reply }
       }
@@ -1099,6 +1101,25 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         return aiHubService.getEngine()
       case 'ai:set-engine':
         return aiHubService.setEngine(String(p.engine ?? 'own'))
+      // 5.0.3-503-c: MCP 工具接入管理（list/add/remove/reload）
+      case 'ai:mcp-list':
+        return aiHubService.mcpList()
+      case 'ai:mcp-add': {
+        const m = assertParsed(mcpAddSchema, p, 'ai:mcp-add')
+        return aiHubService.mcpAdd({
+          name: m.name,
+          command: m.command,
+          args: m.args,
+          enabled: m.enabled,
+          permission: m.permission,
+        })
+      }
+      case 'ai:mcp-remove': {
+        const m = assertParsed(mcpNameSchema, p, 'ai:mcp-remove')
+        return aiHubService.mcpRemove(m.name)
+      }
+      case 'ai:mcp-reload':
+        return aiHubService.mcpReload()
       default:
         throw new Error(`未知 AI action: ${action}`)
     }
@@ -1125,6 +1146,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         }
       },
       p.engine,
+      p.workflow,
     )
     return { sessionId, status: 'completed', reply: result }
   }))
