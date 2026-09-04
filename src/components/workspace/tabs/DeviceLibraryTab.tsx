@@ -3,10 +3,12 @@ import clsx from 'clsx'
 import {
   Search, Zap, X, Award, Globe, Hash, Thermometer, Weight,
   Ruler, Cable, History, Tags, Network, Package, Layers,
-  Loader2, AlertTriangle, BookOpen, Server,
+  Loader2, AlertTriangle, BookOpen, Server, Cloud,
+  CloudDownload, CloudUpload, RefreshCw, Clock,
 } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useDeviceLibraryStore, type DeviceCategoryFilter } from '@/stores/device-library.store'
+import { useCloudStore } from '@/stores/cloud.store'
 import type { LibraryDevice } from '@/types/device-profile'
 import { isServerDevice } from '@/types/device-profile'
 import { DEVICE_CATEGORY_LABELS, NETWORK_TYPE_LABELS } from '@/constants/labels'
@@ -43,7 +45,12 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
     selectedDevice, filteredDevices,
     filter, setFilter, resetFilter,
     loadLibrary, selectDevice,
+    // 5.0.4-504-c: 云同步
+    cloudCount, lastSyncAt, cloudSyncing, cloudSyncError,
+    pullCloudLibrary, pushCloudLibrary,
   } = useDeviceLibraryStore()
+
+  const loggedIn = useCloudStore((s) => s.loggedIn)
 
   useEffect(() => {
     loadLibrary()
@@ -90,6 +97,48 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
           重置筛选
         </button>
       </div>
+
+      {/* 5.0.4-504-c: 设备库云同步区（登录后可见） */}
+      {loggedIn && (
+        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-gray-200 dark:border-edge-subtle bg-gray-50 dark:bg-app/50 shrink-0">
+          <Cloud size={13} className="text-primary-500 shrink-0" />
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">云同步</span>
+          <span className="text-2xs text-gray-400 dark:text-gray-500">
+            本地 {allDevices.length} · 云端 {cloudCount}
+            {lastSyncAt && (
+              <span className="inline-flex items-center gap-0.5 ml-1.5">
+                <Clock size={9} />
+                {new Date(lastSyncAt).toLocaleString()}
+              </span>
+            )}
+          </span>
+          {cloudSyncError && (
+            <span className="text-2xs text-error-500 truncate max-w-[220px]" title={cloudSyncError}>
+              {cloudSyncError}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => void pullCloudLibrary()}
+              disabled={cloudSyncing}
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover disabled:opacity-40"
+              title="从云端拉取设备库并合并到本地"
+            >
+              <CloudDownload size={11} />
+              拉取
+            </button>
+            <button
+              onClick={() => void pushCloudLibrary()}
+              disabled={cloudSyncing}
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-40"
+              title="将本地设备库发布到云端"
+            >
+              {cloudSyncing ? <RefreshCw size={11} className="animate-spin" /> : <CloudUpload size={11} />}
+              发布
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Loading / Error */}
       {loading && (

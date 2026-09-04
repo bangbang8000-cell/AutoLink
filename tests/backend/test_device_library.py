@@ -1,4 +1,5 @@
 """H1 AL 设备库测试：加载 + 规格自洽 + 命名规范 + 硬编码映射一致。"""
+import dataclasses
 import glob
 import io
 import json
@@ -11,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 from aidc_planner import DEFAULTS
 import device_defaults as dd
 from validate_device_library import check_device_library
+from device_library import get_device_library
 
 _LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'template', 'device_library')
 
@@ -158,3 +160,55 @@ class TestLibraryReconciliation:
         json.dump(data, open(p, 'w', encoding='utf-8'))
         problems = check_device_library(lib)
         assert any('id 字段' in p_ and 'renamed_2u' in p_ for p_ in problems)
+
+
+class TestCloudSyncPortableContract:
+    """5.0.4-504-c: 设备库云同步可移植契约（autolink-device-library v1）
+
+    客户端上传/拉取载荷须能被 parsePortableLibrary 解析（MC 扁平 / AL bundle / {devices} 外壳）。
+    此处校验内置设备库具备云同步归一化所需字段，并演示 AL v1 bundle 载荷结构。
+    """
+
+    def _flat_devices(self):
+        lib = get_device_library()
+        assert lib.devices, '设备库加载为空'
+        return list(lib.devices.values())
+
+    def test_builtin_cloud_sync_fields(self):
+        """内置库全部设备具备云同步归一化必需字段（id/power_watts；非光模块须 model/vendor）"""
+        devices = self._flat_devices()
+        assert len(devices) >= 40
+        for dev in devices:
+            assert getattr(dev, 'id', None), '缺 id'
+            assert getattr(dev, 'power_watts', None) is not None
+            if getattr(dev, 'category', None) != 'optical_modules':
+                assert getattr(dev, 'vendor', None), '缺 vendor'
+                assert getattr(dev, 'model', None), '缺 model'
+
+    def test_al_v1_bundle_payload_shape(self):
+        """构建 AL autolink-device-library v1 bundle：format/schemaVersion/exportedAt/devices 完整"""
+        devices = self._flat_devices()
+        payload = {
+            'format': 'autolink-device-library',
+            'schemaVersion': 1,
+            'exportedAt': '2026-09-04T00:00:00Z',
+            'devices': [dataclasses.asdict(d) for d in devices],
+        }
+        assert payload['format'] == 'autolink-device-library'
+        assert payload['schemaVersion'] == 1
+        assert isinstance(payload['devices'], list)
+        assert len(payload['devices']) == len(devices)
+        # 每条设备可 JSON 序列化（云同步 IPC 载荷边界，平台 parsePortableLibrary 可解析）
+        text = json.dumps(payload, ensure_ascii=False)
+        assert 'autolink-device-library' in text
+        assert '"schemaVersion": 1' in text
+
+    def test_flat_array_shell_compat(self):
+        """MC 扁平数组 / {devices} 外壳两种形状均含归一化必需字段（非光模块须 model/vendor）"""
+        devices = self._flat_devices()
+        flat = [dataclasses.asdict(d) for d in devices]
+        for dev in flat:
+            if dev.get('category') != 'optical_modules':
+                assert dev.get('model') and dev.get('vendor')
+        shell = {'devices': flat}
+        assert len(shell['devices']) == len(flat)

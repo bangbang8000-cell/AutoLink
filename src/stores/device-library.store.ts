@@ -4,6 +4,7 @@ import type {
   DeviceCategory,
   NetworkType,
 } from '@/types/device-profile'
+import { buildPortableLibrary, parsePortableLibrary } from '@/utils/deviceLibraryPortable'
 
 /* ---------- types ---------- */
 
@@ -96,6 +97,14 @@ interface DeviceLibraryState {
   // 48-c（F8-3）：设备库跨端可移植格式（MC↔AL）
   exportPortable: (deviceIds: string[]) => Promise<void>
   importPortable: () => Promise<void>
+
+  // 5.0.4-504-c: 设备库云同步（本地数 / 云端数 / 上次同步）
+  cloudCount: number
+  lastSyncAt: string | null
+  cloudSyncing: boolean
+  cloudSyncError: string | null
+  pullCloudLibrary: () => Promise<void>
+  pushCloudLibrary: () => Promise<void>
 }
 
 export const useDeviceLibraryStore = create<DeviceLibraryState>()((set, get) => ({
@@ -115,6 +124,12 @@ export const useDeviceLibraryStore = create<DeviceLibraryState>()((set, get) => 
   showSwitchForm: false,
   showImportModal: false,
   showExportModal: false,
+
+  // 5.0.4-504-c: 云同步初始状态
+  cloudCount: 0,
+  lastSyncAt: null,
+  cloudSyncing: false,
+  cloudSyncError: null,
 
   /* ---------- data loading ---------- */
 
@@ -364,6 +379,56 @@ export const useDeviceLibraryStore = create<DeviceLibraryState>()((set, get) => 
       await get().importDevices(parsed.devices)
     } catch (err) {
       set({ error: `导入设备库失败: ${(err as Error).message}` })
+    }
+  },
+
+  // 5.0.4-504-c: 拉取云端设备库 → 与本地合并（union by id，云端优先）→ 导入并刷新
+  pullCloudLibrary: async () => {
+    set({ cloudSyncing: true, cloudSyncError: null })
+    try {
+      if (!window.electron?.cloud?.deviceLibraryGet) throw new Error('云同步能力不可用')
+      const raw = await window.electron.cloud.deviceLibraryGet()
+      const jsonText = typeof raw === 'string' ? raw : JSON.stringify(raw ?? {})
+      const parsed = parsePortableLibrary(jsonText)
+      if (!parsed.ok) throw new Error(parsed.reason)
+      const cloudDevices = parsed.devices
+      // 合并：本地 ∪ 云端，同 id 云端优先
+      const local = get().allDevices
+      const merged = [...local]
+      for (const cd of cloudDevices) {
+        const idx = merged.findIndex((d) => d.id === cd.id)
+        if (idx >= 0) merged[idx] = cd
+        else merged.push(cd)
+      }
+      // 落盘云端设备（本地已存在的同 id 会被覆盖为云端版本）
+      if (window.electron?.deviceLibrary?.import && cloudDevices.length > 0) {
+        await window.electron.deviceLibrary.import(cloudDevices)
+      }
+      await get().loadLibrary()
+      // 直接以合并结果覆盖内存视图（index 未注册的设备也立即可见），再套用筛选
+      set({ allDevices: merged })
+      get().applyFilter()
+      set({ cloudCount: cloudDevices.length, lastSyncAt: new Date().toISOString(), cloudSyncing: false })
+    } catch (err) {
+      set({ cloudSyncError: (err as Error).message, cloudSyncing: false })
+    }
+  },
+
+  // 5.0.4-504-c: 发布本地设备库到云端（autolink-device-library v1 bundle）
+  pushCloudLibrary: async () => {
+    set({ cloudSyncing: true, cloudSyncError: null })
+    try {
+      if (!window.electron?.cloud?.deviceLibraryPush) throw new Error('云同步能力不可用')
+      const devices = get().allDevices.slice(0, 500)
+      const payload = JSON.parse(buildPortableLibrary(devices))
+      const res = await window.electron.cloud.deviceLibraryPush(payload)
+      set({
+        cloudCount: res?.count ?? devices.length,
+        lastSyncAt: new Date().toISOString(),
+        cloudSyncing: false,
+      })
+    } catch (err) {
+      set({ cloudSyncError: (err as Error).message, cloudSyncing: false })
     }
   },
 }))
