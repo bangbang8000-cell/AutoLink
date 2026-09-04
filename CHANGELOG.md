@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [5.0.5] - 2026-09-04
+
+### 5.0.5 文档与知识（5.0 系列第 5 版）
+
+- **文档工作台**：DocsWorkbench 工作台子视图 8 张一键生成卡（设计报告 PDF/合规/连接表/设备清单/布线/BOM + 评审 PDF/评审包 + MC 交付包）+ 产物清单表（doc:list 8 类产物识别/时间/状态 + 导出/打开位置）+ 用户指南入口；engine.py export 接线 compliance 报告
+- **知识库**：KnowledgeEngine（knowledge/*.md + 伴生 .metadata.json，白名单字段，<user_data>/knowledge/）+ 中文双字加权检索 Top-K + list_knowledge/search_knowledge/add_knowledge 工具（与技能自学习解耦）+ /api/chat/knowledge* 端点 + ai:knowledge-* IPC 白名单 + KnowledgePanel 面板
+- **AI 上下文管理**：系统提示词组装注入知识库上下文（query 消息级动态检索 + project 兜底进缓存）+ ChatRequest.knowledge 全链路透传（own/hermes/workflow 三路）+ 知识变更刷新 system prompt 缓存
+
 ## [5.0.4] - 2026-09-04
 
 ### 5.0.4 协作与生态（5.0 系列第 4 版）
