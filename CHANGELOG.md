@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [5.0.4] - 2026-09-04
+
+### 5.0.4 协作与生态（5.0 系列第 4 版）
+
+- **模板市场生态**：评分（1-5 upsert/均值/人数/我的分，POST /rating）+ 订阅（订阅/取消，POST/DELETE /subscribe）+ featured 精选徽标 + 列表注入 rating_avg/rating_count/is_subscribed/subscribers_count（可选字段优雅降级）+ TemplateMarket 星标评分/订阅按钮/精选徽标
+- **设备库云同步**：cloud:deviceLibraryGet/Push IPC + 拉取合并（MC 扁平/AL bundle/{devices} 三种形状兼容、同 id 云端优先）+ 发布（autolink-device-library v1 bundle ≤500）+ DeviceLibraryTab 云同步区（本地数/云端数/上次同步）
+- 分享链路沿用既有（cloud:shareCreate → share:snapshot → POST /shares）
+
 ## [5.0.3] - 2026-09-03
 
 ### 5.0.3 AI Agent 工作流深化（5.0 系列第 3 版）
