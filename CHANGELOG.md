@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [5.0.3] - 2026-09-03
+
+### 5.0.3 AI Agent 工作流深化（5.0 系列第 3 版）
+
+- **多步自主任务编排**（Plan→Execute→Verify 状态机，与 MC 同构）：Plan 接线 parse_plan_from_response；full_auto 自主全流程 / advisor 每步确认 / semi_auto 关键步确认（---STEP_CONFIRM--- 标记）；verify_tool_result 轻量一致性校验；会话任务状态（task_id/plan/step/verify_result）；前端「多步任务」开关 + 任务进度卡片
+- **技能自学习闭环**：record_feedback 持久化（成功/失败/成功率/最近样本）+ maybe_optimize_skill 阈值自动修订 + skill_update/skill_save/skill_optimize 工具；record_usage 接线 run_stream；portable manifest v2 技能级元数据（兼容 v1）
+- **MCP 工具接入**（协议层，非 Agent 框架）：mcp/manager.py 配置+stdio 生命周期+工具发现 → 动态注册 mcp: 命名空间；execute_tool 补参数校验 + unregister_tool；双引擎共享；前端 MCP 管理区；审计登记 mcp 允许依赖
+
 ## [5.0.2] - 2026-09-03
 
 ### 5.0.2 AI Agent 底座（Hermes 并存）（5.0 系列第 2 版）
