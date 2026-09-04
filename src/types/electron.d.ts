@@ -445,6 +445,7 @@ interface Window {
         attachments?: unknown[]
         engine?: 'own' | 'hermes' | 'auto'
         workflow?: boolean
+        knowledge?: string
       }) => Promise<{ sessionId: string; status: string; messages: number; reply?: string | null }>
       onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => () => void
       providers: () => Promise<{
@@ -488,6 +489,34 @@ interface Window {
       }) => Promise<{ ok: boolean; server: string; error?: string; sync?: unknown }>
       mcpRemove: (name: string) => Promise<{ ok: boolean; server: string; error?: string }>
       mcpReload: () => Promise<{ ok: boolean; results: Record<string, unknown> }>
+      // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
+      knowledge: {
+        list: (params?: { category?: string; project?: string }) => Promise<{
+          ok: boolean
+          entries: Array<{
+            name: string
+            title: string
+            category: string
+            project: string
+            tags: string[]
+            enabled: boolean
+            updated_at: string
+            file: string
+          }>
+          total: number
+          categories: string[]
+        }>
+        get: (name: string) => Promise<{ ok: boolean; entry: { name: string; title: string; category: string; project: string; tags: string[]; enabled: boolean; updated_at: string; file: string; content: string } }>
+        add: (params: { name: string; content: string; metadata?: Record<string, unknown> }) => Promise<{ ok: boolean; entry: Record<string, unknown> }>
+        update: (name: string, params: { content?: string; metadata?: Record<string, unknown> }) => Promise<{ ok: boolean; entry: Record<string, unknown> }>
+        delete: (name: string) => Promise<{ ok: boolean; deleted: string }>
+        search: (params: { query?: string; category?: string; project?: string; topK?: number }) => Promise<{
+          ok: boolean
+          query: string
+          entries: Array<Record<string, unknown>>
+          total: number
+        }>
+      }
     }
     rack: {
       optimize: (params: {
@@ -568,6 +597,32 @@ interface Window {
       list: () => Promise<{ ok?: boolean; skills?: Array<{ name: string; enabled: boolean; use_count: number; last_used: string; file: string }> }>
       export: () => Promise<{ canceled: boolean; path: string; count?: number; error?: string }>
       import: (opts?: { overwrite?: boolean }) => Promise<{ canceled: boolean; imported: number; skipped: number; error?: string }>
+    }
+    // 5.0.5-505-a: 文档工作台（产物清单 / 一键生成 / 导出到指定位置）
+    doc: {
+      list: (projectName: string) => Promise<{
+        ok: boolean
+        artifacts: Array<{
+          id: string
+          type: string
+          label: string
+          name: string
+          time: string
+          size: number
+          path: string
+          relPath: string
+          status: 'ready'
+        }>
+      }>
+      generate: (projectName: string, docType: string) => Promise<{
+        ok: boolean
+        path: string
+        type: string
+        fileName?: string
+        versions?: number
+        error?: string
+      }>
+      export: (projectName: string, filePath: string) => Promise<{ canceled: boolean; path: string }>
     }
     export: {
       saveFile: (projectName: string, fileName: string, base64Data: string) => Promise<string>

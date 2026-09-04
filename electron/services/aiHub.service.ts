@@ -311,6 +311,7 @@ export class AIHubService extends EventEmitter {
     onChunk?: (text: string) => void,
     engine?: string,
     workflow?: boolean,
+    knowledge?: string,
   ): Promise<string> {
     await this.ensureRunning()
     return this.withRetry(async () => {
@@ -328,6 +329,8 @@ export class AIHubService extends EventEmitter {
           engine,
           // 5.0.3-503-a: 多步自主任务编排模式
           workflow: Boolean(workflow),
+          // 5.0.5-505-c: 知识库检索 query（可选）
+          knowledge,
         }),
       })
       if (!response.ok) {
@@ -571,6 +574,86 @@ export class AIHubService extends EventEmitter {
       throw new Error(`AI Hub 同步 MCP 工具失败: ${response.status} ${err}`)
     }
     return (await response.json()) as { ok: boolean; results: Record<string, unknown> }
+  }
+
+  // ============================================================
+  // 5.0.5-505-b: 知识库（list / get / add / update / delete / search）
+  // ============================================================
+
+  private async knowledgeRequest<T>(path: string, init?: RequestInit): Promise<T> {
+    await this.ensureRunning()
+    return this.withRetry(async () => {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        headers: { ...this.authHeaders(), ...(init?.body ? { 'Content-Type': 'application/json' } : {}) },
+        ...init,
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(`AI Hub 知识库请求失败: ${response.status} ${text}`)
+      }
+      return (await response.json()) as T
+    })
+  }
+
+  async knowledgeList(params?: { category?: string; project?: string }): Promise<{
+    ok: boolean
+    entries: Array<Record<string, unknown>>
+    total: number
+    categories: string[]
+  }> {
+    const qs = new URLSearchParams()
+    if (params?.category) qs.set('category', params.category)
+    if (params?.project) qs.set('project', params.project)
+    const q = qs.toString()
+    return this.knowledgeRequest(`/api/chat/knowledge${q ? `?${q}` : ''}`)
+  }
+
+  async knowledgeGet(name: string): Promise<{ ok: boolean; entry: Record<string, unknown> }> {
+    return this.knowledgeRequest(`/api/chat/knowledge/${encodeURIComponent(name)}`)
+  }
+
+  async knowledgeAdd(params: {
+    name: string
+    content: string
+    metadata?: Record<string, unknown>
+  }): Promise<{ ok: boolean; entry: Record<string, unknown> }> {
+    return this.knowledgeRequest('/api/chat/knowledge', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    })
+  }
+
+  async knowledgeUpdate(
+    name: string,
+    params: { content?: string; metadata?: Record<string, unknown> },
+  ): Promise<{ ok: boolean; entry: Record<string, unknown> }> {
+    return this.knowledgeRequest(`/api/chat/knowledge/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify(params),
+    })
+  }
+
+  async knowledgeDelete(name: string): Promise<{ ok: boolean; deleted: string }> {
+    return this.knowledgeRequest(`/api/chat/knowledge/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async knowledgeSearch(params: {
+    query?: string
+    category?: string
+    project?: string
+    topK?: number
+  }): Promise<{ ok: boolean; query: string; entries: Array<Record<string, unknown>>; total: number }> {
+    return this.knowledgeRequest('/api/chat/knowledge/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        query: params.query ?? '',
+        category: params.category,
+        project: params.project,
+        top_k: params.topK,
+      }),
+    })
   }
 }
 

@@ -33,6 +33,12 @@ def init_hub(user_data_dir: str = "") -> None:
         get_memory_engine().init_dir(base)
     except Exception as e:
         logger.warning(f"memory init failed: {e}")
+    # 5.0.5-505-b: 初始化知识库目录（<user_data>/knowledge/，幂等）
+    try:
+        from autolink_hub.knowledge.engine import get_knowledge_engine
+        get_knowledge_engine().init_dir(base)
+    except Exception as e:
+        logger.warning(f"knowledge init failed: {e}")
     # 5.0.3-503-c: 初始化时同步已配置的 MCP server 工具（惰性；未装 mcp SDK 静默跳过）
     try:
         from autolink_hub.mcp.manager import get_mcp_manager, mcp_available

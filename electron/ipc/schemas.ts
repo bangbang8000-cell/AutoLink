@@ -43,6 +43,13 @@ export const AI_ACTION_WHITELIST = [
   'ai:mcp-add',
   'ai:mcp-remove',
   'ai:mcp-reload',
+  // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
+  'ai:knowledge-list',
+  'ai:knowledge-get',
+  'ai:knowledge-add',
+  'ai:knowledge-update',
+  'ai:knowledge-delete',
+  'ai:knowledge-search',
 ] as const
 export type AIAction = (typeof AI_ACTION_WHITELIST)[number]
 
@@ -64,6 +71,33 @@ export const aiChatSchema = z.object({
   engine: z.enum(['own', 'hermes', 'auto']).optional(),
   // 5.0.3-503-a: 多步自主任务编排模式（own 引擎 Plan→Execute→Verify）
   workflow: z.boolean().optional(),
+  // 5.0.5-505-c: 知识库检索 query（可选，透传后端检索式注入）
+  knowledge: z.string().max(2000).optional(),
+})
+
+/** 5.0.5-505-b: 知识库条目载荷（name 形状边界 + metadata 对象） */
+export const knowledgeEntrySchema = z.object({
+  name: z.string().min(1, '名称不能为空').max(200, '名称过长')
+    .regex(/^[^/\\]+$/, '名称不能包含路径分隔符')
+    .refine((v) => v !== '.' && v !== '..', '名称非法'),
+  content: z.string().min(1, '内容不能为空').max(200_000, '内容过长'),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
+/** 5.0.5-505-b: 知识库更新载荷（content 可选，metadata 可选） */
+export const knowledgeUpdateSchema = z
+  .object({
+    content: z.string().min(1, '内容不能为空').max(200_000, '内容过长').optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .refine((v) => v.content !== undefined || v.metadata !== undefined, '缺少更新内容')
+
+/** 5.0.5-505-b: 知识库检索载荷（query/分类/项目/Top-K 边界） */
+export const knowledgeSearchSchema = z.object({
+  query: z.string().max(2000).optional().default(''),
+  category: z.string().max(100).optional(),
+  project: z.string().max(120).optional(),
+  topK: z.number().int().min(1).max(50).optional(),
 })
 
 /** 5.0.3-503-c: MCP server 添加载荷（name/command 形状边界） */

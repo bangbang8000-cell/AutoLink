@@ -278,6 +278,50 @@ def _skill_optimize_handler(arguments: dict) -> dict:
             "content": r.get("content", "")}
 
 
+# ============================================================
+# 5.0.5-505-b: 知识库工具（list / search / add，与技能自学习解耦）
+# ============================================================
+
+def _knowledge_list_handler(arguments: dict) -> dict:
+    from autolink_hub.knowledge.engine import get_knowledge_engine
+    engine = get_knowledge_engine()
+    category = str(arguments.get("category") or "")
+    project = str(arguments.get("project") or arguments.get("projectName") or "")
+    entries = engine.list_entries(category=category, project=project)
+    return {"success": True, "entries": entries, "total": len(entries),
+            "categories": engine.list_categories()}
+
+
+def _knowledge_search_handler(arguments: dict) -> dict:
+    from autolink_hub.knowledge.engine import get_knowledge_engine
+    engine = get_knowledge_engine()
+    query = str(arguments.get("query") or "")
+    category = str(arguments.get("category") or "")
+    project = str(arguments.get("project") or arguments.get("projectName") or "")
+    try:
+        top_k = int(arguments.get("top_k") or arguments.get("topK") or 5)
+    except (TypeError, ValueError):
+        top_k = 5
+    hits = engine.search(query=query, category=category, project=project, top_k=top_k)
+    return {"success": True, "query": query, "entries": hits, "total": len(hits)}
+
+
+def _knowledge_add_handler(arguments: dict) -> dict:
+    from autolink_hub.knowledge.engine import get_knowledge_engine
+    name = str(arguments.get("name") or "").strip()
+    content = arguments.get("content")
+    metadata = arguments.get("metadata")
+    if not name:
+        return {"success": False, "error": "知识条目名不能为空"}
+    if not content or not str(content).strip():
+        return {"success": False, "error": "知识条目内容不能为空"}
+    try:
+        entry = get_knowledge_engine().add_entry(name, str(content), metadata)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    return {"success": True, "entry": entry, "added": True}
+
+
 def init_tools() -> None:
     """注册 AutoLink 白名单工具（T5-2 白名单：backend 现有 action 域）"""
     if _tools:
@@ -311,7 +355,7 @@ def init_tools() -> None:
 
     # ---- 导出域 ----
     register_tool(
-        "export_outputs", "导出交付物（connections/deviceList/cablingGuide/bom/reportData/pdfReport）",
+        "export_outputs", "导出交付物（connections/deviceList/cablingGuide/bom/reportData/pdfReport/compliance）",
         _schema({
             "configFile": _str_param("configFile", "project_config.json 或 network_config.ini 路径", True),
             "outputDir": _str_param("outputDir", "输出目录（默认 output）"),
@@ -780,6 +824,38 @@ def init_tools() -> None:
             "notes": _str_param("notes", "优化要点/改进说明（可选）"),
         }, required=["name"]),
         _skill_optimize_handler,
+        permission="notify",
+    )
+
+    # ---- 5.0.5-505-b：知识库工具（list / search / add，与技能自学习解耦）----
+    register_tool(
+        "list_knowledge", "知识库清单：列出全部知识条目（名称/标题/分类/所属项目/标签/更新时间，可按 category/project 过滤）。回答\"有哪些知识/知识库有什么\"时调用（只读 AUTO）",
+        _schema({
+            "category": _str_param("category", "分类过滤（如 设计规范/设备选型/布线规范）"),
+            "project": _str_param("project", "所属项目过滤"),
+        }, []),
+        _knowledge_list_handler,
+        permission="auto",
+    )
+    register_tool(
+        "search_knowledge", "知识库检索：按关键词检索知识条目，返回 Top-K（默认 5）命中（含标题/内容摘要/分类/标签）。回答专业设计/选型/规范类问题时，先检索知识库再作答（只读 AUTO）",
+        _schema({
+            "query": _str_param("query", "检索关键词（如 RoCE 收敛比、IB 交换机选型）", True),
+            "category": _str_param("category", "分类过滤"),
+            "project": _str_param("project", "所属项目过滤"),
+            "top_k": _str_param("top_k", "返回条数上限（默认 5）"),
+        }, required=["query"]),
+        _knowledge_search_handler,
+        permission="auto",
+    )
+    register_tool(
+        "add_knowledge", "新增知识条目：把一段领域知识（markdown）保存为知识库条目 <name>.md + 伴生 metadata（title/category/project/tags），供后续检索式注入与知识库面板展示。回答\"把这段规范/经验存进知识库\"时调用。写操作（NOTIFY）",
+        _schema({
+            "name": _str_param("name", "知识条目名（唯一，如 roc-convergence）", True),
+            "content": _str_param("content", "知识条目 markdown 全文", True),
+            "metadata": _str_param("metadata", "可选元数据 JSON 对象 {title, category, project, tags, description}"),
+        }, required=["name", "content"]),
+        _knowledge_add_handler,
         permission="notify",
     )
 

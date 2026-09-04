@@ -29,6 +29,8 @@ class ChatRequest(BaseModel):
     project_name: Optional[str] = None
     engine: Optional[str] = None  # 5.0.2-502-b: AI 引擎（own/hermes/auto，缺省用配置）
     workflow: bool = False  # 5.0.3-503-a: 多步自主任务编排模式（own 引擎驱动）
+    # 5.0.5-505-c: 知识库检索 query（可选，透传 provider 层 → system prompt 检索式注入）
+    knowledge: Optional[str] = None
 
 
 class ProviderInfo(BaseModel):
@@ -128,6 +130,7 @@ async def send_message(req: ChatRequest):
                     autonomy_mode=req.autonomy_mode,
                     project_name=req.project_name,
                     engine=ENGINE_OWN,
+                    knowledge=req.knowledge,
                 )
             else:
                 chunks = agent.stream_chat(
@@ -138,6 +141,7 @@ async def send_message(req: ChatRequest):
                     attachments=req.attachments,
                     autonomy_mode=req.autonomy_mode,
                     project_name=req.project_name,
+                    knowledge=req.knowledge,
                 )
             async for chunk in chunks:
                 yield {
@@ -372,3 +376,90 @@ async def fetch_models(req: FetchModelsRequest):
     """获取可用模型列表"""
     from autolink_hub.hub import fetch_models as hub_fetch
     return await hub_fetch(req.base_url, req.api_key)
+
+
+# ============================================================
+# 5.0.5-505-b: 知识库端点（list / get / add / update / delete / search）
+# 与 MC 5.0.5 knowledge 端点同构；前端 ai:knowledge* 通道经此访问。
+# ============================================================
+
+class KnowledgeEntryRequest(BaseModel):
+    name: str
+    content: str
+    metadata: Optional[dict] = None
+
+
+class KnowledgeUpdateRequest(BaseModel):
+    content: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str = ""
+    category: Optional[str] = None
+    project: Optional[str] = None
+    top_k: int = 5
+
+
+def _knowledge_engine():
+    from autolink_hub.knowledge.engine import get_knowledge_engine
+    return get_knowledge_engine()
+
+
+@router.get("/knowledge")
+async def knowledge_list(category: Optional[str] = None, project: Optional[str] = None):
+    """知识条目清单（可按分类/项目过滤，含 categories 供下拉）"""
+    engine = _knowledge_engine()
+    entries = engine.list_entries(category=category or "", project=project or "")
+    return {"ok": True, "entries": entries, "total": len(entries),
+            "categories": engine.list_categories()}
+
+
+@router.get("/knowledge/{name}")
+async def knowledge_get(name: str):
+    """知识条目详情（含 content）"""
+    entry = _knowledge_engine().get_entry(name)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"知识条目不存在: {name}")
+    return {"ok": True, "entry": entry}
+
+
+@router.post("/knowledge")
+async def knowledge_add(req: KnowledgeEntryRequest):
+    """新增知识条目"""
+    try:
+        entry = _knowledge_engine().add_entry(req.name, req.content, req.metadata)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, "entry": entry}
+
+
+@router.put("/knowledge/{name}")
+async def knowledge_update(name: str, req: KnowledgeUpdateRequest):
+    """更新知识条目（内容与/或 metadata）"""
+    try:
+        entry = _knowledge_engine().update_entry(name, req.content, req.metadata)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, "entry": entry}
+
+
+@router.delete("/knowledge/{name}")
+async def knowledge_delete(name: str):
+    """删除知识条目"""
+    deleted = _knowledge_engine().delete_entry(name)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"知识条目不存在: {name}")
+    return {"ok": True, "deleted": name}
+
+
+@router.post("/knowledge/search")
+async def knowledge_search(req: KnowledgeSearchRequest):
+    """知识库检索（Top-K，默认 5）"""
+    hits = _knowledge_engine().search(
+        query=req.query or "",
+        category=req.category or "",
+        project=req.project or "",
+        top_k=req.top_k,
+    )
+    return {"ok": True, "query": req.query, "entries": hits, "total": len(hits)}

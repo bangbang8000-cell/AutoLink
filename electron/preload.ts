@@ -199,7 +199,7 @@ const electronAPI = {
   },
   // V3.1.1-T5-4: AI 对话专用桥接（chat 走 ai:chat 独立通道，其余复用 ai:call）
   aihub: {
-    chat: (params: { sessionId: string; message: string; mode?: string; provider?: string; autonomyMode?: string; projectName?: string; attachments?: unknown[]; engine?: 'own' | 'hermes' | 'auto'; workflow?: boolean }) =>
+    chat: (params: { sessionId: string; message: string; mode?: string; provider?: string; autonomyMode?: string; projectName?: string; attachments?: unknown[]; engine?: 'own' | 'hermes' | 'auto'; workflow?: boolean; knowledge?: string }) =>
       ipcRenderer.invoke('ai:chat', params),
     onStream: (callback: (data: { sessionId: string; chunk: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { sessionId: string; chunk: string }) => callback(data)
@@ -232,6 +232,21 @@ const electronAPI = {
     }) => ipcRenderer.invoke('ai:call', 'ai:mcp-add', params),
     mcpRemove: (name: string) => ipcRenderer.invoke('ai:call', 'ai:mcp-remove', { name }),
     mcpReload: () => ipcRenderer.invoke('ai:call', 'ai:mcp-reload', {}),
+    // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
+    knowledge: {
+      list: (params?: { category?: string; project?: string }) =>
+        ipcRenderer.invoke('ai:call', 'ai:knowledge-list', params ?? {}),
+      get: (name: string) =>
+        ipcRenderer.invoke('ai:call', 'ai:knowledge-get', { name }),
+      add: (params: { name: string; content: string; metadata?: Record<string, unknown> }) =>
+        ipcRenderer.invoke('ai:call', 'ai:knowledge-add', params),
+      update: (name: string, params: { content?: string; metadata?: Record<string, unknown> }) =>
+        ipcRenderer.invoke('ai:call', 'ai:knowledge-update', { name, ...params }),
+      delete: (name: string) =>
+        ipcRenderer.invoke('ai:call', 'ai:knowledge-delete', { name }),
+      search: (params: { query?: string; category?: string; project?: string; topK?: number }) =>
+        ipcRenderer.invoke('ai:call', 'ai:knowledge-search', params),
+    },
   },
   render: {
     exportConnections: (projectName: string, outputTypes: string[]) =>
@@ -333,6 +348,15 @@ const electronAPI = {
       importFile: () =>
         ipcRenderer.invoke('feature:snapshot:importFile'),
     },
+  },
+  // 5.0.5-505-a: 文档工作台（产物清单 / 一键生成 / 导出到指定位置）
+  doc: {
+    list: (projectName: string) =>
+      ipcRenderer.invoke('doc:list', projectName),
+    generate: (projectName: string, docType: string) =>
+      ipcRenderer.invoke('doc:generate', projectName, docType),
+    export: (projectName: string, filePath: string) =>
+      ipcRenderer.invoke('doc:export', projectName, filePath),
   },
   // V3.3.0-T13: 云端平台（登录 + 云中心）。渲染层零网络（CSP connect-src 'self'），
   // 所有 HTTP 由主进程 cloudService 发起，此处仅透传 IPC。

@@ -138,6 +138,9 @@ import {
   roomValidateSchema,
   mcpAddSchema,
   mcpNameSchema,
+  knowledgeEntrySchema,
+  knowledgeUpdateSchema,
+  knowledgeSearchSchema,
 } from './schemas.js'
 
 /**
@@ -469,6 +472,242 @@ function buildReviewPdfHtml(projectName: string, plan: Record<string, unknown>):
 
   rows.push(`<p>接线 ${connections.length} 条 · 终端 ${terminals.length} 条</p>`)
   return wrapPrintableHtml(rows.join('\n'))
+}
+
+// ===== 5.0.5-505-a：文档工作台辅助（评审 PDF / 评审包 / 文档产物扫描，供 feature:* 与 doc:* 复用） =====
+
+/** 评审 PDF：printToPDF A4 → output/ 根目录（→ [根目录] 批次） */
+async function createReviewPdf(
+  projectDir: string,
+  projectName: string,
+): Promise<{ ok: true; path: string; fileName: string }> {
+  const planPath = path.join(projectDir, 'plan.json')
+  if (!fs.existsSync(planPath)) {
+    throw new Error('当前项目未生成 AIDC 规划，无法导出评审 PDF（请先在「AIDC 规划」视图生成规划）')
+  }
+  let plan: Record<string, unknown>
+  try {
+    plan = JSON.parse(fs.readFileSync(planPath, 'utf-8'))
+  } catch {
+    throw new Error('plan.json 解析失败，无法导出评审 PDF')
+  }
+  const html = buildReviewPdfHtml(projectName, plan)
+  const outputDir = path.join(projectDir, 'output')
+  fs.mkdirSync(outputDir, { recursive: true })
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const fileName = `${projectName}_评审报告_${ts}.pdf`
+  const pdfPath = path.join(outputDir, fileName)
+  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+  try {
+    await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    const data = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
+    fs.writeFileSync(pdfPath, data)
+  } finally {
+    win.destroy()
+  }
+  return { ok: true, path: pdfPath, fileName }
+}
+
+/** 评审包：聚合版本历史 + 设计报告 + 校验 + 交付清单 → zip（含 PDF 报告），落 output/ 根目录 */
+async function createReviewPackage(
+  projectDir: string,
+  projectName: string,
+): Promise<{ ok: true; path: string; fileName: string; versions: number }> {
+  // 1. 版本历史（current + plan_history）
+  let current: Record<string, unknown> | null = null
+  const planPath = path.join(projectDir, 'plan.json')
+  if (fs.existsSync(planPath)) {
+    try { current = JSON.parse(fs.readFileSync(planPath, 'utf-8')) } catch { current = null }
+  }
+  const hdir = path.join(projectDir, 'plan_history')
+  const versions: { version: number; planHash?: string; generatedAt?: string }[] = []
+  if (fs.existsSync(hdir)) {
+    for (const name of fs.readdirSync(hdir)) {
+      const m = /^v(\d+)\.plan\.json$/.exec(name)
+      if (!m) continue
+      try {
+        const p = JSON.parse(fs.readFileSync(path.join(hdir, name), 'utf-8'))
+        const pm = (p?.meta ?? {}) as Record<string, unknown>
+        versions.push({ version: Number(m[1]), planHash: String(pm.planHash ?? ''), generatedAt: String(pm.generatedAt ?? '') })
+      } catch { /* 跳过损坏快照 */ }
+    }
+  }
+  versions.sort((a, b) => a.version - b.version)
+
+  // 2. 设计报告数据 + 校验（失败不阻断评审包）
+  let designReport: unknown = null
+  const iniPath = path.join(projectDir, 'network_config.ini')
+  if (fs.existsSync(iniPath)) {
+    try { designReport = await pythonService.call('report', { configFile: iniPath }, 60000) } catch { designReport = null }
+  }
+  let validation: unknown = null
+  if (fs.existsSync(iniPath)) {
+    try { validation = await pythonService.call('validate', { configFile: iniPath }, 60000) } catch { validation = null }
+  }
+
+  // 3. 交付清单（最新版本批次 manifest.json）
+  let delivery: unknown = null
+  let deliveryBatch = ''
+  const outputDir = path.join(projectDir, 'output')
+  if (fs.existsSync(outputDir)) {
+    const batches = fs.readdirSync(outputDir)
+      .filter((n) => /^v\d+_/.test(n) && fs.statSync(path.join(outputDir, n)).isDirectory())
+      .sort()
+    const latest = batches[batches.length - 1]
+    if (latest) {
+      const manifestPath = path.join(outputDir, latest, 'manifest.json')
+      if (fs.existsSync(manifestPath)) {
+        try { delivery = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')); deliveryBatch = latest } catch { delivery = null }
+      }
+    }
+  }
+
+  // 4. 评审包 JSON（与 src/utils/reviewPackage.ts 契约一致）
+  let projectMeta: Record<string, unknown> = {}
+  const metaPath = path.join(projectDir, 'project.json')
+  if (fs.existsSync(metaPath)) {
+    try { projectMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')) } catch { projectMeta = {} }
+  }
+  const currentMeta = (current?.meta ?? {}) as Record<string, unknown>
+  const review = {
+    format: 'autolink-review-package',
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    project: { projectName, projectId: String(projectMeta.projectId ?? currentMeta.projectId ?? '') },
+    versionHistory: {
+      currentVersion: Number(currentMeta.planVersion ?? 0) || 0,
+      versions,
+    },
+    designReport,
+    validation,
+    delivery: delivery ? { batch: deliveryBatch, manifest: delivery } : null,
+  }
+
+  // 5. 评审 PDF（有 plan.json 时；失败不阻断评审包）
+  let pdfData: Buffer | null = null
+  if (current) {
+    const html = buildReviewPdfHtml(projectName, current)
+    const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+    try {
+      await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+      pdfData = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
+    } catch { pdfData = null } finally { win.destroy() }
+  }
+
+  // 6. 打包 zip 落盘 output/ 根目录（→ [根目录] 批次）
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const fileName = `${projectName}_评审包_${ts}.zip`
+  const zipPath = path.join(outputDir, fileName)
+  const zip = new ZipArchive({ zlib: { level: 6 } })
+  const done = new Promise<void>((resolve, reject) => {
+    const out = fs.createWriteStream(zipPath)
+    out.on('close', () => resolve())
+    out.on('error', (e) => reject(new Error(`写入评审包 ZIP 失败: ${(e as Error).message}`)))
+    zip.on('error', (e) => reject(new Error(`打包评审包失败: ${(e as Error).message}`)))
+    zip.pipe(out)
+    zip.append(JSON.stringify(review, null, 2), { name: 'review.json' })
+    if (pdfData) zip.append(pdfData, { name: '评审报告.pdf' })
+    zip.finalize()
+  })
+  await done
+  return { ok: true, path: zipPath, fileName, versions: versions.length }
+}
+
+/** 文档产物类型识别（文件名模式 → 类型/标签） */
+const DOC_ARTIFACT_PATTERNS: Array<{ type: string; label: string; test: (name: string) => boolean }> = [
+  { type: 'designReport', label: '设计报告 PDF', test: (n) => /^设计报告_.*\.pdf$/i.test(n) },
+  { type: 'reviewPackage', label: '评审包', test: (n) => /_评审包_.*\.zip$/i.test(n) },
+  { type: 'reviewPdf', label: '评审 PDF', test: (n) => /_评审报告_.*\.pdf$/i.test(n) },
+  { type: 'compliance', label: '信创合规报告', test: (n) => /^信创合规报告_.*\.xlsx$/i.test(n) },
+  { type: 'bom', label: 'BOM 成本估算', test: (n) => /^BOM成本估算_.*\.xlsx$/i.test(n) },
+  { type: 'connections', label: '连接关系表', test: (n) => /^AI智算网络_.*\.xlsx$/i.test(n) },
+  { type: 'cablingGuide', label: '布线指导表', test: (n) => /^布线指导表_.*\.xlsx$/i.test(n) },
+  { type: 'deviceList', label: '设备清单', test: (n) => /^设备清单_.*\.xlsx$/i.test(n) },
+]
+
+interface DocArtifact {
+  id: string
+  type: string
+  label: string
+  name: string
+  time: string
+  size: number
+  path: string
+  relPath: string
+  status: 'ready'
+}
+
+/** 扫描项目 output/ 下全部文档产物（文件按模式识别 + 归档批次目录） */
+function scanDocArtifacts(projectDir: string, projectName: string): DocArtifact[] {
+  const outputDir = path.join(projectDir, 'output')
+  const artifacts: DocArtifact[] = []
+  if (!fs.existsSync(outputDir)) return artifacts
+
+  let id = 0
+  const push = (type: string, label: string, filePath: string, relPath: string) => {
+    try {
+      const st = fs.statSync(filePath)
+      artifacts.push({
+        id: `doc-${type}-${id++}`,
+        type,
+        label,
+        name: path.basename(filePath),
+        time: st.mtime.toISOString(),
+        size: st.size,
+        path: filePath,
+        relPath,
+        status: 'ready',
+      })
+    } catch { /* 文件被并发删除则跳过 */ }
+  }
+
+  // 递归扫描文件（跳过 manifest.json）
+  const walk = (dir: string, rel: string) => {
+    let entries: fs.Dirent[] = []
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      const relFull = rel ? `${rel}/${e.name}` : e.name
+      if (e.isDirectory()) {
+        walk(full, relFull)
+        continue
+      }
+      if (e.name === 'manifest.json' || e.name.startsWith('.')) continue
+      const match = DOC_ARTIFACT_PATTERNS.find((p) => p.test(e.name))
+      if (match) push(match.type, match.label, full, relFull)
+    }
+  }
+  walk(outputDir, '')
+
+  // 归档批次目录：output/<projectName>[-v<ver>]-<YYYYMMDD-HHmm>/（archiveExport.buildArchiveBatchName）
+  const safeName = projectName.replace(/[\\/:*?"<>|]/g, '_')
+  const archiveRe = new RegExp(`^${safeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(-v\\d+)?-\\d{8}-\\d{4}$`)
+  let dirs: string[] = []
+  try { dirs = fs.readdirSync(outputDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) } catch { dirs = [] }
+  for (const d of dirs) {
+    if (!archiveRe.test(d)) continue
+    const full = path.join(outputDir, d)
+    let count = 0
+    try { count = fs.readdirSync(full).filter((f) => !f.startsWith('.')).length } catch { count = 0 }
+    try {
+      const st = fs.statSync(full)
+      artifacts.push({
+        id: `doc-archive-${id++}`,
+        type: 'archive',
+        label: '归档批次',
+        name: d,
+        time: st.mtime.toISOString(),
+        size: count,
+        path: full,
+        relPath: `output/${d}`,
+        status: 'ready',
+      })
+    } catch { /* 目录被并发删除则跳过 */ }
+  }
+
+  // 时间倒序（最新在前）
+  artifacts.sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0))
+  return artifacts
 }
 
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
@@ -1074,6 +1313,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
           p.attachments as Array<{ id: string; name: string; type: string; path: string; size: number }> | undefined,
           String(p.autonomyMode ?? 'semi_auto'), p.projectName as string | undefined,
           undefined, p.engine as string | undefined, Boolean(p.workflow),
+          p.knowledge as string | undefined,
         )
         return { sessionId, status: 'completed', reply }
       }
@@ -1120,6 +1360,34 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       }
       case 'ai:mcp-reload':
         return aiHubService.mcpReload()
+      // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
+      case 'ai:knowledge-list': {
+        const kl = p as { category?: string; project?: string }
+        return aiHubService.knowledgeList({ category: kl.category, project: kl.project })
+      }
+      case 'ai:knowledge-get': {
+        const kg = assertParsed(projectNameSchema, String(p.name ?? ''), 'ai:knowledge-get.name')
+        return aiHubService.knowledgeGet(kg)
+      }
+      case 'ai:knowledge-add': {
+        const ka = assertParsed(knowledgeEntrySchema, p, 'ai:knowledge-add')
+        return aiHubService.knowledgeAdd({ name: ka.name, content: ka.content, metadata: ka.metadata })
+      }
+      case 'ai:knowledge-update': {
+        const kun = assertParsed(projectNameSchema, String(p.name ?? ''), 'ai:knowledge-update.name')
+        const ku = assertParsed(knowledgeUpdateSchema, p, 'ai:knowledge-update')
+        return aiHubService.knowledgeUpdate(kun, { content: ku.content, metadata: ku.metadata })
+      }
+      case 'ai:knowledge-delete': {
+        const kd = assertParsed(projectNameSchema, String(p.name ?? ''), 'ai:knowledge-delete.name')
+        return aiHubService.knowledgeDelete(kd)
+      }
+      case 'ai:knowledge-search': {
+        const ks = assertParsed(knowledgeSearchSchema, p, 'ai:knowledge-search')
+        return aiHubService.knowledgeSearch({
+          query: ks.query, category: ks.category, project: ks.project, topK: ks.topK,
+        })
+      }
       default:
         throw new Error(`未知 AI action: ${action}`)
     }
@@ -1147,6 +1415,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       },
       p.engine,
       p.workflow,
+      p.knowledge,
     )
     return { sessionId, status: 'completed', reply: result }
   }))
@@ -1744,31 +2013,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('feature:review-pdf', wrapHandler(async (_event, projectName: string) => {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
-    const planPath = path.join(projectDir, 'plan.json')
-    if (!fs.existsSync(planPath)) {
-      throw new Error('当前项目未生成 AIDC 规划，无法导出评审 PDF（请先在「AIDC 规划」视图生成规划）')
-    }
-    let plan: Record<string, unknown>
-    try {
-      plan = JSON.parse(fs.readFileSync(planPath, 'utf-8'))
-    } catch {
-      throw new Error('plan.json 解析失败，无法导出评审 PDF')
-    }
-    const html = buildReviewPdfHtml(projectName, plan)
-    const outputDir = path.join(projectDir, 'output')
-    fs.mkdirSync(outputDir, { recursive: true })
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    const fileName = `${projectName}_评审报告_${ts}.pdf`
-    const pdfPath = path.join(outputDir, fileName)
-    const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
-    try {
-      await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
-      const data = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
-      fs.writeFileSync(pdfPath, data)
-    } finally {
-      win.destroy()
-    }
-    return { ok: true, path: pdfPath, fileName }
+    if (!fs.existsSync(projectDir)) throw new Error(`项目不存在: ${projectName}`)
+    return createReviewPdf(projectDir, projectName)
   }))
 
   // 48-d（F8-4）：评审包——聚合版本历史 diff + 设计报告数据 + 校验结果 + 交付清单 → zip（含 PDF 报告）
@@ -1776,105 +2022,80 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     sanitizeName(projectName)
     const projectDir = path.join(getWorkspacePath(), projectName)
     if (!fs.existsSync(projectDir)) throw new Error(`项目不存在: ${projectName}`)
+    return createReviewPackage(projectDir, projectName)
+  }))
 
-    // 1. 版本历史（current + plan_history）
-    let current: Record<string, unknown> | null = null
-    const planPath = path.join(projectDir, 'plan.json')
-    if (fs.existsSync(planPath)) {
-      try { current = JSON.parse(fs.readFileSync(planPath, 'utf-8')) } catch { current = null }
-    }
-    const hdir = path.join(projectDir, 'plan_history')
-    const versions: { version: number; planHash?: string; generatedAt?: string }[] = []
-    if (fs.existsSync(hdir)) {
-      for (const name of fs.readdirSync(hdir)) {
-        const m = /^v(\d+)\.plan\.json$/.exec(name)
-        if (!m) continue
-        try {
-          const p = JSON.parse(fs.readFileSync(path.join(hdir, name), 'utf-8'))
-          const pm = (p?.meta ?? {}) as Record<string, unknown>
-          versions.push({ version: Number(m[1]), planHash: String(pm.planHash ?? ''), generatedAt: String(pm.generatedAt ?? '') })
-        } catch { /* 跳过损坏快照 */ }
-      }
-    }
-    versions.sort((a, b) => a.version - b.version)
+  // ===== 5.0.5-505-a：文档工作台（doc:list / doc:generate / doc:export） =====
+  ipcMain.handle('doc:list', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    if (!fs.existsSync(projectDir)) return { ok: true, artifacts: [] }
+    return { ok: true, artifacts: scanDocArtifacts(projectDir, projectName) }
+  }))
 
-    // 2. 设计报告数据 + 校验（失败不阻断评审包）
-    let designReport: unknown = null
-    const iniPath = path.join(projectDir, 'network_config.ini')
-    if (fs.existsSync(iniPath)) {
-      try { designReport = await pythonService.call('report', { configFile: iniPath }, 60000) } catch { designReport = null }
-    }
-    let validation: unknown = null
-    if (fs.existsSync(iniPath)) {
-      try { validation = await pythonService.call('validate', { configFile: iniPath }, 60000) } catch { validation = null }
-    }
-
-    // 3. 交付清单（最新版本批次 manifest.json）
-    let delivery: unknown = null
-    let deliveryBatch = ''
+  // 一键生成文档产物（复用 exporter export action + 评审包/评审 PDF 逻辑）
+  ipcMain.handle('doc:generate', wrapHandler(async (_event, projectName: string, docType: string) => {
+    sanitizeName(projectName)
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    if (!fs.existsSync(projectDir)) throw new Error(`项目不存在: ${projectName}`)
     const outputDir = path.join(projectDir, 'output')
-    if (fs.existsSync(outputDir)) {
-      const batches = fs.readdirSync(outputDir)
-        .filter((n) => /^v\d+_/.test(n) && fs.statSync(path.join(outputDir, n)).isDirectory())
-        .sort()
-      const latest = batches[batches.length - 1]
-      if (latest) {
-        const manifestPath = path.join(outputDir, latest, 'manifest.json')
-        if (fs.existsSync(manifestPath)) {
-          try { delivery = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')); deliveryBatch = latest } catch { delivery = null }
-        }
+    fs.mkdirSync(outputDir, { recursive: true })
+
+    // exporter 批量生成类型（连接表/设备清单/布线/BOM/PDF 报告/合规报告）
+    const EXPORT_TYPES: Record<string, string> = {
+      designReport: 'pdfReport',
+      connections: 'connections',
+      deviceList: 'deviceList',
+      cablingGuide: 'cablingGuide',
+      bom: 'bom',
+      compliance: 'compliance',
+    }
+    if (docType in EXPORT_TYPES) {
+      const configPath = path.join(projectDir, 'network_config.ini')
+      if (!fs.existsSync(configPath)) {
+        throw new Error(`项目配置不存在: ${projectName}（缺少 network_config.ini）`)
       }
+      const result = await pythonService.call('export', {
+        configFile: configPath,
+        outputDir,
+        outputTypes: [EXPORT_TYPES[docType]],
+      }) as { results?: Array<{ type: string; file?: string; status: string; error?: string }> }
+      const entry = (result.results ?? []).find((x) => x.type === EXPORT_TYPES[docType])
+      if (entry?.status === 'success' && entry.file) {
+        return { ok: true, path: entry.file, type: docType, fileName: path.basename(entry.file) }
+      }
+      throw new Error(`生成失败: ${entry?.error ?? '未知错误'}`)
     }
 
-    // 4. 评审包 JSON（与 src/utils/reviewPackage.ts 契约一致）
-    let projectMeta: Record<string, unknown> = {}
-    const metaPath = path.join(projectDir, 'project.json')
-    if (fs.existsSync(metaPath)) {
-      try { projectMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')) } catch { projectMeta = {} }
+    if (docType === 'reviewPdf') {
+      return createReviewPdf(projectDir, projectName)
     }
-    const currentMeta = (current?.meta ?? {}) as Record<string, unknown>
-    const review = {
-      format: 'autolink-review-package',
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      project: { projectName, projectId: String(projectMeta.projectId ?? currentMeta.projectId ?? '') },
-      versionHistory: {
-        currentVersion: Number(currentMeta.planVersion ?? 0) || 0,
-        versions,
-      },
-      designReport,
-      validation,
-      delivery: delivery ? { batch: deliveryBatch, manifest: delivery } : null,
+    if (docType === 'reviewPackage') {
+      return createReviewPackage(projectDir, projectName)
     }
+    throw new Error(`未知文档类型: ${docType}`)
+  }))
 
-    // 5. 评审 PDF（有 plan.json 时；失败不阻断评审包）
-    let pdfData: Buffer | null = null
-    if (current) {
-      const html = buildReviewPdfHtml(projectName, current)
-      const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
-      try {
-        await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
-        pdfData = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
-      } catch { pdfData = null } finally { win.destroy() }
+  // 导出已生成文档产物（保存对话框 → 复制到用户选择位置）
+  ipcMain.handle('doc:export', wrapHandler(async (_event, projectName: string, filePath: string) => {
+    sanitizeName(projectName)
+    if (!filePath || filePath.includes('..') || !path.isAbsolute(filePath)) {
+      throw new Error('无效文件路径')
     }
-
-    // 6. 打包 zip 落盘 output/ 根目录（→ [根目录] 批次）
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    const fileName = `${projectName}_评审包_${ts}.zip`
-    const zipPath = path.join(outputDir, fileName)
-    const zip = new ZipArchive({ zlib: { level: 6 } })
-    const done = new Promise<void>((resolve, reject) => {
-      const out = fs.createWriteStream(zipPath)
-      out.on('close', () => resolve())
-      out.on('error', (e) => reject(new Error(`写入评审包 ZIP 失败: ${(e as Error).message}`)))
-      zip.on('error', (e) => reject(new Error(`打包评审包失败: ${(e as Error).message}`)))
-      zip.pipe(out)
-      zip.append(JSON.stringify(review, null, 2), { name: 'review.json' })
-      if (pdfData) zip.append(pdfData, { name: '评审报告.pdf' })
-      zip.finalize()
+    // 仅允许导出项目 output/ 内的产物（防任意文件复制）
+    const projectDir = path.join(getWorkspacePath(), projectName)
+    const rel = path.relative(projectDir, path.normalize(filePath))
+    if (rel.startsWith('..') || path.isAbsolute(rel) || !rel.startsWith('output' + path.sep)) {
+      throw new Error('仅允许导出项目 output 目录内的文档产物')
+    }
+    if (!fs.existsSync(filePath)) throw new Error('文档产物不存在（请先生成）')
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出文档产物',
+      defaultPath: path.basename(filePath),
     })
-    await done
-    return { ok: true, path: zipPath, fileName, versions: versions.length }
+    if (result.canceled || !result.filePath) return { canceled: true, path: '' }
+    fs.copyFileSync(filePath, result.filePath)
+    return { canceled: false, path: result.filePath }
   }))
 
   // ===== App =====
