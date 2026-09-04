@@ -81,6 +81,9 @@ interface CloudState {
   toggleTemplateFavorite: (owner: string, repo: string, current: boolean) => Promise<void>
   grantTemplatePermission: (owner: string, repo: string, username: string, role: string) => Promise<void>
   revokeTemplatePermission: (owner: string, repo: string, username: string) => Promise<void>
+  // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+  toggleTemplateSubscribe: (owner: string, repo: string, current: boolean) => Promise<void>
+  rateTemplate: (owner: string, repo: string, rating: number) => Promise<void>
   fetchRemoteProjects: () => Promise<void>
   searchPublicProjects: (q: string, page?: number) => Promise<void>
   pushProject: (name: string, description: string, isPrivate: boolean) => Promise<RemoteProject>
@@ -278,6 +281,33 @@ export const useCloudStore = create<CloudState>()(
 
       revokeTemplatePermission: async (owner, repo, username) => {
         await templates.revokePermission(owner, repo, username)
+      },
+
+      // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+      toggleTemplateSubscribe: async (owner: string, repo: string, current: boolean) => {
+        if (current) {
+          await templates.unsubscribe(owner, repo)
+        } else {
+          await templates.subscribe(owner, repo)
+        }
+        const { remoteTemplates } = get()
+        set({
+          remoteTemplates: remoteTemplates.map((tp) =>
+            tp.owner === owner && tp.name === repo ? { ...tp, is_subscribed: !current } : tp,
+          ),
+        })
+      },
+
+      rateTemplate: async (owner: string, repo: string, rating: number) => {
+        const res = await templates.rate(owner, repo, rating)
+        const { remoteTemplates } = get()
+        set({
+          remoteTemplates: remoteTemplates.map((tp) =>
+            tp.owner === owner && tp.name === repo
+              ? { ...tp, rating_avg: res.rating_avg, rating_count: res.rating_count }
+              : tp,
+          ),
+        })
       },
 
       // --- Project Sync ---

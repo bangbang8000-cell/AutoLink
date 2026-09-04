@@ -47,6 +47,12 @@ export interface RemoteTemplate {
   // V3.3.2-T15-3: 收藏态 / 我的角色（所有者/可编辑/只读）
   is_favorite?: boolean
   my_role?: string | null
+  // 5.0.4-504-b: 协作与生态——评分/订阅/精选（平台列表注入）
+  rating_avg?: number
+  rating_count?: number
+  is_subscribed?: boolean
+  featured?: boolean
+  subscribers_count?: number
 }
 
 // V3.3.2-T15-3: 模板权限
@@ -203,6 +209,10 @@ export const templates = {
     cloud()!.templateGrantPermission(owner, repo, username, role),
   revokePermission: (owner: string, repo: string, username: string) =>
     cloud()!.templateRevokePermission(owner, repo, username),
+  // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+  subscribe: (owner: string, repo: string) => cloud()!.templateSubscribe(owner, repo),
+  unsubscribe: (owner: string, repo: string) => cloud()!.templateUnsubscribe(owner, repo),
+  rate: (owner: string, repo: string, rating: number) => cloud()!.templateRate(owner, repo, rating),
 }
 
 export const user = {
@@ -236,4 +246,17 @@ export const share = {
   create: (data: { projectName: string; description?: string; expireDays?: number }) => cloud()!.shareCreate(data),
   list: () => cloud()!.shareList(),
   delete: (token: string) => cloud()!.shareDelete(token),
+}
+
+// 5.0.4-504-c: 设备库云同步（autolink-device-library v1 bundle）
+export interface DeviceLibrarySyncPayload {
+  format: string
+  schemaVersion: number
+  exportedAt: string
+  devices: unknown[]
+}
+
+export const deviceLibrary = {
+  get: () => cloud()!.deviceLibraryGet(),
+  push: (payload: DeviceLibrarySyncPayload) => cloud()!.deviceLibraryPush(payload),
 }

@@ -167,7 +167,16 @@
     "favoritesOnly": "我的收藏",
     "noFavorites": "暫無收藏的範本",
     "granted": "已授予 {{username}} {{role}} 權限",
-    "revoked": "已撤銷 {{username}} 的權限"
+    "revoked": "已撤銷 {{username}} 的權限",
+    "subscribed": "已訂閱範本 \"{{name}}\"",
+    "unsubscribed": "已取消訂閱 \"{{name}}\"",
+    "subscribe": "訂閱",
+    "unsubscribe": "取消訂閱",
+    "rateTitle": "點擊星星為範本評分（1-5）",
+    "rateStars": "評 {{rating}} 星",
+    "rated": "已為範本 \"{{name}}\" 評 {{rating}} 星",
+    "featured": "精選",
+    "subscribers": "{{count}} 訂閱"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 頁"

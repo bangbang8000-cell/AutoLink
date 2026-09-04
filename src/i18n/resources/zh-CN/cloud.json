@@ -167,7 +167,16 @@
     "favoritesOnly": "我的收藏",
     "noFavorites": "暂无收藏的模板",
     "granted": "已授予 {{username}} {{role}} 权限",
-    "revoked": "已撤销 {{username}} 的权限"
+    "revoked": "已撤销 {{username}} 的权限",
+    "subscribed": "已订阅模板 \"{{name}}\"",
+    "unsubscribed": "已取消订阅 \"{{name}}\"",
+    "subscribe": "订阅",
+    "unsubscribe": "取消订阅",
+    "rateTitle": "点击星星为模板评分（1-5）",
+    "rateStars": "评 {{rating}} 星",
+    "rated": "已为模板 \"{{name}}\" 评 {{rating}} 星",
+    "featured": "精选",
+    "subscribers": "{{count}} 订阅"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页"

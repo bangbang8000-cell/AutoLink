@@ -113,6 +113,21 @@ const permissionTargetSchema = z.object({
   username: z.string().min(1).max(120),
 })
 
+// 5.0.4-504-b: 模板评分载荷（1-5 星）
+const templateRatingSchema = z.object({
+  owner: z.string().min(1).max(120),
+  repo: projectNameSchema,
+  rating: z.number().int().min(1).max(5),
+})
+
+// 5.0.4-504-c: 设备库云同步发布载荷（autolink-device-library v1 bundle）
+const deviceLibraryPushSchema = z.object({
+  format: z.string().max(64),
+  schemaVersion: z.number().int().min(1).max(99),
+  exportedAt: z.string().max(64),
+  devices: z.array(z.record(z.string(), z.unknown())).max(500),
+})
+
 /** 通用包装：解析 + 调用 + 错误脱敏（与 handlers.ts wrapHandler 一致） */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handler<T>(fn: (args: any) => Promise<T> | T) {
@@ -275,6 +290,30 @@ export function registerCloudIpcHandlers(): void {
   ipcMain.handle('cloud:templateRevokePermission', handler(async (payload: unknown) => {
     const { owner, repo, username } = assertParsed(permissionTargetSchema, payload, 'templateRevokePermission')
     return cloudService.templateRevokePermission(owner, repo, username)
+  }))
+
+  // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+  ipcMain.handle('cloud:templateSubscribe', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(templateRepoSchema, payload, 'templateSubscribe')
+    return cloudService.templateSubscribe(owner, repo)
+  }))
+
+  ipcMain.handle('cloud:templateUnsubscribe', handler(async (payload: unknown) => {
+    const { owner, repo } = assertParsed(templateRepoSchema, payload, 'templateUnsubscribe')
+    return cloudService.templateUnsubscribe(owner, repo)
+  }))
+
+  ipcMain.handle('cloud:templateRate', handler(async (payload: unknown) => {
+    const { owner, repo, rating } = assertParsed(templateRatingSchema, payload, 'templateRate')
+    return cloudService.templateRate(owner, repo, rating)
+  }))
+
+  // 5.0.4-504-c: 设备库云同步（拉取 / 发布）
+  ipcMain.handle('cloud:deviceLibraryGet', handler(async () => cloudService.deviceLibraryGet()))
+
+  ipcMain.handle('cloud:deviceLibraryPush', handler(async (payload: unknown) => {
+    const data = assertParsed(deviceLibraryPushSchema, payload, 'deviceLibraryPush')
+    return cloudService.deviceLibraryPush(data)
   }))
 
   // ===== User =====

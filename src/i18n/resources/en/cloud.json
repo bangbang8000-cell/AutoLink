@@ -167,7 +167,16 @@
     "favoritesOnly": "Favorites",
     "noFavorites": "No favorited templates",
     "granted": "Granted {{username}} {{role}} access",
-    "revoked": "Revoked {{username}}'s access"
+    "revoked": "Revoked {{username}}'s access",
+    "subscribed": "Subscribed to template \"{{name}}\"",
+    "unsubscribed": "Unsubscribed from \"{{name}}\"",
+    "subscribe": "Subscribe",
+    "unsubscribe": "Unsubscribe",
+    "rateTitle": "Click a star to rate this template (1-5)",
+    "rateStars": "Rate {{rating}} star(s)",
+    "rated": "Rated template \"{{name}}\" {{rating}} star(s)",
+    "featured": "Featured",
+    "subscribers": "{{count}} subscriber(s)"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}}"

@@ -59,6 +59,12 @@ export interface RemoteTemplate {
   topics?: string[]
   downloads?: number
   files?: { path: string; size: number }[]
+  // 5.0.4-504-b: 协作与生态——评分/订阅/精选（平台列表注入）
+  rating_avg?: number
+  rating_count?: number
+  is_subscribed?: boolean
+  featured?: boolean
+  subscribers_count?: number
 }
 
 export interface RemoteProject {
@@ -501,6 +507,31 @@ class CloudService {
 
   async templateRevokePermission(owner: string, repo: string, username: string): Promise<{ username: string; role: null }> {
     return this.request('DELETE', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/permissions/${encodeURIComponent(username)}`)
+  }
+
+  // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+  async templateSubscribe(owner: string, repo: string): Promise<{ subscribed: boolean }> {
+    return this.request('POST', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/subscribe`)
+  }
+
+  async templateUnsubscribe(owner: string, repo: string): Promise<{ subscribed: boolean }> {
+    return this.request('DELETE', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/subscribe`)
+  }
+
+  async templateRate(owner: string, repo: string, rating: number): Promise<{ rating_avg: number; rating_count: number }> {
+    return this.request('POST', `/templates/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/rating`, { rating })
+  }
+
+  // ===== Device Library 云同步（5.0.4-504-c） =====
+
+  /** 拉取云端设备库（平台 5.0.2 就绪；返回 MC 扁平 / AL bundle / {devices} 外壳均可） */
+  async deviceLibraryGet(): Promise<unknown> {
+    return this.request('GET', '/device-library')
+  }
+
+  /** 发布本地设备库（autolink-device-library v1 bundle，平台用 parsePortableLibrary 解析） */
+  async deviceLibraryPush(payload: { format: string; schemaVersion: number; exportedAt: string; devices: unknown[] }): Promise<{ status: string; count: number }> {
+    return this.request('POST', '/device-library', payload)
   }
 
   // ===== User =====

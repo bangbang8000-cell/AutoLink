@@ -167,7 +167,16 @@
     "favoritesOnly": "즐겨찾기",
     "noFavorites": "즐겨찾기한 템플릿이 없습니다",
     "granted": "{{username}}에게 {{role}} 권한을 부여했습니다",
-    "revoked": "{{username}}의 권한을 취소했습니다"
+    "revoked": "{{username}}의 권한을 취소했습니다",
+    "subscribed": "템플릿 \"{{name}}\" 구독함",
+    "unsubscribed": "\"{{name}}\" 구독 취소함",
+    "subscribe": "구독",
+    "unsubscribe": "구독 취소",
+    "rateTitle": "별을 클릭하여 평가 (1-5)",
+    "rateStars": "{{rating}}점 평가",
+    "rated": "템플릿 \"{{name}}\"을(를) {{rating}}점으로 평가함",
+    "featured": "추천",
+    "subscribers": "구독자 {{count}}명"
   },
   "pagination": {
     "info": "{{page}} / {{total}} 페이지"

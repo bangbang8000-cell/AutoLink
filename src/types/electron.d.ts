@@ -644,6 +644,10 @@ interface Window {
       }>
       templateGrantPermission: (owner: string, repo: string, username: string, role: string) => Promise<{ username: string; role: string }>
       templateRevokePermission: (owner: string, repo: string, username: string) => Promise<{ username: string; role: null }>
+      // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+      templateSubscribe: (owner: string, repo: string) => Promise<{ subscribed: boolean }>
+      templateUnsubscribe: (owner: string, repo: string) => Promise<{ subscribed: boolean }>
+      templateRate: (owner: string, repo: string, rating: number) => Promise<{ rating_avg: number; rating_count: number }>
       userProfile: () => Promise<import('@/api/cloud').UserProfile>
       updateUserProfile: (data: { full_name?: string; bio?: string }) => Promise<import('@/api/cloud').UserProfile>
       giteaCredentials: () => Promise<{ username: string; password: string; gitea_url: string }>
@@ -672,6 +676,9 @@ interface Window {
         }[]
       }>
       shareDelete: (token: string) => Promise<{ deleted: boolean }>
+      // 5.0.4-504-c: 设备库云同步（拉取 / 发布）
+      deviceLibraryGet: () => Promise<unknown>
+      deviceLibraryPush: (payload: { format: string; schemaVersion: number; exportedAt: string; devices: unknown[] }) => Promise<{ status: string; count: number }>
     }
     // V3.3.1: 本地搜索（项目文件 / 设备库 / 模板）
     search: {

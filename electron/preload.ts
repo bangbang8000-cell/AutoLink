@@ -382,6 +382,11 @@ const electronAPI = {
       ipcRenderer.invoke('cloud:templateGrantPermission', { owner, repo, username, role }),
     templateRevokePermission: (owner: string, repo: string, username: string) =>
       ipcRenderer.invoke('cloud:templateRevokePermission', { owner, repo, username }),
+    // 5.0.4-504-b: 模板订阅 / 评分（协作与生态）
+    templateSubscribe: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateSubscribe', { owner, repo }),
+    templateUnsubscribe: (owner: string, repo: string) => ipcRenderer.invoke('cloud:templateUnsubscribe', { owner, repo }),
+    templateRate: (owner: string, repo: string, rating: number) =>
+      ipcRenderer.invoke('cloud:templateRate', { owner, repo, rating }),
     userProfile: () => ipcRenderer.invoke('cloud:userProfile'),
     updateUserProfile: (data: { full_name?: string; bio?: string }) =>
       ipcRenderer.invoke('cloud:updateUserProfile', data),
@@ -399,6 +404,10 @@ const electronAPI = {
       ipcRenderer.invoke('cloud:shareCreate', data),
     shareList: () => ipcRenderer.invoke('cloud:shareList'),
     shareDelete: (token: string) => ipcRenderer.invoke('cloud:shareDelete', token),
+    // 5.0.4-504-c: 设备库云同步（拉取 / 发布）
+    deviceLibraryGet: () => ipcRenderer.invoke('cloud:deviceLibraryGet'),
+    deviceLibraryPush: (payload: { format: string; schemaVersion: number; exportedAt: string; devices: unknown[] }) =>
+      ipcRenderer.invoke('cloud:deviceLibraryPush', payload),
   },
   // V3.3.1: 本地搜索（项目文件 / 设备库 / 模板）
   search: {

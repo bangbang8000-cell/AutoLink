@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Package, Download, Loader2, Clock, Tag, User, ChevronLeft, ChevronRight,
-  Star, ShieldCheck,
+  Star, ShieldCheck, Bell, BellOff, Award, Users,
 } from 'lucide-react'
 import { useCloudStore } from '@/stores/cloud.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -28,6 +28,10 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
   const [permDialog, setPermDialog] = useState<{ owner: string; name: string } | null>(null)
   // V4-2: 模板统计（下载/安装计数）缓存
   const [statsMap, setStatsMap] = useState<Record<string, { downloads: number; usages: number }>>({})
+  // 5.0.4-504-b: 订阅切换中 / 评分交互（hover 预览）
+  const [subscribing, setSubscribing] = useState<string | null>(null)
+  const [ratingBusy, setRatingBusy] = useState<string | null>(null)
+  const [ratingHover, setRatingHover] = useState<string | null>(null)
 
   const addToast = useToastStore((s) => s.addToast)
 
@@ -40,6 +44,8 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
     fetchRemoteTemplates,
     downloadTemplate,
     toggleTemplateFavorite,
+    toggleTemplateSubscribe,
+    rateTemplate,
   } = useCloudStore()
 
   // Reset page when search or category changes
@@ -86,6 +92,46 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
       }
     },
     [toggleTemplateFavorite, addToast, t],
+  )
+
+  // 5.0.4-504-b: 订阅 / 取消订阅
+  const handleToggleSubscribe = useCallback(
+    async (template: RemoteTemplate) => {
+      const key = template.full_name || `${template.owner}/${template.name}`
+      setSubscribing(key)
+      try {
+        await toggleTemplateSubscribe(template.owner, template.name, !!template.is_subscribed)
+        addToast(
+          'success',
+          template.is_subscribed
+            ? t('permissions.unsubscribed', { name: template.name })
+            : t('permissions.subscribed', { name: template.name }),
+        )
+      } catch (err) {
+        addToast('error', (err as Error).message)
+      } finally {
+        setSubscribing(null)
+      }
+    },
+    [toggleTemplateSubscribe, addToast, t],
+  )
+
+  // 5.0.4-504-b: 评分（1-5 星）
+  const handleRate = useCallback(
+    async (template: RemoteTemplate, rating: number) => {
+      const key = template.full_name || `${template.owner}/${template.name}`
+      setRatingBusy(key)
+      setRatingHover(null)
+      try {
+        await rateTemplate(template.owner, template.name, rating)
+        addToast('success', t('permissions.rated', { name: template.name, rating }))
+      } catch (err) {
+        addToast('error', (err as Error).message)
+      } finally {
+        setRatingBusy(null)
+      }
+    },
+    [rateTemplate, addToast, t],
   )
 
   // V3.3.2-T15-3: AutoLink 品类体系（兼容历史 MC 品类）
@@ -222,6 +268,13 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
                     <span className="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 shrink-0">
                       {categoryLabel(template.category)}
                     </span>
+                    {/* 5.0.4-504-b: 精选徽标 */}
+                    {template.featured && (
+                      <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 shrink-0 flex items-center gap-0.5">
+                        <Award size={10} />
+                        {t('permissions.featured')}
+                      </span>
+                    )}
                     {/* V3.3.2-T15-3: 我的角色徽标 */}
                     {template.my_role && template.my_role !== 'reader' && (
                       <span
@@ -265,6 +318,51 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
                         </span>
                       ) : null
                     })()}
+                    {/* 5.0.4-504-b: 评分星标（点击评分 1-5） + 订阅数 */}
+                    {(() => {
+                      const key = template.full_name || `${template.owner}/${template.name}`
+                      const avg = template.rating_avg ?? 0
+                      const count = template.rating_count ?? 0
+                      if (count <= 0 && !template.rating_avg) return null
+                      const hovered = ratingHover?.startsWith(`${key}:`)
+                      const display = hovered ? Number(ratingHover!.split(':').pop()) : Math.round(avg)
+                      return (
+                        <span
+                          className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500"
+                          title={t('permissions.rateTitle')}
+                        >
+                          <span className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <button
+                                key={n}
+                                disabled={ratingBusy === key}
+                                onMouseEnter={() => setRatingHover(`${key}:${n}`)}
+                                onMouseLeave={() => setRatingHover(null)}
+                                onClick={() => handleRate(template, n)}
+                                className="p-0 disabled:opacity-50"
+                                title={t('permissions.rateStars', { rating: n })}
+                              >
+                                <Star
+                                  size={10}
+                                  fill={n <= display ? 'currentColor' : 'none'}
+                                  className={n <= display ? 'text-warning-500' : 'text-gray-300 dark:text-gray-600'}
+                                />
+                              </button>
+                            ))}
+                          </span>
+                          <span>
+                            {avg.toFixed(1)}
+                            {count > 0 && <span className="opacity-80"> ({count})</span>}
+                          </span>
+                        </span>
+                      )
+                    })()}
+                    {(template.subscribers_count ?? 0) > 0 && (
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                        <Users size={10} />
+                        {t('permissions.subscribers', { count: template.subscribers_count })}
+                      </span>
+                    )}
                     {template.topics && template.topics.length > 0 && (
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
                         <Tag size={10} />
@@ -296,6 +394,25 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
                       <ShieldCheck size={13} />
                     </button>
                   )}
+                  {/* 5.0.4-504-b: 订阅 / 取消订阅 */}
+                  <button
+                    onClick={() => handleToggleSubscribe(template)}
+                    disabled={subscribing === (template.full_name || `${template.owner}/${template.name}`)}
+                    className={`p-1.5 rounded transition-colors disabled:opacity-50 ${
+                      template.is_subscribed
+                        ? 'text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                        : 'text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-app-hover'
+                    }`}
+                    title={template.is_subscribed ? t('permissions.unsubscribe') : t('permissions.subscribe')}
+                  >
+                    {subscribing === (template.full_name || `${template.owner}/${template.name}`) ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : template.is_subscribed ? (
+                      <BellOff size={13} />
+                    ) : (
+                      <Bell size={13} />
+                    )}
+                  </button>
                   <button
                     onClick={() => handleInstall(template)}
                     disabled={installing === (template.full_name || `${template.owner}/${template.name}`)}
