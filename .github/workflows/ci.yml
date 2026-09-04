@@ -44,7 +44,9 @@ jobs:
       - run: python scripts/gen_golden.py --check
       # V3.0.0-T0-8: 后端全量 pytest
       # 4.6.0-F6-1: 后端覆盖率门禁（.coveragerc fail_under=55，低于即失败）+ junit/coverage-json 产物
-      - run: python -m pytest tests/backend -q --cov=backend --cov-report=term --cov-fail-under=55 --cov-report=json:reports/coverage-backend.json --junitxml=reports/pytest.xml
+      # 5.0.3-503-c: 重样本校验测试拆出覆盖率运行（--no-cov），避免覆盖率插桩下 CI 超时；test_report 合并两 junit
+      - run: python -m pytest tests/backend -q --ignore=tests/backend/test_sample_assets.py --cov=backend --cov-report=term --cov-fail-under=55 --cov-report=json:reports/coverage-backend.json --junitxml=reports/pytest.xml
+      - run: python -m pytest tests/backend/test_sample_assets.py -q --no-cov --junitxml=reports/pytest-sample.xml
       # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
       - run: python scripts/bench_perf.py --rounds 1
       # 4.6.0-F6-3: 统一测试报告（聚合 pytest/vitest/golden/bench/模板校验 → reports/）

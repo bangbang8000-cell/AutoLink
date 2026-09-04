@@ -13,6 +13,7 @@
   python scripts/test_report.py --update-baseline# 门禁通过后把当前覆盖率写回基线（棘轮上调，只升）
 """
 import argparse
+import glob
 import json
 import os
 import subprocess
@@ -76,6 +77,20 @@ def parse_junit(path):
         'tests': tests, 'failures': failures, 'errors': errors,
         'skipped': skipped, 'durationMs': round(duration * 1000),
     }
+
+
+def _merge_junit_stats(paths):
+    """合并多个 JUnit XML 统计（5.0.3-503-c：后端分片运行，聚合主套件+样本校验）"""
+    if not paths:
+        return None
+    total = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0, 'durationMs': 0.0}
+    for p in paths:
+        st = parse_junit(p) or {}
+        for k in ('tests', 'failures', 'errors', 'skipped'):
+            total[k] += int(st.get(k, 0) or 0)
+        total['durationMs'] += float(st.get('durationMs', 0) or 0)
+    total['durationMs'] = round(total['durationMs'])
+    return total
 
 
 def parse_backend_coverage(path):
@@ -437,11 +452,17 @@ def main():
         backend_cov = parse_backend_coverage(os.path.join(REPORTS, 'coverage-backend.json'))
         frontend_cov = parse_frontend_coverage(os.path.join(REPORTS, 'coverage-frontend', 'coverage-summary.json'))
         modules = []
+        # 5.0.3-503-c: 后端 pytest 分片运行（pytest.xml 主套件 + pytest-sample.xml 样本校验）→ 合并统计
+        backend_paths = sorted(glob.glob(os.path.join(REPORTS, 'pytest*.xml')))
+        backend_src = ('reports/pytest.xml + pytest-sample.xml' if len(backend_paths) > 1
+                       else 'reports/pytest.xml')
         for mid, name, jpath, src in (
-            ('backend', '后端 pytest', os.path.join(REPORTS, 'pytest.xml'), 'reports/pytest.xml'),
+            ('backend', '后端 pytest', _merge_junit_stats(backend_paths) if backend_paths else None, backend_src),
             ('frontend', '前端 vitest', os.path.join(REPORTS, 'vitest.xml'), 'reports/vitest.xml'),
         ):
-            st = parse_junit(jpath)
+            st = jpath
+            if isinstance(jpath, str):
+                st = parse_junit(jpath)
             if st:
                 st['id'] = mid
                 st['name'] = name
