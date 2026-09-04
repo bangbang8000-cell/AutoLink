@@ -76,6 +76,23 @@ const mockElectron = {
     export: vi.fn(),
     import: vi.fn(),
   },
+  // 5.0.5-505-a: 文档工作台（产物清单 / 一键生成 / 导出）
+  doc: {
+    list: vi.fn().mockResolvedValue({ ok: true, artifacts: [] }),
+    generate: vi.fn(),
+    export: vi.fn(),
+  },
+  // 5.0.5-505-b: 知识库（list/get/add/update/delete/search）
+  aihub: {
+    knowledge: {
+      list: vi.fn().mockResolvedValue({ ok: true, entries: [], total: 0, categories: [] }),
+      get: vi.fn(),
+      add: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      search: vi.fn().mockResolvedValue({ ok: true, query: '', entries: [], total: 0 }),
+    },
+  },
   shell: {
     showItemInFolder: vi.fn(),
     openPath: vi.fn(),

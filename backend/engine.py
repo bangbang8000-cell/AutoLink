@@ -34,7 +34,7 @@ from topology import calc_max_2tier
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
     export_cabling_guide, export_bom, generate_report_data, export_pdf_report,
-    generate_snapshot,
+    generate_snapshot, export_compliance_report,
 )
 from estimation import (
     estimate_pue, calc_convergence_ratio, estimate_cabinet_power_density,
@@ -1791,6 +1791,15 @@ def handle_export(params):
             results.append({"type": "pdfReport", "file": fn, "status": "success"})
         except Exception as e:
             results.append({"type": "pdfReport", "file": fn, "status": "error", "error": str(e)})
+
+    # 5.0.5-505-a: 信创合规报告 Excel 导出（V2.7.5-T8 export_compliance_report 接线）
+    if 'compliance' in output_types:
+        fn = os.path.join(batch_dir, f"信创合规报告_{mode}模式_{ts}.xlsx")
+        try:
+            export_compliance_report(designer, fn)
+            results.append({"type": "compliance", "file": fn, "status": "success"})
+        except Exception as e:
+            results.append({"type": "compliance", "file": fn, "status": "error", "error": str(e)})
 
     # v1.5：manifest.json（版本/配置哈希/统计）+ 保留策略轮转
     _write_manifest(

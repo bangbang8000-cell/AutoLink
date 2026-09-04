@@ -20,6 +20,9 @@ import { CreateProjectWizardModal } from '@/components/wizard/CreateProjectWizar
 import { exportDeliveryZip } from '@/utils/aidcDelivery'
 // M8（AL-U2）：工作台 Header 项目切换器——复用 Dropdown 组件
 import { Dropdown } from '@/components/ui/Dropdown'
+// 5.0.5-505-a/b：文档工作台 + 知识库子视图
+import { DocsWorkbench } from '@/components/workbench/DocsWorkbench'
+import { KnowledgePanel } from '@/components/workbench/KnowledgePanel'
 
 /** 打磨轮（v1.6 收尾）：工作台步骤分组标签（5 卡→三步） */
 /* AL-M4j：升级为水平步骤条——数字徽章 + 连接线延伸贯穿卡片分组宽度,串联三步视觉 */
@@ -45,6 +48,8 @@ const SUBVIEW_KEYS: Record<string, string> = {
   visualization: 'workbench:subview.visualization',
   results: 'workbench:subview.results',
   export: 'workbench:subview.export',
+  docs: 'workbench:subview.docs',
+  knowledge: 'workbench:subview.knowledge',
 }
 
 // AL-N1（PRD v3.2）：roomdesign/rackdesign 已并入 ui.store 的 WorkbenchSubview，移除本文件局部收敛类型与断言
@@ -617,6 +622,12 @@ export function WorkbenchTab() {
         return <RackDesignTab projectName={project} />
       case 'export':
         return <ExportView projectName={project} />
+      // 5.0.5-505-a：文档工作台（报告/评审包/合规/交付/归档/Excel 聚合 + 用户指南）
+      case 'docs':
+        return <DocsWorkbench projectName={project} />
+      // 5.0.5-505-b：知识库面板（条目 CRUD + 检索）
+      case 'knowledge':
+        return <KnowledgePanel projectName={project} />
     }
   }
 }

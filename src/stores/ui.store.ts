@@ -27,7 +27,8 @@ export type AccentColor = 'sky' | 'emerald' | 'violet' | 'rose'
 export type ExplorerGroupMode = 'smart' | 'raw'
 
 /** 打磨轮（P-A/v1.3）：工作台子视图——流程：规划→设计→渲染→校对（拓扑/机柜/结果）→归档导出
- *  AL-N1（PRD v3.2）：正式并入 roomdesign/rackdesign（原局部收敛类型归位），移除坏链 'rack' */
+ *  AL-N1（PRD v3.2）：正式并入 roomdesign/rackdesign（原局部收敛类型归位），移除坏链 'rack'
+ *  5.0.5-505-a/b：并入 docs（文档工作台）/ knowledge（知识库）子视图 */
 export type WorkbenchSubview =
   | 'aidc'
   | 'design'
@@ -37,6 +38,8 @@ export type WorkbenchSubview =
   | 'rackdesign'
   | 'results'
   | 'export'
+  | 'docs'
+  | 'knowledge'
 
 /** V3.1.1-T5-5: AI Provider 配置（BYO-Key） */
 export interface AIProviderConfig {
