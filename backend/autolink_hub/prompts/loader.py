@@ -42,15 +42,29 @@ def load_prompt(name: str) -> str:
     return _get_default_prompt(name)
 
 
-def get_system_prompt(mode: Optional[str] = None, project_name: str = "") -> str:
-    """获取完整的系统提示词（基础 + planner + skills + tools + mode + context + memory）
+def get_system_prompt(mode: Optional[str] = None, project_name: str = "", query: str = "") -> str:
+    """获取完整的系统提示词（基础 + planner + skills + tools + mode + context + memory + knowledge）
 
     T6-2: 按 (mode, project_name, version) 缓存，prompts/skills/memory 变更时失效重建。
+    5.0.5-505-c: 知识库上下文检索式注入——query 为空时按 project 兜底；
+    带 query（消息级检索）时不进缓存，避免不同用户消息撑爆缓存。
     """
+    if query:
+        base = _build_system_prompt(mode, project_name)
+        return _append_knowledge_prompt(base, query, project_name)
+
     key = (mode, project_name, _cache_version)
     if key in _system_prompt_cache:
         return _system_prompt_cache[key]
 
+    base = _build_system_prompt(mode, project_name)
+    result = _append_knowledge_prompt(base, project_name, project_name)
+    _system_prompt_cache[key] = result
+    return result
+
+
+def _build_system_prompt(mode: Optional[str] = None, project_name: str = "") -> str:
+    """组装基础系统提示（不含知识库上下文；供缓存 + 动态检索共用）"""
     base = load_prompt("system")
     tools = load_prompt("mc-tools")
 
@@ -72,9 +86,19 @@ def get_system_prompt(mode: Optional[str] = None, project_name: str = "") -> str
     if memory_prompt:
         parts.append(memory_prompt)
 
-    result = "\n\n".join(parts)
-    _system_prompt_cache[key] = result
-    return result
+    return "\n\n".join(parts)
+
+
+def _append_knowledge_prompt(base: str, query: str, project_name: str) -> str:
+    """追加知识库上下文（Top-K 检索式注入）；无命中或异常时原样返回"""
+    try:
+        from autolink_hub.knowledge.engine import get_knowledge_engine
+        knowledge = get_knowledge_engine().get_knowledge_prompt(query, project_name)
+    except Exception:
+        knowledge = ""
+    if not knowledge:
+        return base
+    return base + "\n\n" + knowledge
 
 
 def reload_prompts() -> None:

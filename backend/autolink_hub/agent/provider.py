@@ -77,8 +77,9 @@ class AgentProvider(ABC):
         attachments: Optional[list[dict]] = None,
         autonomy_mode: str = "semi_auto",
         project_name: Optional[str] = None,
+        knowledge: Optional[str] = None,
     ) -> AsyncIterator[str]:
-        """流式对话（逐 chunk 产出文本）"""
+        """流式对话（逐 chunk 产出文本；5.0.5-505-c：knowledge 为知识库检索 query，可选）"""
 
     @abstractmethod
     def clear_session(self, session_id: str) -> None:
@@ -131,11 +132,12 @@ class OwnAgentProvider(AgentProvider):
         attachments: Optional[list[dict]] = None,
         autonomy_mode: str = "semi_auto",
         project_name: Optional[str] = None,
+        knowledge: Optional[str] = None,
     ) -> AsyncIterator[str]:
         from autolink_hub.agent.agent import get_or_create_session
         session = get_or_create_session(session_id, engine=ENGINE_OWN)
         session.set_provider(provider)
-        session.set_mode(mode, project_name or "")
+        session.set_mode(mode, project_name or "", knowledge or "")
         session.autonomy_mode = autonomy_mode
         session.add_user_message(message, attachments)
         async for chunk in session.run_stream():
@@ -236,6 +238,7 @@ class HermesAgentProvider(AgentProvider):
         attachments: Optional[list[dict]] = None,
         autonomy_mode: str = "semi_auto",
         project_name: Optional[str] = None,
+        knowledge: Optional[str] = None,
     ) -> AsyncIterator[str]:
         """流式对话：委托 Hermes 运行时（messages 历史 + system_prompt + AutoLink 工具）"""
         hermes = self._load()
@@ -250,7 +253,7 @@ class HermesAgentProvider(AgentProvider):
                 f"{file_list}\n\n用户消息：{content}"
             )
         history.append({"role": "user", "content": content})
-        system_prompt = self._build_system_prompt(mode, project_name or "")
+        system_prompt = self._build_system_prompt(mode, project_name or "", knowledge or "")
         tools = self.list_tools()
 
         stream_fn = getattr(hermes, "stream_chat", None)
@@ -286,8 +289,8 @@ class HermesAgentProvider(AgentProvider):
     def clear_session(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)
 
-    def _build_system_prompt(self, mode: str, project_name: str) -> str:
-        """组装 Hermes 系统提示：基础身份 + 模式 + 记忆（MEMORY.md/USER.md）"""
+    def _build_system_prompt(self, mode: str, project_name: str, knowledge: str = "") -> str:
+        """组装 Hermes 系统提示：基础身份 + 模式 + 记忆 + 知识库上下文（5.0.5-505-c）"""
         parts = [HERMES_BASE_PROMPT]
         mode_prompt = {
             "template": "当前处于模板帮助模式。请重点帮助用户查看、创建和使用场景模板。",
@@ -299,6 +302,13 @@ class HermesAgentProvider(AgentProvider):
         memory = self.get_memory_prompt(project_name)
         if memory:
             parts.append(memory)
+        try:
+            from autolink_hub.knowledge.engine import get_knowledge_engine
+            kctx = get_knowledge_engine().get_knowledge_prompt(knowledge or project_name, project_name)
+            if kctx:
+                parts.append(kctx)
+        except Exception:  # noqa: BLE001
+            pass
         return "\n\n".join(parts)
 
     # ---- 工具（复用 AutoLink 白名单，直调 cli.execute 同进程）----

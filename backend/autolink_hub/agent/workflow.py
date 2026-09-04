@@ -520,6 +520,7 @@ async def run_workflow_chat(
     autonomy_mode: str = "semi_auto",
     project_name: Optional[str] = None,
     engine: str = "own",
+    knowledge: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """workflow 模式对话入口（自有引擎内部驱动，外部引擎零改动）。
 
@@ -530,7 +531,7 @@ async def run_workflow_chat(
     from autolink_hub.agent.agent import get_or_create_session
     session = get_or_create_session(session_id, engine=engine)
     session.set_provider(provider)
-    session.set_mode(mode, project_name or "")
+    session.set_mode(mode, project_name or "", knowledge or "")
     session.autonomy_mode = autonomy_mode
 
     manager = get_workflow_manager()

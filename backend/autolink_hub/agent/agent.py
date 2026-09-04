@@ -33,6 +33,8 @@ class AgentSession:
         self.mode: str = "general"
         self.autonomy_mode: str = "semi_auto"
         self.current_project: str = ""
+        # 5.0.5-505-c: 会话级知识库检索 query（set_mode 时用于注入知识库上下文）
+        self.knowledge_query: str = ""
         self.session_id: str = ""
         # 5.0.2-502-b: 会话所属引擎命名空间（own/hermes，切换引擎保留旧会话）
         self.engine: str = "own"
@@ -44,11 +46,12 @@ class AgentSession:
     def set_provider(self, name: Optional[str] = None):
         self.provider = registry.get(name)
 
-    def set_mode(self, mode: str, project_name: str = ""):
-        """设置对话模式，自动加载对应 prompt"""
+    def set_mode(self, mode: str, project_name: str = "", knowledge: str = ""):
+        """设置对话模式，自动加载对应 prompt（5.0.5-505-c：可选 knowledge 检索 query 注入知识库上下文）"""
         self.mode = mode
         self.current_project = project_name
-        self.system_prompt = get_system_prompt(mode, project_name)
+        self.knowledge_query = knowledge or ""
+        self.system_prompt = get_system_prompt(mode, project_name, knowledge or "")
 
     def add_message(self, role: str, content: str, extra: dict | None = None):
         msg = {"role": role, "content": content}
