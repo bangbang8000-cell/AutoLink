@@ -12,7 +12,6 @@
 import { app } from 'electron'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
-import * as path from 'path'
 import { aiHubService } from './aiHub.service.js'
 import { pythonService } from './python.service.js'
 import { cloudService } from './cloud.service.js'

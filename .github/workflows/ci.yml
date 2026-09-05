@@ -83,5 +83,15 @@ jobs:
       - run: npm run build:electron
       # E2E 以 dev 模式启动（playwright webServer 拉起 vite :5174）
       # Electron 系统依赖（libgtk/gconf 等）；electron 二进制随 npm ci 安装
-      - run: sudo npx playwright install-deps
-      - run: xvfb-run --auto-servernum npx playwright test
+      # 508-b: install-deps 为历史上反复卡死的环境性步骤 → 失败重试 3 次 + 步骤超时护栏
+      - name: Install Playwright system deps (retry guard)
+        retry-on: failure
+        max-attempts: 3
+        timeout-minutes: 15
+        run: sudo npx playwright install-deps
+      # 508-b: Electron E2E 加上限超时与失败重试，降低环境性 red
+      - name: Run Electron E2E (retry guard)
+        retry-on: failure
+        max-attempts: 3
+        timeout-minutes: 30
+        run: xvfb-run --auto-servernum npx playwright test

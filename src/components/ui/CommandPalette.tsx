@@ -36,6 +36,7 @@ export function CommandPalette({ open, onClose, commands }: CommandPaletteProps)
   // 打开时重置状态并聚焦
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开命令面板时重置内部输入区状态
       setQuery('')
       setSelectedIndex(0)
       setTimeout(() => inputRef.current?.focus(), 50)
@@ -45,6 +46,7 @@ export function CommandPalette({ open, onClose, commands }: CommandPaletteProps)
   // 越界收敛
   useEffect(() => {
     if (selectedIndex >= filtered.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 选中索引越界时收敛到合法范围
       setSelectedIndex(Math.max(0, filtered.length - 1))
     }
   }, [filtered.length, selectedIndex])

@@ -27,14 +27,16 @@ export function useTopologyLayout(nodes: TopologyNode[], edges: TopologyEdge[]) 
 
   useEffect(() => {
     mountedRef.current = true
+    const seq = seqRef.current
     return () => {
       mountedRef.current = false
-      seqRef.current++
+      seqRef.current = seq + 1
     }
   }, [])
 
   useEffect(() => {
     if (nodes.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 节点清空时重置布局结果
       setLayout(null)
       return
     }

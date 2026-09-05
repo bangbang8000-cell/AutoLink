@@ -78,6 +78,7 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步刷新知识条目列表并更新加载态
   useEffect(() => { refresh() }, [refresh])
 
   const handleSearch = useCallback((q: string) => {
@@ -99,7 +100,6 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
       }
     }
     void run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category])
 
   const openAdd = useCallback(() => {

@@ -45,9 +45,10 @@ export function ChatPanel() {
   }, [])
 
   // 新消息自动滚动到底
+  const lastMessageContent = activeSession?.messages[activeSession.messages.length - 1]?.content
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [activeSession?.messages.length, activeSession?.messages[activeSession.messages.length - 1]?.content])
+  }, [activeSession?.messages.length, lastMessageContent])
 
   // AL-S3: 会话可用性 = 内存 key 或后端已配置标记（重启后 localStorage 不再存明文 key）
   const hasProvider = Boolean(

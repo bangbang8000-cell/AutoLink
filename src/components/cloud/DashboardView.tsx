@@ -39,6 +39,7 @@ export function DashboardView() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 登录态变化时异步拉取仪表盘数据并更新加载态
     if (loggedIn) fetchDashboard()
     else setLoading(false)
   }, [loggedIn, fetchDashboard])

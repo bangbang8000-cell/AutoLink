@@ -237,8 +237,10 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProject])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步刷新输出结果并更新加载态
   useEffect(() => { refresh() }, [refresh])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- projectName 变化时同步活动项目状态
   useEffect(() => { setActiveProject(projectName) }, [projectName])
 
   const loadPreview = useCallback(async (file: BatchFile) => {
@@ -254,7 +256,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     } finally {
       setPreviewLoading(false)
     }
-  }, [activeProject, addToast])
+  }, [activeProject, addToast, t])
 
   const handleExport = useCallback(async (batchName?: string) => {
     try {
@@ -264,7 +266,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     } catch (err) {
       addToast('error', `导出失败: ${(err as Error).message}`, 5000)
     }
-  }, [activeProject, addToast])
+  }, [activeProject, addToast, t])
 
   // M4（AL-N3）：导出收敛——「本项目输出」统一导出双设计 Excel（落 output/ 根目录 → [根目录] 批次）
   const handleExportRoomDesign = useCallback(async () => {

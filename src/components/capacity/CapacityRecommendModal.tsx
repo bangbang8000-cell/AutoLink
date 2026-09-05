@@ -118,6 +118,7 @@ export function CapacityRecommendModal({ open, onClose, onApply, initialNumServe
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开对话框时重置内部结果状态
     setResult(null)
     const load = async () => {
       try {

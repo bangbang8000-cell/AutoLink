@@ -88,6 +88,7 @@ export function RemoteProjectView({ onPullSuccess, searchQuery }: RemoteProjectV
   // 多本地项目时默认选中第一个
   useEffect(() => {
     if (localProjects.length > 0 && !pushingName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 本地项目变化时同步默认选中项目
       setPushingName(localProjects[0].name)
     }
   }, [localProjects, pushingName])

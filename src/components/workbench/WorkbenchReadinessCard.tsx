@@ -36,7 +36,7 @@ export function WorkbenchReadinessCard() {
     } finally {
       setValidatingTopo(false)
     }
-  }, [selectedProjectName, validate, addToast])
+  }, [selectedProjectName, validate, addToast, t])
 
   return (
     <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">

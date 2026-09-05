@@ -16,7 +16,6 @@ vi.mock('electron', () => ({
 
 import { cloudService } from './cloud.service.js'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fetchMock = net.fetch as unknown as ReturnType<typeof vi.fn>
 
 function mockResponse(data: unknown, opts: { status?: number } = {}) {

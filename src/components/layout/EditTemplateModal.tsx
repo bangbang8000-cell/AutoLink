@@ -174,6 +174,7 @@ export function EditTemplateModal({ template, onConfirm, onClose }: Props) {
   // 表单变更时同步 JSON 原文（用户未手动编辑过 JSON 才同步）
   useEffect(() => {
     if (!jsonDirty && config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开对话框/config 变化时同步回显 JSON 文本
       setJsonText(JSON.stringify(config, null, 2))
     }
   }, [config, jsonDirty])

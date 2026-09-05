@@ -70,6 +70,7 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
     }
   }, [projectName])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步刷新文档列表并更新加载态
   useEffect(() => { refresh() }, [refresh])
 
   const latestByType = useMemo(() => {

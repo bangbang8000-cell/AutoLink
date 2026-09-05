@@ -67,7 +67,7 @@ function DesignExplorer() {
 
   useEffect(() => {
     if (selectedProjectName) loadConfig(selectedProjectName)
-  }, [selectedProjectName])
+  }, [selectedProjectName, loadConfig])
 
   const handleGenerate = async () => {
     if (!selectedProjectName) return
@@ -487,7 +487,7 @@ function DeviceLibExplorer() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [reuseTab] = useLocalStorage('autolink-device-tab-reuse', true)
 
-  useEffect(() => { loadLibrary() }, [])
+  useEffect(() => { loadLibrary() }, [loadLibrary])
 
   // Compute counts per category
   const categoryCounts = useMemo(() => {

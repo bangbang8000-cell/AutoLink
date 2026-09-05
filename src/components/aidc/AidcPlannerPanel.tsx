@@ -259,6 +259,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
     } catch { /* ignore */ }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载/项目刷新时异步加载项目列表并更新加载态
   useEffect(() => { refreshProjects() }, [refreshProjects])
 
   const run = async () => {
@@ -355,6 +356,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
   // 打磨轮（P-A）：工作台绑定当前 AIDC 项目——传入 boundProjectName 时自动加载（含切换项目）
   useEffect(() => {
     if (boundProjectName && boundProjectName !== currentProject) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 绑定项目变化时异步加载项目并更新内部加载态
       void openProject(boundProjectName)
     }
     // openProject 随渲染重建，这里仅依赖 boundProjectName/currentProject，避免循环

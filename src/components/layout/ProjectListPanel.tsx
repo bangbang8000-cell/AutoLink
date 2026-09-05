@@ -107,7 +107,7 @@ export function ProjectExplorer() {
         })
       }
     },
-    [projects, selectProject, openTab],
+    [projects, selectProject, openTab, t],
   )
 
   // T9: 项目文件树展开/折叠 — 首次展开拉取结构 + 输出批次并缓存到 store

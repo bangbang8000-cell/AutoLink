@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Package, Download, Loader2, Clock, Tag, User, ChevronLeft, ChevronRight,
@@ -50,6 +50,7 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
 
   // Reset page when search or category changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 搜索/品类变化时重置页码到首页
     setPage(1)
   }, [searchQuery, category])
 
@@ -135,14 +136,14 @@ export function TemplateMarket({ searchQuery }: TemplateMarketProps) {
   )
 
   // V3.3.2-T15-3: AutoLink 品类体系（兼容历史 MC 品类）
-  const categories = [
+  const categories = useMemo(() => [
     { value: '', label: t('categories.all') },
     { value: 'general', label: t('categories.general') },
     { value: 'gpu', label: t('categories.gpu') },
     { value: 'storage', label: t('categories.storage') },
     { value: 'network', label: t('categories.network') },
     { value: 'other', label: t('categories.other') },
-  ]
+  ], [t])
 
   const categoryLabel = useCallback((value?: string) => {
     const match = categories.find((c) => c.value === value)

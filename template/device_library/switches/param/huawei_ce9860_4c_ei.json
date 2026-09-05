@@ -6,7 +6,7 @@
   "description": "华为 CE9860-4C-EI 4 插槽框式（4U，25.6T），最大 32×400GE 或 128×100GE",
   "power_watts": 450,
   "weight_kg": 11,
-  "u_height": 1,
+  "u_height": 4,
   "depth_mm": 600,
   "cooling": "air",
   "name_prefix": "Param-CE9860",

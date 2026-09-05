@@ -36,6 +36,7 @@ export function PUEEstimatePanel({ estimation, estimating, onReEstimate }: Props
 
   // 当 estimation.inputs 变化时（重新估算后）同步本地表单
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 估算输入变化时同步本地表单
     setForm({
       cooling_method: inputs.cooling_method as 'air' | 'cold_plate' | 'immersion',
       outdoor_temp_c: inputs.outdoor_temp_c,

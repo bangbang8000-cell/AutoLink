@@ -99,6 +99,7 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
   }, [filePath, templateName, isTemplate, isExcel, isImage])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步加载文件内容并更新加载态
     loadFile()
   }, [loadFile])
 

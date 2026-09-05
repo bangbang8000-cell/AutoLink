@@ -197,6 +197,7 @@ export function WorkbenchTab() {
 
   // 打开新子视图 → 记入二级页签
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开新子视图时记入二级页签
     setOpenedSubviews((prev) => (prev.includes(subview) ? prev : [...prev, subview]))
   }, [subview])
 
@@ -269,6 +270,7 @@ export function WorkbenchTab() {
   useEffect(() => {
     if (selectedProjectName) {
       openSubview('main')
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 项目切换时重置二级页签为根视图
       setOpenedSubviews(['main'])
     }
   }, [selectedProjectName, openSubview])

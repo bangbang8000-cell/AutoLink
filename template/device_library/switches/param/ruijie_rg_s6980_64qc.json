@@ -12,7 +12,7 @@
   "name_prefix": "Param-S6980",
   "port_count": 64,
   "port_speed": "400G",
-  "port_type": "OSFP",
+  "port_type": "QSFP-DD",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
   "tags": [

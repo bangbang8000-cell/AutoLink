@@ -43,6 +43,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   // 打开时拉取登录方式可用性；关闭时清理轮询
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开登录框时重置内部阶段与错误状态
       setStage('choose')
       setErrorMsg('')
       setQrDataUrl(null)

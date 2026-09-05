@@ -66,7 +66,7 @@ function Skeleton({ lines = 3 }: { lines?: number }) {
   return (
     <div className="space-y-2 animate-pulse">
       {Array.from({ length: lines }, (_, i) => (
-        <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" style={{ width: `${60 + Math.random() * 40}%` }} />
+        <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" style={{ width: `${60 + (i * 13) % 40}%` }} />
       ))}
     </div>
   )
@@ -99,6 +99,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
 
   useEffect(() => {
     if (!projectName) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步加载输出文件列表并更新加载态
     setLoadingOutput(true)
     window.electron?.project?.listOutputFiles(projectName)
       .then((files) => setOutputFiles(files || []))
@@ -120,7 +121,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
   const handleQuickRender = useCallback(() => {
     openTab({ type: 'workbench', title: '工作台', closable: false, projectName: projectName ?? undefined })
     addToast('info', t('common:toast.renderHint'))
-  }, [openTab, addToast, projectName])
+  }, [openTab, addToast, projectName, t])
 
   // No project name
   if (!projectName) {

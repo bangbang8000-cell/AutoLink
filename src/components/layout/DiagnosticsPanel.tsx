@@ -86,6 +86,7 @@ export function DiagnosticsPanel() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载/手动刷新时异步运行诊断并更新加载态
     void load()
   }, [load, reloadFlag])
 

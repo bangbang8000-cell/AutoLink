@@ -197,10 +197,6 @@ function sanitizeUnderBase(base: string, ...segments: string[]): string {
   return resolved
 }
 
-function sanitizePath(segments: string[]): string {
-  return sanitizeUnderBase(getWorkspacePath(), ...segments)
-}
-
 function sanitizeName(name: string): string {
   if (!name || name.includes('..') || path.isAbsolute(name)) {
     throw new Error(`无效的项目名称: ${name}`)
@@ -331,7 +327,6 @@ function loadDeviceLibrary(): { categories: DeviceCategory[] } {
 
 function saveDeviceToFile(device: { id: string; category: string; directory?: string }): void {
   const libPath = getDeviceLibraryPath()
-  const safeCategory = path.basename(device.category)
   const safeId = path.basename(device.id)
 
   // V2.7.6-T8: 使用 resolveCategoryDir 动态解析目录 (优先 device.directory, 再回退映射表)

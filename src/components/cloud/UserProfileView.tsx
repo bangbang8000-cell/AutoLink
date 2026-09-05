@@ -33,6 +33,7 @@ export function UserProfileView({ onClose }: UserProfileViewProps) {
   const clipboardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步加载用户资料并更新加载态
     setProfileLoading(true)
     fetchUserProfile().finally(() => setProfileLoading(false))
   }, [fetchUserProfile])

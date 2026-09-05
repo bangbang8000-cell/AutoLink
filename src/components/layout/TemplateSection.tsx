@@ -113,13 +113,13 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
       tags: tpl.tags || [],
       isBuiltin: tpl.isBuiltin,
     })
-  }, [addToast])
+  }, [addToast, t])
 
   const handleEditConfirm = useCallback(async (updates: { name: string; description: string; scenario: string; tags: string[]; configContent?: string; projectConfig?: string }) => {
     if (!editTarget) return
     await updateTemplate(editTarget.id, updates)
     addToast('success', t('common:explorer.toast.templateUpdated', { id: editTarget.id }))
-  }, [editTarget, updateTemplate, addToast])
+  }, [editTarget, updateTemplate, addToast, t])
 
   // V2.9.7-T3: 模板预览方案
   const [previewTarget, setPreviewTarget] = useState<TemplateItem | null>(null)
@@ -141,7 +141,7 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
     } finally {
       setBusy(false)
     }
-  }, [busy, exportTemplate, addToast])
+  }, [busy, exportTemplate, addToast, t])
 
   const handleImportTemplate = useCallback(async () => {
     if (busy) return
@@ -156,7 +156,7 @@ export function TemplateSection({ templates, openTab, handleOpenInExplorer }: {
     } finally {
       setBusy(false)
     }
-  }, [busy, importTemplate, addToast])
+  }, [busy, importTemplate, addToast, t])
 
   // T11: 模板文件右键菜单(openFile)
   const buildTemplateFileContextMenu = (tplName: string, node: FileTreeNode): ContextMenuItem[] => [

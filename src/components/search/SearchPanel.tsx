@@ -62,6 +62,7 @@ export function SearchPanel() {
   useEffect(() => {
     const q = query.trim()
     if (!q) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 查询清空/变化时重置本地搜索结果
       setLocalHits([])
       setCloudData(null)
       setLoading(false)

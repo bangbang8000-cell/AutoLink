@@ -6,7 +6,7 @@
   "description": "H3C S12500R-48Y8C 48×25GE SFP28 + 8×100GE QSFP28（4T，1U）",
   "power_watts": 2000,
   "weight_kg": 35,
-  "u_height": 2,
+  "u_height": 1,
   "depth_mm": 700,
   "cooling": "air",
   "cooling_method": "air",

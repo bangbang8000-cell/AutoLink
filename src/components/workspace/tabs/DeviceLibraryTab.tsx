@@ -54,7 +54,7 @@ export function DeviceLibraryTab({ initialCategory }: Props) {
 
   useEffect(() => {
     loadLibrary()
-  }, [])
+  }, [loadLibrary])
 
   // Apply initialCategory from sidebar
   useEffect(() => {
@@ -232,6 +232,7 @@ function DeviceList({ devices, selectedId, onSelect }: {
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   // v2.7.3-T12: useVirtualizer 仅渲染可见区域,500+ 设备滚动流畅
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual 的 useVirtualizer 为第三方限制，无法记忆化
   const virtualizer = useVirtualizer({
     count: devices.length,
     getScrollElement: () => scrollRef.current,

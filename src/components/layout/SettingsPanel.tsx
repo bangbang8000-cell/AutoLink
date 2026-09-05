@@ -440,6 +440,7 @@ function CloudSettings() {
   const [url, setUrl] = useState(baseUrl)
   const [showLogin, setShowLogin] = useState(false)
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- baseUrl 变化时同步本地输入框内容
   useEffect(() => setUrl(baseUrl), [baseUrl])
 
   const handleSave = async () => {
@@ -714,6 +715,7 @@ function AISettings() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步刷新 MCP 配置列表并更新加载态
     void refreshMcp()
   }, [refreshMcp])
 
@@ -1081,6 +1083,7 @@ function DiagnosticsSettings() {
 
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步加载 CLI 版本信息并更新加载态
     setLoading(true)
     const cli = window.electron?.cli
     if (!cli) {

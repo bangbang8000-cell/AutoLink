@@ -95,6 +95,7 @@ export function WizardStepDevices() {
     if (defaultsApplied) return
     const hasAnyRef = Object.keys(config.device_refs).length > 0
     if (hasAnyRef) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 首次渲染按已有设备引用标记默认值已应用
       setDefaultsApplied(true)
       return
     }
@@ -104,7 +105,7 @@ export function WizardStepDevices() {
     const defaults = getDefaultRefs(config.topology.param_protocol, gpuId)
     updateDeviceRefs(defaults)
     setDefaultsApplied(true)
-  }, [])
+  }, [config.device_refs, config.topology.param_protocol, defaultsApplied, updateDeviceRefs])
 
   // T5: Re-apply defaults if protocol changes (and user hasn't manually picked devices)
   useEffect(() => {
@@ -130,6 +131,7 @@ export function WizardStepDevices() {
       const defaults = getDefaultRefs(protocol, gpuId)
       updateDeviceRefs(defaults)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 加入 device_refs 各 leaf id 会让 useCallback 干预用户手动选型,违背"仅协议变化时联动"的既有意图
   }, [config.topology.param_protocol])
 
   /* ---------- picker callbacks ---------- */

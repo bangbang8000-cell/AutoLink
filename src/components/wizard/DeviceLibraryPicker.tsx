@@ -45,12 +45,13 @@ export function DeviceLibraryPicker({ open, onClose, onSelect, deviceLabel, init
   useEffect(() => {
     if (open) {
       loadLibrary()
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开选择器时重置内部筛选项
       setCategory(initialCategory || 'all')
       setVendor('全部')
       setDeviceType('all')
       setSearch('')
     }
-  }, [open, initialCategory])
+  }, [open, initialCategory, loadLibrary])
 
   const filteredDevices = useMemo(() => {
     let devices = allDevices

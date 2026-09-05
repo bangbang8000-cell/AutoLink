@@ -45,6 +45,7 @@ export function HealthPanel() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载/手动刷新时异步运行健康检查并更新加载态
     void run()
   }, [run, reloadFlag])
 

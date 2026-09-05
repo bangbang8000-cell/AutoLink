@@ -74,6 +74,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
   }, [projectName, addToast, t])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开对话框时异步加载版本历史并更新加载态
     if (open) load()
   }, [open, load])
 

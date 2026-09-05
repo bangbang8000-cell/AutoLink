@@ -210,7 +210,7 @@ export function DesignTab() {
     } else {
       clearResults()
     }
-  }, [selectedProjectName])
+  }, [selectedProjectName, loadConfig, loadSavedTopology, clearResults])
 
   const handleGenerate = useCallback(async () => {
     if (!selectedProjectName) return

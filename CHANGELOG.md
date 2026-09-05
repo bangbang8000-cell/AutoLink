@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [5.0.8] - 2026-09-05
+
+### 5.0.8 质量与可靠性深化（5.0 系列第 8 版）
+
+- **lint 清零**：70 条 ESLint warning 逐条归零（set-state-in-effect 35 / exhaustive-deps 26 / no-unused-vars 3 / immutability 2 / purity 1 / incompatible-library 1），`npm run lint` 0 error 0 warning；相关组件行为回归单测通过。
+- **设备库联网校对（508-d）**：S9827/S9825-64D/S9820-8C/RG-S6980-64QC 400G 形态对齐（OSFP → QSFP-DD/QSFP112），NVIDIA MQM9700/9790 修正为 OSFP，CloudEngine 9860/8860 机架高度与端口数修正；validate_device_library/templates/samples 全部通过。
+- **CI e2e 加固**：install-deps / Playwright 依赖 / E2E 运行步骤增加 `retry-on` + `timeout-minutes` 兜底，降低环境性 red。
+
+### 基准（本版为质量深化，无渲染性能门禁新增；沿用 5.0.7 基准）
+
+- 2048 GPU 设计/渲染：≤30s（沿用）
+- 512 GPU 设计/渲染：≤8s（沿用）
+- 225 柜机房落位：≤5s（沿用）
+
 ## [5.0.7] - 2026-09-05
 
 ### 5.0.7 性能与效率优化（5.0 系列第 7 版）

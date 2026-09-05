@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { useProjectStore } from '@/stores/project.store'
@@ -23,12 +23,7 @@ export function OutputTab({ fileName, fileType }: Props) {
   // V2.9.2-T5: Excel 分片解析进度(0-100), null 表示未在解析
   const [parseProgress, setParseProgress] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (!fileName) return
-    loadFile()
-  }, [fileName, projectName])
-
-  const loadFile = async () => {
+  const loadFile = useCallback(async () => {
     if (!projectName || !fileName) return
     setLoading(true)
     setError(null)
@@ -69,7 +64,13 @@ export function OutputTab({ fileName, fileType }: Props) {
       setLoading(false)
       setParseProgress(null)
     }
-  }
+  }, [projectName, fileName, fileType, t])
+
+  useEffect(() => {
+    if (!fileName) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载/文件名变化时异步加载输出文件并更新加载态
+    loadFile()
+  }, [fileName, projectName, loadFile])
 
   if (loading) {
     return (

@@ -26,9 +26,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // Sync from project store when selectedProjectName changes externally
   useEffect(() => {
     if (selectedProjectName && selectedProjectName !== currentProject) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 外部项目选择变化时同步当前项目
       setCurrentProjectState(selectedProjectName)
     }
-  }, [selectedProjectName])
+  }, [selectedProjectName, currentProject])
 
   const setCurrentProject = useCallback((name: string) => {
     setCurrentProjectState(name)

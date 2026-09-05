@@ -480,6 +480,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     if (selectedProjectName) {
       // V2.4.2: 清除旧版本布局数据
       clearOldLayoutVersions(selectedProjectName)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 切换项目时同步已保存布局标记
       setHasSavedLayout(loadLayout(selectedProjectName) !== null)
       // V3.0.2-T2-3: 切换项目时按新拓扑规模重置 Pod 折叠状态
       const t = useDesignStore.getState().topology
@@ -671,6 +672,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
 
   /* ---------- sync computed nodes/edges to state (for drag-to-move) ---------- */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 计算节点/边变化时同步到可拖拽状态
     setRfNodes(computedNodes)
     setRfEdges(computedEdges)
     // v2.8.1-T8: 数据源变化后位置回到计算态,清除未保存标记
@@ -798,7 +800,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     } else {
       addToast('info', t('common:toast.nodeNotFound'))
     }
-  }, [searchQuery, rfNodes, reactFlow, addToast])
+  }, [searchQuery, rfNodes, reactFlow, addToast, t])
 
   /* ---------- actions ---------- */
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -833,6 +835,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
   // AL-M4b: hover 局部更新——直接更新 rfNodes 中目标节点的 hover 标记,
   // 不再进入 displayNodes 全量重算,拖拽/搜索等场景下更省。
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 悬停标记变化时同步节点高亮状态
     setRfNodes((prev) =>
       prev.map((n) => {
         if (n.id.startsWith('pod-group-')) return n
@@ -873,7 +876,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         console.error('save layout to project failed:', err)
         addToast('error', t('common:toast.layoutSaveFailed'))
       })
-  }, [selectedProjectName, rfNodes, saveLayoutToProject, addToast])
+  }, [selectedProjectName, rfNodes, saveLayoutToProject, addToast, t])
 
   const handleResetLayout = useCallback(() => {
     if (!selectedProjectName) return
@@ -893,7 +896,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
       }))
     }
     addToast('success', t('common:toast.layoutReset'))
-  }, [selectedProjectName, layoutResult, clearLayoutFromProject, addToast])
+  }, [selectedProjectName, layoutResult, clearLayoutFromProject, addToast, t])
 
   /* ---------- V2.4.4: 根据节点规模动态调整画布缩放范围 ---------- */
   const { minZoom, fitViewPadding } = useMemo(() => {
@@ -1056,7 +1059,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     } finally {
       setExportingPng(false)
     }
-  }, [topology, savedLayout, selectedProjectName, exportingPng, addToast])
+  }, [topology, savedLayout, selectedProjectName, exportingPng, addToast, t])
 
   const nodeConnectionCount = useMemo(() => {
     if (!selectedNode || !topology) return 0

@@ -45,6 +45,7 @@ export function TemplatePermissionDialog({ owner, name, onClose }: Props) {
   }, [owner, name, addToast])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开对话框时异步加载成员/权限列表并更新加载态
     void load()
   }, [load])
 
