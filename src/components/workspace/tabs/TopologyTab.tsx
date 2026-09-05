@@ -1352,6 +1352,8 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
           maxZoom={4}
           nodesDraggable
           nodesConnectable={false}
+          // 507-b1：仅渲染视口内可见节点/边，大拓扑渲染性能优化
+          onlyRenderVisibleElements
           // v2.8.2-T4: 空格临时平移;框选模式下 Shift 追加选区
           selectionOnDrag={selectionMode && !spacePressed}
           panOnDrag={!selectionMode || spacePressed}
@@ -1362,6 +1364,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={isDark ? '#374151' : '#e5e7eb'} />
           <Controls className="!bg-white dark:!bg-surface !border-gray-200 dark:!border-gray-600" showInteractive={false} />
+          {/* 507-b1：大拓扑仅渲染视口内元素，显著减少 DOM 节点；大拓扑下禁用 MiniMap 平移/缩放省计算 */}
           <MiniMap
             className="!bg-white dark:!bg-surface !border-gray-200 dark:!border-gray-600"
             nodeColor={(node) => {
@@ -1369,8 +1372,8 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
               return NODE_COLORS[data?.nodeType] || '#9ca3af'
             }}
             maskColor={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'}
-            pannable
-            zoomable
+            pannable={nodeCount < ANIMATION_DISABLE_THRESHOLD}
+            zoomable={nodeCount < ANIMATION_DISABLE_THRESHOLD}
           />
         </ReactFlow>
 

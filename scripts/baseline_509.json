@@ -1,0 +1,41 @@
+{
+  "tool": "AutoLink bench_perf",
+  "version": "5.0.7",
+  "env": {
+    "python": "3.13.3",
+    "ts": "2026-09-05T13:39:18",
+    "baseline": "n/a"
+  },
+  "scenarios": [
+    {
+      "name": "design-2048",
+      "label": "2048 GPU 设计/渲染",
+      "threshold_s": 30.0,
+      "avg_s": 0.474,
+      "min_s": 0.444,
+      "max_s": 0.501,
+      "unit": "s",
+      "pass": true
+    },
+    {
+      "name": "design-512",
+      "label": "512 GPU 设计/渲染",
+      "threshold_s": 8.0,
+      "avg_s": 0.117,
+      "min_s": 0.102,
+      "max_s": 0.127,
+      "unit": "s",
+      "pass": true
+    },
+    {
+      "name": "room-225",
+      "label": "225 柜机房落位",
+      "threshold_s": 5.0,
+      "avg_s": 0.077,
+      "min_s": 0.076,
+      "max_s": 0.078,
+      "unit": "s",
+      "pass": true
+    }
+  ]
+}
