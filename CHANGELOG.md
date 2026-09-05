@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [5.0.6] - 2026-09-05
+
+### 5.0.6 3D 可视化（5.0 系列第 6 版）
+
+- **机房 3D 视图**：Room3DView react-three-fiber 机房全景，机柜按 room.store 矩阵落位/朝向、冷热通道对向排布，getPowerColor 热力着色，OrbitControls 轨道/缩放；点击机柜 emissive 高亮 + 线框放大并联动 selectCabinet/selectPosition（2D↔3D 高亮一致 + 跳转机柜设计）
+- **2D↔3D 切换**：RoomDesignTab 新增 2D/3D 视图模式切换（默认 2D，不破坏既有矩阵流程）
+- **机房 3D 导出**：preserveDrawingBuffer + canvas.toDataURL('image/png') 下载 PNG
+- **纯函数底座**：room3d.ts（roomToWorld 网格居中/冷热通道 + powerToHeatColor 阈值着色），配套单测
+
 ## [5.0.5] - 2026-09-04
 
 ### 5.0.5 文档与知识（5.0 系列第 5 版）
