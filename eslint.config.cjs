@@ -45,7 +45,7 @@ module.exports = [
   {
     // V2.7.6-T9: three.js JSX 元素属性 (position/intensity/args 等) 是合法 DOM 属性,
     // 与 DOM 属性 (className/style) 不同, 需豁免 react/no-unknown-property
-    files: ['src/components/workspace/tabs/Topology3DTab.tsx'],
+    files: ['src/components/workspace/tabs/Topology3DTab.tsx', 'src/components/workspace/room/**/*.tsx'],
     rules: {
       'react/no-unknown-property': 'off',
     },
