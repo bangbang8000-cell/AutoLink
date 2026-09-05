@@ -10,9 +10,11 @@
  * 工具栏：定稿/撤销定稿、矩阵摘要、自动布点默认配比、按矩阵自动落位、保存
  *          （M4/AL-N3：导出机房设计 Excel 按钮已移除，统一到「本项目输出」导出）
  */
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, FileCheck2, Lock, Unlock, ArrowRight, Undo2, Redo2, Camera, History, Trash2 } from 'lucide-react'
+import { Download, FileCheck2, Lock, Unlock, ArrowRight, Undo2, Redo2, Camera, History, Trash2, Box, Grid3x3 } from 'lucide-react'
+// 5.0.6（Lazy 加载，避免 2D 默认路径/测试图 eager 拉入 three·r3f·drei，防止 WebGL 依赖拖慢矩阵流程与 jsdom 超时）
+const Room3DView = lazy(() => import('@/components/workspace/room/Room3DView'))
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useDesignStore } from '@/stores/design.store'
@@ -123,6 +125,8 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
   const [saveOpen, setSaveOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [snapName, setSnapName] = useState('')
+  // v5.0.6：「3D 可视化」视图切换（默认 2D 平面，不破坏既有流程）
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d')
   const openSaveModal = () => {
     setSnapName(defaultSnapshotName())
     setSaveOpen(true)
@@ -163,6 +167,21 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
           title="重做 (Ctrl+Shift+Z / Ctrl+Y)">
           <Redo2 size={11} /> {t('common:menu.edit.redo', '重做')}
         </button>
+        {/* v5.0.6：「3D 可视化」2D/3D 视图切换（默认 2D 平面，不破坏既有流程） */}
+        {matrix && (
+          <div className="flex items-center bg-white dark:bg-app border border-gray-200 dark:border-gray-600 rounded overflow-hidden" role="group" aria-label="视图切换">
+            <button type="button" onClick={() => setViewMode('2d')}
+              className={`flex items-center gap-1 px-2 py-1 text-2xs ${viewMode === '2d' ? 'bg-blue-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+              title={t('rack:view2d', '2D 平面')}>
+              <Grid3x3 size={11} /> 2D
+            </button>
+            <button type="button" onClick={() => setViewMode('3d')}
+              className={`flex items-center gap-1 px-2 py-1 text-2xs ${viewMode === '3d' ? 'bg-blue-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+              title={t('rack:view3d', '3D 视图')}>
+              <Box size={11} /> 3D
+            </button>
+          </div>
+        )}
         {/* 定稿 / 撤销定稿 */}
         {matrix && !matrix.finalized && (
           <button type="button" onClick={() => setFinalized(true)}
@@ -210,9 +229,15 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
         )}
       </div>
 
-      {/* 主体：DataCenterLayout（矩阵视图；无矩阵时其内部提供创建面板） */}
+      {/* 主体：2D 平面（DataCenterLayout）或 3D 视图（v5.0.6「3D 可视化」） */}
       <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">
-        <DataCenterLayout />
+        {viewMode === '3d' ? (
+          <Suspense fallback={<div className="flex h-full w-full items-center justify-center text-gray-500">加载 3D 视图…</div>}>
+            <Room3DView />
+          </Suspense>
+        ) : (
+          <DataCenterLayout />
+        )}
       </div>
 
       {/* M2（AL-SNAP1/3）：保存快照命名弹窗 */}
