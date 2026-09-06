@@ -145,7 +145,7 @@ SAMPLES = [
         'project_id': '49a-256-roce-0001',
         'rows': list('ABCDEFGHIJKLMNOP'),
         'cols': list(range(1, 25)),
-        'zones': {'gpu': ('A1', 'H16'), 'network': ('A17', 'D20'),
+        'zones': {'gpu': ('A1', 'P16'), 'network': ('A17', 'D20'),
                   'storage': ('E17', 'J20'), 'compute': ('K17', 'N20')},
     },
     {
@@ -163,8 +163,8 @@ SAMPLES = [
         'project_id': '49a-512-roce-0001',
         'rows': list('ABCDEFGHIJKLMNOPQRST'),
         'cols': list(range(1, 33)),
-        'zones': {'gpu': ('A1', 'H24'), 'network': ('A25', 'D28'),
-                  'storage': ('E25', 'J28'), 'compute': ('K25', 'N28')},
+        'zones': {'gpu': ('A1', 'P32'), 'network': ('Q1', 'R8'),
+                  'storage': ('Q9', 'T16'), 'compute': ('Q17', 'T24')},
     },
     {
         'id': '国产-昇腾-256',
@@ -181,7 +181,7 @@ SAMPLES = [
         'project_id': '49a-ascend256-0001',
         'rows': list('ABCDEFGHIJKLMNOP'),
         'cols': list(range(1, 25)),
-        'zones': {'gpu': ('A1', 'H16'), 'network': ('A17', 'D20'),
+        'zones': {'gpu': ('A1', 'P16'), 'network': ('A17', 'D20'),
                   'storage': ('E17', 'J20'), 'compute': ('K17', 'N20')},
     },
 ]

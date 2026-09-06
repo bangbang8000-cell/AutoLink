@@ -43,6 +43,7 @@ def build_design_dict(designer: Any) -> Dict[str, Any]:
         'param_cores': len(getattr(designer, 'param_cores', []) or []),
         'storage_leaves': len(getattr(designer, 'storage_leaves', []) or []),
         'storage_spines': len(getattr(designer, 'storage_spines', []) or []),
+        'storage_cores': len(getattr(designer, 'storage_cores', []) or []),
         'biz_access': len(getattr(designer, 'biz_access', []) or []),
         'biz_agg': len(getattr(designer, 'biz_agg', []) or []),
         'oob_access': len(getattr(designer, 'oob_access', []) or []),
