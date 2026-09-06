@@ -2233,6 +2233,20 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     updateService.openReleasesPage()
   })
 
+  // 5.0.9-509-a：回滚基线（保守，仅列出/清除/定位）
+  ipcMain.handle('app:rollback-list', () => updateService.getRollbackEntries())
+  ipcMain.handle('app:rollback-clear', () => updateService.clearRollback())
+  ipcMain.handle('app:rollback-reveal', () => {
+    const entries = updateService.getRollbackEntries()
+    if (entries.length > 0) {
+      shell.showItemInFolder(entries[0].filePath)
+      return entries[0].filePath
+    }
+    return null
+  })
+  // 5.0.9-509-b：版本锁定（本地低于平台最低要求需提示升级）
+  ipcMain.handle('app:version-lock', () => updateService.getVersionLock())
+
   // ===== Device Library =====
   ipcMain.handle('device-library:list', wrapHandler(async () => {
     return loadDeviceLibrary()

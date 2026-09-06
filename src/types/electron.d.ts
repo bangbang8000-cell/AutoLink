@@ -565,6 +565,12 @@ interface Window {
       onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => () => void
       onUpdateDownloaded: (callback: () => void) => () => void
       onUpdateError: (callback: (message: string) => void) => () => void
+      // 5.0.9-509-a：回滚基线（保守，仅列出/清除/定位）
+      rollbackList: () => Promise<{ version: string; filePath: string; savedAt: string }[]>
+      rollbackClear: () => Promise<void>
+      rollbackReveal: () => Promise<string | null>
+      // 5.0.9-509-b：版本锁定（本地低于平台最低要求）
+      getVersionLock: () => Promise<boolean>
     }
     window: {
       minimize: () => void

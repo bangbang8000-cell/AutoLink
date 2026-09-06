@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [5.0.9] - 2026-09-06
+
+### 5.0.9 交付与运维强化（5.0 系列第 9 版）
+
+- **升级体验（509-a）**：安装包下载**断点续传**（`.part` 记录偏移，失败续传）+ **SHA-512 强校验**（读 latest.yml sha512，缺失退化 Content-Length 比对）+ **版本回滚**（安装前留存上一版本安装包，启动异常可回退）+ **灰度通道**（stable/beta，按通道选择 latest\*-channel.yml，服务端多通道下发）。
+- **企业部署基座（509-b）**：新增 `enableEnterpriseDeploy` 配置开关（默认关，隐藏）；开启后支持**内网 updateUrl 镜像**、**代理下载**（系统代理 / 自定义代理 CONNECT 隧道）、**版本锁定**（平台下发 min_required_version/allowed 校验）。
+- 平台侧 509-c：health/full 磁盘水位/进程探测 + 多通道 versions.json（sha512/镜像）+ 备份统一 auto_backup.sh + 告警脚本。
+
 ## [5.0.8] - 2026-09-05
 
 ### 5.0.8 质量与可靠性深化（5.0 系列第 8 版）

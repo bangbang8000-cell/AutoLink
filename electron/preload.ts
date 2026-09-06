@@ -300,6 +300,12 @@ const electronAPI = {
       ipcRenderer.on('update:error', handler)
       return () => ipcRenderer.removeListener('update:error', handler)
     },
+    // 5.0.9-509-a：回滚基线（保守，仅列出/清除/定位）
+    rollbackList: () => ipcRenderer.invoke('app:rollback-list'),
+    rollbackClear: () => ipcRenderer.invoke('app:rollback-clear'),
+    rollbackReveal: () => ipcRenderer.invoke('app:rollback-reveal'),
+    // 5.0.9-509-b：版本锁定（本地低于平台最低要求）
+    getVersionLock: () => ipcRenderer.invoke('app:version-lock'),
   },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
