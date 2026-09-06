@@ -1,0 +1,16 @@
+{
+  "id": "H100-512台-RoCE",
+  "name": "H100-512台-RoCE（示例）",
+  "description": "512台H100 DGX 超大布署 RoCE（400G，H3C S9825/S9827 2:1收敛）超大规模示例项目",
+  "scenario": "H100-512台-RoCE",
+  "tags": [
+    "H100",
+    "512台",
+    "RoCE",
+    "示例项目",
+    "超大规模"
+  ],
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
+}

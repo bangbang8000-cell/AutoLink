@@ -1,16 +1,17 @@
 {
   "id": "国产-昇腾-256",
-  "name": "国产昇腾256台方案",
-  "description": "256台华为昇腾910B GPU（Atlas 800T A2，三层RoCE 200G）+ 32存储 + 16通算",
-  "scenario": "昇腾-256",
+  "name": "国产-昇腾-256（示例）",
+  "description": "256台昇腾910C NPU 国产智算 RoCE（400G，H3C/华为 2:1收敛）多厂商场景示例项目",
+  "scenario": "国产-昇腾-256",
   "tags": [
-    "昇腾910B",
+    "昇腾",
     "256台",
-    "3层组网",
-    "国产化",
     "RoCE",
-    "200G"
+    "示例项目",
+    "国产",
+    "多厂商"
   ],
-  "updatedAt": "2026-07-29",
-  "templateVersion": 2
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
 }

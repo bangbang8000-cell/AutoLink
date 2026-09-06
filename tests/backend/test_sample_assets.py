@@ -28,7 +28,8 @@ from validate_samples import (  # noqa: E402
 
 BASE = os.path.join(os.path.dirname(__file__), '..', '..', 'template')
 
-EXPECTED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE'}
+EXPECTED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
+                       'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256'}
 
 
 def _read_json(path):
@@ -37,7 +38,7 @@ def _read_json(path):
 
 
 def test_discover_exactly_four_samples():
-    """示例发现：isSample=true 模板恰为 4 个，ID 与规格一致"""
+    """示例发现：isSample=true 模板恰为 7 个，ID 与规格一致"""
     samples = discover_samples()
     ids = {name for name, _ in samples}
     assert ids == EXPECTED_SAMPLE_IDS
