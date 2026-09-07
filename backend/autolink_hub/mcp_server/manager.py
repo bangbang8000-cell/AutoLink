@@ -7,6 +7,7 @@
 """
 import json
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -16,9 +17,35 @@ logger = logging.getLogger(__name__)
 AGENT_MODES = ("compiled", "source")
 DEFAULT_AGENT_MODE = "compiled"
 
+# 审计敏感字段（写盘/查询时脱敏，避免密钥/口令入库）
+_SENSITIVE_SUBSTR = (
+    "password", "passwd", "secret", "token", "api_key", "apikey",
+    "authorization", "credential", "private_key", "access_key",
+)
+
 
 def _now() -> str:
     return datetime.now().isoformat()
+
+
+def _summarize_args(arguments: dict[str, Any], max_len: int = 120) -> dict[str, Any]:
+    """审计入参摘要：敏感字段脱敏 + 长值截断 + 列表/对象压缩。"""
+    args = arguments or {}
+    out: dict[str, Any] = {}
+    for k, v in args.items():
+        if any(s in str(k).lower() for s in _SENSITIVE_SUBSTR):
+            out[k] = "[REDACTED]"
+            continue
+        if isinstance(v, dict):
+            s = json.dumps(v, ensure_ascii=False)
+        elif isinstance(v, (list, tuple)):
+            s = f"[list:{len(v)}]"
+        elif v is None:
+            s = "null"
+        else:
+            s = str(v)
+        out[k] = s if len(s) <= max_len else s[:max_len] + "..."
+    return out
 
 
 def _import_fastmcp():
@@ -212,6 +239,7 @@ class AgentConnectManager:
             validate_result,
         )
 
+        _started = time.time()
         args = arguments or {}
         # L3 幂等：写入工具且同 key 已提交 → 返回"已存在"
         if is_write_tool(name):
@@ -228,11 +256,12 @@ class AgentConnectManager:
             payload = validate_result(name, result)
             ok = payload.get("success")
             if ok:
-                # 记录幂等标记（后续同 key 提交返回"已存在"）
+                # 记录幂等标记（后续同 key 提交返回"已存在"+ 原始结果重放）
                 key = idempotency_key(args)
                 if key:
-                    self._write_records[f"{name}:{key}"] = True
-        self.record_audit("external-agent", name, args, "ok" if ok else "error")
+                    self._write_records[f"{name}:{key}"] = {"result": payload.get("result")}
+        duration_ms = round((time.time() - _started) * 1000, 1)
+        self.record_audit("external-agent", name, args, "ok" if ok else "error", duration_ms=duration_ms)
         if ok:
             return {"success": True, "result": payload.get("result")}
         return {"success": False, "error": payload.get("error", "工具执行失败")}
@@ -242,8 +271,18 @@ class AgentConnectManager:
     def set_audit_path(self, path: Optional[Path]) -> None:
         self._audit_path = Path(path) if path else None
 
-    def record_audit(self, agent: str, tool: str, arguments: dict, result: str) -> None:
-        """记录 Agent 操作审计。审计路径未配置时跳过（不阻断执行）。"""
+    def record_audit(
+        self,
+        agent: str,
+        tool: str,
+        arguments: dict,
+        result: str,
+        duration_ms: float | None = None,
+    ) -> None:
+        """记录 Agent 操作审计。审计路径未配置时跳过（不阻断执行）。
+
+        5.1.5-515-d：入参摘要（脱敏+截断）、耗时、模式写入审计条目。
+        """
         if self._audit_path is None:
             return
         try:
@@ -253,12 +292,49 @@ class AgentConnectManager:
                 "agent": agent,
                 "tool": tool,
                 "arguments": arguments,
+                "args_summary": _summarize_args(arguments),
                 "result": result,
+                "duration_ms": duration_ms,
+                "mode": self._agent_mode,
             }
             with self._audit_path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         except OSError as e:  # pragma: no cover
             logger.warning(f"Agent Connect audit write failed: {e}")
+
+    def query_audit(
+        self,
+        agent: str = "",
+        tool: str = "",
+        result: str = "",
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """查询审计日志（按 agent/tool/result 过滤，返回最近 N 条）。
+
+        返回条目含脱敏入参摘要（args_summary），避免敏感信息外泄。
+        """
+        if self._audit_path is None or not self._audit_path.exists():
+            return []
+        entries: list[dict[str, Any]] = []
+        try:
+            with self._audit_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entries.append(json.loads(line))
+                    except Exception:  # noqa: BLE001 - 单行损坏不影响整体
+                        continue
+        except OSError:  # pragma: no cover
+            return []
+        filtered = [
+            e for e in entries
+            if (not agent or agent in (e.get("agent") or ""))
+            and (not tool or tool == e.get("tool"))
+            and (not result or result == e.get("result"))
+        ]
+        return filtered[-limit:]
 
     # -------------------- 状态报告 --------------------
 

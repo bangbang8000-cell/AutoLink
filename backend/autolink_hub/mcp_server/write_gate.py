@@ -46,14 +46,29 @@ def idempotency_key(arguments: dict[str, Any]) -> str | None:
 
 
 def check_idempotent(records: dict[str, Any], tool: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
-    """L3 幂等检查：若该 (tool, key) 已提交，返回"已存在"结构化响应；否则 None。"""
+    """L3 幂等检查：若该 (tool, key) 已提交，返回"已存在"结构化响应；否则 None。
+
+    5.1.5-515-a：标记可携带已提交结果（{"result": ...}），重放请求返回原始结果，
+    保证"幂等重放"语义 —— 相同请求重复提交不再重复写入，且结果确定一致。
+    兼容旧标记（True）—— 仅返回"已存在"消息，无重放结果。
+    """
     key = idempotency_key(arguments)
     if not key:
         return None
     marker = f"{tool}:{key}"
-    if marker in records:
-        return {"success": True, "idempotent": True, "result": {"message": "已存在（幂等：相同请求已处理，未重复写入）", "idempotency_key": key}}
-    return None
+    if marker not in records:
+        return None
+    stored = records[marker]
+    replay = stored.get("result") if isinstance(stored, dict) else None
+    return {
+        "success": True,
+        "idempotent": True,
+        "result": {
+            "message": "已存在（幂等：相同请求已处理，未重复写入）",
+            "idempotency_key": key,
+            "replay": replay,
+        },
+    }
 
 
 def validate_result(tool: str, result: dict[str, Any]) -> dict[str, Any]:
