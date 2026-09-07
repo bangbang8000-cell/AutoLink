@@ -217,6 +217,63 @@ def set_ai_engine(engine: str) -> dict:
     return {"status": "ok", "ai_engine": engine, "changed": True}
 
 
+# ============================================================
+# 5.1.1-511-c：Agent Connect 双开关配置
+# enable_agent_connect（默认关、隐藏）+ agent_mode（compiled/source）
+# ============================================================
+AGENT_CONNECT_MODES = ("compiled", "source")
+AGENT_CONNECT_DEFAULT_MODE = "compiled"
+
+
+def clamp_agent_mode(value) -> str:
+    """校验 agent_mode 合法（compiled/source）；非法/缺失回退 compiled"""
+    if isinstance(value, str) and value in AGENT_CONNECT_MODES:
+        return value
+    return AGENT_CONNECT_DEFAULT_MODE
+
+
+def get_enable_agent_connect() -> bool:
+    """读取 Agent Connect 总开关（默认关）。实时读 secrets 文件，立即生效。"""
+    try:
+        secrets = load_secrets()
+        return bool(secrets.get("enable_agent_connect", False))
+    except Exception:
+        return False
+
+
+def set_enable_agent_connect(value: bool) -> bool:
+    """设置 Agent Connect 总开关：持久化到 secrets 文件（diff 幂等）"""
+    enabled = bool(value)
+    secrets = load_secrets()
+    if secrets.get("enable_agent_connect") == enabled:
+        return enabled
+    secrets["enable_agent_connect"] = enabled
+    save_secrets(secrets)
+    return enabled
+
+
+def get_agent_mode() -> str:
+    """读取当前运行模式（compiled/source）。实时读 secrets 文件。"""
+    try:
+        secrets = load_secrets()
+        if "agent_mode" in secrets:
+            return clamp_agent_mode(secrets["agent_mode"])
+    except Exception:
+        pass
+    return AGENT_CONNECT_DEFAULT_MODE
+
+
+def set_agent_mode(value) -> str:
+    """设置运行模式：校验二选一 → 持久化到 secrets 文件（diff 幂等）"""
+    clamped = clamp_agent_mode(value)
+    secrets = load_secrets()
+    if secrets.get("agent_mode") == clamped:
+        return clamped
+    secrets["agent_mode"] = clamped
+    save_secrets(secrets)
+    return clamped
+
+
 def get_provider_persisted_models(provider: str) -> list:
     """AI-3：读取某 provider 已持久化的模型列表（/config 回写 ai_secrets 的 models，供前端水合下拉）
 

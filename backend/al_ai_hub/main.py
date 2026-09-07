@@ -54,6 +54,18 @@ def main() -> None:
     from autolink_hub.hub import init_hub
     init_hub(args.user_data)
 
+    # 5.1.1-511-a/511-c：Agent Connect MCP Server（默认关、隐藏）
+    # 开关开启时按 agent_mode 启用 MCP Server；审计写入 <user_data>/agent-connect-audit.jsonl
+    from autolink_hub.config import get_agent_mode, get_enable_agent_connect
+    if get_enable_agent_connect():
+        from autolink_hub.mcp_server.manager import get_agent_connect_manager
+        mgr = get_agent_connect_manager()
+        if args.user_data:
+            from pathlib import Path
+            mgr.set_audit_path(Path(args.user_data) / "agent-connect-audit.jsonl")
+        ok, msg = mgr.enable(agent_mode=get_agent_mode())
+        print(f"AGENT_CONNECT mode={get_agent_mode()} ok={ok} {msg}", flush=True)
+
     # 打印就绪信号（Electron 主进程通过此信号判断启动成功）
     print(f"AL_AI_HUB_READY port={args.port}", flush=True)
 
