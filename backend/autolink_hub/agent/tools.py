@@ -4,8 +4,10 @@
 `cli.execute(action, params)` 同进程调用 —— UI / CLI / AI 三入口行为一致，且每次
 调用自动写 cli-audit.jsonl（R5.7 AI 留轨迹）。
 """
+import asyncio
 import json
 import logging
+import time
 from typing import Any, Awaitable, Callable, Optional
 
 from autolink_hub.agent.schemas import get_tool_permission
@@ -320,6 +322,96 @@ def _knowledge_add_handler(arguments: dict) -> dict:
     except ValueError as e:
         return {"success": False, "error": str(e)}
     return {"success": True, "entry": entry, "added": True}
+
+
+# ============================================================
+# 5.1.4-514-c：异步任务工具（长耗时设计生成/导出 → task_id + 进度轮询）
+# ============================================================
+
+async def _task_submit(arguments: dict) -> dict:
+    """提交任意编译态工具为异步后台任务，返回 task_id（用 task_query 轮询进度）。
+
+    后台执行走 AgentConnectManager._execute_wrapped，保留 L2/L3 语义与审计。
+    """
+    tool = arguments.get("tool")
+    if not tool:
+        raise ValueError("缺少必需参数: tool")
+    tool_args = arguments.get("arguments") or {}
+    if not isinstance(tool_args, dict):
+        raise ValueError("参数 arguments 应为对象")
+    from autolink_hub.mcp_server.capabilities import filter_tools_for_mode
+    from autolink_hub.mcp_server.manager import get_agent_connect_manager
+    from autolink_hub.mcp_server.tasks import get_task_manager
+
+    manager = get_agent_connect_manager()
+    allowed = {d["name"] for d in filter_tools_for_mode(manager.agent_mode, get_tool_definitions())}
+    if tool not in allowed:
+        raise ValueError(f"工具 {tool} 在当前模式不可用")
+    task_id = get_task_manager().submit(
+        tool,
+        lambda: manager._execute_wrapped(tool, tool_args),
+    )
+    return {"success": True, "task_id": task_id, "tool": tool, "status": "submitted",
+            "message": "任务已提交，用 task_query 查询进度"}
+
+
+async def _task_query(arguments: dict) -> dict:
+    """查询异步任务状态（pending/running/done/error + 进度 + 结果/错误）。"""
+    task_id = arguments.get("taskId") or arguments.get("task_id")
+    if not task_id:
+        raise ValueError("缺少必需参数: taskId")
+    from autolink_hub.mcp_server.tasks import get_task_manager
+
+    st = get_task_manager().query(task_id)
+    if st is None:
+        raise ValueError(f"任务不存在: {task_id}")
+    return {"success": True, "task": st}
+
+
+async def _task_list(arguments: dict) -> dict:
+    """列出全部异步任务（含状态与进度）。"""
+    from autolink_hub.mcp_server.tasks import get_task_manager
+
+    tasks = get_task_manager().list_tasks()
+    return {"success": True, "tasks": tasks, "total": len(tasks)}
+
+
+async def _task_wait(arguments: dict) -> dict:
+    """等待异步任务完成（最多 timeout 秒），返回最终状态与结果。"""
+    task_id = arguments.get("taskId") or arguments.get("task_id")
+    if not task_id:
+        raise ValueError("缺少必需参数: taskId")
+    timeout = float(arguments.get("timeout", 60) or 60)
+    from autolink_hub.mcp_server.tasks import get_task_manager
+
+    task_mgr = get_task_manager()
+    st = task_mgr.query(task_id)
+    if st is None:
+        raise ValueError(f"任务不存在: {task_id}")
+    deadline = time.time() + max(0.0, timeout)
+    while st["status"] not in ("done", "error") and time.time() < deadline:
+        await asyncio.sleep(0.05)
+        st = task_mgr.query(task_id)
+        if st is None:
+            break
+    return {"success": True, "task": st}
+
+
+async def _task_cancel(arguments: dict) -> dict:
+    """取消运行中的异步任务（pending/running → 取消为 error）。"""
+    task_id = arguments.get("taskId") or arguments.get("task_id")
+    if not task_id:
+        raise ValueError("缺少必需参数: taskId")
+    from autolink_hub.mcp_server.tasks import get_task_manager
+
+    task_mgr = get_task_manager()
+    st = task_mgr.query(task_id)
+    if st is None:
+        raise ValueError(f"任务不存在: {task_id}")
+    ok = task_mgr.cancel(task_id)
+    st = task_mgr.query(task_id)
+    return {"success": True, "task_id": task_id, "task": st,
+            "message": "任务已取消" if ok else "任务不可取消（已完成或不存在）"}
 
 
 def init_tools() -> None:
@@ -857,6 +949,48 @@ def init_tools() -> None:
         }, required=["name", "content"]),
         _knowledge_add_handler,
         permission="notify",
+    )
+
+    # ---- 5.1.4-514-c：异步任务工具（长耗时设计生成/导出 → task_id + 进度轮询）----
+    register_tool(
+        "task_submit", "提交任意编译态工具为异步后台任务，立即返回 task_id，用 task_query 轮询进度。设计生成/导出等长耗时工具在 MCP 层已自动异步，无需再调本工具",
+        _schema({
+            "tool": _str_param("tool", "要异步执行的工具名（如 generate_design/export_outputs）", True),
+            "arguments": _str_param("arguments", "工具入参 JSON 对象"),
+        }, required=["tool"]),
+        _task_submit,
+        permission="auto",
+    )
+    register_tool(
+        "task_query", "查询异步任务状态：pending/running/done/error + 进度（percent/message）+ 结果或错误",
+        _schema({
+            "taskId": _str_param("taskId", "任务 ID", True),
+        }, required=["taskId"]),
+        _task_query,
+        permission="auto",
+    )
+    register_tool(
+        "task_list", "列出全部异步任务（含状态与进度）",
+        _schema({}, []),
+        _task_list,
+        permission="auto",
+    )
+    register_tool(
+        "task_wait", "等待异步任务完成（最多 timeout 秒），返回最终状态与结果；适合需要结果后再继续的场景",
+        _schema({
+            "taskId": _str_param("taskId", "任务 ID", True),
+            "timeout": _str_param("timeout", "最大等待秒数（默认 60）"),
+        }, required=["taskId"]),
+        _task_wait,
+        permission="auto",
+    )
+    register_tool(
+        "task_cancel", "取消运行中的异步任务（pending/running → 取消为 error）",
+        _schema({
+            "taskId": _str_param("taskId", "任务 ID", True),
+        }, required=["taskId"]),
+        _task_cancel,
+        permission="auto",
     )
 
     logger.info(f"AutoLink AI Hub: registered {len(_tools)} tools")

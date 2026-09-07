@@ -147,9 +147,14 @@ class AgentConnectManager:
     # -------------------- 工具注册 --------------------
 
     def _register_tools(self, mcp: Any, mode: str) -> int:
-        """将现有 Agent 工具注册表包装为 MCP 工具（按模式过滤）。"""
+        """将现有 Agent 工具注册表包装为 MCP 工具（按模式过滤）。
+
+        5.1.4-514-a：长耗时设计生成/导出工具自动异步化 —— MCP 调用立即返回 task_id，
+        后台执行仍走 _execute_wrapped（保留 L2/L3 语义与审计），用 task_query 轮询。
+        """
         from autolink_hub.agent import tools
         from autolink_hub.mcp_server.capabilities import (
+            LONG_RUNNING_TOOLS,
             filter_tools_for_mode,
             mcp_permission_meta,
             normalize_mcp_schema,
@@ -164,14 +169,38 @@ class AgentConnectManager:
             mcp_name = tool_name_to_mcp(name)
             schema = normalize_mcp_schema(item.get("parameters") or {})
             perm_meta = mcp_permission_meta(item.get("permission") or "confirm")
-            tool_name = name  # 闭包绑定
+            tool_name = name  # 闭包绑定（避免 FastMCP 对下划线参数名的限制）
+            async_flag = " [async:task]" if name in LONG_RUNNING_TOOLS else ""
 
-            @mcp.tool(name=mcp_name, description=f"{item.get('description', '')} [permission:{perm_meta['approval_level']}]")
-            async def _handler(arguments: dict | None = None, toolName: str = tool_name) -> dict:
-                return await self._execute_wrapped(toolName, arguments or {})
+            if name in LONG_RUNNING_TOOLS:
+                @mcp.tool(name=mcp_name, description=f"{item.get('description', '')} [permission:{perm_meta['approval_level']}]{async_flag}")
+                async def _async_handler(arguments: dict | None = None, toolName: str = tool_name) -> dict:
+                    return self._submit_long_task(toolName, arguments or {})
+            else:
+                @mcp.tool(name=mcp_name, description=f"{item.get('description', '')} [permission:{perm_meta['approval_level']}]")
+                async def _handler(arguments: dict | None = None, toolName: str = tool_name) -> dict:
+                    return await self._execute_wrapped(toolName, arguments or {})
 
             count += 1
         return count
+
+    def _submit_long_task(self, name: str, arguments: dict) -> dict:
+        """5.1.4-514-a：长耗时工具提交为异步后台任务，立即返回 task_id。
+
+        后台执行复用 _execute_wrapped，保留 L2/L3 语义与审计记录。
+        """
+        from autolink_hub.mcp_server.tasks import get_task_manager
+
+        task_id = get_task_manager().submit(
+            name,
+            lambda: self._execute_wrapped(name, arguments),
+        )
+        return {
+            "task_id": task_id,
+            "tool": name,
+            "status": "submitted",
+            "message": "任务已提交，用 task_query 查询进度",
+        }
 
     async def _execute_wrapped(self, name: str, arguments: dict) -> dict:
         """执行 Agent 工具并记录审计；写入工具过 L2/L3 语义层，失败返回结构化错误。"""

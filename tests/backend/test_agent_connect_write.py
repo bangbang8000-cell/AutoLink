@@ -24,6 +24,16 @@ from autolink_hub.mcp_server.write_gate import (  # noqa: E402
 )
 
 
+@pytest.fixture(autouse=True)
+def _restore_execute_tool():
+    """每用例后恢复 tools.execute_tool，防止 fake 泄漏到其他测试文件。"""
+    import autolink_hub.agent.tools as tools_mod
+
+    orig = tools_mod.execute_tool
+    yield
+    tools_mod.execute_tool = orig
+
+
 class TestWriteToolDetect:
     def test_write_tools_detected(self):
         for name in ("create_project", "update_project", "import_plan", "delete_project", "save_template", "apply_patch", "repair_design"):

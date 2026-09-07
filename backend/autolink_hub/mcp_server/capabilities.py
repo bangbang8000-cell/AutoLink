@@ -71,6 +71,12 @@ CAPABILITY_DOMAINS: dict[str, dict[str, Any]] = {
         "compiled_visible": True,
         "default_permission": "auto",
     },
+    "task": {
+        "name": "任务",
+        "description": "长耗时设计生成/导出任务提交与进度轮询（异步任务层）",
+        "compiled_visible": True,
+        "default_permission": "auto",
+    },
     "cli": {
         "name": "CLI",
         "description": "命令行透传（白名单子命令，仅源码态）",
@@ -99,6 +105,23 @@ COMPILED_BLOCKED_TOOLS: list[str] = [
     "read_file",
     "list_dir",
     "read_source",
+]
+
+# 长耗时工具（设计生成/导出/优化/打包）：MCP 层自动提交为异步任务并返回 task_id
+LONG_RUNNING_TOOLS: list[str] = [
+    "generate_design",
+    "report",
+    "export_outputs",
+    "export_project",
+    "project_export",
+    "template_export",
+    "room_optimize",
+    "atop_recommend",
+    "capacity_recommend",
+    "project_import",
+    "template_import",
+    "repair_apply",
+    "optimize_apply",
 ]
 
 # 工具名 → 能力域映射（前缀/关键字推断 + 显式表兜底）
@@ -144,6 +167,11 @@ _TOOL_DOMAIN_HINTS: list[tuple[str, str]] = [
     ("skill", "knowledge"),
     ("health", "system"),
     ("status", "system"),
+    ("task_submit", "task"),
+    ("task_query", "task"),
+    ("task_list", "task"),
+    ("task_wait", "task"),
+    ("task_cancel", "task"),
     ("run_cli", "cli"),
     ("read_file", "filesystem"),
     ("list_dir", "filesystem"),
