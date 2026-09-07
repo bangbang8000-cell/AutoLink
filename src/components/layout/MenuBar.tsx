@@ -10,6 +10,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { AboutDialog } from './AboutDialog'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { shortcutKeys, type ShortcutAction } from '@/utils/shortcuts'
+import { openMcpGuideTab } from '@/utils/mcpGuide'
 
 interface MenuItem {
   label?: string
@@ -200,6 +201,11 @@ export function MenuBar() {
     openTab({ type: 'guide', title: t('guide.title'), closable: true })
   }, [openTab, t])
 
+  // V5.1.x: MCP 接入指南（工作区标签页，与用户指南一致）
+  const handleMcpGuide = useCallback(() => {
+    openMcpGuideTab()
+  }, [])
+
   const handleKeyboardShortcuts = useCallback(() => {
     // V2.4.4: 弹出独立快捷键对话框（替代原来的 toast 提示）
     setShowShortcutsDialog(true)
@@ -252,6 +258,7 @@ export function MenuBar() {
     ],
     [t('menu.topLevel.help')]: [
       { label: t('menu.help.userGuide'), action: handleUserGuide },
+      { label: t('menu.help.mcpGuide'), action: handleMcpGuide },
       { label: t('menu.help.keyboardShortcuts'), shortcutAction: 'showShortcuts', action: handleKeyboardShortcuts },
       { separator: true },
       { label: t('menu.help.about'), action: handleAbout },

@@ -377,6 +377,7 @@
     },
     "help": {
       "userGuide": "使用者指南",
+      "mcpGuide": "MCP 接入指南",
       "keyboardShortcuts": "快捷鍵參考",
       "checkUpdate": "檢查更新",
       "about": "關於 AutoLink"
@@ -780,6 +781,9 @@
         "mcpRemove": "刪除",
         "agentConnectTitle": "Agent Connect（外部 AI 接入）",
         "agentConnectDesc": "將 AutoLink 能力封裝為標準 MCP Server，供 Claude / Codex / Trae / VS Code 等外部 AI Agent 接入。",
+        "agentConnectCopyConfig": "複製接入設定",
+        "agentConnectOpenGuide": "開啟 MCP 接入指南",
+        "agentConnectCopied": "已複製",
         "agentConnectRefresh": "重新整理",
         "agentConnectOn": "開啟 Agent Connect",
         "agentConnectMode": "執行模式",
@@ -865,7 +869,13 @@
     "loading": "正在載入使用者指南...",
     "loadFailed": "使用者指南載入失敗",
     "notFound": "使用者指南文件不存在",
-    "toc": "目錄"
+    "toc": "目錄",
+    "mcpTitle": "MCP 接入指南",
+    "mcpLoading": "正在載入 MCP 接入指南...",
+    "mcpLoadFailed": "MCP 接入指南載入失敗",
+    "mcpNotFound": "MCP 接入指南文件不存在",
+    "mcpCopyConfig": "複製接入設定",
+    "mcpCopied": "已複製"
   },
   "onboarding": {
     "title": "歡迎使用 AutoLink",

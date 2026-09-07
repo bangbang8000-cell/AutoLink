@@ -377,6 +377,7 @@
     },
     "help": {
       "userGuide": "사용자 가이드",
+      "mcpGuide": "MCP 연결 가이드",
       "keyboardShortcuts": "단축키",
       "checkUpdate": "업데이트 확인",
       "about": "AutoLink 정보"
@@ -780,6 +781,9 @@
         "mcpRemove": "삭제",
         "agentConnectTitle": "Agent Connect(외부 AI 연결)",
         "agentConnectDesc": "AutoLink 기능을 표준 MCP Server로 노출하여 Claude / Codex / Trae / VS Code 등 외부 AI 에이전트가 접속할 수 있게 합니다.",
+        "agentConnectCopyConfig": "연결 설정 복사",
+        "agentConnectOpenGuide": "MCP 연결 가이드 열기",
+        "agentConnectCopied": "복사됨",
         "agentConnectRefresh": "새로고침",
         "agentConnectOn": "Agent Connect 활성화",
         "agentConnectMode": "실행 모드",
@@ -865,7 +869,13 @@
     "loading": "사용자 가이드 로딩 중...",
     "loadFailed": "사용자 가이드 로딩 실패",
     "notFound": "사용자 가이드 문서를 찾을 수 없습니다",
-    "toc": "목차"
+    "toc": "목차",
+    "mcpTitle": "MCP 연결 가이드",
+    "mcpLoading": "MCP 연결 가이드 로딩 중...",
+    "mcpLoadFailed": "MCP 연결 가이드 로딩 실패",
+    "mcpNotFound": "MCP 연결 가이드 문서를 찾을 수 없습니다",
+    "mcpCopyConfig": "연결 설정 복사",
+    "mcpCopied": "복사됨"
   },
   "onboarding": {
     "title": "AutoLink에 오신 것을 환영합니다",

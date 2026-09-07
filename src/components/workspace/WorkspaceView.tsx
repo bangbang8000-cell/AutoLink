@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect, Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, LayoutTemplate, Upload, BookOpen, Sparkles, Cpu } from 'lucide-react'
+import { X, LayoutDashboard, Server, GitBranch, Network, FileOutput, Library, Monitor, Wrench, FolderOpen, Play, LayoutTemplate, Upload, BookOpen, Sparkles, Cpu, Plug } from 'lucide-react'
 import { useWorkspaceStore, type TabType } from '@/stores/workspace.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -21,6 +21,8 @@ const FileViewerTab = lazy(() => import('./tabs/FileViewerTab').then(m => ({ def
 const GuideTab = lazy(() => import('./tabs/GuideTab').then(m => ({ default: m.GuideTab })))
 // V3.1.1-T5-5: AI 对话 Tab（懒加载）
 const ChatTab = lazy(() => import('../chat/ChatPanel').then(m => ({ default: m.ChatPanel })))
+// V5.1.x: MCP 接入指南 Tab（懒加载）
+const McpGuideTab = lazy(() => import('./tabs/McpGuideTab').then(m => ({ default: m.McpGuideTab })))
 
 const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
   workbench: LayoutDashboard,
@@ -37,6 +39,8 @@ const TAB_ICONS: Record<TabType, React.ComponentType<{ size?: number; className?
   guide: BookOpen,
   // V3.1.1-T5-5: AI 对话
   chat: Sparkles,
+  // V5.1.x: MCP 接入指南
+  mcpGuide: Plug,
 }
 
 export function WorkspaceView() {
@@ -130,6 +134,8 @@ export function WorkspaceView() {
       case 'guide': return <GuideTab />
       // V3.1.1-T5-5: AI 对话
       case 'chat': return <ChatTab />
+      // V5.1.x: MCP 接入指南
+      case 'mcpGuide': return <McpGuideTab />
     }
   }, [activeTab])
 

@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware'
 
 // V2.7.6-T9: 新增 'topology3d' Tab 类型 (3D 拓扑可视化 PoC)
 // V3.1.1-T5-5: 新增 'chat' Tab 类型 (AI 对话)
-export type TabType = 'workbench' | 'design' | 'visualization' | 'aidcPlan' | 'rack' | 'topology' | 'output' | 'deviceLibrary' | 'projectOverview' | 'fileViewer' | 'guide' | 'chat'
+// V5.1.x: 新增 'mcpGuide' Tab 类型 (MCP 接入指南)
+export type TabType = 'workbench' | 'design' | 'visualization' | 'aidcPlan' | 'rack' | 'topology' | 'output' | 'deviceLibrary' | 'projectOverview' | 'fileViewer' | 'guide' | 'chat' | 'mcpGuide'
 
 export interface WorkspaceTab {
   id: string

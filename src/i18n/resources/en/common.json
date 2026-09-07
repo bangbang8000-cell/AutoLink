@@ -377,6 +377,7 @@
     },
     "help": {
       "userGuide": "User Guide",
+      "mcpGuide": "MCP Integration Guide",
       "keyboardShortcuts": "Keyboard Shortcuts",
       "checkUpdate": "Check for Updates",
       "about": "About AutoLink"
@@ -780,6 +781,9 @@
         "mcpRemove": "Remove",
         "agentConnectTitle": "Agent Connect (External AI)",
         "agentConnectDesc": "Expose AutoLink capabilities as a standard MCP Server for external AI agents like Claude / Codex / Trae / VS Code.",
+        "agentConnectCopyConfig": "Copy Config",
+        "agentConnectOpenGuide": "Open MCP Guide",
+        "agentConnectCopied": "Copied",
         "agentConnectRefresh": "Refresh",
         "agentConnectOn": "Enable Agent Connect",
         "agentConnectMode": "Mode",
@@ -865,7 +869,13 @@
     "loading": "Loading user guide...",
     "loadFailed": "Failed to load user guide",
     "notFound": "User guide document not found",
-    "toc": "Table of Contents"
+    "toc": "Table of Contents",
+    "mcpTitle": "MCP Integration Guide",
+    "mcpLoading": "Loading MCP integration guide...",
+    "mcpLoadFailed": "Failed to load MCP integration guide",
+    "mcpNotFound": "MCP integration guide document not found",
+    "mcpCopyConfig": "Copy Config",
+    "mcpCopied": "Copied"
   },
   "onboarding": {
     "title": "Welcome to AutoLink",

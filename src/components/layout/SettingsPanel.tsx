@@ -5,7 +5,7 @@ import {
   Cpu, Wifi, Download, Search, Settings as SettingsIcon,
   Upload, RotateCcw, Check,
   Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText, Cloud,
-  Plus, Trash2, Boxes,
+  Plus, Trash2, Boxes, Copy, Plug,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useUIStore, type ThemeMode, type AccentColor, type AIConfig } from '@/stores/ui.store'
@@ -15,6 +15,7 @@ import { useToastStore } from '@/stores/toast.store'
 import { LoginDialog } from '@/components/cloud/LoginDialog'
 import { Toggle } from '@/components/ui/Toggle'
 import { SettingsSection, SettingsRow, INPUT_CLASS } from '@/components/ui/SettingsRow'
+import { MCP_CONFIG_JSON, openMcpGuideTab } from '@/utils/mcpGuide'
 
 /* ================================================== */
 /*  SettingsExplorer — two-column layout              */
@@ -746,6 +747,7 @@ function AISettings() {
   // 5.1.1-511-e: Agent Connect（MCP Server 对外暴露）
   const [acStatus, setAcStatus] = useState<AgentConnectStatusInfo | null>(null)
   const [acBusy, setAcBusy] = useState(false)
+  const [acCopied, setAcCopied] = useState(false)
 
   const refreshAgentConnect = useCallback(async () => {
     const aiHub = window.electron?.aihub
@@ -1118,6 +1120,32 @@ function AISettings() {
                 />
               </div>
             </label>
+          </div>
+
+          {/* V5.1.x: 一键复制接入配置 + 打开 MCP 接入指南 */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(MCP_CONFIG_JSON)
+                  setAcCopied(true)
+                  setTimeout(() => setAcCopied(false), 2000)
+                } catch { /* 剪贴板不可用时静默 */ }
+              }}
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
+            >
+              {acCopied ? <Check size={11} className="text-success-500" /> : <Copy size={11} />}
+              {acCopied
+                ? t('common:explorer.settings.ai.agentConnectCopied', '已复制')
+                : t('common:explorer.settings.ai.agentConnectCopyConfig', '复制接入配置')}
+            </button>
+            <button
+              onClick={() => openMcpGuideTab()}
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover transition-colors"
+            >
+              <Plug size={11} />
+              {t('common:explorer.settings.ai.agentConnectOpenGuide', '打开 MCP 接入指南')}
+            </button>
           </div>
 
           {acStatus?.enabled && (
