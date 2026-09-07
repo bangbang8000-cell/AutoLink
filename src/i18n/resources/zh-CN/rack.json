@@ -78,5 +78,19 @@
   "snapshot.empty": "暂无设计快照",
   "snapshot.createdAt": "创建时间",
   "snapshot.saved": "设计快照已保存：{{name}}",
-  "snapshot.deleted": "已删除快照：{{name}}"
+  "snapshot.deleted": "已删除快照：{{name}}",
+  "needFinalizeFirst": "请先完成机房设计并定稿，再进入机柜设计",
+  "finalizeHint": "在「机房设计」子视图完成矩阵布局并点「定稿布局」后，即可进入机柜内设备上架",
+  "matrixSummary": "矩阵 {{rows}}排×{{cols}}列",
+  "backToRoomDesign": "返回机房设计",
+  "undoFinalize": "撤销定稿",
+  "cleared": "柜内设计已清空（设备回到待上架池），可重新规划",
+  "clearRacks": "清空柜内设计",
+  "archiveAndClear": "归档并清空",
+  "view2d": "2D 平面",
+  "view3d": "3D 视图",
+  "finalizeLayout": "定稿布局",
+  "gotoRackDesign": "前往机柜设计",
+  "roomDesignExported": "机房设计 Excel 已导出",
+  "rackDesignExported": "机柜设计 Excel 已导出"
 }

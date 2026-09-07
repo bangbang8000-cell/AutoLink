@@ -81,7 +81,7 @@ describe('AidcPlannerPanel', () => {
     render(<AidcPlannerPanel />)
     // 展开高级参数
     fireEvent.click(screen.getByRole('button', { name: /高级宏观参数/ }))
-    fireEvent.change(screen.getByLabelText('收敛比'), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText(/收敛比/), { target: { value: '2' } })
     fireEvent.change(screen.getByLabelText('AS 起始'), { target: { value: '65100' } })
     fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
 

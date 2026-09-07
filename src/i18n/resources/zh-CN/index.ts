@@ -8,4 +8,5 @@ import device from './device.json'
 import chat from './chat.json'
 import cloud from './cloud.json'
 import nav from './nav.json'
-export default { common, design, project, rack, topology, workbench, device, chat, cloud, nav }
+import aidc from './aidc.json'
+export default { common, design, project, rack, topology, workbench, device, chat, cloud, nav, aidc }

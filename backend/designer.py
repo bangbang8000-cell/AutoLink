@@ -558,7 +558,8 @@ class NetworkDesignerV2:
         self.naming_prefix = '机柜'
         # V2.9.1: 机柜配置扩展 (INI 旧格式使用默认值)
         self.cooling_method = 'air'
-        self.gpu_dedicated = False
+        # V5.0.11: 旧格式（INI）默认同样一柜一台 GPU
+        self.gpu_dedicated = True
         self.power_preset = ''
 
         # 端口前缀 (旧格式使用默认值)
@@ -587,8 +588,12 @@ class NetworkDesignerV2:
                 self.biz_dl = 45
                 self.oob_dl = 48
             else:
-                self.param_dl = int(topo.get('param_downlink_limit', self.param_switch_ports // 2))
-                self.storage_dl = int(topo.get('storage_downlink_limit', self.storage_switch_ports // 2))
+                # V5.0.11: custom 模式下行口数钳制到 switch_ports//2（至少留一半上联口），
+                # 防止 downlink_limit ≥ switch_ports 时生成满口下联、无上联口的错误 Leaf 结构
+                self.param_dl = min(int(topo.get('param_downlink_limit', self.param_switch_ports // 2)),
+                                    max(1, self.param_switch_ports // 2))
+                self.storage_dl = min(int(topo.get('storage_downlink_limit', self.storage_switch_ports // 2)),
+                                      max(1, self.storage_switch_ports // 2))
                 self.biz_dl = int(topo.get('biz_downlink_limit', 25))
                 self.oob_dl = int(topo.get('oob_downlink_limit', 25))
             return
@@ -602,13 +607,15 @@ class NetworkDesignerV2:
             self.biz_dl = 45
             self.oob_dl = 48
         else:
-            # custom模式: 读取配置
+            # custom模式: 读取配置（V5.0.11: 下行口数钳制到 switch_ports//2，保证上联口）
             ps = self.param_switch_ports
             ss = self.storage_switch_ports
-            self.param_dl = int(self.config.get('DEFAULT', 'param_downlink_limit',
-                                                 fallback=ps // 2))
-            self.storage_dl = int(self.config.get('DEFAULT', 'storage_downlink_limit',
-                                                   fallback=ss // 2))
+            self.param_dl = min(int(self.config.get('DEFAULT', 'param_downlink_limit',
+                                                     fallback=ps // 2)),
+                                max(1, ps // 2))
+            self.storage_dl = min(int(self.config.get('DEFAULT', 'storage_downlink_limit',
+                                                       fallback=ss // 2)),
+                                  max(1, ss // 2))
             self.biz_dl = int(self.config.get('DEFAULT', 'biz_downlink_limit', fallback=48))
             self.oob_dl = int(self.config.get('DEFAULT', 'oob_downlink_limit', fallback=48))
 

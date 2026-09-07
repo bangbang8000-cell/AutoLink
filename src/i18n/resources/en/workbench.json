@@ -246,7 +246,12 @@
   "pipeline": {
     "title": "One-Click Pipeline",
     "subtitle": "Plan(AIDC)→Design(room/rack)→Render→Export",
-    "steps": { "plan": "Plan", "design": "Design", "render": "Render", "export": "Export" },
+    "steps": {
+      "plan": "Plan",
+      "design": "Design",
+      "render": "Render",
+      "export": "Export"
+    },
     "running": "Pipeline running…",
     "failed": "Pipeline failed; you can retry the failed step",
     "interrupted": "Interrupted; remaining steps skipped",
@@ -263,5 +268,21 @@
     "noTemplates": "No templates",
     "templateOk": "OK",
     "templateFailed": "Failed"
-  }
+  },
+  "networkDesign": "Network Design",
+  "rackDesign": "Rack Design",
+  "renderReady": "Ready to render (network design done)",
+  "renderGateHint": "Finish network design",
+  "output.exportRoomDesignExcel": "Export Room Design Excel",
+  "output.exportRackDesignExcel": "Export Rack Design Excel",
+  "output.exportSnapshotFile": "Export Snapshot File",
+  "output.reviewPackage": "Export Review Package",
+  "output.integrityOk": "Artifact integrity check passed",
+  "output.integrityIssues": "Artifact integrity issues (missing/drift/hash mismatch)",
+  "result.connections": "Connection Table",
+  "result.rackTable": "Rack Table",
+  "result.topology": "Topology",
+  "result.deviceList": "Device List",
+  "openFile": "Open file",
+  "openFolder": "Open folder"
 }

@@ -216,7 +216,7 @@ export function DiagnosticsPanel() {
                   {t('common:diagnosticsPanel.crash.noError', '无错误日志')}
                 </div>
               ) : (
-                <div className="max-h-32 overflow-y-auto bg-gray-900 text-gray-200 font-mono text-2xs leading-relaxed">
+                <div className="max-h-32 overflow-y-auto bg-gray-50 dark:bg-app-surface text-gray-700 dark:text-gray-300 font-mono text-2xs leading-relaxed">
                   {report.errorsLog.entries.slice(-8).map((l, i) => (
                     <div key={i} className="px-2 py-0.5 truncate">
                       {l}

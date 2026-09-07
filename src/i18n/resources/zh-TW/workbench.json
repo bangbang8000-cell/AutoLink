@@ -246,7 +246,12 @@
   "pipeline": {
     "title": "一鍵管線",
     "subtitle": "規劃(AIDC)→設計(機房/機櫃)→渲染→匯出",
-    "steps": { "plan": "規劃", "design": "設計", "render": "渲染", "export": "匯出" },
+    "steps": {
+      "plan": "規劃",
+      "design": "設計",
+      "render": "渲染",
+      "export": "匯出"
+    },
     "running": "管線執行中…",
     "failed": "管線失敗，可重試失敗步驟",
     "interrupted": "已中斷，未執行步驟已跳過",
@@ -263,5 +268,21 @@
     "noTemplates": "暫無模板",
     "templateOk": "成功",
     "templateFailed": "失敗"
-  }
+  },
+  "networkDesign": "組網設計",
+  "rackDesign": "機櫃設計",
+  "renderReady": "可渲染（組網設計就緒）",
+  "renderGateHint": "完成組網設計",
+  "output.exportRoomDesignExcel": "匯出機房設計 Excel",
+  "output.exportRackDesignExcel": "匯出機櫃設計 Excel",
+  "output.exportSnapshotFile": "匯出快照檔案",
+  "output.reviewPackage": "匯出評審包",
+  "output.integrityOk": "產物完整性驗證通過",
+  "output.integrityIssues": "產物完整性異常（缺失/漂移/雜湊不符）",
+  "result.connections": "連接關係表",
+  "result.rackTable": "上機表",
+  "result.topology": "拓撲圖",
+  "result.deviceList": "設備清單",
+  "openFile": "開啟檔案",
+  "openFolder": "開啟資料夾"
 }

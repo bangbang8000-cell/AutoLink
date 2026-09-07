@@ -100,7 +100,7 @@ export function WorkspaceView() {
     switch (activeTab.type) {
       case 'workbench': return <WorkbenchTab />
       case 'design': return <DesignTab />
-      case 'aidcPlan': return <AidcPlannerTab />
+      case 'aidcPlan': return <AidcPlannerTab projectName={selectedProjectName} />
       case 'visualization': return <TopologyTab />
       case 'rack': return <RackTab cabinetId={activeTab?.state?.cabinetId as number | null | undefined} />
       case 'topology': return <TopologyTab />
@@ -137,7 +137,7 @@ export function WorkspaceView() {
       // V5.1.x: MCP 接入指南
       case 'mcpGuide': return <McpGuideTab />
     }
-  }, [activeTab])
+  }, [activeTab, selectedProjectName])
 
   return (
     <div className="h-full flex flex-col">

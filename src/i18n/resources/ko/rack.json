@@ -78,5 +78,19 @@
   "snapshot.empty": "아직 설계 스냅샷이 없습니다",
   "snapshot.createdAt": "생성 시간",
   "snapshot.saved": "설계 스냅샷 저장됨: {{name}}",
-  "snapshot.deleted": "스냅샷 삭제됨: {{name}}"
+  "snapshot.deleted": "스냅샷 삭제됨: {{name}}",
+  "needFinalizeFirst": "먼저 룸 설계를 완료하고 확정한 후 랙 설계로 진행하세요",
+  "finalizeHint": "「룸 설계」하위 보기에서 매트릭스 레이아웃을 완료하고「레이아웃 확정」을 누르면 랙 내 배치로 진행합니다",
+  "matrixSummary": "매트릭스 {{rows}}행×{{cols}}열",
+  "backToRoomDesign": "룸 설계로 돌아가기",
+  "undoFinalize": "확정 취소",
+  "cleared": "랙 내 설계를 지웠습니다(장치는 미배치 풀로 복귀). 다시 계획할 수 있습니다",
+  "clearRacks": "랙 내 설계 지우기",
+  "archiveAndClear": "보관 후 지우기",
+  "view2d": "2D 평면",
+  "view3d": "3D 보기",
+  "finalizeLayout": "레이아웃 확정",
+  "gotoRackDesign": "랙 설계로 이동",
+  "roomDesignExported": "룸 설계 Excel 내보냄",
+  "rackDesignExported": "랙 설계 Excel 내보냄"
 }

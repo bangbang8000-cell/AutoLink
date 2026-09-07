@@ -229,6 +229,16 @@
   "exportView.exportAllZip": "导出全部渲染结果（ZIP）",
   "exportView.exportFailed": "导出失败: {{err}}",
   "exportView.exportBatchHint": "在「渲染结果」视图可单独导出某个批次。",
+  "networkDesign": "组网设计",
+  "rackDesign": "机柜设计",
+  "renderReady": "可渲染（组网设计就绪）",
+  "renderGateHint": "完成组网设计",
+  "output.exportRoomDesignExcel": "导出机房设计 Excel",
+  "output.exportRackDesignExcel": "导出机柜设计 Excel",
+  "output.exportSnapshotFile": "导出快照文件",
+  "output.reviewPackage": "导出评审包",
+  "output.integrityOk": "产物完整性校验通过",
+  "output.integrityIssues": "产物完整性异常（缺失/漂移/哈希不符）",
   "empty.welcome": "欢迎使用 AutoLink",
   "empty.hint": "选择一个项目开始组网设计；或到「项目」面板新建/导入模板。",
   "empty.selectProject": "选择一个项目作为当前项目：",
@@ -246,7 +256,12 @@
   "pipeline": {
     "title": "一键管线",
     "subtitle": "规划(AIDC)→设计(机房/机柜)→渲染→导出",
-    "steps": { "plan": "规划", "design": "设计", "render": "渲染", "export": "导出" },
+    "steps": {
+      "plan": "规划",
+      "design": "设计",
+      "render": "渲染",
+      "export": "导出"
+    },
     "running": "管线执行中…",
     "failed": "管线失败，可重试失败步骤",
     "interrupted": "已中断，未执行步骤已跳过",
@@ -263,5 +278,11 @@
     "noTemplates": "暂无模板",
     "templateOk": "成功",
     "templateFailed": "失败"
-  }
+  },
+  "result.connections": "连接关系表",
+  "result.rackTable": "上机表",
+  "result.topology": "拓扑图",
+  "result.deviceList": "设备清单",
+  "openFile": "打开文件",
+  "openFolder": "打开文件夹"
 }

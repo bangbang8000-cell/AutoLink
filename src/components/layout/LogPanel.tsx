@@ -175,18 +175,18 @@ export function LogPanel() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-auto bg-gray-900 text-gray-200 font-mono text-2xs leading-relaxed"
+        className="flex-1 overflow-auto bg-gray-50 dark:bg-app-surface font-mono text-2xs leading-relaxed"
       >
         {logs.length === 0 ? (
-          <div className="p-3 text-gray-500 select-none">{t('common:logPanel.waiting')}</div>
+          <div className="p-3 text-gray-500 dark:text-gray-400 select-none">{t('common:logPanel.waiting')}</div>
         ) : (
           logs.map((entry, i) => (
-            <div key={i} className="px-3 py-0.5 flex items-start gap-2 hover:bg-gray-800">
-              <span className="text-gray-500 shrink-0 select-none">{entry.timestamp}</span>
+            <div key={i} className="px-3 py-0.5 flex items-start gap-2 hover:bg-gray-200/70 dark:hover:bg-app-hover">
+              <span className="text-gray-400 dark:text-gray-500 shrink-0 select-none">{entry.timestamp}</span>
               <span className={
-                entry.level === 'error' ? 'text-error-400' :
-                entry.level === 'warn' ? 'text-yellow-400' :
-                'text-gray-300'
+                entry.level === 'error' ? 'text-error-600 dark:text-error-400' :
+                entry.level === 'warn' ? 'text-warning-600 dark:text-warning-400' :
+                'text-gray-700 dark:text-gray-300'
               }>
                 {entry.message}
               </span>

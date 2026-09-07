@@ -246,7 +246,12 @@
   "pipeline": {
     "title": "원클릭 파이프라인",
     "subtitle": "계획(AIDC)→설계(룸/랙)→렌더링→내보내기",
-    "steps": { "plan": "계획", "design": "설계", "render": "렌더링", "export": "내보내기" },
+    "steps": {
+      "plan": "계획",
+      "design": "설계",
+      "render": "렌더링",
+      "export": "내보내기"
+    },
     "running": "파이프라인 실행 중…",
     "failed": "파이프라인 실패. 실패한 단계를 다시 시도할 수 있습니다",
     "interrupted": "중단됨. 실행하지 않은 단계는 건너뜀",
@@ -263,5 +268,21 @@
     "noTemplates": "템플릿 없음",
     "templateOk": "성공",
     "templateFailed": "실패"
-  }
+  },
+  "networkDesign": "네트워크 설계",
+  "rackDesign": "랙 설계",
+  "renderReady": "렌더링 가능(네트워크 설계 완료)",
+  "renderGateHint": "네트워크 설계 완료",
+  "output.exportRoomDesignExcel": "룸 설계 Excel 내보내기",
+  "output.exportRackDesignExcel": "랙 설계 Excel 내보내기",
+  "output.exportSnapshotFile": "스냅샷 파일 내보내기",
+  "output.reviewPackage": "검토 패키지 내보내기",
+  "output.integrityOk": "산출물 무결성 검사 통과",
+  "output.integrityIssues": "산출물 무결성 문제(누락/드리프트/해시 불일치)",
+  "result.connections": "연결 관계표",
+  "result.rackTable": "상가표",
+  "result.topology": "토폴로지도",
+  "result.deviceList": "장치 목록",
+  "openFile": "파일 열기",
+  "openFolder": "폴더 열기"
 }

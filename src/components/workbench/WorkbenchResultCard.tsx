@@ -10,15 +10,15 @@ const resultIcons: Record<string, React.ReactNode> = {
   deviceList: <List size={13} className="text-gray-400" />,
 }
 
-const resultLabels: Record<string, string> = {
-  connections: '连接关系表',
-  rackTable: '上机表',
-  topology: '拓扑图',
-  deviceList: '设备清单',
-}
-
 export function WorkbenchResultCard() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  // V5.0.11: 结果类型标签改为 i18n 动态解析（切语言即时跟随），不再使用模块级硬编码中文
+  const resultLabels: Record<string, string> = {
+    connections: t('workbench:result.connections', '连接关系表'),
+    rackTable: t('workbench:result.rackTable', '上机表'),
+    topology: t('workbench:result.topology', '拓扑图'),
+    deviceList: t('workbench:result.deviceList', '设备清单'),
+  }
   const results = useRenderStore((s) => s.results)
   const progress = useRenderStore((s) => s.progress)
 
@@ -58,21 +58,21 @@ export function WorkbenchResultCard() {
                 {resultLabels[result.type] || result.type}
               </span>
               <span className="text-2xs text-gray-400 dark:text-gray-500">
-                {new Date(result.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                {new Date(result.timestamp).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             <div className="flex items-center gap-0.5">
               <button
                 onClick={() => handleOpenFile(result)}
                 className="p-1 hover:bg-gray-200 dark:hover:bg-app-hover rounded text-gray-400"
-                title="打开文件"
+                title={t('workbench:openFile', '打开文件')}
               >
                 <FileSpreadsheet size={11} />
               </button>
               <button
                 onClick={() => handleOpenFolder(result)}
                 className="p-1 hover:bg-gray-200 dark:hover:bg-app-hover rounded text-gray-400"
-                title="打开文件夹"
+                title={t('workbench:openFolder', '打开文件夹')}
               >
                 <FolderOpen size={11} />
               </button>

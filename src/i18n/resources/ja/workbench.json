@@ -246,7 +246,12 @@
   "pipeline": {
     "title": "ワンクリックパイプライン",
     "subtitle": "計画(AIDC)→設計(ラック/キャビネット)→レンダリング→エクスポート",
-    "steps": { "plan": "計画", "design": "設計", "render": "レンダリング", "export": "エクスポート" },
+    "steps": {
+      "plan": "計画",
+      "design": "設計",
+      "render": "レンダリング",
+      "export": "エクスポート"
+    },
     "running": "パイプライン実行中…",
     "failed": "パイプライン失敗。失敗したステップを再試行できます",
     "interrupted": "中断しました。未実行のステップはスキップしました",
@@ -263,5 +268,21 @@
     "noTemplates": "テンプレートがありません",
     "templateOk": "成功",
     "templateFailed": "失敗"
-  }
+  },
+  "networkDesign": "ネットワーク設計",
+  "rackDesign": "ラック設計",
+  "renderReady": "レンダリング可能（ネットワーク設計完了）",
+  "renderGateHint": "ネットワーク設計を完了",
+  "output.exportRoomDesignExcel": "机房设计 Excel をエクスポート",
+  "output.exportRackDesignExcel": "ラック設計 Excel をエクスポート",
+  "output.exportSnapshotFile": "スナップショットファイルをエクスポート",
+  "output.reviewPackage": "レビューパッケージをエクスポート",
+  "output.integrityOk": "成果物の整合性チェックに合格",
+  "output.integrityIssues": "成果物の整合性に問題（欠落/ドリフト/ハッシュ不一致）",
+  "result.connections": "接続関係表",
+  "result.rackTable": "上架表",
+  "result.topology": "トポロジ図",
+  "result.deviceList": "デバイス一覧",
+  "openFile": "ファイルを開く",
+  "openFolder": "フォルダを開く"
 }

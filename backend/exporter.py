@@ -1360,18 +1360,10 @@ def export_pdf_report(designer, filename):
                                   fontName=font_name, fontSize=10, leading=16)
     cell_style = ParagraphStyle('ChCell', parent=styles['Normal'],
                                 fontName=font_name, fontSize=9, leading=12)
-    toc_style = ParagraphStyle('ChTOC', parent=styles['Normal'],
-                               fontName=font_name, fontSize=11, leading=20)
 
     story = []
 
-    # V2.7.4-T8: 目录
-    story.append(Paragraph('目录', h2_style))
-    toc_items = ['1. 项目概览', '2. 网络架构', '3. 设备清单', '4. 收敛比',
-                 '5. 功耗与散热', '6. 光模块汇总', '7. 成本估算', '8. 机柜规划', '9. 校验结果']
-    for item in toc_items:
-        story.append(Paragraph(item, toc_style))
-    story.append(PageBreak())
+    # V5.0.11: 移除静态目录页（无页码/无跳转的假目录，章节直接紧跟封面，避免误导）
 
     # 封面
     story.append(Paragraph('AutoLink 智算中心设计报告', title_style))

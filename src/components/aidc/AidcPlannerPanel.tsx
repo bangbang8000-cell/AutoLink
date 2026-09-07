@@ -7,8 +7,10 @@
  *   - 表格视图：设备清单 / 接线 / 终端 / 宏观参数
  *   - 拓扑预览：轻量 SVG（AidcTopologyPreview）
  *   - 桥接标识 chips（source/projectType/bridgeVersion，契约 v1.1）
+ * V5.0.11: 全部文案接入 i18n（aidc 命名空间），切换语言后工作台 AIDC 规划子视图同步切换。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionCard } from '@/components/ui/SectionCard'
@@ -52,6 +54,7 @@ function useGroups(plan: PlanSummary | null) {
 }
 
 function DeviceNames({ devices }: { devices: PlanDevice[] }) {
+  const { t } = useTranslation('aidc')
   const [open, setOpen] = useState(false)
   const first = devices.slice(0, 3)
   const rest = devices.slice(3)
@@ -63,7 +66,7 @@ function DeviceNames({ devices }: { devices: PlanDevice[] }) {
           <button type="button" onClick={() => setOpen(!open)}
             className="text-xs text-primary-500 flex items-center gap-1 mt-1">
             {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {open ? '收起' : `展开 ${rest.length} 台`}
+            {open ? t('collapse') : t('expandN', { count: rest.length })}
           </button>
           {open && rest.map((d) => <DeviceRow key={d.name} d={d} />)}
         </>
@@ -73,8 +76,9 @@ function DeviceNames({ devices }: { devices: PlanDevice[] }) {
 }
 
 function DeviceRow({ d }: { d: PlanDevice }) {
+  const { t } = useTranslation('aidc')
   const tag = [
-    d.rack != null ? `机柜 R${String(d.rack).padStart(2, '0')}` : null,
+    d.rack != null ? t('rackR', { no: String(d.rack).padStart(2, '0') }) : null,
     d.asn != null ? `ASN ${d.asn}` : null,
     d.mlag_pair != null ? `MLAG-${d.mlag_pair}` : null,
   ].filter(Boolean).join(' · ')
@@ -87,15 +91,16 @@ function DeviceRow({ d }: { d: PlanDevice }) {
 }
 
 function ConnectionsView({ conns }: { conns: PlanConnection[] }) {
-  if (!conns.length) return <p className="text-sm text-gray-400">无接线</p>
+  const { t } = useTranslation('aidc')
+  if (!conns.length) return <p className="text-sm text-gray-400">{t('noConnections')}</p>
   return (
     <div className="max-h-72 overflow-auto border rounded">
       <table className="w-full text-xs">
         <thead className="sticky top-0 bg-gray-50 dark:bg-app-surface">
           <tr className="text-left text-gray-500">
-            <th className="px-2 py-1">本端</th><th className="px-2 py-1">本端端口</th>
-            <th className="px-2 py-1">对端</th><th className="px-2 py-1">速率</th>
-            <th className="px-2 py-1">描述</th>
+            <th className="px-2 py-1">{t('from')}</th><th className="px-2 py-1">{t('fromPort')}</th>
+            <th className="px-2 py-1">{t('to')}</th><th className="px-2 py-1">{t('rate')}</th>
+            <th className="px-2 py-1">{t('desc')}</th>
           </tr>
         </thead>
         <tbody>
@@ -115,13 +120,14 @@ function ConnectionsView({ conns }: { conns: PlanConnection[] }) {
 }
 
 function TerminalsView({ terms }: { terms: PlanTerminal[] }) {
+  const { t } = useTranslation('aidc')
   const groups = useMemo(() => {
     const g: Record<string, PlanTerminal[]> = {}
     for (const t of terms) (g[t.src] ??= []).push(t)
     return Object.entries(g)
   }, [terms])
   const [openDev, setOpenDev] = useState<string | null>(null)
-  if (!terms.length) return <p className="text-sm text-gray-400">无终端</p>
+  if (!terms.length) return <p className="text-sm text-gray-400">{t('noTerminals')}</p>
   return (
     <div className="max-h-72 overflow-auto border rounded p-1 space-y-1">
       {groups.map(([dev, ts]) => (
@@ -130,15 +136,15 @@ function TerminalsView({ terms }: { terms: PlanTerminal[] }) {
             className="flex items-center gap-1 text-gray-600 dark:text-gray-300 w-full text-left">
             {openDev === dev ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             <span className="font-mono">{dev}</span>
-            <span className="text-gray-400">· {ts.length} 端口 · VLAN {[...new Set(ts.map((t) => t.vlan).filter((v) => v != null))].join('/')}</span>
+            <span className="text-gray-400">· {t('nPorts', { count: ts.length })} · {t('vlan')} {[...new Set(ts.map((t) => t.vlan).filter((v) => v != null))].join('/')}</span>
           </button>
           {openDev === dev && (
             <div className="pl-4 mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-              {ts.map((t, i) => (
+              {ts.map((term, i) => (
                 <div key={i} className="flex gap-2 font-mono text-gray-500">
-                  <span>{t.src_port}</span>
-                  <span>VLAN {t.vlan ?? '-'}</span>
-                  <span>{t.desc ?? ''}</span>
+                  <span>{term.src_port}</span>
+                  <span>{t('vlan')} {term.vlan ?? '-'}</span>
+                  <span>{term.desc ?? ''}</span>
                 </div>
               ))}
             </div>
@@ -151,20 +157,21 @@ function TerminalsView({ terms }: { terms: PlanTerminal[] }) {
 
 
 function MacroView({ plan }: { plan: PlanSummary }) {
+  const { t } = useTranslation('aidc')
   const m = plan.macro
   const rows: Array<[string, string]> = [
-    ['机房', m.site],
-    ['GPU 规模', String(mnum(plan, 'gpuCount', 'gpu_count', 0))],
-    ['PFC 队列', String(mnum(plan, 'pfcQueue', 'pfc_queue', 3))],
-    ['CNP 队列', String(mnum(plan, 'cnpQueue', 'cnp_queue', 6))],
-    ['BGP 多路径', String(mnum(plan, 'bgpMaxPaths', 'bgp_max_paths', 16))],
-    ['收敛比', String(mnum(plan, 'convergence', 'convergence', 1))],
-    ['多轨数', String(mnum(plan, 'rails', 'rails', 8))],
-    ['AS 段', JSON.stringify(m.asRange ?? m.as_range)],
-    ['VLAN 范围', JSON.stringify(m.vlanRanges ?? m.vlan_ranges)],
-    ['命名格式', m.naming?.format ?? ''],
-    ['OSPF', JSON.stringify(m.ospf)],
-    ['地址段', JSON.stringify(m.ipSegments)],
+    [t('macroSite'), m.site],
+    [t('macroGpuScale'), String(mnum(plan, 'gpuCount', 'gpu_count', 0))],
+    [t('macroPfc'), String(mnum(plan, 'pfcQueue', 'pfc_queue', 3))],
+    [t('macroCnp'), String(mnum(plan, 'cnpQueue', 'cnp_queue', 6))],
+    [t('macroBgp'), String(mnum(plan, 'bgpMaxPaths', 'bgp_max_paths', 16))],
+    [t('macroConvergence'), String(mnum(plan, 'convergence', 'convergence', 1))],
+    [t('macroRails'), String(mnum(plan, 'rails', 'rails', 8))],
+    [t('macroAsRange'), JSON.stringify(m.asRange ?? m.as_range)],
+    [t('macroVlanRanges'), JSON.stringify(m.vlanRanges ?? m.vlan_ranges)],
+    [t('macroNaming'), m.naming?.format ?? ''],
+    [t('macroOspf'), JSON.stringify(m.ospf)],
+    [t('macroIpSegments'), JSON.stringify(m.ipSegments)],
   ]
   const proto = plan.protocols
   return (
@@ -178,7 +185,9 @@ function MacroView({ plan }: { plan: PlanSummary }) {
         ))}
       </div>
       <div className="flex gap-4 text-gray-500">
-        <span>拓扑 {plan.topology ? `${plan.topology.layers} 层 · ${plan.topology.spines} Spine / ${plan.topology.leaves} Leaf` : '-'}</span>
+        <span>{plan.topology
+          ? t('topologyInfo', { layers: plan.topology.layers, spines: plan.topology.spines, leaves: plan.topology.leaves })
+          : '-'}</span>
         <span>BGP ECMP {proto?.bgp?.ecmp ?? '-'}</span>
         <span>OSPF {proto?.ospf ? `${proto.ospf.process}/${proto.ospf.area}` : '-'}</span>
       </div>
@@ -201,7 +210,8 @@ interface AidcProjectItem {
   gpuCount?: number
 }
 
-export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: string }) {
+export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: string | null }) {
+  const { t } = useTranslation('aidc')
   // 契约 v1.2（P1）：项目身份——P1 起由 AL 项目持久化（会话内 mint 作为未保存时兜底）
   const [projectId, setProjectId] = useState(genUuid)
   const [projectName, setProjectName] = useState('')
@@ -270,7 +280,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       if (res?.error) setError(res.error)
       else setPlan(res)
     } catch (e) {
-      setError(`规划失败: ${String(e)}`)
+      setError(t('planFailed', { error: String(e) }))
     } finally {
       setLoading(false)
     }
@@ -279,8 +289,8 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
   // 打磨轮（v1.3）：AIDC 规划 → 应用到设计（写设计配置结构字段 + 设计:generate），
   // 使拓扑/机柜/常规渲染都以设计为事实源（工作台统一）
   const applyToDesign = async () => {
-    if (!boundProjectName) { setError('请先在工作台选择/创建 AIDC 项目'); return }
-    if (!plan) { setError('请先生成规划'); return }
+    if (!boundProjectName) { setError(t('needProjectFirst')); return }
+    if (!plan) { setError(t('needPlanFirst')); return }
     setLoading(true); setError(''); setExportMsg('')
     try {
       const ds = useDesignStore.getState()
@@ -298,20 +308,20 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
           )
         } catch { /* 读取失败：保持默认落位参数 */ }
         const res = await ensureMatrixRacks(boundProjectName, topo.nodes, rackOpts)
-        setExportMsg(res.usedMatrix
-          ? '已应用到设计并生成拓扑（已按机柜矩阵落位，可到「机柜」子视图微调）'
-          : '已应用到设计并生成拓扑（未定义机柜矩阵，机柜按拓扑生成）')
+        setExportMsg(res.usedMatrix ? t('appliedWithMatrix') : t('appliedNoMatrix'))
       } else {
-        setExportMsg('已应用到设计并生成拓扑（拓扑为空）')
+        setExportMsg(t('appliedEmpty'))
       }
     } catch (e) {
-      setError(`应用到设计失败: ${(e as Error).message}`)
+      setError(t('applyFailed', { error: (e as Error).message }))
     } finally {
       setLoading(false)
     }
   }
 
   // P1（A-4）：项目打开/保存/另存为
+  // V5.0.11: 普通 AL 项目（无 AIDC plan.json）load 失败时，回退读取 project_config.json
+  // 的 GPU 服务器规模回填基础参数，保证 GPU 规模随项目选择动态更新（不再停在默认 64）。
   const openProject = async (name: string) => {
     if (!name) return
     setProjectLoading(true); setError(''); setExportMsg('')
@@ -321,7 +331,24 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         plan?: PlanSummary; macro?: PlanMacro
         history?: Array<{ version: number; planHash: string; generatedAt?: string }>
       }
-      if (res?.error) { setError(res.error); return }
+      if (res?.error) {
+        // 非 AIDC 项目回退：读 project_config.json 的 GPU 规模（num_gpu_servers）
+        setCurrentProject(name)
+        try {
+          const raw = await window.electron.project.getFile(name, 'project_config.json')
+          if (raw) {
+            const cfg = JSON.parse(raw) as { topology?: { num_gpu_servers?: number; site?: string } }
+            const n = cfg.topology?.num_gpu_servers
+            if (typeof n === 'number' && n > 0) setGpuCount(String(n))
+            if (cfg.topology?.site) setSite(cfg.topology.site)
+            setExportMsg(t('boundProject', { name }))
+          } else {
+            setExportMsg(t('boundProjectSimple', { name }))
+          }
+        } catch { setExportMsg(t('boundProjectSimple', { name })) }
+        setError('')
+        return
+      }
       setCurrentProject(res.name ?? name)
       setProjectId(res.projectId || projectId)
       if (res.projectName) setProjectName(res.projectName)
@@ -345,9 +372,9 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       setAdvMacro(extractAdv(inp))
       setPlan(res.plan ?? null)
       setHistory(res.history ?? [])
-      setExportMsg(`已打开项目 ${name}（v${res.plan?.meta?.planVersion ?? ''}）`)
+      setExportMsg(t('openedProject', { name, version: res.plan?.meta?.planVersion ?? '' }))
     } catch (e) {
-      setError(`打开失败: ${String(e)}`)
+      setError(t('openFailed', { error: String(e) }))
     } finally {
       setProjectLoading(false)
     }
@@ -365,7 +392,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
 
   const saveProject = async () => {
     const name = projectName.trim()
-    if (!name) { setError('请填写项目名再保存'); return }
+    if (!name) { setError(t('saveNameRequired')); return }
     setProjectLoading(true); setError(''); setExportMsg('')
     try {
       const macro = buildParams()
@@ -381,11 +408,11 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       if (res.plan) setPlan(res.plan)
       setHistory([])
       setExportMsg(res.changed === false
-        ? `已保存（无变更，仍 v${res.planVersion}）`
-        : `已保存 v${res.planVersion}${res.changed ? '（新版本）' : ''}`)
+        ? t('savedNoChange', { version: res.planVersion })
+        : t('savedVersion', { version: res.planVersion, suffix: res.changed ? t('savedNewVersion') : '' }))
       await refreshProjects()
     } catch (e) {
-      setError(`保存失败: ${String(e)}`)
+      setError(t('saveFailed', { error: String(e) }))
     } finally {
       setProjectLoading(false)
     }
@@ -393,7 +420,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
 
   const saveAsProject = async () => {
     const name = projectName.trim()
-    if (!name) { setError('请填写新项目名'); return }
+    if (!name) { setError(t('saveAsNameRequired')); return }
     setProjectLoading(true); setError(''); setExportMsg('')
     try {
       const res = (await window.electron.aidc.project.create(name, buildParams())) as {
@@ -405,10 +432,10 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       setProjectId(res.projectId)
       if (res.plan) setPlan(res.plan)
       setHistory([])
-      setExportMsg(`已另存为新项目 ${res.name}（v${res.planVersion}）`)
+      setExportMsg(t('savedAs', { name: res.name, version: res.planVersion }))
       await refreshProjects()
     } catch (e) {
-      setError(`另存失败: ${String(e)}`)
+      setError(t('saveAsFailed', { error: String(e) }))
     } finally {
       setProjectLoading(false)
     }
@@ -425,15 +452,15 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
 
   // 打磨轮（v1.3）：机柜/拓扑移至工作台设计子视图（TopologyTab/RackTab 以设计为源），AIDC 规划不再独立
   const tabItems = [
-    { value: 'dev', label: '设备清单' },
-    { value: 'conn', label: '接线' },
-    { value: 'term', label: '终端' },
-    { value: 'macro', label: '宏观参数' },
+    { value: 'dev', label: t('deviceList') },
+    { value: 'conn', label: t('connections') },
+    { value: 'term', label: t('terminals') },
+    { value: 'macro', label: t('macro') },
   ]
 
   return (
-    <SectionCard title="AIDC 规划">
-      <p className="text-xs text-gray-500 mb-3">宏观参数 → plan:table（契约 v1.2）→ MC 导入渲染 · 项目化：保存/打开/版本/评审</p>
+    <SectionCard title={t('title')}>
+      <p className="text-xs text-gray-500 mb-3">{t('subtitle')}</p>
 
       {/* P1（A-4）：项目保存/打开 */}
       <div className="flex flex-wrap items-center gap-2 mb-3 p-2 border rounded bg-gray-50/50 dark:bg-app-surface">
@@ -442,9 +469,9 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
           value={openName}
           onChange={(e) => setOpenName(e.target.value)}
           className="text-xs rounded border bg-white dark:bg-app px-2 py-1 max-w-[220px]"
-          aria-label="选择 AIDC 项目"
+          aria-label={t('selectProjectAria')}
         >
-          <option value="">选择 AIDC 项目…</option>
+          <option value="">{t('selectProjectPlaceholder')}</option>
           {projects.map((p) => (
             <option key={p.name} value={p.name}>
               {p.projectName || p.name}（v{p.planVersion}）
@@ -452,40 +479,40 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
           ))}
         </select>
         <Button size="sm" variant="secondary" onClick={() => openProject(openName)}
-          disabled={projectLoading || !openName}>打开</Button>
+          disabled={projectLoading || !openName}>{t('open')}</Button>
         <Button size="sm" variant="secondary" onClick={saveProject}
-          disabled={projectLoading}>保存</Button>
+          disabled={projectLoading}>{t('save')}</Button>
         {currentProject && (
           <Button size="sm" variant="ghost" onClick={saveAsProject}
-            disabled={projectLoading}>另存为</Button>
+            disabled={projectLoading}>{t('saveAs')}</Button>
         )}
         {currentProject && (
-          <span className="text-xs text-gray-500 font-mono">当前：{currentProject}</span>
+          <span className="text-xs text-gray-500 font-mono">{t('current', { name: currentProject })}</span>
         )}
       </div>
 
       {/* 基础参数 */}
       <div className="grid grid-cols-2 gap-4 mb-3">
         <div>
-          <label className="text-sm">项目名（可选）</label>
+          <label className="text-sm">{t('projectName')}</label>
           <Input value={projectName} onChange={(e) => setProjectName(e.target.value)}
-            placeholder={`${site}-${gpuCount}台`} aria-label="项目名" />
+            placeholder={`${site}-${gpuCount}`} aria-label={t('projectName')} />
         </div>
         <div>
-          <label className="text-sm">机房</label>
-          <Input value={site} onChange={(e) => setSite(e.target.value)} aria-label="机房" />
+          <label className="text-sm">{t('site')}</label>
+          <Input value={site} onChange={(e) => setSite(e.target.value)} aria-label={t('site')} />
         </div>
         <div>
-          <label className="text-sm">GPU 规模</label>
-          <Input value={gpuCount} onChange={(e) => setGpuCount(e.target.value)} type="number" min={32} step={32} aria-label="GPU 规模" />
+          <label className="text-sm">{t('gpuScale')}</label>
+          <Input value={gpuCount} onChange={(e) => setGpuCount(e.target.value)} type="number" min={32} step={32} aria-label={t('gpuScale')} />
         </div>
         <div>
-          <label className="text-sm">PFC 队列（0-7）</label>
-          <Input value={pfcQueue} onChange={(e) => setPfcQueue(e.target.value)} type="number" min={0} max={7} aria-label="PFC 队列" />
+          <label className="text-sm">{t('pfcQueue')}</label>
+          <Input value={pfcQueue} onChange={(e) => setPfcQueue(e.target.value)} type="number" min={0} max={7} aria-label={t('pfcQueue')} />
         </div>
         <div>
-          <label className="text-sm">CNP 队列（0-7）</label>
-          <Input value={cnpQueue} onChange={(e) => setCnpQueue(e.target.value)} type="number" min={0} max={7} aria-label="CNP 队列" />
+          <label className="text-sm">{t('cnpQueue')}</label>
+          <Input value={cnpQueue} onChange={(e) => setCnpQueue(e.target.value)} type="number" min={0} max={7} aria-label={t('cnpQueue')} />
         </div>
       </div>
 
@@ -493,51 +520,51 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
         className="text-xs text-primary-500 flex items-center gap-1 mb-3">
         {showAdvanced ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        高级宏观参数（收敛比 / 多轨 / AS 段 / VLAN 范围）
+        {t('advanced')}
       </button>
       {showAdvanced && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3 p-3 border rounded bg-gray-50/50 dark:bg-app-surface">
           <div>
-            <label className="text-sm">收敛比 (0,4]</label>
-            <Input value={convergence} onChange={(e) => setConvergence(e.target.value)} type="number" min={0.5} step={0.5} aria-label="收敛比" />
+            <label className="text-sm">{t('convergence')}</label>
+            <Input value={convergence} onChange={(e) => setConvergence(e.target.value)} type="number" min={0.5} step={0.5} aria-label={t('convergence')} />
           </div>
           <div>
-            <label className="text-sm">多轨数 1-16</label>
-            <Input value={rails} onChange={(e) => setRails(e.target.value)} type="number" min={1} max={16} aria-label="多轨数" />
+            <label className="text-sm">{t('rails')}</label>
+            <Input value={rails} onChange={(e) => setRails(e.target.value)} type="number" min={1} max={16} aria-label={t('rails')} />
           </div>
           <div>
-            <label className="text-sm">AS 起始</label>
-            <Input value={asStart} onChange={(e) => setAsStart(e.target.value)} type="number" min={65001} max={65500} aria-label="AS 起始" />
+            <label className="text-sm">{t('asStart')}</label>
+            <Input value={asStart} onChange={(e) => setAsStart(e.target.value)} type="number" min={65001} max={65500} aria-label={t('asStart')} />
           </div>
           <div>
-            <label className="text-sm">AS 结束</label>
-            <Input value={asEnd} onChange={(e) => setAsEnd(e.target.value)} type="number" min={65001} max={65500} aria-label="AS 结束" />
+            <label className="text-sm">{t('asEnd')}</label>
+            <Input value={asEnd} onChange={(e) => setAsEnd(e.target.value)} type="number" min={65001} max={65500} aria-label={t('asEnd')} />
           </div>
           <div>
-            <label className="text-sm">VLAN 计算 起,止</label>
-            <Input value={vlanCompute} onChange={(e) => setVlanCompute(e.target.value)} placeholder="100,199" aria-label="VLAN 计算" />
+            <label className="text-sm">{t('vlanCompute')}</label>
+            <Input value={vlanCompute} onChange={(e) => setVlanCompute(e.target.value)} placeholder="100,199" aria-label={t('vlanCompute')} />
           </div>
           <div>
-            <label className="text-sm">VLAN 存储 起,止</label>
-            <Input value={vlanStorage} onChange={(e) => setVlanStorage(e.target.value)} placeholder="200,299" aria-label="VLAN 存储" />
+            <label className="text-sm">{t('vlanStorage')}</label>
+            <Input value={vlanStorage} onChange={(e) => setVlanStorage(e.target.value)} placeholder="200,299" aria-label={t('vlanStorage')} />
           </div>
           <div>
-            <label className="text-sm">VLAN 业务 起,止</label>
-            <Input value={vlanBiz} onChange={(e) => setVlanBiz(e.target.value)} placeholder="300,399" aria-label="VLAN 业务" />
+            <label className="text-sm">{t('vlanBiz')}</label>
+            <Input value={vlanBiz} onChange={(e) => setVlanBiz(e.target.value)} placeholder="300,399" aria-label={t('vlanBiz')} />
           </div>
           <div>
-            <label className="text-sm">VLAN 带外 起,止</label>
-            <Input value={vlanOob} onChange={(e) => setVlanOob(e.target.value)} placeholder="400,499" aria-label="VLAN 带外" />
+            <label className="text-sm">{t('vlanOob')}</label>
+            <Input value={vlanOob} onChange={(e) => setVlanOob(e.target.value)} placeholder="400,499" aria-label={t('vlanOob')} />
           </div>
         </div>
       )}
 
       <Button onClick={run} disabled={loading}>
-        {loading ? '生成中…' : '生成规划'}
+        {loading ? t('generating') : t('generate')}
       </Button>
       <Button variant="secondary" onClick={applyToDesign} disabled={loading || !plan}
         className="ml-2">
-        <Wrench size={12} className="inline mr-1" /> 应用到设计
+        <Wrench size={12} className="inline mr-1" /> {t('applyToDesign')}
       </Button>
 
       {exportMsg && <p className="text-xs text-gray-500 mt-2">{exportMsg}</p>}
@@ -558,13 +585,13 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
             </span>
             {(plan.meta.source || plan.meta.projectType || plan.meta.bridgeVersion) && (
               <span className="flex items-center gap-1 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded px-1.5 py-0.5">
-                <Tag size={12} /> 桥接 {plan.meta.source ?? '-'}/{plan.meta.projectType ?? '-'}/v{plan.meta.bridgeVersion ?? '-'}
+                <Tag size={12} /> {t('bridge')} {plan.meta.source ?? '-'}/{plan.meta.projectType ?? '-'}/v{plan.meta.bridgeVersion ?? '-'}
               </span>
             )}
             <span className="flex items-center gap-3 text-xs text-gray-500">
-              <span className="flex items-center gap-1"><Network size={14} /> 接线 {plan.connections.length}</span>
-              <span className="flex items-center gap-1"><Zap size={14} /> 终端 {plan.terminals.length}</span>
-              <span className="flex items-center gap-1"><Server size={14} /> {totalDevices} 台</span>
+              <span className="flex items-center gap-1"><Network size={14} /> {t('nConnections', { count: plan.connections.length })}</span>
+              <span className="flex items-center gap-1"><Zap size={14} /> {t('nTerminals', { count: plan.terminals.length })}</span>
+              <span className="flex items-center gap-1"><Server size={14} /> {t('nDevices', { count: totalDevices })}</span>
             </span>
           </div>
 
@@ -572,7 +599,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
           {history.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 mt-2 text-2xs">
               <History size={12} className="text-gray-400" />
-              <span className="text-gray-500">版本历史：</span>
+              <span className="text-gray-500">{t('versionHistory')}</span>
               {history.map((h) => (
                 <span key={h.version}
                   className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-app-surface text-gray-500 font-mono"
@@ -594,7 +621,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
                           <Server size={14} />
                           <span>{ROLE_LABEL[role] ?? role}</span>
                           <span className="text-gray-400 font-mono">{devs[0]?.model}</span>
-                          <span className="text-gray-500">{devs.length} 台</span>
+                          <span className="text-gray-500">{t('nDevices', { count: devs.length })}</span>
                         </div>
                         <DeviceNames devices={devs} />
                       </div>

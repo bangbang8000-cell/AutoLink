@@ -78,5 +78,19 @@
   "snapshot.empty": "設計スナップショットはまだありません",
   "snapshot.createdAt": "作成日時",
   "snapshot.saved": "設計スナップショットを保存しました: {{name}}",
-  "snapshot.deleted": "スナップショットを削除しました: {{name}}"
+  "snapshot.deleted": "スナップショットを削除しました: {{name}}",
+  "needFinalizeFirst": "先に机房設計を完了して確定してから、ラック設計へ進んでください",
+  "finalizeHint": "「機房設計」サブビューでマトリクスレイアウトを完了し「レイアウト確定」を押すと、ラック内配置に入れます",
+  "matrixSummary": "マトリクス {{rows}}行×{{cols}}列",
+  "backToRoomDesign": "機房設計に戻る",
+  "undoFinalize": "確定を元に戻す",
+  "cleared": "ラック内設計をクリアしました（機器は未配置プールへ戻ります）。再計画できます",
+  "clearRacks": "ラック内設計をクリア",
+  "archiveAndClear": "アーカイブしてクリア",
+  "view2d": "2D 平面",
+  "view3d": "3D 表示",
+  "finalizeLayout": "レイアウト確定",
+  "gotoRackDesign": "ラック設計へ",
+  "roomDesignExported": "機房設計 Excel をエクスポートしました",
+  "rackDesignExported": "ラック設計 Excel をエクスポートしました"
 }
