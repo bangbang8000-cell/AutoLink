@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 from autolink_hub.agent.schemas import get_tool_permission
@@ -433,6 +434,113 @@ async def _task_cancel(arguments: dict) -> dict:
     st = task_mgr.query(task_id)
     return {"success": True, "task_id": task_id, "task": st,
             "message": "任务已取消" if ok else "任务不可取消（已完成或不存在）"}
+
+
+# ============================================================
+# 5.1.7-517-a/b：源码态工具（CLI 透传 + 文件系统，编译态被过滤）
+# ============================================================
+_AL_CLI_ALLOWED_ROOTS = (
+    "design", "validate", "export", "estimate", "report", "room", "config",
+    "migrate", "project", "template", "capacity", "atop", "optimize",
+    "repair", "file", "device", "parse", "generate",
+)
+
+
+def _al_sandbox_roots() -> list[str]:
+    """源码态可读范围：用户数据目录 + 仓库根（读源码）。"""
+    from autolink_hub.config import settings
+
+    roots = []
+    if settings.user_data_dir:
+        roots.append(str(Path(settings.user_data_dir).resolve()))
+    roots.append(str(Path(__file__).resolve().parents[3]))
+    return roots
+
+
+def _resolve_al_sandbox(path: str):
+    """解析路径并校验在沙箱内；越权返回 None。"""
+    try:
+        p = Path(path).resolve()
+    except OSError:
+        return None
+    for root in _al_sandbox_roots():
+        try:
+            p.relative_to(Path(root).resolve())
+            return p
+        except ValueError:
+            continue
+    return None
+
+
+async def _read_source_handler(arguments: dict) -> dict:
+    """【源码态】读取源码/项目文件（沙箱内，超范围拒绝）。"""
+    path = arguments.get("path") or arguments.get("sourcePath") or ""
+    if not path:
+        return {"success": False, "error": "缺少必需参数: path"}
+    resolved = _resolve_al_sandbox(path)
+    if resolved is None:
+        return {"success": False, "error": f"路径越权（沙箱外）: {path}"}
+    if not resolved.is_file():
+        return {"success": False, "error": f"文件不存在: {path}"}
+    try:
+        content = resolved.read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        return {"success": False, "error": f"读取失败: {e}"}
+    return {"success": True, "path": str(resolved), "content": content[:20000]}
+
+
+async def _list_dir_handler(arguments: dict) -> dict:
+    """【源码态】列出沙箱内目录条目。"""
+    path = arguments.get("path") or arguments.get("directory") or ""
+    if not path:
+        return {"success": False, "error": "缺少必需参数: path"}
+    resolved = _resolve_al_sandbox(path)
+    if resolved is None:
+        return {"success": False, "error": f"路径越权（沙箱外）: {path}"}
+    if not resolved.is_dir():
+        return {"success": False, "error": f"目录不存在: {path}"}
+    try:
+        entries = [
+            {"name": child.name, "type": "dir" if child.is_dir() else "file"}
+            for child in sorted(resolved.iterdir())
+        ]
+    except OSError as e:
+        return {"success": False, "error": f"读取目录失败: {e}"}
+    return {"success": True, "path": str(resolved), "entries": entries[:200]}
+
+
+async def _read_file_handler(arguments: dict) -> dict:
+    """读取文件：源码态可用 path 沙箱读，或 projectName+filePath 项目内读。"""
+    if arguments.get("path"):
+        return await _read_source_handler(arguments)
+    project = arguments.get("projectName") or arguments.get("project") or ""
+    file_path = arguments.get("filePath") or ""
+    if not project or not file_path:
+        return {"success": False, "error": "缺少必需参数: projectName/filePath 或 path"}
+    from manage import project_read_file
+    return project_read_file(project, file_path)
+
+
+async def _run_cli_handler(arguments: dict) -> dict:
+    """【源码态】白名单 CLI action 透传（直调 cli.execute，UI/CLI/AI 同一执行路径）。"""
+    action = (arguments.get("action") or "").strip()
+    params = arguments.get("params") or {}
+    if not action:
+        return {"success": False, "error": "缺少必需参数: action"}
+    root = action.split(":")[0]
+    if root not in _AL_CLI_ALLOWED_ROOTS:
+        return {"success": False, "error": f"CLI action 不在白名单: {action}"}
+    if not isinstance(params, dict):
+        return {"success": False, "error": "参数 params 应为对象"}
+    from cli import CLIError, execute as cli_execute
+
+    try:
+        result = cli_execute(action, params, argv=[f"ai:{action}"])
+        return {"success": True, "action": action, "result": result}
+    except CLIError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:  # noqa: BLE001
+        return {"success": False, "error": f"action {action} 执行失败: {e}"}
 
 
 def init_tools() -> None:
@@ -969,6 +1077,43 @@ def init_tools() -> None:
             "metadata": _str_param("metadata", "可选元数据 JSON 对象 {title, category, project, tags, description}"),
         }, required=["name", "content"]),
         _knowledge_add_handler,
+        permission="notify",
+    )
+
+    # ---- 5.1.7-517-a/b：源码态工具（编译态被过滤）----
+    register_tool(
+        "run_cli", "【源码态】白名单 CLI action 透传：design/validate/export/report/room/config/project/template/capacity/atop/optimize/repair/file/device 等域",
+        _schema({
+            "action": _str_param("action", "action，如 project:list / design / template:view", True),
+            "params": _str_param("params", "action 参数 JSON 对象"),
+        }, required=["action"]),
+        _run_cli_handler,
+        permission="notify",
+    )
+    register_tool(
+        "read_file", "读取文件：源码态可用 path 沙箱读（用户数据目录/仓库根），或 projectName+filePath 项目内读",
+        _schema({
+            "projectName": _str_param("projectName", "项目名（项目内读取时必填）"),
+            "filePath": _str_param("filePath", "项目内相对路径（项目内读取时必填）"),
+            "path": _str_param("path", "沙箱内绝对路径（源码态通用读取，可选）"),
+        }, []),
+        _read_file_handler,
+        permission="notify",
+    )
+    register_tool(
+        "list_dir", "【源码态】列出沙箱内目录条目（用户数据目录/仓库根内，超范围拒绝）",
+        _schema({
+            "path": _str_param("path", "沙箱内目录路径", True),
+        }, required=["path"]),
+        _list_dir_handler,
+        permission="notify",
+    )
+    register_tool(
+        "read_source", "【源码态】读取源码/项目文件（沙箱内，超范围拒绝）",
+        _schema({
+            "path": _str_param("path", "沙箱内文件路径", True),
+        }, required=["path"]),
+        _read_source_handler,
         permission="notify",
     )
 

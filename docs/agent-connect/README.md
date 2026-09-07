@@ -19,6 +19,14 @@ python -m autolink_hub.mcp_server.run --mode compiled --user-data <用户数据�
 2. **复制配置**：按下方你的 Agent 客户端粘贴对应配置
 3. **自检**：调用 `ac_selfcheck` / 查看「设置 → Agent Connect → 自检」，绿灯即接入成功
 
+## 开发态（源码运行，517-e）
+
+以 `npm run dev:all` 源码运行时，追加 `--mode source` 即可解锁无限制通道：
+
+- `run_cli`：白名单 CLI action 透传（design/validate/export/report/room/config/project/template/capacity/atop/optimize/repair/file/device 等域）
+- `read_file(path)` / `list_dir(path)` / `read_source(path)`：沙箱内文件系统（用户数据目录 + 仓库根），越权拒绝
+- 该模式下写入工具权限放宽为 NOTIFY 为主，但业务数据校验（L2/L3）不豁免
+
 ## Claude Desktop
 
 `claude_desktop_config.json`（macOS: `~/Library/Application Support/Claude/`；Windows: `%APPDATA%\Claude\`）
