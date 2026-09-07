@@ -12,11 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
 def _init(tmp_path, monkeypatch):
     from autolink_hub.agent.tools import init_tools
     from autolink_hub.config import settings
+    from autolink_hub.knowledge.engine import get_knowledge_engine
     from autolink_hub.mcp_server.manager import reset_manager
     from autolink_hub.mcp_server.tasks import reset_tasks
 
     monkeypatch.setenv("AUTOLINK_USER_DATA", str(tmp_path))
     settings.user_data_dir = str(tmp_path)
+    get_knowledge_engine().init_dir(str(tmp_path))  # 知识引擎写入 tmp，避免污染仓库
     reset_manager()
     reset_tasks()
     init_tools()
