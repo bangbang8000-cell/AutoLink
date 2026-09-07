@@ -17,7 +17,7 @@ python -m autolink_hub.mcp_server.run --mode compiled --user-data <用户数据�
 
 1. **开启**：应用「设置 → AI → Agent Connect」打开开关（可选用 `--mode source` 体验完整能力）
 2. **复制配置**：按下方你的 Agent 客户端粘贴对应配置
-3. **自检**：调用 `ac_selfcheck` / 查看「设置 → Agent Connect → 自检」，绿灯即接入成功
+3. **自检**：设置页「Agent Connect → 自检」绿灯即接入成功（或 `GET /api/chat/agent-connect/selfcheck`）
 
 ## 开发态（源码运行，517-e）
 
@@ -88,10 +88,10 @@ cwd = "<REPO_ROOT>"
 - **反馈自优化**：`agent_feedback` 沉淀交互反馈；平台 `POST /agent-connect/feedback` 汇聚分析
 - **升级**：5.1 系列源码运行 `npm run dev:all`；正式版发布后无缝切换
 
-## 验证工具（Agent 会话内可调用）
+## 验证工具（Agent 会话内可调用，均为 MCP 工具名）
 
-- `ac_generate_design`（返回 task_id）→ `task_query` 轮询 —— 一键网络设计
-- `ac_list_projects` / `ac_project_info` —— 查询项目
-- `ac_template_list` / `ac_preview_template` —— 查询模板
+- `generate_design`（长耗时自动异步，返回 task_id）→ `task_query` 轮询 —— 一键网络设计
+- `list_projects` / `project_info` —— 查询项目
+- `template_list` / `preview_template` —— 查询模板
 - `task_submit` / `task_wait` / `task_cancel` —— 异步任务
 - `audit_query` —— 查询本人操作审计（脱敏摘要）

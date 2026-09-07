@@ -1,6 +1,6 @@
 # AIDC AutoLink 用户指南
 
-> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v5.0.10（5.1 系列 Agent Connect 预告）
+> AIDC AutoLink —— AI 智算中心网络规划与可视化工具 | v5.0.10（含 5.1 系列 Agent Connect）
 
 欢迎使用 AIDC AutoLink！本指南带您全面了解产品核心功能与使用流程：从 Scale-Up 双栈拓扑、Scale-Out 网络设计、设备选型、机柜规划，到校验、报告与交付，全流程覆盖。5.1 系列起，AutoLink 还能以标准 MCP Server（Agent Connect）形式接入外部 AI Agent（Claude / Codex / Trae Work / VS Code 等），让 Agent 直接查询、创建、更新、渲染项目 / 模板 / 设备库 / 机房规划 / 输出。
 
@@ -738,7 +738,22 @@ v3.6.0 与 MagicCommander 联合完成 M1–M6 打磨，重点如下：
 
 ## 22. Agent Connect：AI Agent 互联（5.1 系列）
 
-5.1 系列将 AutoLink 封装为标准 **MCP Server（Agent Connect）**，让外部 AI Agent / 编程智能体通过标准协议与产品能力交互。
+5.1 系列（5.1.1–5.1.10）将 AutoLink 封装为标准 **MCP Server（Agent Connect）**，让外部 AI Agent / 编程智能体通过标准协议与产品能力交互：查询、创建、更新、渲染项目 / 模板 / 设备库 / 机房规划 / 输出；开发场景可追加 CLI 与源码直读。
+
+### 5.1 系列能力地图
+
+| 版本 | 能力 |
+|------|------|
+| 5.1.1 | Agent Connect 框架：开关 / 双模式 / 状态机 / 审计 / stdio |
+| 5.1.2 | 编译态只读能力域 + 入参契约（L1）+ 黄金用例 |
+| 5.1.3 | 写入语义层：结果校验（L2）+ 幂等事务（L3） |
+| 5.1.4 | 异步任务：task_id + 进度轮询 / 等待 / 取消，设计生成/导出自动异步 |
+| 5.1.5 | 语义完善：幂等重放 + 审计增强（脱敏/耗时/模式）+ 契约测试 |
+| 5.1.6 | 接入样板（Claude/Codex/Trae/VS Code）+ 自检 + 结构化错误码 |
+| 5.1.7 | 源码态通道：白名单 CLI 透传 + 沙箱文件系统 |
+| 5.1.8 | 远程模式试点：平台网关（TLS/强鉴权/按域授权/远程写默认关闭） |
+| 5.1.9 | 反馈自优化 + 修复闭环 + 无代码写入约束 |
+| 5.1.10 | 双场景黄金回归 + 文档收官 |
 
 ### 双场景模型
 
@@ -747,11 +762,38 @@ v3.6.0 与 MagicCommander 联合完成 M1–M6 打磨，重点如下：
 | **编译态**（默认） | 产品使用 | 标准 MCP 查询 / 创建 / 更新 / 渲染项目、模板、设备库、机房规划、输出；**不修改软件本体** |
 | **源码态** | 开发者（`npm run dev:all`） | 追加 CLI 透传与源码直读，无限制交互 |
 
+### 编译态工具集
+
+| 能力域 | 常用工具 |
+|--------|----------|
+| 设计 | `generate_design`（一键设计，自动异步）`validate_design` `estimate` `report` |
+| 导出 | `export_outputs`（交付物：connections/deviceList/cablingGuide/bom/reportData/pdfReport/compliance） |
+| 机房 | `room_create` `room_validate` `room_optimize`（智能落位）`room_set_type` `room_place` |
+| 项目 | `list_projects` `project_info` `create_project` `update_project` `import_project` `export_project` `create_from_template` `project_read_file` |
+| 模板 | `template_list` `template_view` `template_create` `template_update` `template_recommend` `template_export` `template_import` `preview_template` |
+| 设备 | `device_query` `device_defaults` |
+| 规划 | `capacity_recommend`（容量/TCO）`atop_recommend`（ATOP 拓扑）`generate_project`（需求生成） |
+| 优化 / 修复 | `optimize_suggest` `optimize_apply` `repair_plan` `repair_apply` |
+| 知识 / 技能 | `list_knowledge` `search_knowledge` `add_knowledge`；`skill_list` `skill_view` `skill_update` `skill_optimize` |
+| 任务 / 审计 / 反馈 | `task_submit` `task_query` `task_list` `task_wait` `task_cancel`；`audit_query`；`agent_feedback` |
+
+> 删除类 / CLI / 文件系统工具在编译态不暴露（源码态可用）。
+
+### 源码态通道（5.1.7）
+
+以 `npm run dev:all` 源码运行、`--mode source` 启动即解锁无限制通道：
+
+- `run_cli`：白名单 CLI action 透传（design / validate / export / report / room / config / project / template / capacity / atop / optimize / repair / file / device 等域）
+- `read_file(path)` / `list_dir(path)` / `read_source(path)`：沙箱内文件系统（用户数据目录 + 仓库根），越权拒绝
+- 写入权限放宽为 NOTIFY 为主，但业务数据校验（L2/L3）不豁免
+
 ### 接入外部 Agent（3 步）
 
 1. **开启**：设置 → AI → Agent Connect，打开开关（可切换 `compiled` / `source` 模式）
-2. **复制配置**：将下列配置粘贴到你的 Agent 客户端（`<用户数据目录>` 替换为你的 user data）
+2. **复制配置**：按下方你的 Agent 客户端粘贴对应配置（`<用户数据目录>` 替换为你的 user data，`<仓库根>` 为 AIDC AutoLink-Client 绝对路径）
 3. **自检**：设置页点击「自检」逐项绿灯即接入成功
+
+#### Claude Desktop（`claude_desktop_config.json`）
 
 ```json
 {
@@ -759,26 +801,47 @@ v3.6.0 与 MagicCommander 联合完成 M1–M6 打磨，重点如下：
     "autolink": {
       "command": "python",
       "args": ["-m", "autolink_hub.mcp_server.run", "--mode", "compiled", "--user-data", "<用户数据目录>"],
-      "cwd": "<AIDC AutoLink-Client 仓库根目录>"
+      "cwd": "<仓库根>"
     }
   }
 }
 ```
 
-- **Claude Desktop**：`claude_desktop_config.json`
-- **Codex CLI**：`.codex/config.toml`
-- **Trae Work / VS Code**：`.mcp.json`
-- 详细样板见 `docs/agent-connect/README.md`
+#### Codex CLI（`.codex/config.toml`）
+
+```toml
+[mcp_servers.autolink]
+command = "python"
+args = ["-m", "autolink_hub.mcp_server.run", "--mode", "compiled", "--user-data", "<用户数据目录>"]
+cwd = "<仓库根>"
+```
+
+#### Trae Work / VS Code（`.mcp.json`）
+
+```json
+{
+  "servers": {
+    "autolink": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "autolink_hub.mcp_server.run", "--mode", "compiled", "--user-data", "<用户数据目录>"],
+      "cwd": "<仓库根>"
+    }
+  }
+}
+```
+
+> 详细样板、命令参数与排错见 `docs/agent-connect/README.md`。
 
 ### 确定性语义层
 
-- **入参契约**：每个工具定义 JSON Schema，入参非法返回结构化错误
-- **语义校验**：写入结果结构校验（L2），不合法不落盘
-- **幂等事务**：相同请求（projectId + planHash）重复提交返回"已存在"与原结果，不重复写入（L3）
+- **入参契约（L1）**：每个工具定义 JSON Schema，入参非法返回结构化错误（`AC_ERR_INVALID_ARGS` 等错误码 + 可读提示）
+- **语义校验（L2）**：写入结果结构校验，不合法不落盘
+- **幂等事务（L3）**：相同请求（projectId + planHash）重复提交返回"已存在"与原结果，不重复写入
 
 ### 异步任务
 
-设计生成 / 导出等长耗时工具自动异步化：调用立即返回 `task_id`，用 `task_query` 轮询进度（percent/message），支持 `task_wait` / `task_cancel`。Agent 长任务不再超时。
+设计生成 / 导出等长耗时工具自动异步化：调用立即返回 `task_id`，用 `task_query` 轮询进度（percent / message），支持 `task_wait`（同步等待）与 `task_cancel`。Agent 长任务不再超时。
 
 ### 操作审计
 
@@ -791,6 +854,15 @@ Agent 对项目/模板/设备/机房的每次改动均记录（Agent / 工具 / 
 ### Agent 反馈自优化（5.1.9）
 
 `agent_feedback` 沉淀 Agent 交互反馈为知识库条目并产出优化建议；平台 `POST /api/v1/agent-connect/feedback` 汇聚分析，形成"校验 → 建议 → 修复 → 复核"闭环。
+
+### 自检与排错
+
+| 现象 | 检查项 | 修复 |
+|------|--------|------|
+| 连接失败「MCP SDK 未安装」 | `pip show mcp` | `pip install "mcp>=1.2.0"` 后重启应用 |
+| 工具列表为空 | 设置开关 | 开启 Agent Connect 后再连接 |
+| 权限提示频繁 | `--mode` | 编译态写入需确认属预期；开发场景切 `--mode source` |
+| 审计缺失 | 审计开关 | 设置中开启审计；`--audit <path>` 指定路径 |
 
 ---
 
