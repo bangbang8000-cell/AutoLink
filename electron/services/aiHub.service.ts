@@ -604,7 +604,11 @@ export class AIHubService extends EventEmitter {
       headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
       body: JSON.stringify(config),
     })
-    const body = await response.json()
+    const body = (await response.json()) as {
+      status: string
+      error?: string
+      data?: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean }
+    }
     if (!response.ok || body.status === 'error') {
       throw new Error(body.error || `Agent Connect 配置失败: ${response.status}`)
     }
