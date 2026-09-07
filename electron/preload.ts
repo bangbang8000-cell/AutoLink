@@ -232,6 +232,10 @@ const electronAPI = {
     }) => ipcRenderer.invoke('ai:call', 'ai:mcp-add', params),
     mcpRemove: (name: string) => ipcRenderer.invoke('ai:call', 'ai:mcp-remove', { name }),
     mcpReload: () => ipcRenderer.invoke('ai:call', 'ai:mcp-reload', {}),
+    // 5.1.1-511-e: Agent Connect（MCP Server 对外暴露）
+    agentConnectStatus: () => ipcRenderer.invoke('ai:call', 'ai:agent-connect-status', {}),
+    agentConnectConfig: (config: { enable?: boolean; agent_mode?: string }) =>
+      ipcRenderer.invoke('ai:call', 'ai:agent-connect-config', config),
     // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
     knowledge: {
       list: (params?: { category?: string; project?: string }) =>

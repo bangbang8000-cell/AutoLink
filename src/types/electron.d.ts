@@ -489,6 +489,16 @@ interface Window {
       }) => Promise<{ ok: boolean; server: string; error?: string; sync?: unknown }>
       mcpRemove: (name: string) => Promise<{ ok: boolean; server: string; error?: string }>
       mcpReload: () => Promise<{ ok: boolean; results: Record<string, unknown> }>
+      // 5.1.1-511-e: Agent Connect（MCP Server 对外暴露）
+      agentConnectStatus: () => Promise<{
+        status: string
+        data: AgentConnectStatusInfo
+      }>
+      agentConnectConfig: (config: { enable?: boolean; agent_mode?: string }) => Promise<{
+        status: string
+        data?: AgentConnectStatusInfo
+        error?: string
+      }>
       // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
       knowledge: {
         list: (params?: { category?: string; project?: string }) => Promise<{
@@ -773,6 +783,15 @@ interface Window {
       arch: string
     }
   }
+}
+
+/** 5.1.1-511-e: Agent Connect 状态信息 */
+interface AgentConnectStatusInfo {
+  enabled: boolean
+  agent_mode: string
+  status: string
+  tool_count: number
+  audit_enabled: boolean
 }
 
 /* Extend React CSSProperties for Electron window drag region */

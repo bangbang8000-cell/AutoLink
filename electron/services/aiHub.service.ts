@@ -576,6 +576,41 @@ export class AIHubService extends EventEmitter {
     return (await response.json()) as { ok: boolean; results: Record<string, unknown> }
   }
 
+  /** 5.1.1-511-e: Agent Connect 状态（MCP Server 对外暴露） */
+  async agentConnectStatus(): Promise<{
+    status: string
+    data: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean }
+  }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/agent-connect/status`, { headers: this.authHeaders() })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`Agent Connect 状态获取失败: ${response.status} ${err}`)
+    }
+    return (await response.json()) as {
+      status: string
+      data: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean }
+    }
+  }
+
+  /** 5.1.1-511-e: Agent Connect 配置（开关/模式） */
+  async agentConnectConfig(config: {
+    enable?: boolean
+    agent_mode?: string
+  }): Promise<{ status: string; data?: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean }; error?: string }> {
+    await this.ensureRunning()
+    const response = await fetch(`${this.baseUrl}/api/chat/agent-connect/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.authHeaders() },
+      body: JSON.stringify(config),
+    })
+    const body = await response.json()
+    if (!response.ok || body.status === 'error') {
+      throw new Error(body.error || `Agent Connect 配置失败: ${response.status}`)
+    }
+    return body
+  }
+
   // ============================================================
   // 5.0.5-505-b: 知识库（list / get / add / update / delete / search）
   // ============================================================

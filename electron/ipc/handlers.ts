@@ -1355,6 +1355,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       }
       case 'ai:mcp-reload':
         return aiHubService.mcpReload()
+      // 5.1.1-511-e: Agent Connect（MCP Server 对外暴露）
+      case 'ai:agent-connect-status':
+        return aiHubService.agentConnectStatus()
+      case 'ai:agent-connect-config': {
+        const ac = p as { enable?: boolean; agent_mode?: string }
+        return aiHubService.agentConnectConfig({ enable: ac.enable, agent_mode: ac.agent_mode })
+      }
       // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
       case 'ai:knowledge-list': {
         const kl = p as { category?: string; project?: string }

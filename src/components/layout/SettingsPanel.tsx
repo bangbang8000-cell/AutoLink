@@ -743,6 +743,38 @@ function AISettings() {
     }
   }
 
+  // 5.1.1-511-e: Agent Connect（MCP Server 对外暴露）
+  const [acStatus, setAcStatus] = useState<AgentConnectStatusInfo | null>(null)
+  const [acBusy, setAcBusy] = useState(false)
+
+  const refreshAgentConnect = useCallback(async () => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub?.agentConnectStatus) return
+    try {
+      const res = await aiHub.agentConnectStatus()
+      if (res?.data) setAcStatus(res.data)
+    } catch { /* 后端不可用静默 */ }
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载时异步刷新 Agent Connect 状态
+    void refreshAgentConnect()
+  }, [refreshAgentConnect])
+
+  const setAgentConnect = async (config: { enable?: boolean; agent_mode?: string }) => {
+    const aiHub = window.electron?.aihub
+    if (!aiHub?.agentConnectConfig) return
+    setAcBusy(true)
+    try {
+      const res = await aiHub.agentConnectConfig(config)
+      if (res?.data) setAcStatus(res.data)
+    } catch (e) {
+      toast('error', e instanceof Error ? e.message : 'agent connect config failed')
+    } finally {
+      setAcBusy(false)
+    }
+  }
+
   const syncToHub = async (provider: string) => {
     const c = aiConfig.providers[provider]
     const aiHub = window.electron?.aihub
@@ -1041,6 +1073,89 @@ function AISettings() {
               <Plus size={10} />{t('common:explorer.settings.ai.mcpAdd')}
             </button>
           </div>
+        </div>
+      </SettingsRow>
+
+      {/* 5.1.1-511-e: Agent Connect（MCP Server 对外暴露） */}
+      <SettingsRow label={t('common:explorer.settings.ai.agentConnectTitle')}>
+        <div className="flex flex-col gap-2 flex-1">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs text-gray-500 dark:text-gray-400">
+              {t('common:explorer.settings.ai.agentConnectDesc')}
+            </span>
+            <button
+              onClick={() => void refreshAgentConnect()}
+              className="inline-flex items-center gap-0.5 px-2 py-0.5 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <RefreshCw size={10} />
+              {t('common:explorer.settings.ai.agentConnectRefresh')}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-2xs text-gray-500 dark:text-gray-400">
+              {t('common:explorer.settings.ai.agentConnectOn')}
+            </span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(acStatus?.enabled)}
+                onChange={(e) => setAgentConnect({ enable: e.target.checked, agent_mode: acStatus?.agent_mode })}
+                disabled={acBusy}
+                className="sr-only peer"
+              />
+              <div
+                className={clsx(
+                  'w-8 h-4 rounded-full peer transition-colors',
+                  acStatus?.enabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600',
+                )}
+              >
+                <div
+                  className={clsx(
+                    'w-3 h-3 rounded-full bg-white transition-transform mt-0.5',
+                    acStatus?.enabled ? 'translate-x-4 ml-0.5' : 'translate-x-0.5',
+                  )}
+                />
+              </div>
+            </label>
+          </div>
+
+          {acStatus?.enabled && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-2xs text-gray-500 dark:text-gray-400">
+                  {t('common:explorer.settings.ai.agentConnectMode')}
+                </span>
+                <select
+                  value={acStatus.agent_mode}
+                  onChange={(e) => setAgentConnect({ enable: true, agent_mode: e.target.value })}
+                  disabled={acBusy}
+                  className={INPUT_CLASS + ' w-36'}
+                >
+                  <option value="compiled">{t('common:explorer.settings.ai.agentConnectCompiled')}</option>
+                  <option value="source">{t('common:explorer.settings.ai.agentConnectSource')}</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xs text-gray-500 dark:text-gray-400">
+                  {t('common:explorer.settings.ai.agentConnectTools')}
+                </span>
+                <span className="text-2xs font-medium text-gray-700 dark:text-gray-200">
+                  {acStatus.tool_count ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xs text-gray-500 dark:text-gray-400">
+                  {t('common:explorer.settings.ai.agentConnectAudit')}
+                </span>
+                <span className="text-2xs font-medium text-gray-700 dark:text-gray-200">
+                  {acStatus.audit_enabled
+                    ? t('common:explorer.settings.ai.agentConnectAuditOn')
+                    : t('common:explorer.settings.ai.agentConnectAuditOff')}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </SettingsRow>
 

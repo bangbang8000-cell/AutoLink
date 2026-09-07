@@ -50,6 +50,9 @@ export const AI_ACTION_WHITELIST = [
   'ai:knowledge-update',
   'ai:knowledge-delete',
   'ai:knowledge-search',
+  // 5.1.1-511-e: Agent Connect（MCP Server 对外暴露）
+  'ai:agent-connect-status',
+  'ai:agent-connect-config',
 ] as const
 export type AIAction = (typeof AI_ACTION_WHITELIST)[number]
 
