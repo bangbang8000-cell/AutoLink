@@ -187,6 +187,8 @@ def apply_secrets() -> None:
     settings.provider_configs = {
         k: v for k, v in secrets.items()
         if k != "default_provider" and k != "ai_engine"
+        and k != "enable_agent_connect" and k != "agent_mode"
+        and k != "enable_remote_mode"
     }
     if "default_provider" in secrets:
         settings.default_provider = secrets["default_provider"]
@@ -272,6 +274,26 @@ def set_agent_mode(value) -> str:
     secrets["agent_mode"] = clamped
     save_secrets(secrets)
     return clamped
+
+
+def get_enable_remote_mode() -> bool:
+    """5.1.8-518-a：远程模式开关（默认关）。实时读 secrets 文件。"""
+    try:
+        secrets = load_secrets()
+        return bool(secrets.get("enable_remote_mode", False))
+    except Exception:
+        return False
+
+
+def set_enable_remote_mode(value: bool) -> bool:
+    """5.1.8-518-a：设置远程模式开关：更新内存 → 持久化到 secrets 文件（diff 幂等）"""
+    enabled = bool(value)
+    secrets = load_secrets()
+    if secrets.get("enable_remote_mode") == enabled:
+        return enabled
+    secrets["enable_remote_mode"] = enabled
+    save_secrets(secrets)
+    return enabled
 
 
 def get_provider_persisted_models(provider: str) -> list:
