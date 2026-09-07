@@ -74,6 +74,7 @@ class AgentConnectManager:
         self._mcp: Any = None
         self._audit_path: Optional[Path] = None
         self._tool_count = 0
+        self._write_records: dict[str, Any] = {}  # 5.1.3-513-c：L3 幂等记录
 
     # -------------------- 状态机 --------------------
 
@@ -173,14 +174,39 @@ class AgentConnectManager:
         return count
 
     async def _execute_wrapped(self, name: str, arguments: dict) -> dict:
-        """执行 Agent 工具并记录审计；失败返回结构化错误。"""
+        """执行 Agent 工具并记录审计；写入工具过 L2/L3 语义层，失败返回结构化错误。"""
         from autolink_hub.agent.tools import execute_tool
+        from autolink_hub.mcp_server.write_gate import (
+            check_idempotent,
+            idempotency_key,
+            is_write_tool,
+            validate_result,
+        )
 
-        result = await execute_tool(name, arguments or {})
-        self.record_audit("external-agent", name, arguments or {}, "ok" if result.get("success") else "error")
-        if result.get("success"):
-            return {"success": True, "result": result.get("result")}
-        return {"success": False, "error": result.get("error", "工具执行失败")}
+        args = arguments or {}
+        # L3 幂等：写入工具且同 key 已提交 → 返回"已存在"
+        if is_write_tool(name):
+            hit = check_idempotent(self._write_records, name, args)
+            if hit is not None:
+                self.record_audit("external-agent", name, args, "idempotent")
+                return hit
+
+        result = await execute_tool(name, args)
+        ok = result.get("success")
+        payload = result
+        if ok and is_write_tool(name):
+            # L2 语义校验：写入结果结构完整、无 error 标记
+            payload = validate_result(name, result)
+            ok = payload.get("success")
+            if ok:
+                # 记录幂等标记（后续同 key 提交返回"已存在"）
+                key = idempotency_key(args)
+                if key:
+                    self._write_records[f"{name}:{key}"] = True
+        self.record_audit("external-agent", name, args, "ok" if ok else "error")
+        if ok:
+            return {"success": True, "result": payload.get("result")}
+        return {"success": False, "error": payload.get("error", "工具执行失败")}
 
     # -------------------- 审计 --------------------
 
