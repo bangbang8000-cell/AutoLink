@@ -72,12 +72,23 @@ def check_idempotent(records: dict[str, Any], tool: str, arguments: dict[str, An
 
 
 def validate_result(tool: str, result: dict[str, Any]) -> dict[str, Any]:
-    """L2 语义校验：写入结果结构完整、无 error 标记。"""
+    """L2 语义校验：写入结果结构完整、无 error 标记。
+
+    失败时给出可读中文错误与结构化错误码（5.1.6-516-d）。
+    """
     if not isinstance(result, dict):
-        return {"success": False, "error": f"工具 {tool} 返回结构非法（非对象）"}
+        return {"success": False, "error": f"工具 {tool} 返回结构非法（非对象）", "error_code": "AC_ERR_L2_STRUCTURE"}
     if result.get("success") is False:
-        return {"success": False, "error": result.get("error", f"工具 {tool} 执行失败")}
+        return {
+            "success": False,
+            "error": result.get("error", f"工具 {tool} 执行失败"),
+            "error_code": result.get("error_code") or "AC_ERR_L2_EXEC",
+        }
     status = result.get("result", {})
     if isinstance(status, dict) and status.get("status") == "error":
-        return {"success": False, "error": status.get("error") or status.get("message") or f"工具 {tool} 业务失败"}
+        return {
+            "success": False,
+            "error": status.get("error") or status.get("message") or f"工具 {tool} 业务失败",
+            "error_code": "AC_ERR_L2_BUSINESS",
+        }
     return {"success": True, "result": result.get("result")}

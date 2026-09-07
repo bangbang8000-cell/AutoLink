@@ -328,6 +328,17 @@ async def agent_connect_config(req: AgentConnectConfigRequest):
     }}
 
 
+@router.get("/agent-connect/selfcheck")
+async def agent_connect_selfcheck():
+    """5.1.6-516-b/X-516：Agent Connect 连接自检（一键接入排错入口）。
+
+    返回逐项检查结果（MCP SDK/开关/工具注册/审计）与修复提示。
+    """
+    from autolink_hub.mcp_server.manager import get_agent_connect_manager
+    mgr = get_agent_connect_manager()
+    return {"status": "ok", "data": mgr.selfcheck()}
+
+
 class SaveSkillRequest(BaseModel):
     name: str
     content: str

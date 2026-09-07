@@ -264,7 +264,9 @@ class AgentConnectManager:
         self.record_audit("external-agent", name, args, "ok" if ok else "error", duration_ms=duration_ms)
         if ok:
             return {"success": True, "result": payload.get("result")}
-        return {"success": False, "error": payload.get("error", "工具执行失败")}
+        # 5.1.6-516-d：结构化错误码 + 可读提示
+        err = payload.get("error", "工具执行失败")
+        return {"success": False, "error": err, "error_code": payload.get("error_code") or "AC_ERR_EXEC_FAILED"}
 
     # -------------------- 审计 --------------------
 
@@ -335,6 +337,40 @@ class AgentConnectManager:
             and (not result or result == e.get("result"))
         ]
         return filtered[-limit:]
+
+    # -------------------- 自检（5.1.6-516-b/X-516） --------------------
+
+    def selfcheck(self) -> dict[str, Any]:
+        """Agent Connect 连接自检：面向"一键接入（复制配置→自检→排错）"的排错入口。"""
+        checks: list[dict[str, Any]] = []
+        try:
+            _import_fastmcp()
+            checks.append({"name": "mcp_sdk", "ok": True, "message": "MCP SDK 已安装（mcp>=1.2.0）"})
+        except ImportError as e:
+            checks.append({
+                "name": "mcp_sdk", "ok": False, "message": str(e),
+                "hint": "运行 pip install 'mcp>=1.2.0' 后重启应用",
+            })
+        enabled = self._status == "enabled"
+        checks.append({
+            "name": "enabled", "ok": enabled,
+            "message": "Agent Connect 已开启" if enabled else f"Agent Connect 未开启（当前 {self._status}）",
+            "hint": "" if enabled else "在设置中开启 Agent Connect 后再接入",
+        })
+        checks.append({
+            "name": "tools", "ok": self._tool_count > 0,
+            "message": f"已注册 {self._tool_count} 个 MCP 工具",
+            "hint": "" if self._tool_count > 0 else "工具注册异常，请重启应用",
+        })
+        checks.append({
+            "name": "audit", "ok": self._audit_path is not None,
+            "message": f"审计{'已启用（' + str(self._audit_path) + '）' if self._audit_path else '未启用（默认关闭，可配置开启）'}",
+        })
+        return {
+            "ok": all(c["ok"] for c in checks),
+            "mode": self._agent_mode,
+            "checks": checks,
+        }
 
     # -------------------- 状态报告 --------------------
 

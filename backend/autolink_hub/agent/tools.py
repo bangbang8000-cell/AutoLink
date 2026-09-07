@@ -106,15 +106,18 @@ async def execute_tool(name: str, arguments: dict) -> dict:
 
     参数校验失败按 handler 业务失败同构返回（外层 success=True + 内层 result.success=False），
     与既有工具缺参返回约定一致（run_stream 会把内层错误回填 LLM 自愈）。
+    5.1.6-516-d：失败响应携带结构化 error_code（机器可读）与可读中文 error（人类可排）。
     """
     tool = _tools.get(name)
     if tool is None:
-        return {"success": False, "error": f"未知工具: {name}"}
+        return {"success": False, "error": f"未知工具: {name}", "error_code": "AC_ERR_UNKNOWN_TOOL"}
     # 5.0.3-503-c: 参数校验（必填缺失/类型错误 → 可读失败，不进入 handler）
     arg_errors = _validate_tool_args(tool, arguments or {})
     if arg_errors:
         return {"success": True, "result": {
-            "success": False, "error": f"工具参数校验失败: {'；'.join(arg_errors)}",
+            "success": False,
+            "error": f"工具参数校验失败: {'；'.join(arg_errors)}",
+            "error_code": "AC_ERR_INVALID_ARGS",
         }}
     try:
         result = tool["handler"](arguments)
@@ -123,7 +126,7 @@ async def execute_tool(name: str, arguments: dict) -> dict:
         return {"success": True, "result": result}
     except Exception as e:
         logger.error(f"Tool '{name}' execution error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "error_code": "AC_ERR_EXEC_FAILED"}
 
 
 # ============================================================

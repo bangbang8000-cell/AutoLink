@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "autolink": {
+      "command": "python",
+      "args": [
+        "-m",
+        "autolink_hub.mcp_server.run",
+        "--mode",
+        "compiled",
+        "--user-data",
+        "<用户数据目录>"
+      ],
+      "cwd": "<REPO_ROOT>"
+    }
+  }
+}
