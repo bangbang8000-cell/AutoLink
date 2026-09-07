@@ -80,6 +80,14 @@ cwd = "<REPO_ROOT>"
 | 权限提示频繁 | `--mode` | 编译态写入需确认属预期；开发场景切 `--mode source` |
 | 审计缺失 | 审计开关 | 设置中开启审计；`--audit <path>` 指定路径 |
 
+## 运维（5110-c）
+
+- **审计**：`--audit <path>` 或应用设置开启；审计 JSONL 可用 `audit_query` 工具查询（脱敏摘要）
+- **自检**：`GET /api/chat/agent-connect/selfcheck`（SDK / 开关 / 工具 / 审计逐项绿灯）
+- **远程模式（试点）**：平台网关 `POST /agent-connect/remote/invoke`（TLS + 强 token + 按域授权 + 审计全开，远程写默认关闭）
+- **反馈自优化**：`agent_feedback` 沉淀交互反馈；平台 `POST /agent-connect/feedback` 汇聚分析
+- **升级**：5.1 系列源码运行 `npm run dev:all`；正式版发布后无缝切换
+
 ## 验证工具（Agent 会话内可调用）
 
 - `ac_generate_design`（返回 task_id）→ `task_query` 轮询 —— 一键网络设计
