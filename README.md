@@ -6,13 +6,14 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-3.6.1-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-5.0.10-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
-[![Templates](https://img.shields.io/badge/templates-19-teal)](#)
+[![Templates](https://img.shields.io/badge/templates-25-teal)](#)
 [![Devices](https://img.shields.io/badge/devices-126-purple)](#)
-[![CI](https://img.shields.io/badge/tests-1533%20passed-brightgreen)](#)
+[![AI Tools](https://img.shields.io/badge/Agent--Tools-60-brightgreen)](#)
+[![CI](https://img.shields.io/badge/tests-2800%2B%20passed-brightgreen)](#)
 
 </div>
 
@@ -32,7 +33,7 @@
 | **真材实料** | 126 款主流设备库（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ 35 款光模块 |
 | **硬核校验** | 22 条校验规则（V001-V022）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
 | **交付级报告** | 连接表 / 布线表 / BOM / 设备清单 / 机柜表 / 9 章 PDF 报告，收敛比全部按计算值输出 |
-| **开箱即用** | 23 套场景模板（含 4 套 H100 示例）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
+| **开箱即用** | 25 套场景模板（含 7 套 H100/昇腾示例）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
 
 ---
 
@@ -223,6 +224,28 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 - **便捷美观**：AIDC 新建并入创建向导、`window.confirm` → 项目 Modal 确认体系、机柜矩阵拖拽预览/无效落点高亮、输出预览 loading 骨架 + 大表前 500 行提示、厂商目录单源化、空态「前往项目面板」联动高亮
 - **联合收口**：拓扑过滤器 FilterType 英文枚举收敛、Glossary v1.0 术语一致性门禁、修复 M4 引入的 TopologyTab TDZ、双端全量回归全绿
 
+### 28. 4.0 系列 · 工程基座与 AI 底座（v4.0.0–v4.9.0）
+
+与 MagicCommander 双端三位一体推进的 4.0 系列十版（基座/视觉/稳定/AI/高效/准确/质量/运维/互操作/示例收官）：
+
+- **工程基座**（4.0.0）：E2E 冒烟 / golden 基线 / 模板校验 / 性能门禁 / 渲染安全基线五道 CI 门禁；版本单源 + 设计 token 契约
+- **AI 能力**（4.3.0-4.5.0）：AI 项目/模板操作工具（8 个，权限分级 + 校验 + 可读错误）；一致性校验引擎 + 导出数据核对 + IP 规划校验（掩码/子网重叠/网关冲突）+ 校验面板一键校验/定位/导出报告
+- **质量体系**（4.6.0）：测试覆盖率门禁（pytest-cov + vitest coverage + 基线棘轮只升不降）+ 测试数据资产 + 报告聚合 + 质量仪表盘
+- **运维可观测**（4.7.0）：诊断中心（日志/审计/崩溃/性能/系统信息 + 一键导出支持包）+ 健康自检 + 本地遥测（默认关闭）+ 审计日志（脱敏）
+- **互操作**（4.8.0）：项目包往返强化（可移植项目包导出 + 按身份导入）+ 跨端资产互灌（设备库/技能库/模板）+ 交付物清单校验（manifest sha256）+ 评审包（zip/Markdown/PDF）
+- **示例收官**（4.9.0）：AIDC 四示例项目（64/128 台 H100 × IB/RoCE，可打开/渲染/导出/导入项目包）+ 示例自动化验收门禁
+
+### 29. 5.0 系列 · AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官（v5.0.1–v5.0.10）
+
+- **AI Agent 深化**（5.0.2-5.0.3）：统一 AgentProvider 抽象 + AI 引擎三选一（自有=默认 / Hermes / 自动）；多步自主任务编排（Plan→Execute→Verify）+ 技能自学习闭环 + **MCP 工具接入**（60 个内置工具 + 外部 MCP server 动态注册）
+- **协作生态**（5.0.4）：模板市场生态（评分/订阅/精选）+ 设备库云同步（拉取合并/发布 bundle）+ 分享链路
+- **文档与知识**（5.0.5）：DocsWorkbench 8 张一键生成卡（设计报告/合规/连接表/设备清单/布线/BOM/评审/MC 交付包）+ 知识库（KnowledgeEngine 检索 Top-K）+ AI 上下文管理
+- **3D 可视化**（5.0.6）：机房 3D（react-three-fiber 全景 + 冷热通道 + 热力着色 + 2D↔3D 高亮联动）+ PNG 导出
+- **性能优化**（5.0.7）：拓扑仅渲染可见节点（大图降帧）+ MiniMap 静态化降级 + 性能基准对比基线；实测 2048 GPU 设计 ≤30s（实测 0.47s）、225 柜落位 ≤5s（实测 0.08s）
+- **质量深化**（5.0.8）：lint 70→0 清零 + 设备库联网校对（400G 形态对齐厂商手册）+ CI e2e 加固
+- **交付运维**（5.0.9）：升级体验（断点续传 + SHA-512 强校验 + 版本回滚 + 灰度通道）+ 企业部署基座（内网镜像/代理/版本锁定，配置隐藏）
+- **内容收官**（5.0.10）：示例库 4→**7**（新增 H100-256/512 台规模化 + 国产-昇腾-256）+ 模板 23→**25** 全量重测通过 + 5.0 系列验收复盘
+
 ---
 
 ## 📦 快速开始
@@ -231,11 +254,11 @@ GPU 卡间高速互联（Scale-Up 域）与服务器间网络（Scale-Out）协�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-3.6.3-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-3.6.3-mac-x64.dmg` / `AutoLink-3.6.3-mac-arm64.dmg`
-- **Linux**：`AutoLink-3.6.3-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-5.0.10-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-5.0.10-mac-x64.dmg` / `AutoLink-5.0.10-mac-arm64.dmg`
+- **Linux**：`AutoLink-5.0.10-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建 3 个示例项目，内置 **19 套场景模板** 与 **126 款设备库**。
+安装后首次启动自动创建示例项目，内置 **25 套场景模板**（含 7 套 H100/昇腾示例）与 **126 款设备库**。
 
 ### 方式二：从源码运行
 
@@ -264,18 +287,18 @@ npm run dist:linux  # Linux (AppImage + DEB)
 ### 运行测试
 
 ```bash
-npm test              # 前端测试（Vitest 520 cases）
-npm run test:backend  # 后端测试（pytest 1010 cases）
-npm run test:all      # 全量测试（1533 cases，含 e2e 3 条）
+npm test              # 前端测试（Vitest 98 文件）
+npm run test:backend  # 后端测试（pytest 75 文件 / 1422+ 用例）
+npm run test:all      # 全量测试（含 e2e）
 npm run typecheck     # TypeScript 类型检查（含 preload）
-npm run lint          # ESLint 代码检查（0 error）
-python scripts/validate_templates.py  # 19 模板验证
+npm run lint          # ESLint 代码检查（0 error 0 warning）
+python scripts/validate_templates.py  # 25 模板验证
 python scripts/gen_golden.py --check  # golden 基线比对
 ```
 
 ---
 
-## 🗂️ 内置模板（23 套）
+## 🗂️ 内置模板（25 套）
 
 | 模板 | 场景 | 规模 | Scale-Up |
 |------|------|------|----------|
@@ -290,13 +313,17 @@ python scripts/gen_golden.py --check  # golden 基线比对
 | H100-100台 / H100-128台 | NVIDIA H100 训练 | 100 / 128 GPU | — |
 | **H100-64台-IB / H100-64台-RoCE** | H100 示例（单 POD） | 64 GPU | — |
 | **H100-128台-IB / H100-128台-RoCE** | H100 示例（双 POD） | 128 GPU | — |
+| **H100-256台-RoCE** | H100 示例（四 POD 规模化） | 256 GPU | — |
+| **H100-512台-RoCE** | H100 示例（超大规模） | 512 GPU | — |
+| **国产-昇腾-256** | 华为昇腾 910C 国产智算 | 256 NPU | — |
 | L20-推理-64 | L20 推理集群 | 64 GPU | — |
-| 国产-昇腾-256 | 华为昇腾 910B | 256 NPU | — |
 | cambricon_mlu_cluster | 寒武纪 MLU 集群 | — | — |
 | hygon_dcu_cluster | 海光 DCU 集群 | — | — |
 | 液冷-H100-256 | 液冷场景 | 256 GPU | — |
 | 中型-512 / 大型-1024 / 超大-2048 | 训练集群 | 512 / 1024 / 2048 GPU | — |
 | 空项目 | 从零开始 | — | — |
+
+> 其中 7 套为示例项目（isSample=true）：H100-64台/128台/256台/512台 × IB/RoCE + 国产-昇腾-256，覆盖 64 台到 512 台完整规模谱系。
 
 ---
 
@@ -305,7 +332,8 @@ python scripts/gen_golden.py --check  # golden 基线比对
 - **前端**：React 18 + TypeScript + Zustand + Tailwind CSS + @xyflow/react + ECharts + Vite
 - **桌面**：Electron + contextBridge（安全隔离）+ electron-updater（双通道更新）
 - **后端**：Python（pandas + openpyxl + reportlab），JSON-RPC 子进程桥接，PyInstaller 免 Python 打包
-- **测试**：Vitest（520）+ pytest（1010）+ E2E（Playwright 3）
+- **AI Hub**：独立 FastAPI 进程（端口 18722）+ 9 Provider + 60 Agent Tools + MCP Client + 知识库/技能/记忆
+- **测试**：Vitest（98 文件）+ pytest（75 文件 / 1422+ 用例）+ E2E（Playwright）
 - **i18n**：react-i18next（5 种语言）
 - **CI/CD**：GitHub Actions 三平台矩阵构建（win / mac / linux）+ 模板/golden 门禁
 
@@ -337,7 +365,7 @@ AutoLink/
 │   └── autolink_hub/       #   AIHUB（Provider / 工具注册 / 技能 / 对话 Agent）
 ├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
-├── template/               # 设备库（126 款）+ 19 套场景模板
+├── template/               # 设备库（126 款）+ 25 套场景模板
 ├── scripts/                # pyinstaller.spec / validate_templates / gen_golden
 ├── docs/                   # 产品文档 / 用户指南 / PRD
 └── tests/backend/          # Python 后端测试
@@ -354,13 +382,23 @@ AutoLink/
 
 ---
 
+## 🚀 路线图
+
+| 阶段 | 状态 | 核心交付 |
+|------|------|---------|
+| **4.0 系列** | ✅ 已完成 | 工程基座 / AI 底座 / 协作 / 3D / 性能 / 质量 / 交付 / 内容资产十版 |
+| **5.0 系列** | ✅ 已完成 | AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官十版，双端三位一体 |
+| **5.1 系列（规划）** | 🚀 规划中 | **AI Agent 互联**：MCP Server 双场景（编译态受限 / 源码态无限制），让 Claude/Codex/Trae/VS Code/Hermes 等外部 Agent 直接查询、创建、更新、渲染项目/模板/设备库/机房规划 |
+
+---
+
 ## ❓ FAQ
 
 **Q: AIDC AutoLink 支持哪些网络协议？**
 A: Scale-Out 支持 IB、RoCE、UEC 三种；Scale-Up 支持 NVLink、UALink、UB 三种。可组合出 NVL72、CloudMatrix 384、UALink 1024 GPU Pod 等主流智算中心形态。
 
 **Q: 支持多大的集群规模？**
-A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 23 套模板（含 4 套 H100 示例）可直接使用，也可从空项目自定义。
+A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 25 套模板（含 7 套 H100/昇腾示例，覆盖 64-512 台规模谱系）可直接使用，也可从空项目自定义。
 
 **Q: 生成的报告包含哪些内容？**
 A: 连接表、布线指导表、BOM 成本、设备清单、机柜表（Excel），以及 9 章节 PDF 报告（概览/架构/功耗/光模块/成本/校验/设备清单/收敛比/机柜），全部基于真实计算值。
