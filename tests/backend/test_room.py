@@ -16,6 +16,9 @@ from room import (
     ROOM_TYPE_GPU,
     ROOM_TYPE_NETWORK,
     ROOM_TYPE_STORAGE,
+    ROOM_TYPE_SCALEUP,
+    ROOM_TYPE_SECURITY,
+    ROOM_TYPE_CUSTOM,
     PLACEHOLDER_AC,
     PLACEHOLDER_PILLAR,
     DEVICE_TYPE_GPU,
@@ -164,6 +167,15 @@ class TestRoomConstraints:
         """组合/未标记柜任意设备域"""
         c = RoomConstraints()
         for cell_type in (ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY):
+            cell = RoomCell('A', 1, cell_type=cell_type)
+            for dtype in (DEVICE_TYPE_GPU, DEVICE_TYPE_NETWORK,
+                          DEVICE_TYPE_STORAGE, DEVICE_TYPE_COMPUTE):
+                assert c.validate_placement(cell, dtype) == []
+
+    def test_free_domain_cabinets_allow_any(self):
+        """525-d：Scale-Up/安全/自定义柜按自由域处理（类似 combined/empty），不约束设备域"""
+        c = RoomConstraints()
+        for cell_type in (ROOM_TYPE_SCALEUP, ROOM_TYPE_SECURITY, ROOM_TYPE_CUSTOM):
             cell = RoomCell('A', 1, cell_type=cell_type)
             for dtype in (DEVICE_TYPE_GPU, DEVICE_TYPE_NETWORK,
                           DEVICE_TYPE_STORAGE, DEVICE_TYPE_COMPUTE):

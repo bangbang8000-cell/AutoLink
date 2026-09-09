@@ -15,11 +15,21 @@
   "port_type": "QSFP56",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "通用", "200G", "存储网络"],
-  "applicable_networks": ["storage"],
+  "tags": [
+    "交换机",
+    "通用",
+    "200G",
+    "存储网络"
+  ],
+  "applicable_networks": [
+    "storage"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_network": [
+    "independent"
+  ]
 }

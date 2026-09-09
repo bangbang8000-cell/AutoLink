@@ -52,11 +52,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "浪潮", "AI训练", "深度学习", "液冷"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "浪潮",
+    "AI训练",
+    "深度学习",
+    "液冷"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_scenario": [
+    "training",
+    "inference"
+  ]
 }

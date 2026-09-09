@@ -35,5 +35,9 @@
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/enterprise-networking/switches/cloudengine-16800",
   "added_at": "2026-07-29",
-  "updated_at": "2026-08-14"
+  "updated_at": "2026-08-14",
+  "recommended_network": [
+    "rail_optimized",
+    "dual_plane"
+  ]
 }

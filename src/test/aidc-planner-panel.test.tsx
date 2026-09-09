@@ -94,6 +94,21 @@ describe('AidcPlannerPanel', () => {
     expect(args.gpu_count).toBe(64)
   })
 
+  it('5.2.2-522-h（契约 v1.3）：拓扑/合分/场景选择随请求下发（F522-1 AIDC 面板入口）', async () => {
+    const plan = mockAidcPlan(samplePlan)
+    render(<AidcPlannerPanel />)
+    fireEvent.change(screen.getByLabelText('拓扑模式'), { target: { value: 'zcube' } })
+    fireEvent.change(screen.getByLabelText('网络合分'), { target: { value: 'inference_4in1' } })
+    fireEvent.change(screen.getByLabelText('应用场景'), { target: { value: 'inference' } })
+    fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
+
+    await screen.findByText(/aidc_64/)
+    const args = plan.mock.calls[0][0]
+    expect(args.topology_mode).toBe('zcube')
+    expect(args.combined_mode).toBe('inference_4in1')
+    expect(args.scenario).toBe('inference')
+  })
+
   it('后端报错时显示错误信息', async () => {
     mockAidcPlan({ error: 'GPU 规模 96 不在支持档位（[32, 64, 128, 256, 512, 1024]）' })
     render(<AidcPlannerPanel />)

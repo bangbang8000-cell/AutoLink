@@ -110,6 +110,47 @@ describe('buildPlanDesignPatch (AL-P4 映射进 DesignConfig)', () => {
     expect(patch.num_servers).toBe(32)
     expect(patch.rail_count).toBe(4)
   })
+
+  it('5.2.1-521-e：IB plan → param_protocol=IB（修复硬编码 RoCE，IB 方案不再被错映射）', () => {
+    const p = netPlan({ macro: { ...netPlan().macro, protocol: 'IB' } })
+    expect(buildPlanDesignPatch(p).param_protocol).toBe('IB')
+  })
+
+  it('5.2.1-521-e：RoCE plan → param_protocol=RoCE；macro 缺协议字段向后兼容默认 RoCE', () => {
+    const p = netPlan({ macro: { ...netPlan().macro, protocol: 'RoCE' } })
+    expect(buildPlanDesignPatch(p).param_protocol).toBe('RoCE')
+    expect(buildPlanDesignPatch(netPlan()).param_protocol).toBe('RoCE')
+  })
+
+  it('5.2.2-522-h（契约 v1.3）：topologyMode → 拓扑模式映射（dual_plane/zcube）', () => {
+    const dp = netPlan({ macro: { ...netPlan().macro, topologyMode: 'dual_plane' } })
+    const patch = buildPlanDesignPatch(dp)
+    expect(patch.param_network_mode).toBe('standard')
+    expect(patch.dual_plane_enabled).toBe(true)
+
+    const zc = netPlan({ macro: { ...netPlan().macro, topologyMode: 'zcube' } })
+    const patchZ = buildPlanDesignPatch(zc)
+    expect(patchZ.param_network_mode).toBe('zcube')
+    expect(patchZ.dual_plane_enabled).toBe(false)
+  })
+
+  it('5.2.2-522-h（契约 v1.3）：combinedMode → 合分模式映射（2合1/3合1/4合1）', () => {
+    const two = netPlan({ macro: { ...netPlan().macro, combinedMode: 'biz_oob_2in1' } })
+    const p2 = buildPlanDesignPatch(two)
+    expect(p2.eth_combined).toBe(false)
+    expect(p2.oob_enabled).toBe(false)
+    expect(p2.biz_enabled).toBe(true)
+
+    const three = netPlan({ macro: { ...netPlan().macro, combinedMode: 'eth_3in1' } })
+    const p3 = buildPlanDesignPatch(three)
+    expect(p3.eth_combined).toBe(true)
+    expect(p3.oob_enabled).toBe(true)
+
+    const four = netPlan({ macro: { ...netPlan().macro, combinedMode: 'inference_4in1' } })
+    const p4 = buildPlanDesignPatch(four)
+    expect(p4.eth_combined).toBe(true)
+    expect(p4.inference_plane).toBe(true)
+  })
 })
 
 describe('rackMatrixOptsFromProjectConfig (AL-R3 项目 gpu_per_cabinet 生效)', () => {

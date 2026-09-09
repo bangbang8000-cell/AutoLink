@@ -48,11 +48,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["存储", "并行文件系统", "华为", "OceanStor Pacific", "国产化", "多协议", "HPC"],
-  "applicable_networks": ["storage", "biz", "oob"],
+  "tags": [
+    "存储",
+    "并行文件系统",
+    "华为",
+    "OceanStor Pacific",
+    "国产化",
+    "多协议",
+    "HPC"
+  ],
+  "applicable_networks": [
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/storage/distributed-storage/oceanstor-pacific",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "storage"
+  ]
 }

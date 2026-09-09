@@ -24,14 +24,43 @@ class TestPlanAidcContract:
         assert meta['source'] == 'autolink'
         assert meta['projectType'] == 'aidc'
         assert meta['bridgeVersion'] == '1.0'
-        assert meta['schema'] == 'plan:table/1.2'
-        assert meta['version'] == CONTRACT_VERSION == '1.2'
+        assert meta['schema'] == 'plan:table/1.3'
+        assert meta['version'] == CONTRACT_VERSION == '1.3'
         assert meta['generatedAt']
         assert meta['project'] == 'aidc_64'
         # 契约 v1.2：身份 + 版本必带
         assert meta['projectId']
         assert meta['planHash']
         assert meta['planVersion'] == 1
+
+    def test_contract_v13_topology_fields(self):
+        """契约 v1.3（522-h）：macro 透传 topologyMode/combinedMode/scenario/paramPlanes，默认值合理"""
+        plan = plan_aidc({'gpu_count': 64})
+        m = plan['macro']
+        # 默认：轨道优化 / 四网独立 / 训练场景 / 空双平面
+        assert m['topologyMode'] == 'rail_optimized'
+        assert m['combinedMode'] == 'independent'
+        assert m['scenario'] == 'training'
+        assert m['paramPlanes'] == []
+        # 显式传入（camelCase / snake_case 兼容）
+        plan2 = plan_aidc({'gpu_count': 64, 'topology_mode': 'dual_plane', 'combined_mode': 'inference_4in1',
+                           'scenario': 'inference', 'param_planes': [{'leaf_count': 8, 'speed': '400G'}]})
+        m2 = plan2['macro']
+        assert m2['topologyMode'] == 'dual_plane'
+        assert m2['combinedMode'] == 'inference_4in1'
+        assert m2['scenario'] == 'inference'
+        assert m2['paramPlanes'][0]['leaf_count'] == 8
+        # topology 段携带 mode/combined
+        assert plan2['topology']['mode'] == 'dual_plane'
+        assert plan2['topology']['combined'] == 'inference_4in1'
+
+    def test_contract_v13_validate_macro(self):
+        """契约 v1.3：新增字段值域校验"""
+        assert validate_macro({'gpu_count': 64, 'topology_mode': 'bad'}) == 'topology_mode 仅支持 rail_optimized/dual_plane/zcube'
+        assert validate_macro({'gpu_count': 64, 'combined_mode': 'x'}) == 'combined_mode 仅支持 independent/biz_oob_2in1/eth_3in1/inference_4in1'
+        assert validate_macro({'gpu_count': 64, 'scenario': 'serve'}) == 'scenario 仅支持 training/inference'
+        assert validate_macro({'gpu_count': 64, 'param_planes': 'not-list'}) == 'param_planes 必须是数组'
+        assert validate_macro({'gpu_count': 64, 'topology_mode': 'zcube', 'scenario': 'inference'}) is None
 
     def test_identity_project_id(self):
         pid = '7c9e6679-7425-40de-944b-e07fc1f90ae7'

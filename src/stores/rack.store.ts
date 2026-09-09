@@ -660,7 +660,7 @@ export const useRackStore = create<RackState>()(
     }))
   },
 
-  initDefault: (serverCount, rackType = 42, powerLimit = 6000) => {
+  initDefault: (serverCount, rackType = 42, powerLimit = 12000) => {
     // V2.9.2: 按真实 GPU 服务器参数生成 (8U 高, 功率≈上限85%), GPU 独占机柜 1 台/柜
     const gpuPower = Math.max(1, Math.round((powerLimit * 0.85) / 100) * 100)
     const gpuU = 8
@@ -697,7 +697,7 @@ export const useRackStore = create<RackState>()(
     }))
   },
 
-  initFromTopology: (topologyNodes, rackType = 42, powerLimit = 6000) => {
+  initFromTopology: (topologyNodes, rackType = 42, powerLimit = 12000) => {
     // V2.9.2: 优先采用后端分配(cabinetId/type/startU/endU/power/uHeight)，
     // 服务器按 group 分类(gpu/storage/compute)，交换机归为网络柜
     const nodes = topologyNodes.filter(
@@ -905,7 +905,7 @@ export const useRackStore = create<RackState>()(
               ...c,
               type: c.type || 'gpu',
               totalU: c.totalU || 42,
-              power_limit: c.power_limit || 6000,
+              power_limit: c.power_limit || 12000,
               devices: (c.devices || []).map((d) => ({
                 ...d,
                 type: d.type || 'gpu',
@@ -965,7 +965,7 @@ export const useRackStore = create<RackState>()(
     }
   },
 
-  addCabinet: (totalU = 42, type = 'gpu', powerLimit = 6000) => {
+  addCabinet: (totalU = 42, type = 'gpu', powerLimit = 12000) => {
     set((s) => {
       const newId = s.cabinets.length > 0 ? Math.max(...s.cabinets.map((c) => c.id)) + 1 : 1
       const label = String.fromCharCode(64 + newId)
@@ -1497,7 +1497,7 @@ export const useRackStore = create<RackState>()(
       const name = cols[0]
       const totalU = parseInt(cols[1]) || 42
       const type = (cols[2] || 'gpu') as CabinetType
-      const powerLimit = parseInt(cols[3]) || 6000
+      const powerLimit = parseInt(cols[3]) || 12000
 
       if (name && !isNaN(totalU)) {
         cabinets.push({

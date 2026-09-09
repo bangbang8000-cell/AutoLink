@@ -164,6 +164,63 @@ biz_enabled = False
             # 性能基线: T6 优化目标 <2s, CI 环境留 10 倍余量防抖动
             assert elapsed < 20.0, f"2048台设计耗时 {elapsed:.2f}s 超出基线"
 
+    # ---------- 5.2.2-522-e: INI 模式 ZCube 再生成（ATOP「应用到拓扑」→ configToINI → INI） ----------
+
+    def test_zcube_ini_regenerate(self):
+        """INI 模式读 param_network_mode=zcube + param_zcube_* → 生成 ZCube（无 Spine，两组 Leaf 直连 GPU）"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini = self._create_ini(tmpdir, """[DEFAULT]
+num_servers = 64
+param_switch_ports = 128
+param_ports_per_server = 2
+param_speed = 400G
+storage_ports_per_server = 1
+storage_switch_ports = 48
+storage_speed = 200G
+oob_enabled = False
+biz_enabled = False
+param_network_mode = zcube
+param_zcube_nics_per_gpu = 2
+param_zcube_leaf_count = 4
+param_zcube_switch_ports = 128
+""")
+            designer = NetworkDesignerV2(ini)
+            assert designer.param_network_mode == 'zcube'
+            assert designer.zcube_config.get('nics_per_gpu') == 2
+            assert designer.zcube_config.get('leaf_count') == 4
+            assert designer.zcube_config.get('switch_ports') == 128
+            # ZCube 无 Spine/Core
+            assert not designer.param_spines, 'ZCube 不应有 Spine'
+            assert not designer.param_cores, 'ZCube 不应有 Core'
+            # 两组 Leaf（A/B）
+            assert len(designer.param_leaves) == 2 * 4, len(designer.param_leaves)
+            # 服务器接入参数网
+            param_conns = [c for s in designer.servers for c in s.connections
+                           if c.network_type == 'param' and c.a_device == s.name]
+            assert param_conns, 'ZCube 参数网无连接'
+            vr = designer.validate_topology()
+            assert vr['valid'], vr['errors']
+
+    def test_zcube_ini_missing_params_fallback(self):
+        """INI 模式 param_zcube_* 缺失/非数字 → zcube_config 为空 dict（后端按默认 nics=2 兜底），不报错"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini = self._create_ini(tmpdir, """[DEFAULT]
+num_servers = 16
+param_switch_ports = 64
+param_ports_per_server = 8
+param_speed = 400G
+storage_ports_per_server = 1
+storage_switch_ports = 48
+storage_speed = 200G
+oob_enabled = False
+biz_enabled = False
+param_network_mode = zcube
+""")
+            designer = NetworkDesignerV2(ini)
+            assert designer.param_network_mode == 'zcube'
+            assert designer.zcube_config == {}
+            assert designer.param_leaves, '缺省 nics=2 应仍能生成 Leaf'
+
 
 class TestDesignerProjectConfig:
     """project_config.json 格式测试"""

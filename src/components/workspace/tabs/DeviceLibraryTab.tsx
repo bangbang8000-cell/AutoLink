@@ -11,7 +11,7 @@ import { useDeviceLibraryStore, type DeviceCategoryFilter } from '@/stores/devic
 import { useCloudStore } from '@/stores/cloud.store'
 import type { LibraryDevice } from '@/types/device-profile'
 import { isServerDevice } from '@/types/device-profile'
-import { DEVICE_CATEGORY_LABELS, NETWORK_TYPE_LABELS } from '@/constants/labels'
+import { DEVICE_CATEGORY_LABELS, NETWORK_TYPE_LABELS, RECOMMENDED_SCENARIO_LABELS, RECOMMENDED_NETWORK_LABELS } from '@/constants/labels'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 
@@ -378,6 +378,28 @@ function DeviceDetailCard({ device }: { device: LibraryDevice }) {
           <DetailRow label="命名前缀" value={device.name_prefix} icon={<Hash size={12} />} />
         </div>
       </Section>
+
+      {/* 523-e: 推荐信息（应用场景/推荐组网） */}
+      {(device.recommended_scenario?.length || device.recommended_network?.length) && (
+        <Section title="推荐信息" icon={<BookOpen size={13} />}>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            {device.recommended_scenario && device.recommended_scenario.length > 0 && (
+              <DetailRow
+                label="应用场景"
+                value={device.recommended_scenario.map((s) => RECOMMENDED_SCENARIO_LABELS[s] || s).join(' / ')}
+                icon={<Server size={12} />}
+              />
+            )}
+            {device.recommended_network && device.recommended_network.length > 0 && (
+              <DetailRow
+                label="推荐组网"
+                value={device.recommended_network.map((n) => RECOMMENDED_NETWORK_LABELS[n] || n).join(' / ')}
+                icon={<Network size={12} />}
+              />
+            )}
+          </div>
+        </Section>
+      )}
 
       {/* Server: Interface models */}
       {isServer && device.interface_models && (

@@ -524,7 +524,7 @@ export function EditTemplateModal({ template, onConfirm, onClose }: Props) {
                 <div key={n.key} className="flex items-center gap-2">
                   <button
                     role="switch"
-                    aria-checked={config.networks[n.key]}
+                    aria-checked={config.networks[n.key] === true}
                     onClick={() => updateNetworks({ [n.key]: !config.networks[n.key] })}
                     disabled={loading}
                     className={toggleCls(!!config.networks[n.key])}

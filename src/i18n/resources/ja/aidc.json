@@ -24,6 +24,8 @@
   "generating": "生成中…",
   "generate": "プランを生成",
   "applyToDesign": "設計に適用",
+  "markDone": "完了とマーク",
+  "unmarkDone": "完了を取り消し",
   "deviceList": "デバイス一覧",
   "connections": "接続",
   "terminals": "ターミナル",

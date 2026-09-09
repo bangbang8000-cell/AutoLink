@@ -2,14 +2,14 @@
   "meta": {
     "project": "aidc_128",
     "site": "BJ01",
-    "version": "1.2",
-    "schema": "plan:table/1.2",
-    "generatedAt": "2026-09-06T13:58:56+00:00",
+    "version": "1.3",
+    "schema": "plan:table/1.3",
+    "generatedAt": "2026-09-08T11:02:42+00:00",
     "source": "autolink",
     "projectType": "aidc",
     "bridgeVersion": "1.0",
     "projectId": "49a-128-roce-0001",
-    "planHash": "2a19d176bc069d651bd8130861b7c8e2aea9dfae1bf9b9dae8fdd79aacf3dc82",
+    "planHash": "8721a0a8d88f3a97fe2cf1467acbf50e20697e78e6a32a561308690c4e6811a2",
     "planVersion": 1,
     "projectName": "H100-128台-RoCE"
   },
@@ -78,7 +78,11 @@
       "BIZ_ACCESS": "H3C S6850-56HF",
       "OOB_AGG": "H3C S6805-56HF-G",
       "OOB_ACCESS": "H3C S5560X-54C-EI"
-    }
+    },
+    "topologyMode": "rail_optimized",
+    "combinedMode": "independent",
+    "scenario": "training",
+    "paramPlanes": []
   },
   "topology": {
     "layers": 2,
@@ -89,7 +93,9 @@
       "gpuCount": 128,
       "spine": 4,
       "leaf": 8
-    }
+    },
+    "mode": "rail_optimized",
+    "combined": "independent"
   },
   "deviceList": [
     {

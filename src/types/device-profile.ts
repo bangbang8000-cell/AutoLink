@@ -82,6 +82,9 @@ export interface LibraryDevice extends DeviceProfile {
   datasheet_url?: string
   added_at: string
   updated_at: string
+  // 523-e: 设备库推荐信息（一键选厂商/向导推荐/规划建议的单一事实源）
+  recommended_scenario?: string[]  // 应用场景：training/inference/storage/compute/...
+  recommended_network?: string[]   // 推荐组网：rail_optimized/dual_plane/zcube/independent/biz_oob_2in1/eth_3in1/inference_4in1
 }
 
 /* ---------- 设备库分类 ---------- */

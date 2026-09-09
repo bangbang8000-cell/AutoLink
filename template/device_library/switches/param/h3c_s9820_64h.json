@@ -28,5 +28,9 @@
   "verified": true,
   "datasheet_url": "https://www.h3c.com/cn/Products_And_Solution/InterConnect/Products/Switches/",
   "added_at": "2026-07-28",
-  "updated_at": "2026-08-14"
+  "updated_at": "2026-08-14",
+  "recommended_network": [
+    "rail_optimized",
+    "dual_plane"
+  ]
 }

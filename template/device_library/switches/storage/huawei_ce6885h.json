@@ -24,11 +24,26 @@
   "rdma_type": "RoCEv2",
   "price_range": "中高",
   "eol_date": "",
-  "tags": ["交换机", "华为", "CloudEngine", "6885H", "200G", "存储网", "RoCEv2", "接入", "国产化"],
-  "applicable_networks": ["storage"],
+  "tags": [
+    "交换机",
+    "华为",
+    "CloudEngine",
+    "6885H",
+    "200G",
+    "存储网",
+    "RoCEv2",
+    "接入",
+    "国产化"
+  ],
+  "applicable_networks": [
+    "storage"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/enterprise-networking/switches/cloudengine-6885",
   "added_at": "2026-08-04",
-  "updated_at": "2026-08-04"
+  "updated_at": "2026-08-04",
+  "recommended_network": [
+    "independent"
+  ]
 }

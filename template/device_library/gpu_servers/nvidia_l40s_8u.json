@@ -62,11 +62,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "NVIDIA", "L40S", "AI推理", "可视化", "渲染"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "NVIDIA",
+    "L40S",
+    "AI推理",
+    "可视化",
+    "渲染"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/data-center/l40s/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "inference"
+  ]
 }

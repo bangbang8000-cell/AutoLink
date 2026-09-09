@@ -15,11 +15,24 @@
   "port_type": "SFP28",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "通用", "25G", "业务网络"],
-  "applicable_networks": ["biz"],
+  "tags": [
+    "交换机",
+    "通用",
+    "25G",
+    "业务网络"
+  ],
+  "applicable_networks": [
+    "biz"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_network": [
+    "independent",
+    "biz_oob_2in1",
+    "eth_3in1",
+    "inference_4in1"
+  ]
 }

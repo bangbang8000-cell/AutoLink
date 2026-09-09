@@ -613,14 +613,16 @@ describe('RoomStore', () => {
       expect(useRoomStore.getState().matrix!.cells[0].type).toBe('storage')
     })
 
-    it('域外类型（security）不写回', () => {
-      const m = makeMatrix()
-      m.cells[0].type = 'gpu'
-      m.cells[0].cabinetId = 1
-      useRoomStore.setState({ matrix: m })
-      useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type: 'security' })] })
-      useRoomStore.getState().syncCabinetToCell(1)
-      expect(useRoomStore.getState().matrix!.cells[0].type).toBe('gpu')
+    it('525-d：安全/自定义/Scale-Up 柜改类型 → 回写，不再漂移', () => {
+      for (const type of ['security', 'custom', 'scaleup'] as const) {
+        const m = makeMatrix()
+        m.cells[0].type = 'gpu'
+        m.cells[0].cabinetId = 1
+        useRoomStore.setState({ matrix: m })
+        useRackStore.setState({ cabinets: [makeCabinet({ id: 1, type })] })
+        useRoomStore.getState().syncCabinetToCell(1)
+        expect(useRoomStore.getState().matrix!.cells[0].type).toBe(type)
+      }
     })
 
     it('未上架机柜为 no-op', () => {

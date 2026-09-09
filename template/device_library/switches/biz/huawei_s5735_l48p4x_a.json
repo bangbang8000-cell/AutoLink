@@ -29,5 +29,11 @@
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-08-14"
+  "updated_at": "2026-08-14",
+  "recommended_network": [
+    "independent",
+    "biz_oob_2in1",
+    "eth_3in1",
+    "inference_4in1"
+  ]
 }

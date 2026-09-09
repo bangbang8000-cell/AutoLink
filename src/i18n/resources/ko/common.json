@@ -592,6 +592,20 @@
       "validationFailed": "검증 실패"
     },
     "workbench": {
+      "views": "워크벤치 뷰",
+      "status": {
+        "done": "완료",
+        "pending": "대기",
+        "in_progress": "진행 중",
+        "needs_update": "조정 필요"
+      },
+      "lifecycle": {
+        "ready": "시작 전",
+        "configured": "구성됨",
+        "planned": "계획됨",
+        "designed": "설계됨",
+        "layouted": "배치됨"
+      },
       "title": "워크벤치",
       "openFullSize": "전체 크기로 열기",
       "selectProject": "프로젝트를 선택하여 워크벤치 사용",
@@ -673,7 +687,9 @@
         "title": "새 프로젝트 기본값",
         "defaultRackType": "기본 랙 유형",
         "defaultPowerLimit": "기본 전력 제한 (W)",
-        "defaultPortSpeed": "기본 포트 속도"
+        "defaultPortSpeed": "기본 포트 속도",
+        "defaultStorageSpeed": "기본 스토리지 네트워크 속도",
+        "defaultBizSpeed": "기본 업무&관리 네트워크 속도"
       },
       "output": {
         "title": "출력 설정",

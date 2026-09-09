@@ -96,9 +96,10 @@ class TestGpuDedicated:
             assert cab.device_count == 1
 
     def test_atlas_16kw_two_per_cabinet(self):
-        """32×Atlas (6.5KW/8U) + 16KW 柜 → 16 柜, 2 台/柜 (6.5×2=13 ≤ 16)"""
+        """32×Atlas (6.5KW/8U) + 16KW 柜 → 16 柜, 2 台/柜 (6.5×2=13 ≤ 16)
+        (5.2.4-524-d：默认 1 柜 1 台；此处显式 gpu_per_cabinet=2 才多台共柜)"""
         devices = make_servers('GPU服务器', 32, 6500, 8, DEVICE_TYPE_GPU)
-        allocator = RackAllocator(rack_type=42, power_limit=16000)
+        allocator = RackAllocator(rack_type=42, power_limit=16000, gpu_per_cabinet=2)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 16
         for cab in allocator.cabinets:
@@ -116,9 +117,10 @@ class TestGpuDedicated:
             assert cab.device_count == 1
 
     def test_mlu590_12kw_three_per_cabinet(self):
-        """30×MLU590 (3.8KW/4U) + 12KW 柜 → 10 柜, 3 台/柜 (3.8×3=11.4 ≤ 12)"""
+        """30×MLU590 (3.8KW/4U) + 12KW 柜 → 10 柜, 3 台/柜 (3.8×3=11.4 ≤ 12)
+        (5.2.4-524-d：显式 gpu_per_cabinet=3 才多台共柜)"""
         devices = make_servers('GPU服务器', 30, 3800, 4, DEVICE_TYPE_GPU)
-        allocator = RackAllocator(rack_type=42, power_limit=12000)
+        allocator = RackAllocator(rack_type=42, power_limit=12000, gpu_per_cabinet=3)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 10
         for cab in allocator.cabinets:
@@ -126,6 +128,27 @@ class TestGpuDedicated:
             assert cab.total_power == 11400
         assert_u_no_conflict(allocator.cabinets)
         assert_u_ok(allocator.cabinets, 42)
+
+    def test_gpu_default_one_per_cabinet(self):
+        """5.2.4-524-d: 默认每柜 GPU 上限 1——低功率 GPU 也 1 台/柜（与前端矩阵硬约束对齐）"""
+        devices = make_servers('GPU服务器', 30, 3800, 4, DEVICE_TYPE_GPU)
+        allocator = RackAllocator(rack_type=42, power_limit=12000)
+        allocator.allocate(devices)
+        assert len(allocator.cabinets) == 30
+        for cab in allocator.cabinets:
+            assert cab.device_count == 1
+        assert_u_no_conflict(allocator.cabinets)
+        assert_power_ok(allocator.cabinets)
+
+    def test_gpu_per_cabinet_respects_power_bound(self):
+        """5.2.4-524-d: gpu_per_cabinet=2 但功率放不下 2 台 → 仍 1 台/柜（功率约束优先）"""
+        devices = make_servers('GPU服务器', 30, 7000, 8, DEVICE_TYPE_GPU)
+        allocator = RackAllocator(rack_type=42, power_limit=12000, gpu_per_cabinet=2)
+        allocator.allocate(devices)
+        assert len(allocator.cabinets) == 30
+        for cab in allocator.cabinets:
+            assert cab.device_count == 1
+        assert_power_ok(allocator.cabinets)
 
     def test_gpu_dedicated_flag(self):
         """gpu_dedicated=True 时 3.8KW GPU 也独占机柜"""

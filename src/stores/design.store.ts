@@ -27,6 +27,26 @@ export interface DesignConfig {
   rail_count: number
   /** V2.7.2: 参数网协议 (IB | RoCE),用于设备选型 */
   param_protocol: 'IB' | 'RoCE'
+  /** 5.2.2-522-a: 参数网组网模式 (standard | zcube)，缺省 standard */
+  param_network_mode?: 'standard' | 'zcube'
+  /** 5.2.2-522-a: 双平面开关（启用时经 merge 落 param_planes，后端 dual_plane_enabled） */
+  dual_plane_enabled?: boolean
+  /** 5.2.2-522-f: 三合一融合网（存储+业务+带内管理，OOB 独立）→ 后端 networks.eth_combined */
+  eth_combined?: boolean
+  /** 5.2.2-522-f: 存储网开关 → 后端 networks.storage_network */
+  storage_enabled?: boolean
+  /** 5.2.2-522-f: 推理加速平面（4合1）标记（后端推理域开发中） */
+  inference_plane?: boolean
+  /** 5.2.2-522-f: 推理 GPU 服务器数量（前 N 台接入推理域） */
+  inference_servers?: number
+  /** 5.2.2-522-f: 推理域速率（默认 400G） */
+  inference_speed?: string
+  /** 5.2.2-522-f: 推理域收敛比（1:1~3:1，默认 3） */
+  inference_convergence?: number
+  /** 5.2.3-523-b: 业务&管理网速率（默认 25G） */
+  biz_speed?: string
+  /** 5.2.2-522-e: ZCube 组网参数（ATOP「应用到拓扑」补写，DesignTab 可再生成） */
+  param_zcube?: { nics_per_gpu?: number; leaf_count?: number; switch_ports?: number }
 }
 
 export interface DesignSummary {
@@ -185,6 +205,12 @@ export const defaultDesignConfig: DesignConfig = {
   rail_mode: 'standard',
   rail_count: 8,
   param_protocol: 'RoCE',
+  param_network_mode: 'standard',
+  dual_plane_enabled: false,
+  eth_combined: false,
+  storage_enabled: true,
+  inference_plane: false,
+  biz_speed: '25G',
 }
 
 /* ---------- helpers ---------- */
@@ -212,6 +238,13 @@ oob_downlink_limit = ${num(config.oob_downlink_limit, 25)}
 rail_mode = ${str(config.rail_mode, 'none')}
 rail_count = ${num(config.rail_count, 0)}
 param_protocol = ${str(config.param_protocol, 'RoCE')}
+param_network_mode = ${str(config.param_network_mode, 'standard')}
+dual_plane_enabled = ${config.dual_plane_enabled ? 'true' : 'false'}
+${config.param_network_mode === 'zcube' && config.param_zcube
+  ? Object.entries(config.param_zcube)
+    .filter(([, v]) => v != null && String(v) !== '')
+    .map(([k, v]) => `param_zcube_${k} = ${String(v)}`).join('\n')
+  : ''}
 cable_param_server_leaf = MPO
 cable_param_leaf_spine = MPO
 cable_param_spine_core = MPO
@@ -219,6 +252,14 @@ cable_storage_server_leaf = AOC
 cable_storage_leaf_spine = AOC
 cable_storage_spine_core = MPO
 oob_enabled = ${config.oob_enabled ? 'true' : 'false'}
+eth_combined = ${config.eth_combined ? 'true' : 'false'}
+storage_enabled = ${config.storage_enabled !== false ? 'true' : 'false'}
+inference_plane = ${config.inference_plane ? 'true' : 'false'}
+${config.inference_plane && config.inference_servers != null && config.inference_servers > 0 ? [
+  `inference_servers = ${config.inference_servers}`,
+  config.inference_speed ? `inference_speed = ${config.inference_speed}` : '',
+  config.inference_convergence != null && config.inference_convergence > 0 ? `inference_convergence = ${config.inference_convergence}` : '',
+].filter(Boolean).join('\n') : ''}
 oob_access_ports = 48
 oob_access_uplinks = 2
 oob_agg_ports = 48
@@ -227,7 +268,7 @@ oob_uplink_speed = 10G
 cable_oob_server_access = 网线
 cable_oob_access_agg = 光纤
 biz_enabled = ${config.biz_enabled ? 'true' : 'false'}
-biz_port_speed = 25G
+biz_port_speed = ${config.biz_speed || '25G'}
 biz_access_ports = 48
 biz_access_uplinks = 8
 biz_uplink_speed = 100G
@@ -610,6 +651,24 @@ function parseINI(ini: string): DesignConfig {
     rail_mode: (config['rail_mode'] as 'standard' | 'rail_optimized') || 'standard',
     rail_count: parseInt(config['rail_count']) || 8,
     param_protocol: (config['param_protocol'] as 'IB' | 'RoCE') || 'RoCE',
+    param_network_mode: (config['param_network_mode'] as 'standard' | 'zcube') || 'standard',
+    dual_plane_enabled: config['dual_plane_enabled'] === 'true',
+    eth_combined: config['eth_combined'] === 'true',
+    storage_enabled: config['storage_enabled'] !== 'false',
+    inference_plane: config['inference_plane'] === 'true',
+    inference_servers: config['inference_servers'] ? parseInt(config['inference_servers']) : undefined,
+    inference_speed: config['inference_speed'] || undefined,
+    inference_convergence: config['inference_convergence'] ? parseInt(config['inference_convergence']) : undefined,
+    biz_speed: config['biz_port_speed'] || '25G',
+    ...(config['param_zcube_nics_per_gpu'] || config['param_zcube_leaf_count'] || config['param_zcube_switch_ports']
+      ? {
+          param_zcube: {
+            nics_per_gpu: config['param_zcube_nics_per_gpu'] ? parseInt(config['param_zcube_nics_per_gpu']) : undefined,
+            leaf_count: config['param_zcube_leaf_count'] ? parseInt(config['param_zcube_leaf_count']) : undefined,
+            switch_ports: config['param_zcube_switch_ports'] ? parseInt(config['param_zcube_switch_ports']) : undefined,
+          },
+        }
+      : {}),
   }
 }
 
@@ -662,6 +721,27 @@ function buildConfigFromSources(ini: string, jsonStr: string): DesignConfig {
     rail_mode: (topo.rail_mode as 'standard' | 'rail_optimized') || iniConfig?.rail_mode || 'standard',
     rail_count: num(topo.rail_count, iniConfig?.rail_count ?? 8),
     param_protocol: (topo.param_protocol as 'IB' | 'RoCE') || iniConfig?.param_protocol || 'RoCE',
+    param_network_mode: (topo.param_network_mode as 'standard' | 'zcube') || iniConfig?.param_network_mode || 'standard',
+    dual_plane_enabled: Array.isArray(topo.param_planes) ? (topo.param_planes as unknown[]).length > 0 : iniConfig?.dual_plane_enabled === true,
+    eth_combined: networks.eth_combined != null ? networks.eth_combined !== false : (iniConfig?.eth_combined === true),
+    storage_enabled: networks.storage_network != null ? networks.storage_network !== false : (iniConfig?.storage_enabled !== false),
+    inference_plane: topo.inference_plane === true || iniConfig?.inference_plane === true,
+    inference_servers: num(topo.inference_servers, iniConfig?.inference_servers ?? 0),
+    inference_speed: (topo.inference_speed as string) || iniConfig?.inference_speed || '400G',
+    inference_convergence: num(topo.inference_convergence, iniConfig?.inference_convergence ?? 3),
+    biz_speed: iniConfig?.biz_speed || '25G',
+    // 5.2.2-522-e: ZCube 组网参数（JSON 权威，INI 补漏）
+    ...(topo.param_zcube && typeof topo.param_zcube === 'object'
+      ? {
+          param_zcube: {
+            nics_per_gpu: num((topo.param_zcube as Record<string, unknown>).nics_per_gpu, iniConfig?.param_zcube?.nics_per_gpu ?? 0),
+            leaf_count: num((topo.param_zcube as Record<string, unknown>).leaf_count, iniConfig?.param_zcube?.leaf_count ?? 0),
+            switch_ports: num((topo.param_zcube as Record<string, unknown>).switch_ports, iniConfig?.param_zcube?.switch_ports ?? 0),
+          },
+        }
+      : iniConfig?.param_zcube
+        ? { param_zcube: iniConfig.param_zcube }
+        : {}),
   }
   return fromJson
 }

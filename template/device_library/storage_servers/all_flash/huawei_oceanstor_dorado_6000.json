@@ -52,11 +52,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["存储", "华为", "OceanStor", "Dorado", "全闪存", "NVMe"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "存储",
+    "华为",
+    "OceanStor",
+    "Dorado",
+    "全闪存",
+    "NVMe"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_scenario": [
+    "storage"
+  ]
 }

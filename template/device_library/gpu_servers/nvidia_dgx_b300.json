@@ -62,11 +62,29 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "NVIDIA", "B300", "Blackwell Ultra", "800G", "双平面", "IB", "液冷", "AI训练"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "NVIDIA",
+    "B300",
+    "Blackwell Ultra",
+    "800G",
+    "双平面",
+    "IB",
+    "液冷",
+    "AI训练"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-08-04",
-  "updated_at": "2026-08-04"
+  "updated_at": "2026-08-04",
+  "recommended_scenario": [
+    "training"
+  ]
 }

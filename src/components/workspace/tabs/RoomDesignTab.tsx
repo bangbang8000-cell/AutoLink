@@ -22,6 +22,7 @@ import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { useSnapshotStore, defaultSnapshotName } from '@/stores/snapshot.store'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
+import { DataCenterStats } from '@/components/datacenter/DataCenterStats'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 
@@ -228,6 +229,9 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
           </>
         )}
       </div>
+
+      {/* 5.2.4-524-e：机房统计面板挂载（2D 平面计算 stats 后展示） */}
+      <DataCenterStats />
 
       {/* 主体：2D 平面（DataCenterLayout）或 3D 视图（v5.0.6「3D 可视化」） */}
       <div className="flex-1 min-h-0 rounded border overflow-hidden bg-white dark:bg-app">

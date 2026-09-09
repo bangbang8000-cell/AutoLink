@@ -62,11 +62,27 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["NPU", "华为", "昇腾", "910B", "国产化", "AI训练", "大模型"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "NPU",
+    "华为",
+    "昇腾",
+    "910B",
+    "国产化",
+    "AI训练",
+    "大模型"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/computing/ascend/atlas-800-t-a2",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "training"
+  ]
 }

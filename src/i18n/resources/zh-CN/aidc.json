@@ -24,6 +24,8 @@
   "generating": "生成中…",
   "generate": "生成规划",
   "applyToDesign": "应用到设计",
+  "markDone": "标记完成",
+  "unmarkDone": "撤销完成",
   "deviceList": "设备清单",
   "connections": "接线",
   "terminals": "终端",

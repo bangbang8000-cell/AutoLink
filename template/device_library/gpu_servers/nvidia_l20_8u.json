@@ -62,11 +62,25 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "NVIDIA", "L20", "AI推理", "图文生成"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "NVIDIA",
+    "L20",
+    "AI推理",
+    "图文生成"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/data-center/l20/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "inference"
+  ]
 }

@@ -592,6 +592,20 @@
       "validationFailed": "验证失败"
     },
     "workbench": {
+      "views": "工作台视图",
+      "status": {
+        "done": "已完成",
+        "pending": "待操作",
+        "in_progress": "进行中",
+        "needs_update": "待调整"
+      },
+      "lifecycle": {
+        "ready": "未开始",
+        "configured": "已配置",
+        "planned": "已规划",
+        "designed": "已设计",
+        "layouted": "已布局"
+      },
       "title": "工作台",
       "openFullSize": "全尺寸打开",
       "selectProject": "选择项目后开始使用工作台",
@@ -673,7 +687,9 @@
         "title": "新建项目默认值",
         "defaultRackType": "默认机柜类型",
         "defaultPowerLimit": "默认功率上限 (W)",
-        "defaultPortSpeed": "默认端口速率"
+        "defaultPortSpeed": "默认端口速率",
+        "defaultStorageSpeed": "默认存储网速率",
+        "defaultBizSpeed": "默认业务&管理网速率"
       },
       "output": {
         "title": "输出设置",

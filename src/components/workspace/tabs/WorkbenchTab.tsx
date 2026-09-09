@@ -9,6 +9,7 @@ import { WorkbenchOutputCard } from '@/components/workbench/WorkbenchOutputCard'
 import { WorkbenchActionCard } from '@/components/workbench/WorkbenchActionCard'
 import { WorkbenchResultCard } from '@/components/workbench/WorkbenchResultCard'
 import { PipelinePanel } from '@/components/workbench/PipelinePanel'
+import { WorkbenchStaleBanner } from '@/components/workbench/WorkbenchStaleBanner'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
@@ -60,7 +61,16 @@ const SUBVIEW_LABEL_FALLBACK: Record<string, string> = {
   rackdesign: '机柜设计',
 }
 
-// AL-M4c: 工作台二级页签保活上限——最多同时保持 N 个非激活子视图挂载,超限卸载释放内存
+/** 5.2.1-521-f：项目生命周期标签（后端 project:list 按关键文件推断的 status） */
+/* 5.2.5-525-b：生命周期标签迁移至 i18n（common:explorer.workbench.lifecycle.*） */
+
+/** 5.2.5-525-a：全部可打开子视图（含 docs/knowledge，修复孤儿视图——有组件无入口） */
+const ALL_SUBVIEWS: WorkbenchSubview[] = [
+  'aidc', 'design', 'roomdesign', 'rackdesign', 'main', 'visualization',
+  'results', 'export', 'docs', 'knowledge',
+]
+
+/** AL-M4c: 工作台二级页签保活上限——最多同时保持 N 个非激活子视图挂载,超限卸载释放内存 */
 const KEEP_ALIVE_LIMIT = 5
 
 /** 打磨轮（v1.3）：归档/导出子视图（导出 MC 交付包 + 渲染结果） */
@@ -174,6 +184,7 @@ export function WorkbenchTab() {
   const recentProjects = useProjectStore((s) => s.recentProjects)
   const templates = useProjectStore((s) => s.templates)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
+  const selectedProject = useProjectStore((s) => s.selectedProject)
   const selectProject = useProjectStore((s) => s.selectProject)
   const subview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
@@ -194,6 +205,8 @@ export function WorkbenchTab() {
   const [showAidcWizard, setShowAidcWizard] = useState(false)
   // 打磨轮（v1.6 / AL-T1a）：工作台二级页签——访问过的子视图保留（keep-alive 保留状态）
   const [openedSubviews, setOpenedSubviews] = useState<WorkbenchSubview[]>(['main'])
+  // 5.2.5-525-a：子视图"+"添加菜单（docs/knowledge 等无默认入口的孤儿视图可打开）
+  const [showAddMenu, setShowAddMenu] = useState(false)
 
   // 打开新子视图 → 记入二级页签
   useEffect(() => {
@@ -464,6 +477,34 @@ export function WorkbenchTab() {
             </div>
           )
         })}
+        {/* 5.2.5-525-a：子视图添加入口（孤儿视图 docs/knowledge 等在此可打开） */}
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowAddMenu((v) => !v)}
+            className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
+            title={t('workbench:addSubview', '打开子视图')}
+          >
+            <Plus size={12} />
+          </button>
+          {showAddMenu && (
+            <div className="absolute left-0 top-full mt-1 z-[9999] bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 min-w-[150px]">
+              {ALL_SUBVIEWS.filter((sv) => !openedSubviews.includes(sv)).map((sv) => (
+                <button
+                  key={sv}
+                  type="button"
+                  onClick={() => {
+                    openSubview(sv)
+                    setShowAddMenu(false)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-app-hover"
+                >
+                  {t(SUBVIEW_KEYS[sv] ?? `workbench:subview.${sv}`, SUBVIEW_LABEL_FALLBACK[sv] ?? sv)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* AL-M4h：二级页签右键菜单 */}
@@ -553,11 +594,14 @@ export function WorkbenchTab() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {t('workbench:status')}:
                 </span>
+                {/* 5.2.1-521-f：项目生命周期（后端按关键文件推断的 status；缺省回退 Ready） */}
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">
-                  Ready
+                  {t(`common:explorer.workbench.lifecycle.${selectedProject?.status || 'ready'}`, { defaultValue: 'Ready' })}
                 </span>
               </div>
             </div>
+            {/* 5.2.1-521-d：上游变更 → 待调整横幅（重跑依赖链/同步规划/确认偏离） */}
+            <WorkbenchStaleBanner />
             {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
             <StepLabel n="①" text={t('workbench:stepConfig', '配置与就绪')} />
             <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3 grid grid-cols-2 gap-3 mb-4">

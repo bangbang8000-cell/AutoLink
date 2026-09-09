@@ -1,0 +1,39 @@
+{
+  "id": "nvidia_th6_128_800g_ib",
+  "vendor": "NVIDIA",
+  "model": "TH6 128×800G InfiniBand",
+  "category": "switches_param",
+  "description": "NVIDIA TH6 128端口800Gb/s InfiniBand交换机（单接形态，端口不支持1分2扇出），适用于800G单接的超大规模AI训练集群",
+  "power_watts": 2400,
+  "weight_kg": 25,
+  "u_height": 2,
+  "depth_mm": 760,
+  "cooling": "air",
+  "name_prefix": "IB-TH6",
+  "port_count": 128,
+  "port_speed": "800G",
+  "port_type": "OSFP",
+  "downlink_prefix": "IB",
+  "uplink_prefix": "IB",
+  "tags": [
+    "交换机",
+    "NVIDIA",
+    "TH6",
+    "800G",
+    "IB",
+    "InfiniBand",
+    "参数面",
+    "单接"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-09-08",
+  "updated_at": "2026-09-08",
+  "recommended_network": [
+    "rail_optimized"
+  ]
+}

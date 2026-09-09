@@ -248,8 +248,11 @@ function LanguageSettings() {
 function ProjectDefaultsSettings() {
   const { t } = useTranslation()
   const [defaultRack, setDefaultRack] = useLocalStorage('autolink-default-rack', 42)
-  const [defaultPowerLimit, setDefaultPowerLimit] = useLocalStorage('autolink-default-power', 6000)
+  const [defaultPowerLimit, setDefaultPowerLimit] = useLocalStorage('autolink-default-power', 12000)
+  // 5.2.3-523-b: 三网默认端口速率（参数/存储/业务&管理）
   const [defaultPortSpeed, setDefaultPortSpeed] = useLocalStorage('autolink-default-port-speed', '400G')
+  const [defaultStorageSpeed, setDefaultStorageSpeed] = useLocalStorage('autolink-default-storage-speed', '200G')
+  const [defaultBizSpeed, setDefaultBizSpeed] = useLocalStorage('autolink-default-biz-speed', '25G')
   // 打磨轮（v1.2 复核）：输出偏好并入项目默认（移除自定义输出目录——输出默认=项目 output 目录）
   const [defaultFormat, setDefaultFormat] = useLocalStorage('autolink-output-format', 'xlsx')
   const [autoSaveInterval, setAutoSaveInterval] = useLocalStorage('autolink-autosave-interval', 5)
@@ -272,6 +275,18 @@ function ProjectDefaultsSettings() {
         <select value={defaultPortSpeed} onChange={(e) => setDefaultPortSpeed(e.target.value)}
           className={INPUT_CLASS}>
           {['100G', '200G', '400G', '800G'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </SettingsRow>
+      <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultStorageSpeed')}>
+        <select value={defaultStorageSpeed} onChange={(e) => setDefaultStorageSpeed(e.target.value)}
+          className={INPUT_CLASS}>
+          {['100G', '200G', '400G'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </SettingsRow>
+      <SettingsRow label={t('common:explorer.settings.projectDefaults.defaultBizSpeed')}>
+        <select value={defaultBizSpeed} onChange={(e) => setDefaultBizSpeed(e.target.value)}
+          className={INPUT_CLASS}>
+          {['10G', '25G', '100G'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </SettingsRow>
       <SettingsRow label={t('common:explorer.settings.output.defaultFormat')}>

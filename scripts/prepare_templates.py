@@ -28,7 +28,6 @@ GPU_SERVER_BY_TEMPLATE = {
     'NVL72-单架': 'nvidia_dgx_gb300_nvl72',
     'SuperPOD-256': 'nvidia_dgx_h100',
     'cambricon_mlu_cluster': 'cambricon_mlu590_8u',
-    'cloudmatrix_384': 'huawei_atlas_800t_a2',
     'hygon_dcu_cluster': 'hygon_k100_ai',
     'ualink_1_0_1024': 'nvidia_dgx_h100',
     'uec_1_0_cluster': 'nvidia_dgx_b200',
@@ -40,7 +39,6 @@ GPU_SERVER_BY_TEMPLATE = {
     '空项目': 'nvidia_dgx_h100',
     'DP3Tier-1024': 'nvidia_dgx_b300',
     'GB300-NVL72-三合一': 'nvidia_dgx_gb300_nvl72',
-    'cloudmatrix_512': 'huawei_atlas_800t_a2',
 }
 
 

@@ -24,6 +24,8 @@
   "generating": "생성 중…",
   "generate": "플랜 생성",
   "applyToDesign": "디자인에 적용",
+  "markDone": "완료 표시",
+  "unmarkDone": "완료 취소",
   "deviceList": "장치 목록",
   "connections": "연결",
   "terminals": "터미널",

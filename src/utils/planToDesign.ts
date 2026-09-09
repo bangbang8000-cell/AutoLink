@@ -84,7 +84,8 @@ export function buildPlanDesignPatch(plan: PlanSummary): Partial<DesignConfig> {
   const patch: Partial<DesignConfig> = {
     num_servers: Number(plan.macro.gpuCount ?? 64),
     rail_count: Number(plan.macro.rails ?? 8),
-    param_protocol: 'RoCE',
+    // 5.2.1-521-e：读取 plan.macro.protocol 真实值（IB 方案不再被错映射为 RoCE；缺省向后兼容 RoCE）
+    param_protocol: plan.macro.protocol === 'IB' ? 'IB' : 'RoCE',
     param_speed: inferPlanSpeed(plan.macro.deviceModels),
   }
   const switchPorts = inferSwitchPorts(plan)
@@ -92,6 +93,28 @@ export function buildPlanDesignPatch(plan: PlanSummary): Partial<DesignConfig> {
   Object.assign(patch, inferNetworkSwitches(plan))
   const dl = inferConvergenceDownlink(plan, switchPorts)
   if (dl) patch.param_downlink_limit = dl
+  // 5.2.2-522-h（契约 v1.3）：拓扑模式 / 合分模式 / 推理场景 → DesignConfig
+  const tm = plan.macro.topologyMode as string | undefined
+  if (tm === 'dual_plane') {
+    patch.param_network_mode = 'standard'
+    patch.dual_plane_enabled = true
+  } else if (tm === 'zcube') {
+    patch.param_network_mode = 'zcube'
+    patch.dual_plane_enabled = false
+  }
+  const cm = plan.macro.combinedMode as string | undefined
+  if (cm === 'biz_oob_2in1') {
+    patch.eth_combined = false
+    patch.oob_enabled = false
+    patch.biz_enabled = true
+  } else if (cm === 'eth_3in1') {
+    patch.eth_combined = true
+    patch.oob_enabled = true
+  } else if (cm === 'inference_4in1') {
+    patch.eth_combined = true
+    patch.oob_enabled = true
+    patch.inference_plane = true
+  }
   return patch
 }
 

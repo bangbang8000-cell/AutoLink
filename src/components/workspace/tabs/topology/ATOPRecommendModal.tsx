@@ -91,12 +91,24 @@ export function ATOPRecommendModal({ open, defaultNumGpus, onClose }: {
     }
   }
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!result?.topology || !result.zcube) return
     const nodes = result.topology.nodes
     const edges = result.topology.edges
-    useDesignStore.getState().restoreTopology(nodes as never, edges as never)
+    const design = useDesignStore.getState()
+    design.restoreTopology(nodes as never, edges as never)
+    // 5.2.2-522-e: 「应用到拓扑」补写 ZCube 组网配置（param_network_mode + param_zcube）→
+    // configToINI 发射 param_zcube_* → INI/JSON 落盘，DesignTab 可再次生成 Zcube
     useDesignStore.setState({
+      config: {
+        ...useDesignStore.getState().config,
+        param_network_mode: 'zcube',
+        param_zcube: {
+          nics_per_gpu: result.zcube.params.nics_per_gpu,
+          leaf_count: result.zcube.params.leaf_count,
+          switch_ports: result.zcube.params.switch_ports,
+        },
+      },
       summary: {
         mode: 'zcube',
         numServers: result.zcube.meta.numGpus,
@@ -121,8 +133,13 @@ export function ATOPRecommendModal({ open, defaultNumGpus, onClose }: {
         recommendation: '',
       })),
     })
+    try {
+      if (design.projectName) {
+        await design.saveConfig(design.projectName)
+      }
+    } catch { /* 保存失败不阻塞画布应用 */ }
     setApplied(true)
-    addToast('success', '推荐拓扑已应用到画布（GPU 按 A/B 组双平面着色）', 4000)
+    addToast('success', '推荐拓扑已应用到画布并写入组网配置（DesignTab 可再次生成 Zcube）', 4000)
   }
 
   const f = result?.feature

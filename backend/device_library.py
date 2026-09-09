@@ -77,6 +77,9 @@ class DeviceProfile:
     # 交换机口用: 物理 1 个高速口 → 逻辑 count 个低速口（如 Q3200 800G→2×400G）
     # 光模块用: 1 根分裂线缆，input_speed 物理速率 → output_speed 逻辑速率
     breakout: Optional[Dict[str, Any]] = None
+    # 523-e: 设备库推荐信息（一键选厂商/向导推荐/规划建议的单一事实源，可选）
+    recommended_scenario: List[str] = field(default_factory=list)  # 应用场景: training/inference/storage/compute/...
+    recommended_network: List[str] = field(default_factory=list)   # 推荐组网: rail_optimized/dual_plane/zcube/independent/... 
 
     def is_server(self) -> bool:
         return len(self.interface_models) > 0
@@ -250,6 +253,9 @@ class DeviceLibrary:
             lead_time=data.get("lead_time"),
             # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）能力
             breakout=data.get("breakout"),
+            # 523-e: 设备库推荐信息（可选）
+            recommended_scenario=data.get("recommended_scenario", []),
+            recommended_network=data.get("recommended_network", []),
         )
 
     def get(self, device_id: str) -> Optional[LibraryDevice]:
@@ -342,6 +348,9 @@ class DeviceLibrary:
             lead_time=getattr(device, 'lead_time', None),
             # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）能力
             breakout=overrides.get("breakout", getattr(device, 'breakout', None)),
+            # 523-e: 设备库推荐信息（可选，overrides 覆盖）
+            recommended_scenario=overrides.get("recommended_scenario", getattr(device, 'recommended_scenario', [])),
+            recommended_network=overrides.get("recommended_network", getattr(device, 'recommended_network', [])),
         )
         return merged
 

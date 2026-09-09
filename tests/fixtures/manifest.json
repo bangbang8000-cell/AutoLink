@@ -32,13 +32,6 @@
       "consumed_by": ["pytest:test_quality_fixtures"]
     },
     {
-      "id": "supernode_384",
-      "name": "384 NPU 华为超节点",
-      "path": "projects/supernode_384/project_config.json",
-      "scenario": "384 NPU 超节点，UB 域内全对等 + 800G Scale-Out",
-      "consumed_by": ["pytest:test_quality_fixtures"]
-    },
-    {
       "id": "zcube_512",
       "name": "512 GPU ZCube",
       "path": "projects/zcube_512/project_config.json",

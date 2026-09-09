@@ -2,14 +2,14 @@
   "meta": {
     "project": "aidc_64",
     "site": "BJ01",
-    "version": "1.2",
-    "schema": "plan:table/1.2",
-    "generatedAt": "2026-09-06T13:58:56+00:00",
+    "version": "1.3",
+    "schema": "plan:table/1.3",
+    "generatedAt": "2026-09-08T11:02:42+00:00",
     "source": "autolink",
     "projectType": "aidc",
     "bridgeVersion": "1.0",
     "projectId": "49a-64-ib-0001",
-    "planHash": "2facc0067fabc376ab13ffa5cc171027c5a56a1602fec53fb3c1f59cff487d01",
+    "planHash": "81e6c9875621b3ff0aecd6d2b228cdb1e8db7b5034b73c9e96b076a70bf641d1",
     "planVersion": 1,
     "projectName": "H100-64台-IB"
   },
@@ -78,7 +78,11 @@
       "BIZ_ACCESS": "H3C S6850-56HF",
       "OOB_AGG": "H3C S6805-56HF-G",
       "OOB_ACCESS": "H3C S5560X-54C-EI"
-    }
+    },
+    "topologyMode": "rail_optimized",
+    "combinedMode": "independent",
+    "scenario": "training",
+    "paramPlanes": []
   },
   "topology": {
     "layers": 2,
@@ -89,7 +93,9 @@
       "gpuCount": 64,
       "spine": 2,
       "leaf": 8
-    }
+    },
+    "mode": "rail_optimized",
+    "combined": "independent"
   },
   "deviceList": [
     {

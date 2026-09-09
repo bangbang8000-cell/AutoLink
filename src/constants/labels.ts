@@ -40,6 +40,25 @@ export const NETWORK_TYPE_LABELS: Record<string, string> = {
   oob: '带外网',
 }
 
+/** 523-e: 设备推荐应用场景 → 中文标签 */
+export const RECOMMENDED_SCENARIO_LABELS: Record<string, string> = {
+  training: '训练',
+  inference: '推理',
+  storage: '存储',
+  compute: '通算',
+}
+
+/** 523-e: 设备推荐组网模式 → 中文标签 */
+export const RECOMMENDED_NETWORK_LABELS: Record<string, string> = {
+  rail_optimized: '轨道优化',
+  dual_plane: '双平面',
+  zcube: 'Zcube',
+  independent: '四网独立',
+  biz_oob_2in1: '管理&业务2合1',
+  eth_3in1: '3合1',
+  inference_4in1: '推理4合1',
+}
+
 /* ================================================================
  *  厂商目录（单源） — 网络设备 / 服务器厂商预设及别名、匹配工具
  * ================================================================ */

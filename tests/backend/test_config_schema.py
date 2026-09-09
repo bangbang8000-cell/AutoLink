@@ -49,7 +49,7 @@ class TestSchemas:
 
     def test_app_settings_defaults(self):
         assert DEFAULT_APP_SETTINGS['theme'] == 'system'
-        assert DEFAULT_APP_SETTINGS['defaultPowerLimit'] == 6000
+        assert DEFAULT_APP_SETTINGS['defaultPowerLimit'] == 12000
         assert DEFAULT_APP_SETTINGS['explorerGroupMode'] == 'smart'
 
     def test_get_schema_unknown_type(self):
@@ -112,7 +112,7 @@ class TestMigrateAndNormalize:
     def test_normalize_app_settings_fills_defaults(self):
         merged = normalize_app_settings({'theme': 'dark'})
         assert merged['theme'] == 'dark'
-        assert merged['defaultPowerLimit'] == 6000
+        assert merged['defaultPowerLimit'] == 12000
         assert len(merged) == len(DEFAULT_APP_SETTINGS)
 
     def test_normalize_none(self):

@@ -21,7 +21,7 @@ AutoLink V3.0.1-T1-2 / V3.0.1-T1-5: 双平面 16 Leaf 拓扑（2-tier / 3-tier�
   - 每网卡双口在服务器侧命名区分：平面 A 用端口 1..N，平面 B 用 N+1..2N。
 """
 import math
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from models import NetworkObject, Connection
 from topology import calc_max_2tier
@@ -33,13 +33,16 @@ class DualPlaneTopology:
     def __init__(self, nics_per_server: int, ports_per_nic: int,
                  planes: List[Dict[str, Any]],
                  cable_type_config: Dict[str, str],
-                 network_type: str = "param", prefix: str = "参数"):
+                 network_type: str = "param", prefix: str = "参数",
+                 nic_breakout: Optional[Dict[str, Any]] = None):
         self.nics_per_server = int(nics_per_server)
         self.ports_per_nic = int(ports_per_nic)
         self.planes = planes              # [ {leaf_count, protocol, speed, switch_ports, uplink} ]
         self.cable_type_config = cable_type_config
         self.network_type = network_type
         self.prefix = prefix
+        # 5.2.2-522-c: 服务器网卡 1 分 2 分光标注 {input_speed, count}（output_speed 取各平面逻辑速率）
+        self.nic_breakout = nic_breakout
 
         # 网络组件（全部平面压平；平面归属经 plane_id 区分）
         self.leaves: List[NetworkObject] = []
@@ -241,7 +244,8 @@ class DualPlaneTopology:
                 self._connect_pair(server, srv_port, speed, leaf, leaf_port, speed,
                                    self.cable_type_config['server_leaf'],
                                    f"服务器到{self.prefix}{label}Leaf",
-                                   network_type=self.network_type, out=connections)
+                                   network_type=self.network_type, out=connections,
+                                   breakout=self._nic_breakout(speed))
 
         if not spines:
             return
@@ -292,7 +296,8 @@ class DualPlaneTopology:
                 self._connect_pair(server, srv_port, speed, leaf, leaf_port, speed,
                                    self.cable_type_config['server_leaf'],
                                    f"服务器到{self.prefix}{label}Leaf",
-                                   network_type=self.network_type, out=connections)
+                                   network_type=self.network_type, out=connections,
+                                   breakout=self._nic_breakout(speed))
 
         # --- Leaf → Spine（Pod 内全互联，轮转） ---
         for pod in range(1, pods + 1):
@@ -341,8 +346,20 @@ class DualPlaneTopology:
                                    f"{self.prefix}{label}Spine到Core",
                                    network_type=self.network_type, out=connections)
 
+    def _nic_breakout(self, logical_speed: str):
+        """5.2.2-522-c: 服务器网卡 1 分 2 分光标注（物理口 → 2 逻辑口，分别接 A/B 平面）"""
+        bk = self.nic_breakout
+        if not bk:
+            return None
+        return {
+            'input_speed': bk.get('input_speed', ''),
+            'output_speed': logical_speed,
+            'count': int(bk.get('count', 1) or 1),
+        }
+
     def _connect_pair(self, a_dev, a_port, a_mod, z_dev, z_port, z_mod,
-                      cable, desc, network_type, out: List[Connection]) -> None:
+                      cable, desc, network_type, out: List[Connection],
+                      breakout=None) -> None:
         """双向 Connection 并挂接到两端对象（与 designer._add_conn 语义一致）"""
         c1 = Connection(a_dev.name, a_port, a_mod, z_dev.name, z_port, z_mod, cable, desc,
                         a_cabinet_id=a_dev.cabinet_id, a_cabinet_name=a_dev.cabinet_name,
@@ -356,6 +373,10 @@ class DualPlaneTopology:
                         a_cabinet_id=z_dev.cabinet_id, a_cabinet_name=z_dev.cabinet_name,
                         a_start_u=z_dev.start_u, a_end_u=z_dev.end_u,
                         network_type=network_type)
+        # 5.2.2-522-c: 1 分 2 分光标注（服务器网卡物理口 → A/B 平面逻辑口）
+        if breakout:
+            c1.breakout = breakout
+            c2.breakout = breakout
         a_dev.add_connection(c1)
         z_dev.add_connection(c2)
         out.extend([c1, c2])

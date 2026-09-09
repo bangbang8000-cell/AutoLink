@@ -32,11 +32,22 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["计算", "H3C", "UniServer", "通用计算"],
-  "applicable_networks": ["biz", "oob"],
+  "tags": [
+    "计算",
+    "H3C",
+    "UniServer",
+    "通用计算"
+  ],
+  "applicable_networks": [
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_scenario": [
+    "compute"
+  ]
 }

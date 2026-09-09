@@ -175,15 +175,13 @@ python scripts/gen_golden.py --check  # golden 基线比对
 
 ---
 
-## 🗂️ 内置模板（25 套）
+## 🗂️ 内置模板（23 套）
 
 | 模板 | 场景 | 规模 | Scale-Up |
 |------|------|------|----------|
 | NVL72-单架 | NVIDIA GB200 NVLink 域 | 72 GPU | NVLink 72 单域 ✅ |
 | **GB300-NVL72-三合一** | GB300 冷板液冷 + 三合一融合网 | 72 GPU | NVLink 72 单域 ✅ |
 | ualink_1_0_1024 | UALink 1.0 1024 GPU Pod | 1024 GPU | UALink 1024 ✅ |
-| cloudmatrix_384 | 华为 CloudMatrix 384 | 384 GPU | UB 384 单域 ✅ |
-| cloudmatrix_512 | 华为 CloudMatrix 双域 | 512 NPU | UB 双域 ✅ |
 | uec_1_0_cluster | UEC 1.0 集群 | 1024 GPU | — |
 | SuperPOD-256 | NVIDIA SuperPOD | 256 GPU | — |
 | DP3Tier-1024 | 3-tier 双平面 800G | 1024 GPU | — |
@@ -226,8 +224,7 @@ AutoLink/
 │   ├── designer.py         #   网络设计协调层（四网 + 三合一融合网）
 │   ├── dual_plane_topology.py # 双平面拓扑
 │   ├── zcube_topology.py   #   ZCube 扁平二部图拓扑
-│   ├── ub_topology.py      #   UB（昇腾）拓扑
-│   ├── network_plugin.py   #   插件化接线（HuaweiSuperNode 等）
+│   ├── network_plugin.py   #   插件化接线（param/storage/biz/oob/scale_up/zcube）
 │   ├── rail_topology.py    #   Rail-Optimized 拓扑算法
 │   ├── rack_allocation.py  #   多约束机柜分配
 │   ├── room_optimizer.py   #   机房智能落位（约束满足 + 多目标优化）

@@ -1,5 +1,51 @@
 # CHANGELOG
 
+## [5.2.0] - 2026-09-09
+
+### 5.2.0 工作台精细打磨与回归发布（5.2 系列首版对外）
+
+**里程碑 M1–M5 全量交付**：工作台状态机、拓扑三模式与网络合分、配置默认值与设备选型、机房布局与 3D 可视化、打磨修复与双端回归。
+
+- **5.2.1 工作台状态机与数据流转（M1）**：
+  - 新增 `workbenchState.ts`（依赖图/级联失效/四态推导/指纹检测）+ `workbench.store.ts`（aidcDone/stale 标记，zustand persist）；
+  - AIDC 规划「标记完成/撤销」按钮 + plan 重新生成自动撤销完成标记 + 级联失效下游；
+  - `WorkbenchStaleBanner`（待调整横幅：一键重跑依赖链/跳转/同步/确认偏离）；
+  - `planToDesign.buildPlanDesignPatch` 协议硬编码修复（读 `plan.macro.protocol`）；
+  - FileExplorer 迁移 `deriveWorkbenchState` + 渲染门禁收敛到 `renderGateReady` 单一入口 + 项目生命周期徽章。
+
+- **5.2.2 拓扑模式与网络合分 + 超节点移出（M2）**：
+  - **拓扑三模式 UI**：轨道优化/双平面/Zcube 三模式可切换，向导 + 设计面板 + AIDC 面板三入口统一；智能建议（B300+RoCE→双平面、TH6→关闭双平面）；
+  - **分光建模**：轨道优化交换机 1 分 2 分光（`apply_breakout` 模块函数）；双平面 NIC breakout（物理口→A/B 平面逻辑口 1 分 2，`dual_plane_topology` 透传 `breakout` 标注）；
+  - **TH6 单接**：新增 `nvidia_th6_128_800g_ib.json`（128×800G IB，单接无 breakout）；
+  - **Zcube 前端持久化**：INI 读取 `param_network_mode/param_zcube` → 再生成可复现；
+  - **网络合分四模式**：四网独立/2合1/3合1/4合1（推理加速平面），新建 `inference_plane_topology.py`（独立精简参数面，收敛比 1:1~3:1）；
+  - **超节点移出**：删除 `ub_topology.py`（455 行）+ designer 超节点方法 + `HuaweiSuperNodePlugin` + V021 规则；旧项目 `huawei_supernode` 降级 standard + 提示；清理 cloudmatrix_384/512 模板与 golden；
+  - **契约 v1.3**：`plan:table/1.3`（新增 `topology_mode/combined_mode/scenario/paramPlanes/deviceModels`），7 模板重新生成；
+  - **设备库**：127 设备全量对账校验通过，`recommended_scenario/recommended_network` 字段补充 91 个模板。
+
+- **5.2.3 配置默认值与设备选型（M3）**：
+  - 机柜功率默认 6000→12000（全链路 12 处同步）；
+  - 三网速率拆分（参数 400G / 存储 200G / 业务&管理 25G）独立配置；
+  - RoCE 厂商下拉（H3C/华为/锐捷）+ 最佳设备推荐文案；
+  - 一键选厂商修复（`vendorPreset.ts` 按 refKey+角色档位+厂商确定性选型，无空预填）；
+  - 设备库 `recommended_scenario/recommended_network` 字段 + 详情面板展示。
+
+- **5.2.4 机房布局与 3D 可视化（M4）**：
+  - 冷暖风道建模（排间色带，冷蓝/热红 + 标签，`aisleWidth` 可配 6~48）；
+  - 3D 重构：`InstancedMesh`（一次 draw call）+ 机柜类型着色 + 柜内设备块 + 空调/立柱占位体 + 名称标签 + 功率热力条 + 点击设备清单面板；
+  - GPU 上架统一（`gpu_per_cabinet` 默认 1 = 1 柜 1 台，与前端矩阵对齐）；
+  - `DataCenterStats` 挂载到 `RoomDesignTab` + 删除死代码 `Topology3DTab.tsx`。
+
+- **5.2.5 打磨修复与双端回归（M5）**：
+  - **525-a 孤儿视图**：WorkbenchTab「+」按钮弹子视图添加菜单（docs/knowledge 等孤儿视图可打开）；
+  - **525-b 状态标签 i18n**：5 语言全齐（`common:explorer.workbench.status.*` + `lifecycle.*` + `views`）；
+  - **525-c 前后端柜型统一**：后端补齐 `security/custom/power` 常量，8↔5 收敛；
+  - **525-d 矩阵格回写漂移**：`ROOM_MARK_TYPES` 扩为 8 型 + 后端 `ROOM_TYPES` 同步 + `ROOM_FREE_DOMAIN_TYPES` 放开设备域约束；
+  - **525-e 生命周期展示收尾**：`WorkbenchReadinessCard` 三态 i18n（就绪/待调整/未就绪），语义对齐；
+  - **525-f 双端全量门禁**：前端 vitest 114 文件/1431 用例 + tsc + eslint 全绿；后端 pytest 全量通过（既有 V010 收敛比失败为 5.1.0 基线环境差异，非本次改动）。
+
+- **工程**：golden 基线 23/23 通过；设备库 127 设备对账校验 PASS；模板校验 23/23 通过。
+
 ## [5.1.0] - 2026-09-07
 
 ### 5.1.0 Agent Connect 全能力正式发布（5.1 系列对外版本号）

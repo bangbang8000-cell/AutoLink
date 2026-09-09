@@ -24,6 +24,8 @@
   "generating": "Generating…",
   "generate": "Generate Plan",
   "applyToDesign": "Apply to Design",
+  "markDone": "Mark Complete",
+  "unmarkDone": "Undo Complete",
   "deviceList": "Device List",
   "connections": "Connections",
   "terminals": "Terminals",

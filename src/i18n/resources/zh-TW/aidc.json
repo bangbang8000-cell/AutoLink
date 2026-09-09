@@ -24,6 +24,8 @@
   "generating": "產生中…",
   "generate": "產生規劃",
   "applyToDesign": "套用到設計",
+  "markDone": "標記完成",
+  "unmarkDone": "撤銷完成",
   "deviceList": "設備清單",
   "connections": "接線",
   "terminals": "終端",

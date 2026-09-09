@@ -63,7 +63,7 @@ def validate_cube_topology(topology: Dict[str, Any], num_gpus: int,
         },
         'param_zcube': {'nics_per_gpu': nics_per_gpu},
         'num_servers': num_gpus,
-        'power_limit_per_rack': 6000,
+        'power_limit_per_rack': 12000,
         'param_switch_ports': switch_ports,
     }
     ctx = ValidationContext(

@@ -62,11 +62,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "NVIDIA", "A100", "AI训练", "深度学习", "已发布型号"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "NVIDIA",
+    "A100",
+    "AI训练",
+    "深度学习",
+    "已发布型号"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/data-center/dgx-a100/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "training"
+  ]
 }

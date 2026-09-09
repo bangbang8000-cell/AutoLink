@@ -63,7 +63,7 @@ describe('RackStore', () => {
 
       const state = useRackStore.getState()
       state.cabinets.forEach((cab: RackCabinet) => {
-        expect(cab.power_limit).toBe(6000) // 默认值
+        expect(cab.power_limit).toBe(12000) // 默认值（523-a：6000→12000）
       })
     })
   })

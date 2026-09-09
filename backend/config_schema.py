@@ -54,8 +54,11 @@ APP_SETTINGS_FIELDS = [
     _f('language', 'string', 'zh-CN', 'language', '界面语言', '', ['zh-CN', 'en', 'ja', 'ko', 'zh-TW']),
     # 项目默认值
     _f('defaultRack', 'number', 42, 'projectDefaults', '默认机柜 U 数', '', ),
-    _f('defaultPowerLimit', 'number', 6000, 'projectDefaults', '默认机柜功率上限(W)', '', ),
-    _f('defaultPortSpeed', 'string', '400G', 'projectDefaults', '默认端口速率', '', ['100G', '200G', '400G', '800G']),
+    _f('defaultPowerLimit', 'number', 12000, 'projectDefaults', '默认机柜功率上限(W)', '', ),
+    # 5.2.3-523-b: 三网默认端口速率（参数/存储/业务&管理）
+    _f('defaultPortSpeed', 'string', '400G', 'projectDefaults', '默认参数网速率', '', ),
+    _f('defaultStorageSpeed', 'string', '200G', 'projectDefaults', '默认存储网速率', '', ),
+    _f('defaultBizSpeed', 'string', '25G', 'projectDefaults', '默认业务&管理网速率', '', ),
     # 输出
     _f('outputFormat', 'string', 'xlsx', 'output', '默认导出格式', '', ['xlsx', 'csv', 'png']),
     _f('outputDir', 'string', '', 'output', '输出目录', '空 = 项目默认'),
@@ -87,7 +90,7 @@ PROJECT_FIELDS = [
     _f('rail_mode', 'string', 'standard', 'param', 'Rail 模式', '', ['standard', 'rail_optimized']),
     _f('rail_count', 'number', 8, 'param', 'Rail 数量', ''),
     _f('rack_type', 'number', 42, 'rack', '机柜 U 数', '', ),
-    _f('power_limit_per_rack', 'number', 6000, 'rack', '机柜功率上限(W)', ''),
+    _f('power_limit_per_rack', 'number', 12000, 'rack', '机柜功率上限(W)', ''),
     _f('cooling_method', 'string', 'air', 'rack', '散热方式', '', ['air', 'cold_plate', 'immersion']),
 ]
 

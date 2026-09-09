@@ -76,9 +76,6 @@ def test_designer_scale_matches_config():
                     + topo.get('num_compute_servers', 0))
         d = NetworkDesignerV2(cfg_path)
         total = len(d.servers)
-        # 超节点 NPU 单独建模（huawei_npus），不计入 servers
-        if topo.get('param_network_mode') == 'huawei_supernode':
-            total += len(getattr(d, 'huawei_npus', []))
         assert total == expected, \
             f'{name}: 设计规模 {total} != 配置声明 {expected}'
 
@@ -91,9 +88,6 @@ def test_fixture_scenario_flags():
     storage_off = _load('storage_disabled')
     assert storage_off['networks']['storage_network'] is False
     assert storage_off['topology']['num_all_flash_storage'] == 0
-
-    supernode = _load('supernode_384')
-    assert supernode['topology']['param_network_mode'] == 'huawei_supernode'
 
     zcube = _load('zcube_512')
     assert zcube['topology']['param_network_mode'] == 'zcube'

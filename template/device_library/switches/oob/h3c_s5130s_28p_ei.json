@@ -21,11 +21,26 @@
   "rdma_type": "",
   "price_range": "低",
   "eol_date": "",
-  "tags": ["交换机", "H3C", "S5130S", "千兆", "带外", "PoE", "国产化", "紧凑型"],
-  "applicable_networks": ["oob"],
+  "tags": [
+    "交换机",
+    "H3C",
+    "S5130S",
+    "千兆",
+    "带外",
+    "PoE",
+    "国产化",
+    "紧凑型"
+  ],
+  "applicable_networks": [
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.h3c.com/cn/Products_And_Solution/Enterprise/Products/Switches/Products/S5130S-EI/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_network": [
+    "independent",
+    "eth_3in1"
+  ]
 }

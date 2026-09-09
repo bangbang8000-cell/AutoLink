@@ -110,6 +110,22 @@ describe('504-c 设备库云同步 store', () => {
     expect(st.cloudSyncing).toBe(false)
   })
 
+  it('523-f: 云同步 bundle 保留推荐字段（recommended_network/scenario，MC 端可用）', async () => {
+    useDeviceLibraryStore.setState({
+      allDevices: [
+        makeDevice('sw_1', { recommended_network: ['rail_optimized', 'dual_plane'] }),
+        makeDevice('gpu_1', { category: 'gpu_servers', recommended_scenario: ['inference'] }),
+      ],
+      filteredDevices: [],
+    } as never)
+    cloudMock.deviceLibraryPush.mockResolvedValue({ status: 'ok', count: 2 })
+    await useDeviceLibraryStore.getState().pushCloudLibrary()
+    const payload = cloudMock.deviceLibraryPush.mock.calls[0][0] as { devices: any[] }
+    const byId = new Map(payload.devices.map((d) => [d.id, d]))
+    expect(byId.get('sw_1')?.recommended_network).toEqual(['rail_optimized', 'dual_plane'])
+    expect(byId.get('gpu_1')?.recommended_scenario).toEqual(['inference'])
+  })
+
   it('pushCloudLibrary：IPC 失败 → 设置 cloudSyncError', async () => {
     cloudMock.deviceLibraryPush.mockRejectedValue(new Error('网络错误'))
     await useDeviceLibraryStore.getState().pushCloudLibrary()

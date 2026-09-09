@@ -19,11 +19,26 @@
   "tech_route": "硅光",
   "origin": "domestic",
   "lead_time": "16-20周",
-  "tags": ["交换机", "H3C", "CPO", "硅光", "51.2T", "国产化", "参数面"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "H3C",
+    "CPO",
+    "硅光",
+    "51.2T",
+    "国产化",
+    "参数面"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": false,
   "datasheet_url": "",
   "added_at": "2026-08-02",
-  "updated_at": "2026-08-02"
+  "updated_at": "2026-08-02",
+  "recommended_network": [
+    "rail_optimized",
+    "dual_plane",
+    "zcube"
+  ]
 }

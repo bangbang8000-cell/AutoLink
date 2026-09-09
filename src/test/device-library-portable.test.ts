@@ -34,6 +34,7 @@ const mcDevice = {
   port_type: 'QSFP56',
   description: '存储网交换机',
   applicable_networks: ['storage'],
+  recommended_network: ['independent'],
 }
 
 describe('buildPortableLibrary（设备库导出可移植格式）', () => {
@@ -70,6 +71,28 @@ describe('parsePortableLibrary（设备库可移植格式回导）', () => {
       expect(dev.source).toBe('custom')
       expect(dev.port_count).toBe(128)
       expect(dev.port_speed).toBe('200G')
+    }
+  })
+
+  it('523-e: 透传推荐字段（recommended_network/recommended_scenario）', () => {
+    const r = parsePortableLibrary(JSON.stringify([{
+      ...mcDevice,
+      recommended_scenario: ['training'],
+    }]))
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.devices[0].recommended_network).toEqual(['independent'])
+      expect(r.devices[0].recommended_scenario).toEqual(['training'])
+    }
+  })
+
+  it('523-e: 无推荐字段时不生成空数组字段', () => {
+    const plain = { id: 'dev_a', vendor: 'H3C', model: 'M', applicable_networks: ['oob'] }
+    const r = parsePortableLibrary(JSON.stringify([plain]))
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.devices[0].recommended_network).toBeUndefined()
+      expect(r.devices[0].recommended_scenario).toBeUndefined()
     }
   })
 

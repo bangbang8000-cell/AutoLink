@@ -48,11 +48,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["存储", "并行文件系统", "DDN", "EXAScaler", "Lustre", "HPC", "PB级"],
-  "applicable_networks": ["storage", "biz", "oob"],
+  "tags": [
+    "存储",
+    "并行文件系统",
+    "DDN",
+    "EXAScaler",
+    "Lustre",
+    "HPC",
+    "PB级"
+  ],
+  "applicable_networks": [
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.ddn.com/products/exascaler-storage/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "storage"
+  ]
 }

@@ -142,6 +142,9 @@ export function normalizeMcDevice(mcDevice: unknown): LibraryDevice {
     verified: false,
     added_at: todayISO(),
     updated_at: todayISO(),
+    // 523-e: 推荐字段透传（MC 有则带，无则省略）
+    ...(Array.isArray(d.recommended_scenario) ? { recommended_scenario: d.recommended_scenario.map(String) } : {}),
+    ...(Array.isArray(d.recommended_network) ? { recommended_network: d.recommended_network.map(String) } : {}),
   }
 }
 

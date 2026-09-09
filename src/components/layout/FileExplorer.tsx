@@ -9,7 +9,8 @@ import { useRenderStore } from '@/stores/render.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useExplorerStore } from '@/stores/explorer.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
-import { deriveSubviewStatus, type SubviewStatus, type SubviewStatusDeps, type SubviewStatusTone } from '@/utils/subviewStatus'
+import { useWorkbenchStore } from '@/stores/workbench.store'
+import { deriveWorkbenchState, type WorkbenchStatus, type WorkbenchStateDeps } from '@/utils/workbenchState'
 import { OutputExplorer } from '@/components/layout/OutputExplorer'
 import {
   ChevronRight, ChevronDown,
@@ -184,11 +185,12 @@ const WORKBENCH_SUBVIEWS: Array<{ id: WorkbenchSubview; label: string; icon: Rea
   { id: 'export', label: '导出', icon: <Download size={13} className="text-success-500" /> },
 ]
 
-/** AL-N2：动态状态标签色调（已完成=绿 / 待操作=灰 / 进行中=蓝） */
-const STATUS_TONE_CLASS: Record<SubviewStatusTone, string> = {
+/** 5.2.5-525-b：状态标签文案已迁移至 i18n（common:explorer.workbench.status.*） */
+const STATUS_TONE_CLASS: Record<WorkbenchStatus, string> = {
   done: 'text-success-600 dark:text-success-400',
   pending: 'text-gray-400 dark:text-gray-500',
-  active: 'text-info-500',
+  in_progress: 'text-info-500',
+  needs_update: 'text-warning-500',
 }
 
 function WorkbenchExplorer() {
@@ -203,6 +205,8 @@ function WorkbenchExplorer() {
   const renderStatus = useRenderStore((s) => s.progress.status)
   const roomMatrix = useRoomStore((s) => s.matrix)
   const outputBatches = useExplorerStore((s) => s.outputBatches)
+  const workbenchStale = useWorkbenchStore((s) => (selectedProjectName ? s.stale[selectedProjectName] : undefined))
+  const aidcDone = useWorkbenchStore((s) => (selectedProjectName ? s.aidcDone[selectedProjectName] === true : false))
   const toggleOutputType = useRenderStore((s) => s.toggleOutputType)
   const openTab = useWorkspaceStore((s) => s.openTab)
   const subview = useUIStore((s) => s.workbenchSubview)
@@ -232,25 +236,26 @@ function WorkbenchExplorer() {
   const roomMatrixFinalized = roomMatrix?.finalized === true
   const hasOutputBatches = selectedProjectName ? (outputBatches[selectedProjectName] ?? []).length > 0 : false
 
-  // AL-N2：每行动态状态——active 子视图 / 读取中优先「进行中」；否则按数据就绪度「已完成 / 待操作」
+  // 5.2.1-521-f：每行动态状态——读取中 > 待调整(stale) > active 进行中 > 已完成/待操作
   const subviewStatuses = useMemo(() => {
-    const deps: SubviewStatusDeps = {
+    const deps: WorkbenchStateDeps = {
       designValid: valid,
-      rackReady,
-      rackHasCabinets,
       roomMatrixFinalized,
+      rackHasCabinets,
       hasOutputBatches,
       hasSelectedOutputTypes: selectedOutputTypes.length > 0,
       activeSubview: subview,
+      stale: workbenchStale,
+      aidcDone,
     }
     const reading = (id: WorkbenchSubview): boolean =>
       (id === 'design' && generating) || (id === 'main' && renderStatus === 'rendering')
-    const map = {} as Record<WorkbenchSubview, SubviewStatus>
+    const map = {} as Record<WorkbenchSubview, WorkbenchStatus>
     for (const s of WORKBENCH_SUBVIEWS) {
-      map[s.id] = deriveSubviewStatus(s.id, { ...deps, reading: reading(s.id) })
+      map[s.id] = deriveWorkbenchState(s.id, { ...deps, reading: reading(s.id) })
     }
     return map
-  }, [valid, rackReady, rackHasCabinets, roomMatrixFinalized, hasOutputBatches, selectedOutputTypes.length, subview, generating, renderStatus])
+  }, [valid, roomMatrixFinalized, rackHasCabinets, hasOutputBatches, selectedOutputTypes.length, subview, generating, renderStatus, workbenchStale, aidcDone])
 
   if (!selectedProjectName) {
     return (
@@ -274,7 +279,7 @@ function WorkbenchExplorer() {
       <div className="flex-1 overflow-auto p-3 space-y-3">
         {/* 打磨轮（v1.2）：工作台子视图按钮（点击加载工作区对应界面） */}
         <div className="border border-gray-200 dark:border-edge-subtle rounded-lg overflow-hidden">
-          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-app/50 text-2xs font-medium text-gray-500 dark:text-gray-400">工作台视图</div>
+          <div className="px-2.5 py-1.5 bg-gray-50 dark:bg-app/50 text-2xs font-medium text-gray-500 dark:text-gray-400">{t('common:explorer.workbench.views')}</div>
           <div className="p-1.5 space-y-0.5">
             {WORKBENCH_SUBVIEWS.map((s) => (
               <button key={s.id} type="button"
@@ -288,8 +293,8 @@ function WorkbenchExplorer() {
                 {s.icon}
                 <span className="truncate">{s.label}</span>
                 <span className={clsx('ml-auto text-2xs shrink-0',
-                  subview === s.id ? 'text-white/80' : STATUS_TONE_CLASS[subviewStatuses[s.id].tone])}>
-                  {subviewStatuses[s.id].label}
+                  subview === s.id ? 'text-white/80' : STATUS_TONE_CLASS[subviewStatuses[s.id]])}>
+                  {t(`common:explorer.workbench.status.${subviewStatuses[s.id]}`)}
                 </span>
               </button>
             ))}

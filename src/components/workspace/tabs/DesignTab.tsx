@@ -11,6 +11,8 @@ import { useDesignStore, type DesignConfig, type DesignSummary, type EstimatePar
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useToastStore } from '@/stores/toast.store'
 import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
+import { applyTopologyMode, topologyModeOf, TOPOLOGY_MODE_OPTIONS, type TopologyMode } from '@/utils/topologyMode'
+import { applyCombine, combineModeOf, NETWORK_COMBINE_OPTIONS, type NetworkCombineMode } from '@/utils/networkCombine'
 import { NumberInput, Toggle } from '@/components/ui'
 import { PUEEstimatePanel } from './PUEEstimatePanel'
 import { ReportViewPanel } from './ReportViewPanel'
@@ -368,19 +370,33 @@ export function DesignTab() {
             </div>
           </FormSection>
 
-          {/* V2.7.2: 高级配置 — Rail-Optimized 模式与协议 */}
+          {/* 5.2.2-522-a: 高级配置 — 参数网拓扑三模式（轨道优化/双平面/Zcube）与协议 */}
           <FormSection title="高级配置" icon={<Network size={13} />} defaultOpen={config.rail_mode === 'rail_optimized'}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <SelectInput
-                label="Rail 模式"
-                value={config.rail_mode}
-                onChange={(v) => handleUpdateConfig({ rail_mode: v as 'standard' | 'rail_optimized' })}
-                options={[
-                  { value: 'standard', label: 'Standard (Fat-Tree)' },
-                  { value: 'rail_optimized', label: 'Rail-Optimized (SuperPOD)' },
-                ]}
+                label="拓扑模式"
+                value={topologyModeOf(config)}
+                onChange={(v) => handleUpdateConfig(
+                  applyTopologyMode(config, v as TopologyMode, v === 'dual_plane' ? config.dual_plane_enabled !== false : undefined),
+                )}
+                options={TOPOLOGY_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
               />
-              {config.rail_mode === 'rail_optimized' && (
+              {topologyModeOf(config) === 'dual_plane' && (
+                <Toggle label="启用双平面" checked={config.dual_plane_enabled !== false}
+                  onChange={(v) => handleUpdateConfig(applyTopologyMode(config, 'dual_plane', v))} />
+              )}
+              {topologyModeOf(config) === 'rail' && (
+                <SelectInput
+                  label="Rail 模式"
+                  value={config.rail_mode}
+                  onChange={(v) => handleUpdateConfig({ rail_mode: v as 'standard' | 'rail_optimized' })}
+                  options={[
+                    { value: 'standard', label: 'Standard (Fat-Tree)' },
+                    { value: 'rail_optimized', label: 'Rail-Optimized (SuperPOD)' },
+                  ]}
+                />
+              )}
+              {topologyModeOf(config) === 'rail' && config.rail_mode === 'rail_optimized' && (
                 <NumberInput
                   label="Rail 数量"
                   value={config.rail_count}
@@ -398,9 +414,35 @@ export function DesignTab() {
                 ]}
               />
             </div>
-            {config.rail_mode === 'rail_optimized' && (
+            {/* 5.2.2-522-f: 网络合分模式（四网独立/2合1/3合1/4合1）+ 存储网开关 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              <SelectInput
+                label="网络合分"
+                value={combineModeOf(config)}
+                onChange={(v) => handleUpdateConfig(applyCombine(config, v as NetworkCombineMode))}
+                options={NETWORK_COMBINE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              />
+              <Toggle label="存储网" checked={config.storage_enabled !== false}
+                onChange={(v) => handleUpdateConfig({ storage_enabled: v })} />
+            </div>
+            {combineModeOf(config) === 'inference_4in1' && (
+              <p className="text-2xs text-warning-500 dark:text-warning-400">
+                推理 4合1：推理加速平面（后端推理域）开发中，当前按 3合1 渲染。
+              </p>
+            )}
+            {topologyModeOf(config) === 'rail' && config.rail_mode === 'rail_optimized' && (
               <p className="text-2xs text-gray-400 dark:text-gray-500">
                 Rail-Optimized 模式采用 NVIDIA SuperPOD 8-Rail 架构,服务器交错分配到各 Rail,单 Rail 故障不影响整体可用性。
+              </p>
+            )}
+            {topologyModeOf(config) === 'zcube' && (
+              <p className="text-2xs text-gray-400 dark:text-gray-500">
+                ZCube：无 Spine 扁平二部图（A/B 两组 Leaf 全二部互联）。
+              </p>
+            )}
+            {topologyModeOf(config) === 'dual_plane' && config.dual_plane_enabled !== false && (
+              <p className="text-2xs text-gray-400 dark:text-gray-500">
+                双平面：A/B 两平面各 8 Leaf、每网卡双口（800G→2×400G / 400G→2×200G 分光建模见后续版本）。
               </p>
             )}
           </FormSection>

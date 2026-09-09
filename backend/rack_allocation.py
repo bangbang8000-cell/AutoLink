@@ -19,7 +19,7 @@ AutoLink V2.9.0-T1 - 机柜分配算法（多约束装箱）
     cabinets = allocator.cabinets # 机柜分配结果
 """
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 # --- 设备类型 ---
 DEVICE_TYPE_GPU = 'gpu'          # GPU 服务器
@@ -33,6 +33,11 @@ CABINET_TYPE_COMPUTE = 'compute'
 CABINET_TYPE_STORAGE = 'storage'
 CABINET_TYPE_NETWORK = 'network'
 CABINET_TYPE_SCALEUP = 'scaleup'   # V2.9.3-T3: Scale-Up GPU 节点柜
+# 5.2.5-525-c：前端 8 种机柜类型与后端收敛——补齐 security/custom/power 语义（分配器不主动生成，
+# 但标记/校验/导出/回写可识别，避免前端标记类型在后端无对应）
+CABINET_TYPE_SECURITY = 'security'   # 安全柜（合规/堡垒机等，自定义标记域）
+CABINET_TYPE_CUSTOM = 'custom'       # 自定义柜（任意设备域）
+CABINET_TYPE_POWER = 'power'         # 电源柜（无设备，仅占位标记）
 
 # 交换机 obj_type 前缀 → 网段
 _NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_', 'combined_')
@@ -40,9 +45,10 @@ _NETWORK_PREFIXES = ('param_', 'storage_', 'oob_', 'biz_', 'combined_')
 # GPU 独占阈值: 功率 ≥ 上限 * GPU_DEDICATE_RATIO 时独占机柜
 GPU_DEDICATE_RATIO = 0.5
 
-# 机柜类型全集（分桶索引用，v2.9.1-T6）
+# 机柜类型全集（分桶索引用，v2.9.1-T6；5.2.5-525-c 扩为前端 8 种）
 _CABINET_TYPES = (CABINET_TYPE_GPU, CABINET_TYPE_COMPUTE, CABINET_TYPE_STORAGE,
-                  CABINET_TYPE_NETWORK, CABINET_TYPE_SCALEUP)
+                  CABINET_TYPE_NETWORK, CABINET_TYPE_SCALEUP,
+                  CABINET_TYPE_SECURITY, CABINET_TYPE_CUSTOM, CABINET_TYPE_POWER)
 
 
 @dataclass
@@ -128,11 +134,14 @@ class RackAllocator:
     def __init__(self, rack_type: int = 42, power_limit: int = 6000,
                  naming_prefix: str = '机柜', gpu_dedicated: bool = False,
                  top_reserved_u: int = 2, server_mount_from: str = 'bottom',
-                 network_mount_from: str = 'top'):
+                 network_mount_from: str = 'top',
+                 gpu_per_cabinet: int = 1):
         self.rack_type = max(1, int(rack_type or 42))
         self.power_limit = max(1, int(power_limit or 6000))
         self.naming_prefix = naming_prefix or '机柜'
         self.gpu_dedicated = bool(gpu_dedicated)
+        # 5.2.4-524-d: GPU 每柜台数上限（默认 1 柜 1 台，与前端矩阵硬约束对齐；显式 >1 才多台共柜）
+        self.gpu_per_cabinet = max(1, int(gpu_per_cabinet or 1))
         # M5: 顶部预留 U 数（默认 2U）+ 上架方向（服务器从底部向上、网络从顶部向下）
         self.top_reserved_u = max(0, int(top_reserved_u or 0))
         self.server_mount_from = server_mount_from or 'bottom'
@@ -191,7 +200,8 @@ class RackAllocator:
         - Scale-Up GPU 节点 (scaleup_domain >= 0) → 独占机柜 (1 台/柜, 类型 scaleup)
         - V3.0.0-T0-5: 池化 GPU (pool 非空) → 同池聚柜优先（池间不混柜）
         - gpu_dedicated 或 功率 ≥ 上限*ratio → 独占机柜 (1 台/柜)
-        - 否则 → GPU 柜功率装箱 (可多台共柜)
+        - 否则 → GPU 柜装箱：每柜最多 gpu_per_cabinet 台（5.2.4-524-d，默认 1 柜 1 台；
+          显式 gpu_per_cabinet>1 才多台共柜，仍受功率+U 位约束）
         """
         if device.scaleup_domain >= 0:
             # V2.9.3-T3: 1 台/柜; 输入顺序(域内 GPU 连续)保证域内柜号相邻
@@ -212,10 +222,21 @@ class RackAllocator:
             cab = self._new_cabinet(CABINET_TYPE_GPU)
             self._place(cab, device)
             return
-        cab = self._find_fit_cabinet(CABINET_TYPE_GPU, device)
+        # 5.2.4-524-d: 找已有 GPU 柜——需未达每柜 GPU 上限且可放下（多台共柜仅在 gpu_per_cabinet>1 时发生）
+        cab = self._find_gpu_fit_cabinet(device)
         if cab is None:
             cab = self._new_cabinet(CABINET_TYPE_GPU)
         self._place(cab, device)
+
+    def _find_gpu_fit_cabinet(self, device: DeviceSlot) -> Optional[CabinetAllocation]:
+        """在 GPU 桶中找可放下且未达每柜 GPU 上限的柜（524-d：默认 1 柜 1 台）"""
+        for c in self._buckets.get(CABINET_TYPE_GPU, []):
+            gpu_in_cab = sum(1 for d in c.devices if d.device_type == DEVICE_TYPE_GPU)
+            if gpu_in_cab >= self.gpu_per_cabinet:
+                continue
+            if self._can_fit(c, device):
+                return c
+        return None
 
     # ------------------------------------------------------------------
     # 通用装箱

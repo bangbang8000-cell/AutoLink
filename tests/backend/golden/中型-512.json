@@ -5,8 +5,6 @@
     "biz_access": 48,
     "biz_agg": 8,
     "combined_leaves": 0,
-    "huawei_npus": 0,
-    "huawei_scaleout_switches": 0,
     "oob_access": 24,
     "oob_agg": 1,
     "param_cores": 128,

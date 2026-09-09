@@ -64,11 +64,29 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["NPU", "华为", "昇腾", "910C", "国产化", "UB总线", "CloudMatrix", "AI训练", "大模型"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "NPU",
+    "华为",
+    "昇腾",
+    "910C",
+    "国产化",
+    "UB总线",
+    "CloudMatrix",
+    "AI训练",
+    "大模型"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://e.huawei.com/cn/products/computing/ascend",
   "added_at": "2026-08-02",
-  "updated_at": "2026-08-02"
+  "updated_at": "2026-08-02",
+  "recommended_scenario": [
+    "training"
+  ]
 }

@@ -48,11 +48,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["存储", "并行文件系统", "IBM", "Spectrum Scale", "GPFS", "HPC", "企业级"],
-  "applicable_networks": ["storage", "biz", "oob"],
+  "tags": [
+    "存储",
+    "并行文件系统",
+    "IBM",
+    "Spectrum Scale",
+    "GPFS",
+    "HPC",
+    "企业级"
+  ],
+  "applicable_networks": [
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.ibm.com/products/storage-scale",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "storage"
+  ]
 }

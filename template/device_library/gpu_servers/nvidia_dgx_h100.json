@@ -52,11 +52,25 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "NVIDIA", "H100", "AI训练", "深度学习"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "NVIDIA",
+    "H100",
+    "AI训练",
+    "深度学习"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_scenario": [
+    "training"
+  ]
 }

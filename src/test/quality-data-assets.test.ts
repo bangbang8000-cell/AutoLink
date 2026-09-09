@@ -29,7 +29,7 @@ describe('测试数据资产清单（F6-2 / Q-2）', () => {
     const manifest = loadManifest()
     expect(manifest.schemaVersion).toBe(1)
     expect(Array.isArray(manifest.projects)).toBe(true)
-    expect(manifest.projects.length).toBeGreaterThanOrEqual(6)
+    expect(manifest.projects.length).toBeGreaterThanOrEqual(5)
     for (const p of manifest.projects as FixtureProject[]) {
       expect(p.id).toBeTruthy()
       expect(p.name).toBeTruthy()
@@ -59,7 +59,6 @@ describe('测试数据资产清单（F6-2 / Q-2）', () => {
       '128_h100_multi_rack',
       'combined_network_gb300',
       'storage_disabled',
-      'supernode_384',
       'zcube_512',
     ]) {
       expect(ids.has(required), `缺少关键场景样例: ${required}`).toBe(true)

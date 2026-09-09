@@ -592,6 +592,20 @@
       "validationFailed": "驗證失敗"
     },
     "workbench": {
+      "views": "工作臺檢視",
+      "status": {
+        "done": "已完成",
+        "pending": "待操作",
+        "in_progress": "進行中",
+        "needs_update": "待調整"
+      },
+      "lifecycle": {
+        "ready": "未開始",
+        "configured": "已配置",
+        "planned": "已規劃",
+        "designed": "已設計",
+        "layouted": "已佈局"
+      },
       "title": "工作台",
       "openFullSize": "全尺寸開啟",
       "selectProject": "選擇專案後開始使用工作台",
@@ -673,7 +687,9 @@
         "title": "新建專案預設值",
         "defaultRackType": "預設機柜類型",
         "defaultPowerLimit": "預設功率上限 (W)",
-        "defaultPortSpeed": "預設連接埠速率"
+        "defaultPortSpeed": "預設連接埠速率",
+        "defaultStorageSpeed": "預設儲存網路速率",
+        "defaultBizSpeed": "預設業務&管理網路速率"
       },
       "output": {
         "title": "輸出設定",

@@ -62,11 +62,26 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["DCU", "海光", "K100", "国产化", "信创", "AI训练"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "DCU",
+    "海光",
+    "K100",
+    "国产化",
+    "信创",
+    "AI训练"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "training"
+  ]
 }

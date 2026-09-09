@@ -23,6 +23,8 @@ export interface ProjectNetworks {
   oob_network: boolean
   /** V3.0.2-T2-5: 三合一网卡开关（storage+biz+带内管理合并为融合以太网，OOB 独立；可选，默认 false） */
   eth_combined?: boolean
+  /** 5.2.3-523-c: RoCE 网络厂商（H3C/华为/锐捷，默认 H3C；仅 RoCE 时使用） */
+  vendor?: string
 }
 
 /** 参数面协议类型（V2.7.6-T2/V2.9.3-T8: 支持 UEC） */
@@ -48,6 +50,22 @@ export interface ProjectTopology {
   storage_downlink_limit: number
   biz_downlink_limit: number
   oob_downlink_limit: number
+  /** 5.2.2-522-f: 推理加速平面（4合1）开关 */
+  inference_plane?: boolean
+  /** 5.2.2-522-f: 推理 GPU 服务器数量（前 N 台接入推理域） */
+  inference_servers?: number
+  /** 5.2.2-522-f: 推理域速率（默认 400G） */
+  inference_speed?: string
+  /** 5.2.2-522-f: 推理域收敛比（1:1~3:1，默认 3） */
+  inference_convergence?: number
+  /** 5.2.2-522-a: 参数网组网模式（standard | zcube） */
+  param_network_mode?: 'standard' | 'zcube'
+  /** 5.2.2-522-a: 双平面开关（启用时经 merge 落 param_planes） */
+  dual_plane_enabled?: boolean
+  /** 5.2.2-522-a: 轨道优化开关（Rail-Optimized，NVIDIA 8-Rail） */
+  rail_mode?: 'standard' | 'rail_optimized'
+  /** 5.2.2-522-a: Rail 数量（默认 8） */
+  rail_count?: number
 }
 
 /** 机柜散热方式 */
@@ -156,7 +174,7 @@ export function createDefaultProjectConfig(name: string): ProjectConfig {
     device_refs: {},
     rack_config: {
       rack_type: 42,
-      power_limit_per_rack: 6000,
+      power_limit_per_rack: 12000,
       naming_prefix: '机柜',
       cooling_method: 'air',
       gpu_dedicated: false,

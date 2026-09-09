@@ -592,6 +592,20 @@
       "validationFailed": "Validation Failed"
     },
     "workbench": {
+      "views": "Workbench Views",
+      "status": {
+        "done": "Done",
+        "pending": "Pending",
+        "in_progress": "In progress",
+        "needs_update": "Needs update"
+      },
+      "lifecycle": {
+        "ready": "Not started",
+        "configured": "Configured",
+        "planned": "Planned",
+        "designed": "Designed",
+        "layouted": "Layouted"
+      },
       "title": "Workbench",
       "openFullSize": "Open Full Size",
       "selectProject": "Select a project to use the workbench",
@@ -673,7 +687,9 @@
         "title": "New Project Defaults",
         "defaultRackType": "Default Rack Type",
         "defaultPowerLimit": "Default Power Limit (W)",
-        "defaultPortSpeed": "Default Port Speed"
+        "defaultPortSpeed": "Default Port Speed",
+        "defaultStorageSpeed": "Default Storage Network Speed",
+        "defaultBizSpeed": "Default Biz & Mgmt Speed"
       },
       "output": {
         "title": "Output Settings",

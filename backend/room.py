@@ -16,8 +16,11 @@ from typing import Any, Dict, List, Optional
 
 from rack_allocation import (
     CABINET_TYPE_COMPUTE,
+    CABINET_TYPE_CUSTOM,
     CABINET_TYPE_GPU,
     CABINET_TYPE_NETWORK,
+    CABINET_TYPE_SCALEUP,
+    CABINET_TYPE_SECURITY,
     CABINET_TYPE_STORAGE,
 )
 
@@ -28,11 +31,20 @@ ROOM_TYPE_STORAGE = CABINET_TYPE_STORAGE            # 存储柜
 ROOM_TYPE_COMPUTE = CABINET_TYPE_COMPUTE            # 通算柜
 ROOM_TYPE_COMBINED = 'combined'                     # 组合柜（任意设备域）
 ROOM_TYPE_POWER = 'power'                           # v1.4 电源柜（无设备，仅占位标记）
+# 525-d：与前端 8 种柜型收敛——安全柜/自定义柜/Scale-Up 柜（均按自由域处理，见 RoomConstraints.validate_placement）
+ROOM_TYPE_SCALEUP = CABINET_TYPE_SCALEUP            # Scale-Up GPU 节点柜
+ROOM_TYPE_SECURITY = CABINET_TYPE_SECURITY          # 安全柜（合规/堡垒机等）
+ROOM_TYPE_CUSTOM = CABINET_TYPE_CUSTOM              # 自定义柜（任意设备域）
 ROOM_TYPE_EMPTY = 'empty'                           # 未标记（默认，宽松无类型约束）
 
-# 可标记的机柜类型（UI 展示用）
+# 可标记的机柜类型（UI 展示用；525-d 扩为前端 8 种，保证柜型改类型回写矩阵格子合法可校验）
 ROOM_TYPES = (ROOM_TYPE_GPU, ROOM_TYPE_NETWORK, ROOM_TYPE_STORAGE,
-              ROOM_TYPE_COMPUTE, ROOM_TYPE_COMBINED, ROOM_TYPE_POWER)
+              ROOM_TYPE_COMPUTE, ROOM_TYPE_COMBINED, ROOM_TYPE_POWER,
+              ROOM_TYPE_SCALEUP, ROOM_TYPE_SECURITY, ROOM_TYPE_CUSTOM)
+
+# 自由域柜型（不约束设备域，等同 combined/empty，仅作可视化分类）
+ROOM_FREE_DOMAIN_TYPES = (ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY,
+                          ROOM_TYPE_SCALEUP, ROOM_TYPE_SECURITY, ROOM_TYPE_CUSTOM)
 
 # --- 占位类型（不可放置设备） ---
 PLACEHOLDER_AC = 'ac'          # 空调占位
@@ -252,7 +264,7 @@ class RoomConstraints:
         if not cell.is_available():
             errors.append(f"位置 {cell.position} 是占位（{cell.placeholder}），不可放置设备")
             return errors
-        if cell.type not in (ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY):
+        if cell.type not in ROOM_FREE_DOMAIN_TYPES:
             allowed = self.type_device_map.get(cell.type, [])
             if device_type not in allowed:
                 errors.append(

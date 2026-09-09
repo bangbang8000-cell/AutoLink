@@ -15,11 +15,23 @@
   "port_type": "RJ45",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "H3C", "1G", "带外管理", "汇聚"],
-  "applicable_networks": ["oob"],
+  "tags": [
+    "交换机",
+    "H3C",
+    "1G",
+    "带外管理",
+    "汇聚"
+  ],
+  "applicable_networks": [
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.h3c.com/cn/",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_network": [
+    "independent",
+    "eth_3in1"
+  ]
 }

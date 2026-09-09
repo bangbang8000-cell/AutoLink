@@ -19,13 +19,13 @@ import json
 import uuid
 
 
-# ---------------- 桥接标识（plan:table 契约 v1.2，MC-AL/docs/plan_table_契约v1.2） ----------------
-CONTRACT_VERSION = '1.2'
+# ---------------- 桥接标识（plan:table 契约 v1.3，MC-AL/docs/plan_table_契约v1.3） ----------------
+CONTRACT_VERSION = '1.3'
 BRIDGE_META = {
     'source': 'autolink',          # 来源系统：AL 产出
     'projectType': 'aidc',         # 项目类型：AIDC 桥接
     'bridgeVersion': '1.0',        # 桥接契约能力版本
-    'schema': 'plan:table/1.2',    # schema 标识
+    'schema': 'plan:table/1.3',    # schema 标识
 }
 
 
@@ -62,6 +62,11 @@ DEFAULTS = {
     },
     'ospf': {'process': 10, 'area': '0.0.0.0'},
     'naming_format': '{site}-R{rack:02d}-AIDC-{vendor}-{abbr}-{seq:02d}',
+    # 5.2.2-522-h（契约 v1.3）：拓扑模式 / 合分模式 / 推理场景 / 双平面结构（MC 端解析用）
+    'topology_mode': 'rail_optimized',   # rail_optimized | dual_plane | zcube
+    'combined_mode': 'independent',      # independent | biz_oob_2in1 | eth_3in1 | inference_4in1
+    'scenario': 'training',              # training | inference（GPU 应用场景）
+    'param_planes': [],                  # 双平面结构 [{leaf_count, switch_ports, speed, protocol, uplink}]
     'device_models': {
         'SPINE': 'H3C S9827', 'LEAF': 'H3C S9827',
         'STO_SPINE': 'H3C S9825-128B', 'STO_LEAF': 'H3C S9825-128B',
@@ -126,6 +131,16 @@ def validate_macro(macro: dict) -> str | None:
         return '收敛比须在 (0,4]'
     if 'rails' in macro and not (1 <= int(macro['rails']) <= 16):
         return '多轨数须在 1-16'
+    # 5.2.2-522-h（契约 v1.3）：新增字段值域
+    if 'topology_mode' in macro and str(macro['topology_mode']) not in ('rail_optimized', 'dual_plane', 'zcube'):
+        return 'topology_mode 仅支持 rail_optimized/dual_plane/zcube'
+    if 'combined_mode' in macro and str(macro['combined_mode']) not in (
+            'independent', 'biz_oob_2in1', 'eth_3in1', 'inference_4in1'):
+        return 'combined_mode 仅支持 independent/biz_oob_2in1/eth_3in1/inference_4in1'
+    if 'scenario' in macro and str(macro['scenario']) not in ('training', 'inference'):
+        return 'scenario 仅支持 training/inference'
+    if 'param_planes' in macro and not isinstance(macro['param_planes'], list):
+        return 'param_planes 必须是数组'
     if 'as_range' in macro:
         lo, hi = int(macro['as_range'][0]), int(macro['as_range'][1])
         if not (AS_MIN <= lo <= hi <= AS_MAX):
@@ -252,6 +267,11 @@ def plan_aidc(macro: dict) -> dict:
         'vlanRanges': m['vlan_ranges'], 'asRange': m['as_range'],
         'ospf': m['ospf'],
         'deviceModels': m['device_models'],
+        # 5.2.2-522-h（契约 v1.3）：拓扑/合分/场景/双平面 透传（MC plantable_importer 解析）
+        'topologyMode': m['topology_mode'],
+        'combinedMode': m['combined_mode'],
+        'scenario': m['scenario'],
+        'paramPlanes': m['param_planes'],
     }
     # 契约 v1.2 §1.1/§1.2：项目身份 + 版本。projectId 未提供则 mint（会话内稳定由面板持有）；
     # projectName/planVersion 可选；planHash 权威 = sha256(canonical(macro))。
@@ -277,6 +297,9 @@ def plan_aidc(macro: dict) -> dict:
         'topology': {
             'layers': 2, 'spines': spine_n, 'leaves': leaf_n, 'pods': None,
             'scale': {'gpuCount': gpu, 'spine': spine_n, 'leaf': leaf_n},
+            # 契约 v1.3：拓扑模式 / 合分模式（MC 渲染/校验消费）
+            'mode': m['topology_mode'],
+            'combined': m['combined_mode'],
         },
         'deviceList': devices,
         'connections': conns,

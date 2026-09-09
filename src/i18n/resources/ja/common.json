@@ -592,6 +592,20 @@
       "validationFailed": "検証失敗"
     },
     "workbench": {
+      "views": "ワークスペースビュー",
+      "status": {
+        "done": "完了",
+        "pending": "未操作",
+        "in_progress": "進行中",
+        "needs_update": "要更新"
+      },
+      "lifecycle": {
+        "ready": "未開始",
+        "configured": "設定済み",
+        "planned": "計画済み",
+        "designed": "設計済み",
+        "layouted": "レイアウト済み"
+      },
       "title": "ワークベンチ",
       "openFullSize": "フルサイズで開く",
       "selectProject": "プロジェクトを選択してワークベンチを使用",
@@ -673,7 +687,9 @@
         "title": "新規プロジェクトデフォルト",
         "defaultRackType": "デフォルトラックタイプ",
         "defaultPowerLimit": "デフォルト電力制限 (W)",
-        "defaultPortSpeed": "デフォルトポート速度"
+        "defaultPortSpeed": "デフォルトポート速度",
+        "defaultStorageSpeed": "デフォルトストレージネットワーク速度",
+        "defaultBizSpeed": "デフォルト業務&管理ネットワーク速度"
       },
       "output": {
         "title": "出力設定",

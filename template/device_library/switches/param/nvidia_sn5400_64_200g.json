@@ -15,11 +15,23 @@
   "port_type": "QSFP56",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "NVIDIA", "Spectrum", "200G", "RoCEv2", "参数面"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "NVIDIA",
+    "Spectrum",
+    "200G",
+    "RoCEv2",
+    "参数面"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_network": [
+    "rail_optimized"
+  ]
 }

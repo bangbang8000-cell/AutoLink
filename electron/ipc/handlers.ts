@@ -1272,11 +1272,57 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         const rc = parseInt(iniConfig.rail_count)
         if (!isNaN(rc)) topo.rail_count = rc
       }
+      // 5.2.2-522-a: 拓扑模式字段（param_network_mode / dual_plane_enabled → param_planes）
+      if ('param_network_mode' in iniConfig) topo.param_network_mode = iniConfig.param_network_mode
+      // 5.2.2-522-e: ZCube 组网参数（param_zcube_nics_per_gpu/leaf_count/switch_ports → topo.param_zcube）
+      const zcKeys = ['nics_per_gpu', 'leaf_count', 'switch_ports']
+      const zc: Record<string, number> = {}
+      for (const zk of zcKeys) {
+        const iniKey = `param_zcube_${zk}`
+        if (iniKey in iniConfig && iniConfig[iniKey].trim() !== '') {
+          const zv = parseInt(iniConfig[iniKey])
+          if (!isNaN(zv)) zc[zk] = zv
+        }
+      }
+      if (Object.keys(zc).length > 0) topo.param_zcube = zc
+      else if ('param_zcube' in topo && iniConfig.param_network_mode !== 'zcube') delete topo.param_zcube
+      if ('dual_plane_enabled' in iniConfig) {
+        if (iniConfig.dual_plane_enabled === 'true') {
+          if (!Array.isArray(topo.param_planes) || topo.param_planes.length === 0) {
+            const plane = {
+              leaf_count: 8,
+              switch_ports: typeof topo.param_switch_ports === 'number' ? topo.param_switch_ports : 128,
+              speed: topo.param_speed ?? '400G',
+              protocol: topo.param_protocol ?? 'RoCE',
+              uplink: 0,
+            }
+            topo.param_planes = [{ ...plane }, { ...plane }]
+          }
+        } else {
+          delete topo.param_planes
+        }
+      }
 
       // 网络开关(保留 JSON 已有的 device_refs)
       const networks = existingJson.networks || {}
       if ('oob_enabled' in iniConfig) networks.oob_network = iniConfig.oob_enabled !== 'false'
       if ('biz_enabled' in iniConfig) networks.biz_network = iniConfig.biz_enabled !== 'false'
+      // 5.2.2-522-f: 网络合分——eth_combined / storage_network → networks；inference_plane → topo
+      if ('eth_combined' in iniConfig) networks.eth_combined = iniConfig.eth_combined !== 'false'
+      if ('storage_enabled' in iniConfig) networks.storage_network = iniConfig.storage_enabled !== 'false'
+      if ('inference_plane' in iniConfig) topo.inference_plane = iniConfig.inference_plane !== 'false'
+      // 5.2.2-522-f: 推理域参数（inference_servers/speed/convergence → topo）
+      if ('inference_servers' in iniConfig && iniConfig.inference_servers.trim() !== '') {
+        const iv = parseInt(iniConfig.inference_servers)
+        if (!isNaN(iv)) topo.inference_servers = iv
+      }
+      if ('inference_speed' in iniConfig && iniConfig.inference_speed.trim() !== '') {
+        topo.inference_speed = iniConfig.inference_speed
+      }
+      if ('inference_convergence' in iniConfig && iniConfig.inference_convergence.trim() !== '') {
+        const ic = parseInt(iniConfig.inference_convergence)
+        if (!isNaN(ic)) topo.inference_convergence = ic
+      }
 
       existingJson.topology = topo
       existingJson.networks = networks

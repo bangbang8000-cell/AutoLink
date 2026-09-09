@@ -7,6 +7,8 @@ import { useRackStore } from '@/stores/rack.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useRenderStore } from '@/stores/render.store'
 import { useUIStore } from '@/stores/ui.store'
+import { useWorkbenchStore } from '@/stores/workbench.store'
+import { renderGateReady } from '@/utils/workbenchState'
 import { useToastStore } from '@/stores/toast.store'
 import { exportTopologyViewPng } from '@/utils/exportTopologyView'
 import { roomLayoutArt, rackElevationSvg, rackElevationSize, svgToPngBase64 } from '@/utils/exportGraphics'
@@ -44,9 +46,11 @@ export function WorkbenchActionCard() {
   const isRendering = progress.status === 'rendering'
   // 打磨轮（v1.6 / AL-N1d）：依赖门禁——组网设计有拓扑产出即可渲染（软门禁）；
   // 机柜设计未就绪时提示，不硬置灰
-  const designReady = designValid === true || (topology?.nodes?.length ?? 0) > 0
+  // 5.2.1-521-f：渲染门禁收敛——design/main 被级联失效（待调整）→ 不可渲染
+  const workbenchStale = useWorkbenchStore((s) => (selectedProjectName ? s.stale[selectedProjectName] : undefined))
+  const renderGate = renderGateReady({ designValid, hasTopology: (topology?.nodes?.length ?? 0) > 0, stale: workbenchStale })
+  const renderGateStale = (workbenchStale?.includes('design') || workbenchStale?.includes('main')) === true
   const rackReady = !!matrix && cabinets.length > 0
-  const renderGate = designReady
   const cleanupRef = useRef<(() => void) | null>(null)
   const prevStatusRef = useRef(progress.status)
 
@@ -346,16 +350,21 @@ export function WorkbenchActionCard() {
         {/* 打磨轮（v1.6 / AL-N1d）：渲染门禁提示——组网设计未就绪时置灰；机柜设计未就绪仅提示（软门禁） */}
         {!renderGate && !isRendering && (
           <div className="px-2.5 py-1.5 rounded border border-warning-200 dark:border-warning-800 bg-warning-50/60 dark:bg-warning-900/20 text-2xs text-warning-700 dark:text-warning-300">
-            {t('workbench:renderGateHint', '完成组网设计')}
-            {designReady ? ' ✓' : '（未就绪，先在设计页生成拓扑）'}
-            {' 后可渲染'}
-            {!rackReady && (
-              <>
-                {' · '}
-                {t('workbench:rackDesign', '机柜设计')}
-                {'（未就绪，建议先完成以输出机柜材料）'}
-              </>
-            )}
+            {renderGateStale
+              ? t('workbench:renderGateStale', '组网设计/渲染已因上游变更待调整，请先重跑依赖链或同步规划')
+              : (
+                <>
+                  {t('workbench:renderGateHint', '完成组网设计')}
+                  {'（未就绪，先在设计页生成拓扑）后可渲染'}
+                  {!rackReady && (
+                    <>
+                      {' · '}
+                      {t('workbench:rackDesign', '机柜设计')}
+                      {'（未就绪，建议先完成以输出机柜材料）'}
+                    </>
+                  )}
+                </>
+              )}
           </div>
         )}
 

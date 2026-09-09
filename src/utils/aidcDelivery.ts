@@ -25,6 +25,11 @@ export function macroToInput(m: Partial<PlanMacro> | Record<string, unknown>): R
     as_range: M.asRange,
     ospf: M.ospf,
     device_models: M.deviceModels,
+    // 契约 v1.3（522-h）：拓扑/合分/场景/双平面 透传（重开回填 + 交付包保留）
+    topology_mode: M.topologyMode,
+    combined_mode: M.combinedMode,
+    scenario: M.scenario,
+    param_planes: M.paramPlanes,
   }
 }
 

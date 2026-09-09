@@ -1,12 +1,24 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
-import { Zap, HardDrive, Network, Monitor } from 'lucide-react'
+import { Zap, HardDrive, Network, Monitor, Layers } from 'lucide-react'
 import clsx from 'clsx'
 import type { ProjectNetworks, ParamProtocol } from '@/types/project-config'
+import { NETWORK_COMBINE_OPTIONS, combineModeOf, applyCombine, type NetworkCombineMode } from '@/utils/networkCombine'
+import { TOPOLOGY_MODE_OPTIONS, topologyModeOf, applyTopologyMode, type TopologyMode } from '@/utils/topologyMode'
+
+/** 5.2.3-523-c: RoCE 各厂商参数网最佳设备推荐（下一步「设备选型」可调整） */
+const ROCE_VENDOR_HINT: Record<string, string> = {
+  'H3C': '已预选：Leaf S9827 400G / Spine S9855 800G',
+  '华为': '已预选：Leaf CE8861 400G / Spine CE16800 800G',
+  '锐捷': '已预选：Leaf RG-S6930 400G / Spine RG-S6980 800G',
+}
+
+/** 5.2.3-523-c: vendor 为字符串字段，不参与布尔开关 */
+type NetworkBooleanKey = Exclude<keyof ProjectNetworks, 'vendor'>
 
 interface NetworkCard {
-  key: keyof ProjectNetworks
+  key: NetworkBooleanKey
   label: string
   description: string
   icon: React.ReactNode
@@ -58,12 +70,44 @@ export function WizardStepNetworks() {
   useTranslation('device')
   const { config, updateNetworks, updateTopology } = useWizardStore()
 
-  const toggle = (key: keyof ProjectNetworks) => {
+  const toggle = (key: NetworkBooleanKey) => {
     updateNetworks({ [key]: !config.networks[key] })
   }
 
   const setProtocol = (protocol: ParamProtocol) => {
     updateTopology({ param_protocol: protocol })
+  }
+
+  // 5.2.2-522-f: 网络合分模式（向导侧，映射到 ProjectNetworks/ProjectTopology）
+  const combineMode = combineModeOf({
+    eth_combined: config.networks.eth_combined,
+    inference_plane: config.topology.inference_plane,
+    oob_enabled: config.networks.oob_network,
+    biz_enabled: config.networks.biz_network,
+  })
+
+  const setCombineMode = (mode: NetworkCombineMode) => {
+    const patch = applyCombine({}, mode)
+    updateNetworks({
+      eth_combined: patch.eth_combined,
+      oob_network: patch.oob_enabled !== false,
+      biz_network: patch.biz_enabled !== false,
+    })
+    updateTopology({ inference_plane: patch.inference_plane })
+  }
+
+  // 5.2.2-522-a (F522-1): 参数网拓扑三模式（向导统一入口）
+  const topologyMode = topologyModeOf({
+    param_network_mode: config.topology.param_network_mode,
+    dual_plane_enabled: config.topology.dual_plane_enabled,
+  })
+
+  const setTopologyMode = (mode: TopologyMode) => {
+    const patch = applyTopologyMode({}, mode)
+    updateTopology({
+      param_network_mode: patch.param_network_mode,
+      dual_plane_enabled: patch.dual_plane_enabled,
+    })
   }
 
   const paramEnabled = config.networks.param_network
@@ -163,11 +207,74 @@ export function WizardStepNetworks() {
                       ? 'IB 优先推荐 NVIDIA 交换机'
                       : 'RoCE 优先推荐 H3C 交换机'}
                   </span>
+                  {config.topology.param_protocol === 'RoCE' && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">RoCE 厂商</span>
+                      <select
+                        value={config.networks.vendor || 'H3C'}
+                        onChange={(e) => updateNetworks({ vendor: e.target.value })}
+                        className="px-2 py-1 text-xs rounded-md border border-app-border bg-app-panel"
+                      >
+                        <option value="H3C">H3C（推荐）</option>
+                        <option value="华为">华为</option>
+                        <option value="锐捷">锐捷</option>
+                      </select>
+                      <span className="text-2xs text-gray-400">
+                        {ROCE_VENDOR_HINT[config.networks.vendor || 'H3C']}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 5.2.2-522-a (F522-1): 参数网拓扑模式（轨道优化/双平面/Zcube） */}
+              {card.key === 'param_network' && paramEnabled && (
+                <div className="mt-2 ml-14 flex items-center gap-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                    拓扑模式:
+                  </span>
+                  <select
+                    value={topologyMode}
+                    onChange={(e) => setTopologyMode(e.target.value as TopologyMode)}
+                    className="px-2 py-1 text-xs rounded-md border border-app-border bg-app-panel"
+                  >
+                    {TOPOLOGY_MODE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <span className="text-2xs text-gray-400">
+                    {TOPOLOGY_MODE_OPTIONS.find((o) => o.value === topologyMode)?.hint}
+                  </span>
                 </div>
               )}
             </div>
           )
         })}
+      </div>
+
+      {/* 5.2.2-522-f: 网络合分模式（四网独立 / 管理&业务2合1 / 3合1 / 推理4合1） */}
+      <div className="rounded-lg border border-gray-200 dark:border-edge-subtle p-3 space-y-2">
+        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-200">
+          <Layers size={14} className="text-primary-500" />
+          网络合分模式
+        </div>
+        <select
+          value={combineMode}
+          onChange={(e) => setCombineMode(e.target.value as NetworkCombineMode)}
+          className="w-full px-2 py-1.5 text-xs rounded-md border border-app-border bg-app-panel text-gray-700 dark:text-gray-200"
+        >
+          {NETWORK_COMBINE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <p className="text-2xs text-gray-400">
+          {NETWORK_COMBINE_OPTIONS.find((o) => o.value === combineMode)?.hint}
+        </p>
+        {combineMode === 'inference_4in1' && (
+          <p className="text-2xs text-primary-600 dark:text-primary-400">
+            推理 4 合 1：3 合 1 基础上增加推理加速平面（独立精简参数面，收敛比 1:1~3:1）。推理 GPU 数量可在下一步设备选型后调整。
+          </p>
+        )}
       </div>
     </div>
   )

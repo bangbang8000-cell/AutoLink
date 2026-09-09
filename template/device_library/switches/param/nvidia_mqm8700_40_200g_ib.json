@@ -15,11 +15,26 @@
   "port_type": "QSFP56",
   "downlink_prefix": "IB",
   "uplink_prefix": "IB",
-  "tags": ["交换机", "NVIDIA", "Quantum", "200G", "IB", "HDR", "InfiniBand", "参数面", "有网管口"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "NVIDIA",
+    "Quantum",
+    "200G",
+    "IB",
+    "HDR",
+    "InfiniBand",
+    "参数面",
+    "有网管口"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/networking/infiniband/",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_network": [
+    "rail_optimized"
+  ]
 }

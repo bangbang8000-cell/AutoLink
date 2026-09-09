@@ -464,17 +464,6 @@ class TestTemplateScaleUpConsistency:
         assert len(designer.scale_up_gpus) == 1024
         assert designer.scale_up_stats['num_domains'] == 1
 
-    def test_cloudmatrix_template(self):
-        """cloudmatrix_384: 华为超节点 UB 384 NPU 单域 (V3.0.2-T2-3 huawei_supernode 模式)"""
-        ini = os.path.join('template', 'cloudmatrix_384', 'network_config.ini')
-        designer = NetworkDesignerV2(ini)
-        # JSON 优先加载：cloudmatrix_384 已升级为 huawei_supernode（UB 由 param_huawei_supernode 表达）
-        assert designer.param_network_mode == 'huawei_supernode'
-        assert designer.scale_up_config is None          # 不再走 scale_up 段
-        assert len(designer.huawei_npus) == 384
-        assert designer.huawei_stats['num_domains'] == 1
-        assert designer.huawei_stats['total_links'] == 384 * 383 // 2
-
     def test_nvl72_template(self):
         """NVL72-单架: NVLink 72 GPU 单域 (NVL72)"""
         ini = os.path.join('template', 'NVL72-单架', 'network_config.ini')

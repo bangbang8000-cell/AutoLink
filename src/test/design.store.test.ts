@@ -70,6 +70,58 @@ describe('DesignStore', () => {
       expect(cfg.additional_storage_servers).toBe(8)
       expect(cfg.additional_compute_servers).toBe(8)
       expect(cfg.param_switch_ports).toBe(144)
+      // 5.2.2-522-a: param_planes 非空 → dual_plane_enabled 回填；param_network_mode 缺省 standard
+      expect(cfg.dual_plane_enabled).toBe(true)
+      expect(cfg.param_network_mode).toBe('standard')
+    })
+
+    it('5.2.2-522-a: JSON param_network_mode=zcube → config 回填', async () => {
+      const ini = `[topology]\nnum_gpu_servers = 512\nparam_network_mode = zcube`
+      const json = JSON.stringify({
+        meta: { name: 'z' },
+        networks: {},
+        topology: { num_gpu_servers: 512, param_network_mode: 'zcube' },
+      })
+      window.electron.project.getConfigFile = vi.fn().mockResolvedValue(ini)
+      window.electron.project.getFile = vi.fn().mockResolvedValue(json)
+
+      await useDesignStore.getState().loadConfig('zcube-512')
+
+      const cfg = useDesignStore.getState().config
+      expect(cfg.param_network_mode).toBe('zcube')
+      expect(cfg.dual_plane_enabled).toBe(false)
+    })
+
+    it('5.2.2-522-e: JSON topo.param_zcube → config.param_zcube 回填（DesignTab 可再生成 Zcube）', async () => {
+      const ini = `[topology]\nnum_gpu_servers = 64\nparam_network_mode = zcube`
+      const json = JSON.stringify({
+        meta: { name: 'zcube-atop' },
+        networks: {},
+        topology: {
+          num_gpu_servers: 64,
+          param_network_mode: 'zcube',
+          param_zcube: { nics_per_gpu: 2, leaf_count: 4, switch_ports: 128 },
+        },
+      })
+      window.electron.project.getConfigFile = vi.fn().mockResolvedValue(ini)
+      window.electron.project.getFile = vi.fn().mockResolvedValue(json)
+
+      await useDesignStore.getState().loadConfig('zcube-atop')
+
+      const cfg = useDesignStore.getState().config
+      expect(cfg.param_network_mode).toBe('zcube')
+      expect(cfg.param_zcube).toEqual({ nics_per_gpu: 2, leaf_count: 4, switch_ports: 128 })
+    })
+
+    it('5.2.2-522-e: 无 param_zcube 时 config 不生成空对象', async () => {
+      const ini = `[topology]\nnum_gpu_servers = 64`
+      const json = JSON.stringify({ meta: {}, networks: {}, topology: { num_gpu_servers: 64 } })
+      window.electron.project.getConfigFile = vi.fn().mockResolvedValue(ini)
+      window.electron.project.getFile = vi.fn().mockResolvedValue(json)
+
+      await useDesignStore.getState().loadConfig('plain-64')
+
+      expect(useDesignStore.getState().config.param_zcube).toBeUndefined()
     })
 
     it('V3.0.2-T2-2: 无 project_config.json 时回落 parseINI(兼容 v2 INI 字段)', async () => {
@@ -96,6 +148,75 @@ describe('DesignStore', () => {
       expect(callArgs[0]).toBe('test')
       expect(callArgs[1]).toContain('[DEFAULT]')
       expect(callArgs[1]).toContain('downlink_mode = custom')
+    })
+
+    it('5.2.2-522-e: Zcube 模式 configToINI 发射 param_zcube_* 键', async () => {
+      useDesignStore.setState({
+        config: {
+          ...useDesignStore.getState().config,
+          param_network_mode: 'zcube',
+          param_zcube: { nics_per_gpu: 2, leaf_count: 4, switch_ports: 128 },
+        },
+      })
+      window.electron.design.generate = vi.fn().mockResolvedValue({ summary: {}, topology: {}, valid: true })
+      await useDesignStore.getState().generate('zcube-gen')
+
+      const ini = (window.electron.design.generate as ReturnType<typeof vi.fn>).mock.calls[0][1] as string
+      expect(ini).toContain('param_network_mode = zcube')
+      expect(ini).toContain('param_zcube_nics_per_gpu = 2')
+      expect(ini).toContain('param_zcube_leaf_count = 4')
+      expect(ini).toContain('param_zcube_switch_ports = 128')
+    })
+
+    it('5.2.2-522-e: 非 Zcube 模式不发射 param_zcube_* 键', async () => {
+      useDesignStore.setState({
+        config: {
+          ...useDesignStore.getState().config,
+          param_network_mode: 'standard',
+          param_zcube: { nics_per_gpu: 2 },
+        },
+      })
+      window.electron.design.generate = vi.fn().mockResolvedValue({ summary: {}, topology: {}, valid: true })
+      await useDesignStore.getState().generate('std-gen')
+
+      const ini = (window.electron.design.generate as ReturnType<typeof vi.fn>).mock.calls[0][1] as string
+      expect(ini).not.toContain('param_zcube_nics_per_gpu')
+    })
+
+    it('5.2.2-522-f: 推理 4 合 1 模式发射 inference_servers/speed/convergence 键', async () => {
+      useDesignStore.setState({
+        config: {
+          ...useDesignStore.getState().config,
+          inference_plane: true,
+          inference_servers: 4,
+          inference_speed: '400G',
+          inference_convergence: 3,
+        },
+      })
+      window.electron.design.generate = vi.fn().mockResolvedValue({ summary: {}, topology: {}, valid: true })
+      await useDesignStore.getState().generate('inf-gen')
+
+      const ini = (window.electron.design.generate as ReturnType<typeof vi.fn>).mock.calls[0][1] as string
+      expect(ini).toContain('inference_plane = true')
+      expect(ini).toContain('inference_servers = 4')
+      expect(ini).toContain('inference_speed = 400G')
+      expect(ini).toContain('inference_convergence = 3')
+    })
+
+    it('5.2.2-522-f: 推理关闭时不发射 inference_* 子键', async () => {
+      useDesignStore.setState({
+        config: {
+          ...useDesignStore.getState().config,
+          inference_plane: false,
+          inference_servers: 4,
+        },
+      })
+      window.electron.design.generate = vi.fn().mockResolvedValue({ summary: {}, topology: {}, valid: true })
+      await useDesignStore.getState().generate('inf-off')
+
+      const ini = (window.electron.design.generate as ReturnType<typeof vi.fn>).mock.calls[0][1] as string
+      expect(ini).toContain('inference_plane = false')
+      expect(ini).not.toContain('inference_servers')
     })
   })
 

@@ -62,11 +62,28 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["GPU", "超聚变", "液冷", "冷板", "H100", "高密度", "Spectrum-X", "AI训练"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "GPU",
+    "超聚变",
+    "液冷",
+    "冷板",
+    "H100",
+    "高密度",
+    "Spectrum-X",
+    "AI训练"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "training"
+  ]
 }

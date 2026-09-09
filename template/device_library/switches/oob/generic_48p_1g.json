@@ -15,11 +15,22 @@
   "port_type": "RJ45",
   "downlink_prefix": "Eth",
   "uplink_prefix": "Eth",
-  "tags": ["交换机", "通用", "1G", "带外管理"],
-  "applicable_networks": ["oob"],
+  "tags": [
+    "交换机",
+    "通用",
+    "1G",
+    "带外管理"
+  ],
+  "applicable_networks": [
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28"
+  "updated_at": "2026-07-28",
+  "recommended_network": [
+    "independent",
+    "eth_3in1"
+  ]
 }

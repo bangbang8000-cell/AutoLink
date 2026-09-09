@@ -17,9 +17,10 @@ import { SectionCard } from '@/components/ui/SectionCard'
 import { Tabs } from '@/components/ui/Tabs'
 import {
   Network, Zap, Server, GitBranch, ChevronDown, ChevronRight, Tag,
-  FolderOpen, History, Wrench,
+  FolderOpen, History, Wrench, CheckCircle, RotateCcw,
 } from 'lucide-react'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
+import { useWorkbenchStore } from '@/stores/workbench.store'
 import { ensureMatrixRacks } from '@/utils/ensureMatrixRacks'
 import type { RackMatrixLayoutOptions } from '@/utils/rackMatrixLayout'
 import { buildPlanDesignPatch, rackMatrixOptsFromProjectConfig } from '@/utils/planToDesign'
@@ -236,11 +237,24 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
   const [vlanStorage, setVlanStorage] = useState('200,299')
   const [vlanBiz, setVlanBiz] = useState('300,399')
   const [vlanOob, setVlanOob] = useState('400,499')
+  // 5.2.2-522-h（契约 v1.3 / F522-1）：拓扑模式 / 合分模式 / 推理场景（plan macro 透传）
+  const [topologyMode, setTopologyMode] = useState<'rail_optimized' | 'dual_plane' | 'zcube'>('rail_optimized')
+  const [combinedMode, setCombinedMode] = useState<'independent' | 'biz_oob_2in1' | 'eth_3in1' | 'inference_4in1'>('independent')
+  const [scenario, setScenario] = useState<'training' | 'inference'>('training')
 
   const [plan, setPlan] = useState<PlanSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [exportMsg, setExportMsg] = useState('')
+
+  // 5.2.1-521-b：AIDC 规划手动完成标记（D5，按项目）
+  const aidcDone = useWorkbenchStore((s) => (boundProjectName ? s.aidcDone[boundProjectName] === true : false))
+  const toggleAidcDone = () => {
+    if (!boundProjectName) return
+    const wb = useWorkbenchStore.getState()
+    if (wb.aidcDone[boundProjectName]) wb.unmarkAidcDone(boundProjectName)
+    else wb.markAidcDone(boundProjectName)
+  }
 
   const buildParams = () => ({
     // 契约 v1.2：项目身份
@@ -260,6 +274,10 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
       biz: vlanBiz.split(',').map(Number),
       oob: vlanOob.split(',').map(Number),
     },
+    // 契约 v1.3（522-h）：拓扑/合分/场景（MC plantable_importer 解析）
+    topology_mode: topologyMode,
+    combined_mode: combinedMode,
+    scenario,
   })
 
   const refreshProjects = useCallback(async () => {
@@ -278,7 +296,15 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
     try {
       const res = (await window.electron.aidc.plan(buildParams())) as PlanSummary
       if (res?.error) setError(res.error)
-      else setPlan(res)
+      else {
+        setPlan(res)
+        // 5.2.1-521-c：plan 重新生成 → 撤销"标记完成" + 下游级联置"待调整"
+        if (boundProjectName) {
+          const wb = useWorkbenchStore.getState()
+          wb.unmarkAidcDone(boundProjectName)
+          wb.invalidateDownstream(boundProjectName, ['aidc'])
+        }
+      }
     } catch (e) {
       setError(t('planFailed', { error: String(e) }))
     } finally {
@@ -311,6 +337,10 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         setExportMsg(res.usedMatrix ? t('appliedWithMatrix') : t('appliedNoMatrix'))
       } else {
         setExportMsg(t('appliedEmpty'))
+      }
+      // 5.2.1-521-c：plan→design 同步完成后，清除已重算链路的"待调整"标记
+      if (boundProjectName) {
+        useWorkbenchStore.getState().resolveStale(boundProjectName, ['design', 'rackdesign', 'main', 'visualization', 'results', 'export'])
       }
     } catch (e) {
       setError(t('applyFailed', { error: (e as Error).message }))
@@ -514,6 +544,37 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
           <label className="text-sm">{t('cnpQueue')}</label>
           <Input value={cnpQueue} onChange={(e) => setCnpQueue(e.target.value)} type="number" min={0} max={7} aria-label={t('cnpQueue')} />
         </div>
+        {/* 契约 v1.3（522-h / F522-1）：拓扑模式 / 合分模式 / 推理场景 */}
+        <div>
+          <label className="text-sm">拓扑模式</label>
+          <select value={topologyMode} onChange={(e) => setTopologyMode(e.target.value as typeof topologyMode)}
+            className="w-full px-2 py-1.5 text-xs rounded border border-app-border bg-app-panel text-gray-800 dark:text-gray-200"
+            aria-label="拓扑模式">
+            <option value="rail_optimized">轨道优化（默认）</option>
+            <option value="dual_plane">双平面</option>
+            <option value="zcube">Zcube</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm">网络合分</label>
+          <select value={combinedMode} onChange={(e) => setCombinedMode(e.target.value as typeof combinedMode)}
+            className="w-full px-2 py-1.5 text-xs rounded border border-app-border bg-app-panel text-gray-800 dark:text-gray-200"
+            aria-label="网络合分">
+            <option value="independent">四网独立（默认）</option>
+            <option value="biz_oob_2in1">管理&业务 2合1</option>
+            <option value="eth_3in1">3合1</option>
+            <option value="inference_4in1">推理 4合1</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm">应用场景</label>
+          <select value={scenario} onChange={(e) => setScenario(e.target.value as typeof scenario)}
+            className="w-full px-2 py-1.5 text-xs rounded border border-app-border bg-app-panel text-gray-800 dark:text-gray-200"
+            aria-label="应用场景">
+            <option value="training">训练（默认）</option>
+            <option value="inference">推理</option>
+          </select>
+        </div>
       </div>
 
       {/* 高级参数 */}
@@ -566,6 +627,13 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         className="ml-2">
         <Wrench size={12} className="inline mr-1" /> {t('applyToDesign')}
       </Button>
+      {boundProjectName && plan && (
+        <Button variant="ghost" onClick={toggleAidcDone} disabled={loading}
+          className="ml-2">
+          {aidcDone ? <RotateCcw size={12} className="inline mr-1" /> : <CheckCircle size={12} className="inline mr-1" />}
+          {aidcDone ? t('unmarkDone') : t('markDone')}
+        </Button>
+      )}
 
       {exportMsg && <p className="text-xs text-gray-500 mt-2">{exportMsg}</p>}
 

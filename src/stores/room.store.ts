@@ -76,8 +76,11 @@ export interface RoomOptimizeParams {
   resetExisting?: boolean
 }
 
-/** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值；v1.4 加 power 电源柜） */
-export const ROOM_MARK_TYPES = new Set(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
+/** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值；v1.4 加 power 电源柜；525-d 加 scaleup/security/custom，保证柜型回写不漂移） */
+export const ROOM_MARK_TYPES = new Set([
+  'gpu', 'network', 'storage', 'compute', 'combined', 'power',
+  'scaleup', 'security', 'custom',
+])
 
 /** M4（AL-ED3）：rack.store 机柜类型有效集（格子改类型 → 仅此域内联动机柜 type；combined/empty 不写回） */
 const CABINET_TYPE_SET = new Set(['gpu', 'network', 'storage', 'compute', 'security', 'custom', 'scaleup', 'power'])
@@ -588,7 +591,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     if (!matrix) return
     const cabinet = useRackStore.getState().cabinets.find((c) => c.id === cabinetId)
     if (!cabinet) return
-    if (!ROOM_MARK_TYPES.has(cabinet.type)) return // 域外类型（security/custom/scaleup）不可标记，不写回
+    // 525-d：柜型改类型 → 回写矩阵格子（ROOM_MARK_TYPES 已含全部 8 种柜型，security/custom/scaleup 不再漂移）
+    if (!ROOM_MARK_TYPES.has(cabinet.type)) return
     const cell = matrix.cells.find((c) => c.cabinetId === cabinetId)
     if (!cell || cell.type === 'combined' || cell.type === cabinet.type) return
     // M2（AL-UR1）：实际回写时压一次 room 快照（撤销后矩阵↔柜内一致）；recordHistory=false 由批量调用方统一压栈

@@ -8,6 +8,32 @@ import math
 from typing import Optional, Dict, Any
 
 
+def apply_breakout(obj: "NetworkObject", device_profile: Any) -> None:
+    """V3.0.2-T2-11: 应用设备档案的端口 1 分 2 扇出（breakout）逻辑口模型
+
+    从设备档案 breakout 读取（如 Q3200 800G→2×400G）；缺省 count=1 = 1:1 物理口。
+    供 NetworkObject.__init__ 与轨道优化路径（5.2.2-522-b）复用，保证口径一致。
+    """
+    _bk = getattr(device_profile, 'breakout', None) if device_profile else None
+    if not isinstance(_bk, dict):
+        _bk = None
+    obj.breakout_info = _bk
+    obj.breakout_count = int((_bk or {}).get('count', 1) or 1)
+    # 逻辑输出速率兼容两种档案键：交换机用 logical_speed，光模块用 output_speed
+    obj.breakout_output_speed = ((_bk or {}).get('logical_speed')
+                                 or (_bk or {}).get('output_speed')) if _bk else None
+    # 接线标注统一为 input_speed/output_speed（选型/导出消费）：
+    # 交换机档案 physical_speed/logical_speed → input_speed/output_speed
+    if _bk:
+        obj.breakout_link_info = {
+            'input_speed': _bk.get('input_speed') or _bk.get('physical_speed') or '',
+            'output_speed': _bk.get('output_speed') or _bk.get('logical_speed') or '',
+            'count': obj.breakout_count,
+        }
+    else:
+        obj.breakout_link_info = None
+
+
 class NetworkObject:
     """网络设备（服务器、Leaf/Spine/Core交换机）"""
 
@@ -34,26 +60,8 @@ class NetworkObject:
         self.power_watts = power_watts
         self.u_height = u_height
 
-        # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）逻辑口模型
-        # 从设备档案 breakout 读取（如 Q3200 800G→2×400G）；缺省 1 = 1:1 物理口
-        _bk = getattr(device_profile, 'breakout', None) if device_profile else None
-        if not isinstance(_bk, dict):
-            _bk = None
-        self.breakout_info = _bk
-        self.breakout_count = int((_bk or {}).get('count', 1) or 1)
-        # 逻辑输出速率兼容两种档案键：交换机用 logical_speed，光模块用 output_speed
-        self.breakout_output_speed = ((_bk or {}).get('logical_speed')
-                                      or (_bk or {}).get('output_speed')) if _bk else None
-        # 接线标注统一为 input_speed/output_speed（选型/导出消费）：
-        # 交换机档案 physical_speed/logical_speed → input_speed/output_speed
-        if _bk:
-            self.breakout_link_info = {
-                'input_speed': _bk.get('input_speed') or _bk.get('physical_speed') or '',
-                'output_speed': _bk.get('output_speed') or _bk.get('logical_speed') or '',
-                'count': self.breakout_count,
-            }
-        else:
-            self.breakout_link_info = None
+        # V3.0.2-T2-11: 端口 1 分 2 扇出（breakout）逻辑口模型（复用 apply_breakout，供轨道优化路径同口径）
+        apply_breakout(self, device_profile)
 
         # 机柜信息 (V2.1新增)
         self.cabinet_id: Optional[int] = None

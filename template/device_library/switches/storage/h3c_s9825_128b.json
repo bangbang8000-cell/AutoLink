@@ -28,5 +28,8 @@
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-08-14",
-  "updated_at": "2026-08-14"
+  "updated_at": "2026-08-14",
+  "recommended_network": [
+    "independent"
+  ]
 }

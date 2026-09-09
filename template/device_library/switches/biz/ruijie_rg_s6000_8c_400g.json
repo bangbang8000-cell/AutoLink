@@ -21,11 +21,29 @@
   "rdma_type": "RoCEv2",
   "price_range": "高",
   "eol_date": "",
-  "tags": ["交换机", "锐捷", "S6000", "400G", "业务网", "核心", "国产化", "数据中心"],
-  "applicable_networks": ["biz", "storage"],
+  "tags": [
+    "交换机",
+    "锐捷",
+    "S6000",
+    "400G",
+    "业务网",
+    "核心",
+    "国产化",
+    "数据中心"
+  ],
+  "applicable_networks": [
+    "biz",
+    "storage"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_network": [
+    "independent",
+    "biz_oob_2in1",
+    "eth_3in1",
+    "inference_4in1"
+  ]
 }

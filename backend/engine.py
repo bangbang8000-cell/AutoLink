@@ -385,7 +385,7 @@ def _run_validation(designer):
             "name": info["name"],
             "power_watts": info["power_watts"],
             "cooling_method": info["cooling_method"],
-            "power_limit": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+            "power_limit": getattr(designer, 'power_limit_per_rack', 12000) or 12000,
         })
         # V006: U 位冲突校验(每个设备一条记录)
         for item in info["items"]:
@@ -429,7 +429,7 @@ def _run_validation(designer):
         "oob_enabled": getattr(designer, 'oob_enabled', True),
         # V2.9.3: 机柜配置 (供 V014/V015 读取)
         "rack_type": getattr(designer, 'rack_type', 42),
-        "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+        "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 12000) or 12000,
         # V2.9.3-T5: V016/V018 容量与规模校验数据
         "num_servers": designer.num_servers,
         "total_servers": designer.total_servers,
@@ -452,8 +452,6 @@ def _run_validation(designer):
         "param_network_mode": getattr(designer, 'param_network_mode', 'standard'),
         "param_zcube": getattr(designer, 'zcube_config', {}),
         "zcube_stats": getattr(designer, 'zcube_stats', None),
-        # V3.0.2-T2-3: 华为超节点校验数据（V021）
-        "huawei_stats": getattr(designer, 'huawei_stats', {}),
         # V3.0.2-T2-5: 三合一融合网校验数据（V022）
         "eth_combined": getattr(designer, 'eth_combined', False),
         "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
@@ -740,7 +738,7 @@ def handle_design(params):
             "eth_combined": getattr(designer, 'eth_combined', False),
         },
         "rackType": getattr(designer, 'rack_type', 42),
-        "powerLimitPerRack": getattr(designer, 'power_limit_per_rack', 6000),
+        "powerLimitPerRack": getattr(designer, 'power_limit_per_rack', 12000),
         # V2.4.6: Rail-Optimized 模式
         "railMode": getattr(designer, 'rail_mode', 'standard'),
         "railCount": getattr(designer, 'rail_count', 8),
@@ -751,12 +749,6 @@ def handle_design(params):
             "enabled": bool(getattr(designer, 'scale_up_config', None)),
             "config": getattr(designer, 'scale_up_config', None),
             "stats": getattr(designer, 'scale_up_stats', {}),
-        },
-        # V3.0.2-T2-3: 华为超节点配置与统计
-        "huaweiSuperNode": {
-            "enabled": getattr(designer, 'param_network_mode', '') == 'huawei_supernode',
-            "config": getattr(designer, 'huawei_config', None),
-            "stats": getattr(designer, 'huawei_stats', {}),
         },
     }
 
@@ -837,23 +829,6 @@ def handle_design(params):
             "powerWatts": gpu.power_watts, "uHeight": gpu.u_height,
         })
 
-    # V3.0.2-T2-3: 华为超节点 NPU 节点 + Scale-Out 交换机
-    for npu in getattr(designer, 'huawei_npus', []):
-        nodes.append({
-            "id": npu.name, "type": npu.obj_type, "group": npu.group,
-            "podid": npu.podid,
-            "domainId": npu.domain_id,
-            "protocol": npu.protocol,
-            "networkType": npu.network_type,
-            "network_type": npu.network_type,
-            "layerHint": npu.layer_hint,
-            "cabinetId": npu.cabinet_id, "cabinetName": npu.cabinet_name,
-            "startU": npu.start_u, "endU": npu.end_u,
-            "powerWatts": npu.power_watts, "uHeight": npu.u_height,
-        })
-    for sw in getattr(designer, 'huawei_scaleout_switches', []):
-        nodes.append(_sw_node(sw))
-
     # V2.4.3: 遍历 servers + 所有交换机的 connections，按 (a,z,a_port) 去重
     # 修复 Bug: 旧版只遍历 designer.servers，导致交换机间连接（Leaf-Spine/Spine-Core/Access-Agg）不可见
     # V3.0.0-T0-3: 统一访问器（消除 11 类硬编码聚合）
@@ -924,7 +899,7 @@ def handle_design(params):
             "name": info["name"],
             "power_watts": info["power_watts"],
             "cooling_method": info["cooling_method"],
-            "power_limit": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+            "power_limit": getattr(designer, 'power_limit_per_rack', 12000) or 12000,
         })
         # V006: U 位冲突校验(每个设备一条记录)
         for item in info["items"]:
@@ -968,7 +943,7 @@ def handle_design(params):
         "oob_enabled": getattr(designer, 'oob_enabled', True),
         # V2.9.3: 机柜配置 (供 V014/V015 读取)
         "rack_type": getattr(designer, 'rack_type', 42),
-        "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 6000) or 6000,
+        "power_limit_per_rack": getattr(designer, 'power_limit_per_rack', 12000) or 12000,
         # V2.9.3-T5: V016/V018 容量与规模校验数据
         "num_servers": designer.num_servers,
         "total_servers": designer.total_servers,
@@ -991,8 +966,6 @@ def handle_design(params):
         "param_network_mode": getattr(designer, 'param_network_mode', 'standard'),
         "param_zcube": getattr(designer, 'zcube_config', {}),
         "zcube_stats": getattr(designer, 'zcube_stats', None),
-        # V3.0.2-T2-3: 华为超节点校验数据（V021）
-        "huawei_stats": getattr(designer, 'huawei_stats', {}),
         # V3.0.2-T2-5: 三合一融合网校验数据（V022）
         "eth_combined": getattr(designer, 'eth_combined', False),
         "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
@@ -1091,7 +1064,7 @@ def handle_report(params):
 def _calculate_power_summary(designer):
     """V2.9.0: 计算机柜功率使用情况（含交换机，机柜类型来自分配结果）"""
     cabinets = {}
-    power_limit = getattr(designer, 'power_limit_per_rack', 6000) or 6000
+    power_limit = getattr(designer, 'power_limit_per_rack', 12000) or 12000
     cabinet_type_map = {cab.id: cab.type for cab in (getattr(designer, '_rack_cabinets', []) or [])}
     # V3.0.0-T0-3: 统一访问器（保持原语义：服务器 + 交换机，不含 Scale-Up GPU）
     all_devices = designer.servers + designer.all_switch_lists()

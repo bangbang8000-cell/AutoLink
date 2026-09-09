@@ -44,6 +44,13 @@ _SERVER_CATEGORIES = {
 }
 _OPTICAL_CATEGORY = 'optical_modules'
 
+# 523-e: 推荐字段合法取值（有则校验值域）
+_VALID_SCENARIOS = {'training', 'inference', 'storage', 'compute'}
+_VALID_NETWORKS = {
+    'rail_optimized', 'dual_plane', 'zcube',
+    'independent', 'biz_oob_2in1', 'eth_3in1', 'inference_4in1',
+}
+
 
 def _default_library_path():
     return os.path.join(os.path.dirname(__file__), '..', 'template', 'device_library')
@@ -73,11 +80,23 @@ def _check_device(cid: str, dev: dict, did: str, problems: list) -> None:
             for k in ('port_speed', 'port_type', 'port_count'):
                 if not dev.get(k):
                     problems.append(f'{cid}/{did}.json: 交换机缺 {k}')
+            # 523-e: 交换机须有 recommended_network（推荐组网）
+            rn = dev.get('recommended_network')
+            if not rn or not isinstance(rn, list) or not rn:
+                problems.append(f'{cid}/{did}.json: 交换机缺 recommended_network')
+            elif any(v not in _VALID_NETWORKS for v in rn):
+                problems.append(f'{cid}/{did}.json: recommended_network 含非法值 {rn}')
         elif cid in _SERVER_CATEGORIES:
             if not dev.get('interface_models'):
                 problems.append(f'{cid}/{did}.json: 服务器缺 interface_models')
             if not dev.get('power_watts'):
                 problems.append(f'{cid}/{did}.json: 服务器缺 power_watts')
+            # 523-e: 服务器须有 recommended_scenario（应用场景）
+            rs = dev.get('recommended_scenario')
+            if not rs or not isinstance(rs, list) or not rs:
+                problems.append(f'{cid}/{did}.json: 服务器缺 recommended_scenario')
+            elif any(v not in _VALID_SCENARIOS for v in rs):
+                problems.append(f'{cid}/{did}.json: recommended_scenario 含非法值 {rs}')
 
 
 def check_device_library(library_path=None) -> list:

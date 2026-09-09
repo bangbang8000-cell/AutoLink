@@ -29,5 +29,8 @@
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-28",
-  "updated_at": "2026-08-25"
+  "updated_at": "2026-08-25",
+  "recommended_network": [
+    "rail_optimized"
+  ]
 }

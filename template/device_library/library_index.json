@@ -107,7 +107,8 @@
         "nvidia_mqm9700_64_400g_ib",
         "nvidia_mqm9790_64_400g_ib",
         "ruijie_rg_s6980_64qc",
-        "ruijie_rg_s6910_32oc2vs_1_6t"
+        "ruijie_rg_s6910_32oc2vs_1_6t",
+        "nvidia_th6_128_800g_ib"
       ]
     },
     {

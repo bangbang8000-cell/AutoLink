@@ -52,6 +52,47 @@ def test_id_prefix():
             assert d['id'].startswith('ruijie_rg_'), d['id']
 
 
+_VALID_NETWORKS = {'rail_optimized', 'dual_plane', 'zcube', 'independent', 'biz_oob_2in1', 'eth_3in1', 'inference_4in1'}
+_VALID_SCENARIOS = {'training', 'inference', 'storage', 'compute'}
+
+
+def _servers():
+    out = []
+    for p in glob.glob(os.path.join(_LIB, '*', '*.json')) + glob.glob(os.path.join(_LIB, 'storage_servers', '*', '*.json')):
+        if 'interface_models' in json.load(io.open(p, encoding='utf-8')):
+            out.append(json.load(io.open(p, encoding='utf-8')))
+    return out
+
+
+def test_recommended_network_all_switches():
+    """523-e: 全部交换机具备 recommended_network 且值域合法"""
+    for d in _switches():
+        rn = d.get('recommended_network')
+        assert rn, f"{d['id']} 缺 recommended_network"
+        assert all(v in _VALID_NETWORKS for v in rn), f"{d['id']} recommended_network 非法 {rn}"
+
+
+def test_recommended_scenario_all_servers():
+    """523-e: 全部服务器具备 recommended_scenario 且值域合法"""
+    servers = _servers()
+    assert len(servers) >= 20
+    for d in servers:
+        rs = d.get('recommended_scenario')
+        assert rs, f"{d['id']} 缺 recommended_scenario"
+        assert all(v in _VALID_SCENARIOS for v in rs), f"{d['id']} recommended_scenario 非法 {rs}"
+
+
+def test_inference_gpu_scenario():
+    """523-e: 推理 GPU 识别（L20/L40S → inference；B300/H100 训练型 → training）"""
+    gpu_dir = os.path.join(_LIB, 'gpu_servers')
+    l40 = json.load(io.open(os.path.join(gpu_dir, 'nvidia_l40s_8u.json'), encoding='utf-8'))
+    l20 = json.load(io.open(os.path.join(gpu_dir, 'nvidia_l20_8u.json'), encoding='utf-8'))
+    b300 = json.load(io.open(os.path.join(gpu_dir, 'nvidia_dgx_b300.json'), encoding='utf-8'))
+    assert 'inference' in l40['recommended_scenario']
+    assert 'inference' in l20['recommended_scenario']
+    assert 'training' in b300['recommended_scenario']
+
+
 def test_defaults_reference_existing_ids():
     sw_ids = {d['id'] for d in _switches()}
     for group in (dd.ROCE_DEFAULTS, dd.BIZ_DEFAULTS, dd.OOB_DEFAULTS):
@@ -202,6 +243,19 @@ class TestCloudSyncPortableContract:
         text = json.dumps(payload, ensure_ascii=False)
         assert 'autolink-device-library' in text
         assert '"schemaVersion": 1' in text
+
+    def test_bundle_preserves_recommended_fields(self):
+        """523-f: 云同步 bundle（dataclasses.asdict）保留推荐字段，MC 端互灌可用"""
+        devices = self._flat_devices()
+        bundle = [dataclasses.asdict(d) for d in devices]
+        switches = [b for b in bundle if b.get('category', '').startswith('switches_')]
+        servers = [b for b in bundle if b.get('category', '').startswith(('gpu_', 'compute_', 'storage_'))]
+        assert switches, 'bundle 无交换机'
+        assert servers, 'bundle 无服务器'
+        for b in switches:
+            assert b.get('recommended_network'), f"{b['id']} bundle 缺 recommended_network"
+        for b in servers:
+            assert b.get('recommended_scenario'), f"{b['id']} bundle 缺 recommended_scenario"
 
     def test_flat_array_shell_compat(self):
         """MC 扁平数组 / {devices} 外壳两种形状均含归一化必需字段（非光模块须 model/vendor）"""

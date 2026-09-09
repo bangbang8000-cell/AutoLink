@@ -70,6 +70,14 @@ export interface PlanMacro {
   asRange?: [number, number]
   ospf?: { process?: number; area?: string }
   deviceModels?: Record<string, string>
+  /** 契约 v1.3（522-h）：参数网拓扑模式 rail_optimized | dual_plane | zcube */
+  topologyMode?: string
+  /** 契约 v1.3：网络合分模式 independent | biz_oob_2in1 | eth_3in1 | inference_4in1 */
+  combinedMode?: string
+  /** 契约 v1.3：GPU 应用场景 training | inference */
+  scenario?: string
+  /** 契约 v1.3：双平面结构 [{leaf_count, switch_ports, speed, protocol, uplink}] */
+  paramPlanes?: Array<Record<string, unknown>>
   /** 兼容 v1.0 snake_case 遗留字段 */
   [key: string]: unknown
 }
@@ -83,6 +91,9 @@ export interface PlanSummary {
     leaves?: number
     pods?: unknown
     scale?: Record<string, number>
+    /** 契约 v1.3：拓扑模式 / 合分模式 */
+    mode?: string
+    combined?: string
   }
   deviceList: PlanDevice[]
   connections: PlanConnection[]

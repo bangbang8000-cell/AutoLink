@@ -21,11 +21,27 @@
   "rdma_type": "RoCEv2",
   "price_range": "极高",
   "eol_date": "",
-  "tags": ["交换机", "NVIDIA", "Spectrum-4", "SN5240", "800G", "RoCEv2", "Spectrum-X", "参数面", "Rail-Optimized"],
-  "applicable_networks": ["param"],
+  "tags": [
+    "交换机",
+    "NVIDIA",
+    "Spectrum-4",
+    "SN5240",
+    "800G",
+    "RoCEv2",
+    "Spectrum-X",
+    "参数面",
+    "Rail-Optimized"
+  ],
+  "applicable_networks": [
+    "param"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/networking/spectrum-x/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_network": [
+    "rail_optimized",
+    "dual_plane"
+  ]
 }

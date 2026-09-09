@@ -227,7 +227,7 @@ describe('WizardStore', () => {
       } as never)
       const c = useWizardStore.getState().config
       expect(c.topology.num_gpu_servers).toBe(100)
-      expect(c.rack_config.power_limit_per_rack).toBe(6000)
+      expect(c.rack_config.power_limit_per_rack).toBe(12000)
     })
   })
 

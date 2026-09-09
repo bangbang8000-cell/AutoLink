@@ -4,6 +4,8 @@ import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Loader2 } from 'lucide-
 import { useDesignStore } from '@/stores/design.store'
 import { useRackStore } from '@/stores/rack.store'
 import { useProjectStore } from '@/stores/project.store'
+import { useWorkbenchStore } from '@/stores/workbench.store'
+import { renderGateReady } from '@/utils/workbenchState'
 import { useToastStore } from '@/stores/toast.store'
 
 export function WorkbenchReadinessCard() {
@@ -23,7 +25,10 @@ export function WorkbenchReadinessCard() {
   const placedDevices = cabinets.reduce((sum, c) => sum + c.devices.length, 0)
   const rackReady = totalDevices > 0 && placedDevices === totalDevices
   // 打磨轮（v1.6 / AL-N1d）：渲染门禁 = 组网设计有拓扑产出（软门禁，机柜设计为建议项）
-  const renderReady = valid === true || (summary?.totalServers ?? 0) > 0
+  // 5.2.1-521-f：门禁收敛到 renderGateReady（design/main 被级联失效 → 不可渲染/待调整）
+  const workbenchStale = useWorkbenchStore((s) => (selectedProjectName ? s.stale[selectedProjectName] : undefined))
+  const renderReady = renderGateReady({ designValid: valid, hasTopology: (summary?.totalServers ?? 0) > 0, stale: workbenchStale })
+  const renderBlocked = (workbenchStale?.includes('design') || workbenchStale?.includes('main')) === true && (valid === true || (summary?.totalServers ?? 0) > 0)
 
   const handleValidate = useCallback(async () => {
     if (!selectedProjectName) return
@@ -129,7 +134,7 @@ export function WorkbenchReadinessCard() {
             {t('workbench:renderReady', '可渲染（组网设计就绪）')}:
           </span>
           <span className={renderReady ? 'text-success-600 dark:text-success-400 font-medium' : 'text-warning-600 dark:text-warning-400'}>
-            {renderReady ? t('workbench:topologyComplete', '就绪') : '未就绪'}
+            {renderReady ? t('workbench:renderStateReady') : renderBlocked ? t('workbench:renderStateAdjust') : t('workbench:renderStateNotReady')}
           </span>
         </div>
       </div>

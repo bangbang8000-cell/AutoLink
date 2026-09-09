@@ -330,7 +330,7 @@ class TestPowerSummary:
         assert result["cabinets"][0]["percent"] > 100
 
     def test_power_summary_zero_power_limit(self):
-        """功率上限为0时安全处理（0被视为使用默认值6000）"""
+        """功率上限为0时安全处理（0被视为使用默认值12000）"""
         class MockServer:
             def __init__(self):
                 self.name = "GPU服务器_1"
@@ -347,9 +347,9 @@ class TestPowerSummary:
             all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
-        # 0 被视为 falsy，or 6000 生效，使用默认值 6000
-        assert result["cabinets"][0]["powerLimit"] == 6000
-        assert result["cabinets"][0]["percent"] == round(1000 / 6000 * 100, 1)
+        # 0 被视为 falsy，or 12000 生效，使用默认值 12000
+        assert result["cabinets"][0]["powerLimit"] == 12000
+        assert result["cabinets"][0]["percent"] == round(1000 / 12000 * 100, 1)
 
     def test_power_summary_none_power_limit(self):
         """功率上限为None时使用默认值"""
@@ -369,7 +369,7 @@ class TestPowerSummary:
             all_switch_lists = lambda self: []  # V3.0.0-T0-3: 统一访问器
 
         result = _calculate_power_summary(MockDesigner())
-        assert result["cabinets"][0]["powerLimit"] == 6000  # 默认值
+        assert result["cabinets"][0]["powerLimit"] == 12000  # 默认值
 
     def test_power_summary_no_cabinet(self):
         """服务器未分配机柜时跳过"""

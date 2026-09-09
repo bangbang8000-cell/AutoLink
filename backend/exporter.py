@@ -216,9 +216,9 @@ def generate_switch_view(designer):
     return {'参数网络': param_df, '存储网络': storage_df, '融合网络': combined_df}
 
 
-# V2.9.1: 机柜类型显示标签 (与 rack_allocation.CABINET_TYPE_* 对应)
+# V2.9.1: 机柜类型显示标签 (与 rack_allocation.CABINET_TYPE_* 对应；5.2.5-525-c 扩为前端 8 种)
 _RACK_TYPE_LABELS = {'gpu': 'GPU柜', 'compute': '通算柜', 'storage': '存储柜', 'network': '网络柜',
-                     'scaleup': 'Scale-Up柜'}  # V2.9.3-T4
+                     'scaleup': 'Scale-Up柜', 'security': '安全柜', 'custom': '自定义柜', 'power': '电源柜'}
 
 
 def generate_summary_data(designer):

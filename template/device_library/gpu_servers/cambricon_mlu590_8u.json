@@ -62,11 +62,27 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["NPU", "寒武纪", "思元690", "MLU590", "国产化", "AI推理", "信创"],
-  "applicable_networks": ["param", "storage", "biz", "oob"],
+  "tags": [
+    "NPU",
+    "寒武纪",
+    "思元690",
+    "MLU590",
+    "国产化",
+    "AI推理",
+    "信创"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "training"
+  ]
 }

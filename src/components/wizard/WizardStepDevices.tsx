@@ -2,10 +2,11 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWizardStore } from '@/stores/wizard.store'
 import { useDeviceLibraryStore } from '@/stores/device-library.store'
+import { useToastStore } from '@/stores/toast.store'
 import { DEVICE_REF_KEYS } from '@/types/project-config'
 import type { ProjectNetworks } from '@/types/project-config'
 import type { LibraryDevice, DeviceRef } from '@/types/device-profile'
-import { NETWORK_VENDORS, SERVER_VENDORS, matchesVendor } from '@/constants/labels'
+import { NETWORK_VENDORS, SERVER_VENDORS } from '@/constants/labels'
 import {
   getDefaultRefs,
   resolveIBDefaults,
@@ -15,7 +16,9 @@ import {
   STORAGE_DEFAULT_IDS,
 } from '@/utils/device-defaults'
 import { DeviceLibraryPicker } from './DeviceLibraryPicker'
-import { Plus, X, Zap, HardDrive, Network, Monitor } from 'lucide-react'
+import { selectSwitchForRefKey, selectServerForCategory } from '@/utils/vendorPreset'
+import { topologyModeOf, applyTopologyMode } from '@/utils/topologyMode'
+import { Plus, X, Zap, HardDrive, Network, Monitor, Sparkles } from 'lucide-react'
 
 /* ---------- device ref key groups per network ---------- */
 
@@ -51,8 +54,8 @@ const DEVICE_GROUPS: DeviceGroup[] = [
     accentColor: 'text-gray-500',
     refKeys: ['storage_leaf_switch', 'storage_spine_switch'],
     serverRefKeys: [
-      { refKey: 'all_flash_storage_server', countKey: 'num_all_flash_storage', label: '全闪存储(2U)', category: 'storage_servers' },
-      { refKey: 'hybrid_flash_storage_server', countKey: 'num_hybrid_flash_storage', label: '混闪存储(4U)', category: 'storage_servers' },
+      { refKey: 'all_flash_storage_server', countKey: 'num_all_flash_storage', label: '全闪存储(2U)', category: 'storage_servers_all_flash' },
+      { refKey: 'hybrid_flash_storage_server', countKey: 'num_hybrid_flash_storage', label: '混闪存储(4U)', category: 'storage_servers_hybrid_flash' },
     ],
   },
   {
@@ -81,8 +84,9 @@ const DEVICE_GROUPS: DeviceGroup[] = [
 
 export function WizardStepDevices() {
   const { t } = useTranslation('project')
-  const { config, updateDeviceRefs, updateTopology, removeDeviceRef } = useWizardStore()
+  const { config, updateDeviceRefs, updateNetworks, updateTopology, removeDeviceRef } = useWizardStore()
   const { allDevices } = useDeviceLibraryStore()
+  const addToast = useToastStore((s) => s.addToast)
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerTarget, setPickerTarget] = useState<string | null>(null)
@@ -167,8 +171,8 @@ export function WizardStepDevices() {
         .filter((g) => config.networks[g.networkKey])
         .flatMap((g) => g.refKeys)
       for (const refKey of enabledSwitchRefs) {
-        const device = allDevices.find((d) =>
-          d.category.startsWith('switches') && matchesVendor(d.vendor, vendor))
+        // 523-d：按 (网络类型, 角色档位, 厂商) 选型，不再"第一个同厂商交换机"通吃全部 refKey
+        const device = selectSwitchForRefKey(refKey, vendor, allDevices)
         if (device) refs[refKey] = { library_id: device.id }
       }
     } else {
@@ -178,8 +182,8 @@ export function WizardStepDevices() {
       for (const refKey of enabledServerRefs) {
         const entry = DEVICE_GROUPS.flatMap((g) => g.serverRefKeys).find((s) => s.refKey === refKey)
         if (!entry) continue
-        const device = allDevices.find((d) =>
-          d.category.startsWith(entry.category) && matchesVendor(d.vendor, vendor))
+        // 523-d：精确 category 匹配（all_flash/hybrid_flash 不撞车）
+        const device = selectServerForCategory(entry.category, vendor, allDevices)
         if (device) refs[refKey] = { library_id: device.id }
       }
     }
@@ -193,6 +197,46 @@ export function WizardStepDevices() {
     if (!ref) return undefined
     return allDevices.find((d) => d.id === ref.library_id)
   }
+
+  /* ---------- 5.2.2-522-f: 推理 GPU 自动建议 4 合 1（D10） ---------- */
+
+  const gpuDev = findDevice('gpu_server')
+  const isInferenceGpu = gpuDev?.recommended_scenario?.includes('inference') ?? false
+  const is4in1Active = config.networks.eth_combined === true && config.topology.inference_plane === true
+
+  const applyInference4in1 = useCallback(() => {
+    const numGpu = Number(config.topology.num_gpu_servers) || 1
+    updateNetworks({ eth_combined: true, oob_network: true, biz_network: true })
+    updateTopology({
+      inference_plane: true,
+      inference_servers: numGpu,
+      inference_speed: String(config.topology.param_speed || '400G'),
+      inference_convergence: 3,
+    })
+    addToast('success', '已启用推理 4 合 1（3 合 1 + 推理加速平面）', 4000)
+  }, [config.topology.num_gpu_servers, config.topology.param_speed, updateNetworks, updateTopology, addToast])
+
+  /* ---------- 5.2.2-522-a (D9): 双平面智能建议 ---------- */
+
+  const topologyMode = topologyModeOf({
+    param_network_mode: config.topology.param_network_mode,
+    dual_plane_enabled: config.topology.dual_plane_enabled,
+  })
+  const paramLeafDev = findDevice('param_leaf_switch')
+  const isB300 = /b300/i.test(gpuDev?.id ?? '') || /B300/i.test(gpuDev?.model ?? '')
+  const isTh6Single = paramLeafDev?.id === 'nvidia_th6_128_800g_ib'
+  // B300 + RoCE → 建议启用双平面（800G 分光 2×400G A/B）；TH6 800G 单接 → 建议关闭
+  const suggestEnableDual = config.topology.param_protocol === 'RoCE' && isB300 && topologyMode !== 'dual_plane'
+  const suggestDisableDual = isTh6Single && topologyMode === 'dual_plane'
+
+  const applyDualPlaneSuggestion = useCallback((enable: boolean) => {
+    const patch = applyTopologyMode({}, enable ? 'dual_plane' : 'rail')
+    updateTopology({
+      param_network_mode: patch.param_network_mode,
+      dual_plane_enabled: patch.dual_plane_enabled,
+    })
+    addToast(enable ? 'success' : 'info', enable ? '已启用双平面（800G→2×400G A/B 分光）' : '已关闭双平面（TH6 800G 单接）', 4000)
+  }, [updateTopology, addToast])
 
   /* ---------- render ---------- */
 
@@ -229,6 +273,55 @@ export function WizardStepDevices() {
         </div>
         <p className="text-2xs text-gray-400">点选厂商后自动预填该厂商设备类型（仅已启用网络）；厂商缺某型号时点「选择设备」搜索补齐，已填设备可逐项更换校对。</p>
       </div>
+
+      {/* 5.2.2-522-f (D10): 推理 GPU → 自动建议 4 合 1 */}
+      {isInferenceGpu && !is4in1Active && (
+        <div className="rounded-lg border border-primary-200 dark:border-primary-900/40 bg-primary-50 dark:bg-primary-900/10 p-3 flex items-start gap-2">
+          <Sparkles size={14} className="text-primary-500 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0 text-2xs text-gray-600 dark:text-gray-300">
+            检测到推理型 GPU（{gpuDev?.vendor} {gpuDev?.model}）：建议启用「推理 4 合 1」网络合分——在 3 合 1 基础上增加独立精简参数面（收敛比 1:1~3:1）承载推理互连。
+          </div>
+          <button
+            type="button"
+            onClick={applyInference4in1}
+            className="px-2.5 py-1 text-2xs rounded border border-primary-400 text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 shrink-0"
+          >
+            启用推理 4 合 1
+          </button>
+        </div>
+      )}
+
+      {/* 5.2.2-522-a (D9): 双平面智能建议（B300+RoCE→启用；TH6 800G 单接→关闭） */}
+      {suggestEnableDual && (
+        <div className="rounded-lg border border-primary-200 dark:border-primary-900/40 bg-primary-50 dark:bg-primary-900/10 p-3 flex items-start gap-2">
+          <Sparkles size={14} className="text-primary-500 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0 text-2xs text-gray-600 dark:text-gray-300">
+            检测到 B300 + RoCE：建议启用「双平面」拓扑——800G 网卡 1 分 2（2×400G）接入 A/B 两平面，收敛比更优。
+          </div>
+          <button
+            type="button"
+            onClick={() => applyDualPlaneSuggestion(true)}
+            className="px-2.5 py-1 text-2xs rounded border border-primary-400 text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 shrink-0"
+          >
+            启用双平面
+          </button>
+        </div>
+      )}
+      {suggestDisableDual && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 p-3 flex items-start gap-2">
+          <Sparkles size={14} className="text-amber-500 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0 text-2xs text-gray-600 dark:text-gray-300">
+            检测到 TH6（128×800G）单接形态：建议关闭双平面——TH6 端口不支持 1 分 2 扇出，双平面分光不适用。
+          </div>
+          <button
+            type="button"
+            onClick={() => applyDualPlaneSuggestion(false)}
+            className="px-2.5 py-1 text-2xs rounded border border-amber-400 text-amber-600 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
+          >
+            关闭双平面
+          </button>
+        </div>
+      )}
 
       {DEVICE_GROUPS.map((group) => {
         const enabled = config.networks[group.networkKey]

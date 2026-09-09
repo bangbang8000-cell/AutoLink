@@ -48,11 +48,25 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["存储", "并行文件系统", "BeeGFS", "NVMe", "POSIX", "AI训练"],
-  "applicable_networks": ["storage", "biz", "oob"],
+  "tags": [
+    "存储",
+    "并行文件系统",
+    "BeeGFS",
+    "NVMe",
+    "POSIX",
+    "AI训练"
+  ],
+  "applicable_networks": [
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.beegfs.io/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "storage"
+  ]
 }

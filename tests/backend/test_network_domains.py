@@ -43,14 +43,14 @@ def _base_config(name="domains-test"):
 
 def test_engine_registers_builtin_plugins():
     _ensure_plugins_ready()  # 幂等
-    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up", "zcube", "huawei_supernode"}
+    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up", "zcube"}
     assert get_plugin("param") is not None
 
 
 def test_register_builtin_plugins_idempotent():
     register_builtin_plugins()
     register_builtin_plugins()
-    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up", "zcube", "huawei_supernode"}
+    assert set(list_plugins()) == {"param", "storage", "biz", "oob", "scale_up", "zcube"}
 
 
 # ---------- network_mode 分派 ----------
@@ -64,10 +64,11 @@ def test_resolve_network_mode_dispatch():
     assert resolve_network_mode('rail_optimized') == 'native'
     assert resolve_network_mode('param') == 'native'
     assert resolve_network_mode('scale_up') == 'native'
-    # V3.0.1/V3.0.2: dual_plane / zcube / huawei_supernode 已接入 Designer 原生路径
+    # V3.0.1/V3.0.2: dual_plane / zcube 已接入 Designer 原生路径
     assert resolve_network_mode('dual_plane') == 'native'
     assert resolve_network_mode('zcube') == 'native'
-    assert resolve_network_mode('huawei_supernode') == 'native'
+    # 5.2.2-522-g: huawei_supernode 已移出 → unknown（旧数据由 designer 降级 standard）
+    assert resolve_network_mode('huawei_supernode') == 'unknown'
     # unknown：未实现的组网模式
     assert resolve_network_mode('hypercube') == 'unknown'
 

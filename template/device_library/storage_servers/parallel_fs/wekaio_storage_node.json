@@ -48,11 +48,27 @@
       "port_numbering": "sequential"
     }
   ],
-  "tags": ["存储", "并行文件系统", "WekaIO", "WekaFS", "NVMe", "S3", "软件定义", "Spectrum-X"],
-  "applicable_networks": ["storage", "biz", "oob"],
+  "tags": [
+    "存储",
+    "并行文件系统",
+    "WekaIO",
+    "WekaFS",
+    "NVMe",
+    "S3",
+    "软件定义",
+    "Spectrum-X"
+  ],
+  "applicable_networks": [
+    "storage",
+    "biz",
+    "oob"
+  ],
   "source": "builtin",
   "verified": true,
   "datasheet_url": "https://www.weka.io/",
   "added_at": "2026-07-29",
-  "updated_at": "2026-07-29"
+  "updated_at": "2026-07-29",
+  "recommended_scenario": [
+    "storage"
+  ]
 }

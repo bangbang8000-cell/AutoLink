@@ -13,7 +13,6 @@ tests/fixtures/
     ├── 128_h100_multi_rack/       # 128 GPU 多机柜规划
     ├── combined_network_gb300/    # GB300 NVL72 三合一融合网
     ├── storage_disabled/          # 存储网络关闭场景
-    ├── supernode_384/             # 384 NPU 华为超节点
     └── zcube_512/                 # 512 GPU ZCube 扁平二部图
 ```
 
@@ -25,7 +24,6 @@ tests/fixtures/
 | `128_h100_multi_rack` | 128 GPU 多机柜 | `projects/128_h100_multi_rack/project_config.json` | pytest `test_quality_fixtures.py` |
 | `combined_network_gb300` | GB300 NVL72 三合一融合网 | `projects/combined_network_gb300/project_config.json` | pytest `test_quality_fixtures.py` |
 | `storage_disabled` | 存储网络关闭 | `projects/storage_disabled/project_config.json` | pytest `test_quality_fixtures.py` |
-| `supernode_384` | 384 NPU 华为超节点 | `projects/supernode_384/project_config.json` | pytest `test_quality_fixtures.py` |
 | `zcube_512` | 512 GPU ZCube | `projects/zcube_512/project_config.json` | pytest `test_quality_fixtures.py` |
 
 ## 复用方式

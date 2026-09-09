@@ -23,12 +23,16 @@ import { useToastStore } from '@/stores/toast.store'
 import { useProjectContext } from '@/stores/ProjectContext'
 import { useTranslation } from 'react-i18next'
 
-// 机房矩阵机柜类型配色（RACK_TYPE_COLORS 扩展 combined/empty）
+// 机房矩阵机柜类型配色（RACK_TYPE_COLORS 扩展 combined/empty；525-d 并入 scaleup/security/custom 8 型）
 const ROOM_TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   gpu: RACK_TYPE_COLORS.gpu,
   network: RACK_TYPE_COLORS.network,
   storage: RACK_TYPE_COLORS.storage,
   compute: RACK_TYPE_COLORS.compute,
+  // 525-d：与前端 8 种柜型收敛——Scale-Up/安全/自定义柜格同样着色
+  scaleup: RACK_TYPE_COLORS.scaleup,
+  security: RACK_TYPE_COLORS.security,
+  custom: RACK_TYPE_COLORS.custom,
   combined: { bg: '#f3e8ff', text: '#7e22ce', border: '#c084fc' }, // 紫：组合
   // v1.4: 电源柜（橙色，与空调/柱子区分）
   power: RACK_TYPE_COLORS.power,
@@ -66,13 +70,16 @@ const CABINET_TYPE_OPTIONS = (Object.keys(CABINET_TYPE_LABELS) as CabinetType[])
   label: CABINET_TYPE_LABELS[v],
 }))
 
-/** 格子类型下拉选项（对齐 ROOM_MARK_TYPES + empty） */
+/** 格子类型下拉选项（对齐 ROOM_MARK_TYPES + empty；525-d 并入 8 型，与机柜类型一致） */
 const ROOM_TYPE_OPTIONS = [
   { value: 'empty', label: '空（未标记）' },
   { value: 'gpu', label: 'GPU柜' },
   { value: 'network', label: '网络柜' },
   { value: 'storage', label: '存储柜' },
   { value: 'compute', label: '通算柜' },
+  { value: 'scaleup', label: 'Scale-Up柜' },
+  { value: 'security', label: '安全柜' },
+  { value: 'custom', label: '自定义柜' },
   { value: 'combined', label: '组合柜' },
   { value: 'power', label: '电源柜' },
 ]
@@ -83,6 +90,19 @@ const PLACEHOLDER_OPTIONS = [
   { value: 'ac', label: '空调' },
   { value: 'pillar', label: '立柱' },
 ]
+
+/** 格子类型 → i18n key（525-d：并入 scaleup/security/custom，避免回写类型误显示 GPU 标签） */
+const ROOM_CELL_LABEL_KEYS: Record<string, string> = {
+  gpu: 'room.typeGpu',
+  network: 'room.typeNetwork',
+  storage: 'room.typeStorage',
+  compute: 'room.typeCompute',
+  scaleup: 'room.typeScaleup',
+  security: 'room.typeSecurity',
+  custom: 'room.typeCustom',
+  combined: 'room.typeCombined',
+  power: 'room.typePower',
+}
 
 /** 字段标签行（只读信息用） */
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -527,7 +547,7 @@ function BulkEditModal({ open, mode, onClose }: { open: boolean; mode: 'cabinets
                 </label>
                 <label className="block">
                   <span className="text-2xs text-gray-500 dark:text-gray-400 block mb-1">功率上限(W)（留空=不改）</span>
-                  <Input type="number" min={1} value={powerLimit} onChange={(e) => setPowerLimit(e.target.value)} placeholder="6000" />
+                  <Input type="number" min={1} value={powerLimit} onChange={(e) => setPowerLimit(e.target.value)} placeholder="12000" />
                 </label>
                 <label className="block">
                   <span className="text-2xs text-gray-500 dark:text-gray-400 block mb-1">顶部预留(U)</span>
@@ -588,6 +608,8 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
 
   // V3.1.4-T8-2: 智能落位向导开关
   const [showOptimize, setShowOptimize] = useState(false)
+  // 5.2.4-524-a（D8）：冷暖风道——矩阵按排奇偶自动生成冷/热通道（冷热冷热交替，色带标注，宽度可配）
+  const [aisleWidth, setAisleWidth] = useState(16)
 
   // M4（AL-ED1/ED2/ED3）：右键菜单 / 编辑弹窗 / 框选状态
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; position: string | null } | null>(null)
@@ -664,11 +686,11 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
       const ri = matrix.rows.indexOf(cell.row)
       const ci = matrix.cols.indexOf(cell.col)
       const cx = LABEL_W + ci * (CELL_W + CELL_GAP)
-      const cy = LABEL_H + ri * (CELL_H + CELL_GAP)
+      const cy = LABEL_H + ri * (CELL_H + CELL_GAP) + ri * aisleWidth
       if (x >= cx && x <= cx + CELL_W && y >= cy && y <= cy + CELL_H) return `${cell.row}${cell.col}`
     }
     return null
-  }, [matrix])
+  }, [matrix, aisleWidth])
 
   // ---- M3（AL-CP1）+ M-F2（F2-1）：机柜复制/粘贴（机房右键入口；跨项目兼容校验） ----
   const handleCopyCabinet = useCallback((cabinetId: number) => {
@@ -786,7 +808,7 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           const ri = matrix.rows.indexOf(cell.row)
           const ci = matrix.cols.indexOf(cell.col)
           const cx = LABEL_W + ci * (CELL_W + CELL_GAP)
-          const cy = LABEL_H + ri * (CELL_H + CELL_GAP)
+          const cy = LABEL_H + ri * (CELL_H + CELL_GAP) + ri * aisleWidth
           return !(cx + CELL_W < x0 || cx > x1 || cy + CELL_H < y0 || cy > y1)
         })
         .map((c) => `${c.row}${c.col}`)
@@ -802,9 +824,13 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     [multiSelected, cellMap],
   )
 
+  // 5.2.4-524-a（D8）：冷暖风道布局——排间通道（冷热交替色带）
+  const rowY = (ri: number) => LABEL_H + ri * (CELL_H + CELL_GAP) + ri * aisleWidth
+  const aisleTypeForRow = (ri: number): 'cold' | 'hot' => (ri % 2 === 0 ? 'cold' : 'hot')
+
   const canvas = {
     width: LABEL_W + matrix.cols.length * (CELL_W + CELL_GAP) + CELL_GAP,
-    height: LABEL_H + matrix.rows.length * (CELL_H + CELL_GAP) + CELL_GAP,
+    height: LABEL_H + matrix.rows.length * (CELL_H + CELL_GAP) + (matrix.rows.length) * aisleWidth + CELL_GAP,
   }
 
   const placeholderCount = matrix.cells.filter((c) => c.placeholder).length
@@ -842,6 +868,19 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           )
         })}
         <div className="flex-1" />
+        {/* 5.2.4-524-a（D8）：冷暖风道宽度可配 */}
+        <label className="flex items-center gap-1 text-xs text-gray-500">
+          通道宽
+          <input
+            type="number"
+            min={6}
+            max={48}
+            value={aisleWidth}
+            onChange={(e) => setAisleWidth(Math.max(6, Math.min(48, Number(e.target.value) || 16)))}
+            className="w-12 px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+            aria-label="通道宽"
+          />
+        </label>
         {selectedHasCabinet && (
           <button
             onClick={() => selectedPosition && unmountCabinet(selectedPosition)}
@@ -990,7 +1029,7 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
             <text
               key={`row-${r}`}
               x={LABEL_W - 6}
-              y={LABEL_H + ri * (CELL_H + CELL_GAP) + CELL_H / 2 + 4}
+              y={rowY(ri) + CELL_H / 2 + 4}
               textAnchor="end"
               fontSize={11}
               fontWeight="bold"
@@ -999,6 +1038,32 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
               {r}
             </text>
           ))}
+          {/* 5.2.4-524-a（D8）：冷暖风道——排间通道色带（排奇偶冷热交替） */}
+          {matrix.rows.map((r, ri) => {
+            const isCold = aisleTypeForRow(ri) === 'cold'
+            const y = rowY(ri) + CELL_H + CELL_GAP / 2
+            return (
+              <g key={`aisle-${r}`}>
+                <rect
+                  x={LABEL_W}
+                  y={y}
+                  width={matrix.cols.length * (CELL_W + CELL_GAP)}
+                  height={aisleWidth}
+                  fill={isCold ? 'rgba(59,130,246,0.10)' : 'rgba(239,68,68,0.10)'}
+                  stroke={isCold ? 'rgba(59,130,246,0.35)' : 'rgba(239,68,68,0.35)'}
+                  strokeWidth={0.5}
+                />
+                <text
+                  x={LABEL_W + 6}
+                  y={y + aisleWidth / 2 + 3}
+                  fontSize={9}
+                  fill={isCold ? '#2563eb' : '#dc2626'}
+                >
+                  {isCold ? t('datacenter:coldAisle', '冷通道') : t('datacenter:hotAisle', '热通道')}
+                </text>
+              </g>
+            )
+          })}
           {/* 格子 */}
           {matrix.rows.map((r, ri) =>
             matrix.cols.map((c, ci) => {
@@ -1022,12 +1087,12 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
                     : cabName
                   : cell.type === 'empty'
                     ? t('rack:room.empty')
-                    : t(`rack:${ROOM_TOOL_LABEL_KEYS[cell.type as RoomMarkTool] || 'room.typeGpu'}`)
+                    : t(`rack:${ROOM_CELL_LABEL_KEYS[cell.type] || 'room.typeGpu'}`)
               return (
                 <g
                   key={pos}
                   data-pos={pos}
-                  transform={`translate(${LABEL_W + ci * (CELL_W + CELL_GAP)}, ${LABEL_H + ri * (CELL_H + CELL_GAP)})`}
+                  transform={`translate(${LABEL_W + ci * (CELL_W + CELL_GAP)}, ${rowY(ri)})`}
                   className="cursor-pointer"
                   onClick={(e) => {
                     // M4（AL-ED2）：Ctrl/Shift/Cmd 点击 → 切换多选；否则走原标记/选择逻辑
