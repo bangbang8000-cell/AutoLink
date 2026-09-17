@@ -121,9 +121,10 @@ oob_enabled = False
 biz_enabled = False
 """)
             designer = NetworkDesignerV2(ini)
-            # 默认值
+            # 默认值（INI 旧格式无 [rack] 段 → 与 JSON 路径同源默认，见 designer.py
+            # `rack.get('power_limit_per_rack', 12000)` 与 config_schema 机柜功率上限 12000）
             assert designer.rack_type == 42
-            assert designer.power_limit_per_rack == 6000
+            assert designer.power_limit_per_rack == 12000
             assert designer.naming_prefix == '机柜'
 
     def test_json_config_networks_all_on(self):
