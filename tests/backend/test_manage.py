@@ -43,9 +43,11 @@ class TestDeviceList:
             assert d['category'].startswith('switches')
 
     def test_list_devices_limit(self):
+        """5.2.2-522-a5（AL-E9）起 total = 命中总数、returned = 本次返回条数（不再被 limit 截断）。"""
         result = list_devices(limit=3)
         assert len(result['devices']) == 3
-        assert result['total'] == 3
+        assert result['returned'] == 3
+        assert result['total'] >= 3
 
 
 # ============================================================

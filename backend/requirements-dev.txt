@@ -3,4 +3,7 @@
 -r requirements.txt
 pytest>=7.0.0
 pytest-cov>=4.0.0
+# 5.2.3-523-fix2: 单用例超时护栏 —— 后端存在「拉起外部 MCP server 等握手」类用例，
+# 一旦对端挂起会无限阻塞（曾把 CI 挂到 48 分钟才被人发现）。超时即 FAIL 并点名用例。
+pytest-timeout>=2.0.0
 pyinstaller>=6.0.0

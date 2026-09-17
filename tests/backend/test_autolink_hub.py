@@ -140,9 +140,11 @@ class TestTools:
         assert res['config']['topology']['num_gpu_servers'] == 1024
         assert 'annotations' in res
         assert res['annotations']['confidence'] < 1.0
-        # 缺 config 参数 → 返回 success False
+        # 缺 config 参数 → 5.2.2-522-a2 起为**扁平化错误**（外层 success=False + error_code）
         r2 = asyncio.run(execute_tool('generate_project', {}))
-        assert r2['success'] is True and r2['result']['success'] is False
+        assert r2['success'] is False
+        assert r2['error_code'] == 'AC_ERR_INVALID_ARGS'
+        assert '缺少必填参数: config' in r2['error']
 
     def test_parse_file_tool(self, tmp_path):
         # 文本示例解析
@@ -164,9 +166,11 @@ class TestTools:
         assert rec['scale_out_protocol'] == 'UEC'
         assert rec['scale_out_speed'] == '800G'
         assert rec['convergence_ratio'] <= 1.2
-        # 缺参数 → success False
+        # 缺必填参数 num_gpus → 5.2.2-522-a2 起为扁平化错误（外层 success=False）
         r2 = asyncio.run(execute_tool('capacity_recommend', {'model': 'llama3-8b'}))
-        assert r2['success'] is True and r2['result']['success'] is False
+        assert r2['success'] is False
+        assert r2['error_code'] == 'AC_ERR_INVALID_ARGS'
+        assert '缺少必填参数: num_gpus' in r2['error']
 
     def test_repair_tools(self, tmp_path):
         """智能修复闭环（V3.2.0-T9-4）：repair_plan 产出修复项 → repair_apply 应用并复核"""
@@ -192,7 +196,9 @@ class TestTools:
         res = plan['result']
         assert res['success'] is True
         assert res['fixable'] > 0
-        assert any(fx['rule_id'] == 'V010' for fx in res['fixes'])
+        # 524-d 起参数网按 1:1 无阻塞建模（convergenceRatio=1.0），V010 不再产出；
+        # 以 V002（机柜功率）代表可自动修复项，闭环语义不变。
+        assert any(fx['rule_id'] == 'V002' for fx in res['fixes'])
 
         apply = asyncio.run(execute_tool('repair_apply', {
             'configFile': str(p), 'fixes': res['fixes']}))
@@ -200,7 +206,8 @@ class TestTools:
         ares = apply['result']
         assert ares['success'] is True
         assert ares['validation'] is not None
-        assert not any(i['rule_id'] == 'V010' for i in ares['validation']['issues'])
+        assert ares['validation']['remainingErrors'] < res['totalErrors']
+        assert not any(i['rule_id'] == 'V002' for i in ares['validation']['issues'])
 
 
 # ============================================================

@@ -71,7 +71,7 @@ def _import_fastmcp():
         dist = distribution("mcp")
     except Exception as e:
         raise ImportError(
-            "MCP SDK 未安装（pip install 'mcp>=1.2.0'），无法启动 Agent Connect MCP Server"
+            f"MCP SDK 未安装（pip install 'mcp>=1.2.0,<2'），无法启动 Agent Connect MCP Server：{e}"
         ) from e
 
     try:
@@ -93,8 +93,12 @@ def _import_fastmcp():
         fastmcp_mod = importlib.import_module("mcp.server.fastmcp")
         return fastmcp_mod.FastMCP
     except ImportError as e:
+        # 5.2.3-523-fix1: 原实现把底层原因吞掉、只报「未安装」，导致真正病因（典型如装了
+        # mcp 2.x —— FastMCP 已改名 MCPServer，`mcp.server.fastmcp` 直接 ImportError）
+        # 被掩盖成“没装”，排查成本极高。此处把原始异常原文带出。
         raise ImportError(
-            "MCP SDK 未安装（pip install 'mcp>=1.2.0'），无法启动 Agent Connect MCP Server"
+            "MCP SDK 不可用（需 mcp>=1.2.0,<2；2.x 破坏性重构，已将 FastMCP 改名 "
+            f"MCPServer）：{e}"
         ) from e
 
 

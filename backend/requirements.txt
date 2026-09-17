@@ -13,4 +13,7 @@ uvicorn>=0.27.0
 sse-starlette>=1.6.0
 pydantic>=2.5.0
 # 5.0.3-503-c: MCP 工具接入（Model Context Protocol，协议层非 Agent 框架；运行期惰性导入）
-mcp>=1.2.0
+# 5.2.3-523-fix1: **必须锁 <2** —— mcp 2.x 已把 FastMCP 改名为 MCPServer
+# （`mcp.server.fastmcp` 直接抛 ModuleNotFoundError），Agent Connect 起不来。
+# 与 MC ai_hub/requirements.txt 同源同锁（双端同构）。待 2.x 迁移完成后再放开上限。
+mcp>=1.2.0,<2
