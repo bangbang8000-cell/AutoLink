@@ -71,14 +71,20 @@ class TestRepairPlan:
         assert r['totalErrors'] >= r['fixable']
         assert r['valid'] is False
 
-    def test_plan_includes_convergence_fix(self, tmp_path):
-        """V010 收敛比阻塞 → 产出 topology 下联/交换机端口 patch"""
+    def test_plan_convergence_rule_inactive_under_1to1_param(self, tmp_path):
+        """参数网 1:1 无阻塞建模（5.2.0-524-d 起）→ V010 不再产出；闭环由 V002/V019 覆盖。
+
+        524-d 把 GPU 落柜改为「1 柜 1 台」并同步调整参数网带宽模型后，引擎对参数网输出
+        convergenceRatio=1.0（无阻塞，见 estimation.convergence.param），因此
+        `param_downlink_limit: 55` 已不再触发 V010。本用例固化该现状：
+          - 若产品要恢复「自定义下联上限 → 阻塞 → V010 可修」，需先调整引擎收敛比模型；
+          - 在此之前 V010 属于不可达规则，修复闭环以 V002（机柜功率）/V019（供电）为准。
+        """
         path = _dirty_config(tmp_path)
         r = repair_plan({'configFile': str(path)})
-        v010 = [fx for fx in r['fixes'] if fx['rule_id'] == 'V010']
-        assert v010, '应产出 V010 修复项'
-        patch = v010[0]['patch']['topology']
-        assert 'param_downlink_limit' in patch or 'param_switch_ports' in patch
+        assert not any(fx['rule_id'] == 'V010' for fx in r['fixes'])
+        assert any(fx['rule_id'] == 'V002' for fx in r['fixes'])
+        assert r['fixable'] > 0
 
     def test_plan_includes_power_fixes(self, tmp_path):
         """V002 机柜功率 + V019 供电 → rack_config.power_limit_per_rack patch"""
@@ -186,7 +192,11 @@ class TestFixers:
             {'topology': {'param_zcube': {'switch_ports': 288}}}
 
     def test_fix_v010_reuses_convergence_logic(self, tmp_path):
-        """V010 修复器复用 T9-3 收敛比建议（降下联/提升交换机端口）"""
+        """V010 修复器复用 T9-3 收敛比建议；524-d 后参数网无阻塞 → 修复器返回 None。
+
+        该用例同时是「修复器不得崩」的回归护栏：即使规则不可达，调用链
+        `_fix_v010 → optimization._convergence_suggestions` 仍须可安全调用。
+        """
         from designer import NetworkDesignerV2
         from fixit import _fix_v010
         path = _dirty_config(tmp_path)
@@ -194,28 +204,31 @@ class TestFixers:
         from project_config import load_project_config
         config, _ = load_project_config(str(path))
         patch = _fix_v010({'rule_id': 'V010'}, config, designer)
-        assert patch is not None
-        assert ('param_downlink_limit' in patch['topology']
-                or 'param_switch_ports' in patch['topology'])
+        assert patch is None, '参数网 1:1 无阻塞时不应给出收敛比修复 patch'
 
 
 class TestRepairApply:
     def test_apply_updates_config_file(self, tmp_path):
-        """应用 V010 修复 → patch 字段落盘"""
+        """应用 V002（机柜功率）修复 → patch 字段落盘
+
+        原用例以 V010 为例；5.2.0-524-d 后参数网按 1:1 建模、V010 不再产出
+        （见 TestRepairPlan::test_plan_convergence_rule_inactive_under_1to1_param），
+        故改用同属可自动修复的 V002（rack_config 段）验证落盘闭环。
+        """
         path = _dirty_config(tmp_path)
         plan = repair_plan({'configFile': str(path)})
-        v010 = [fx for fx in plan['fixes'] if fx['rule_id'] == 'V010']
-        assert v010
-        res = repair_apply({'configFile': str(path), 'fixes': v010})
+        v002 = [fx for fx in plan['fixes'] if fx['rule_id'] == 'V002']
+        assert v002
+        res = repair_apply({'configFile': str(path), 'fixes': v002[:1]})
         assert res['success'] is True
         assert res['applied']
-        key = next(iter(v010[0]['patch']['topology']))
+        key = next(iter(v002[0]['patch']['rack_config']))
         assert res['validation'] is not None
         # 落盘可重读
         import project_config
         reloaded, err = project_config.load_project_config(str(path))
         assert not err
-        assert reloaded['topology'][key] == v010[0]['patch']['topology'][key]
+        assert reloaded['rack_config'][key] == v002[0]['patch']['rack_config'][key]
 
     def test_apply_closure_reduces_errors(self, tmp_path):
         """闭环：repair_plan → 应用全部修复 → 复核 remainingErrors 下降、V010 消除"""

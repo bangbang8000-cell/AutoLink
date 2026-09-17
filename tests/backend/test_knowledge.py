@@ -153,9 +153,11 @@ class TestKnowledgeTools:
         assert 'tool-k' in [e['name'] for e in r2['result']['entries']]
         r3 = asyncio.run(execute_tool('search_knowledge', {'query': '工具添加'}))
         assert r3['success'] is True and r3['result']['entries'][0]['name'] == 'tool-k'
-        # 缺参校验
+        # 缺参校验 → 5.2.2-522-a2 起为扁平化错误（外层 success=False + error_code）
         r4 = asyncio.run(execute_tool('search_knowledge', {}))
-        assert r4['success'] is True and r4['result']['success'] is False
+        assert r4['success'] is False
+        assert r4['error_code'] == 'AC_ERR_INVALID_ARGS'
+        # 业务级校验（非 schema 缺参）仍保持内层 result.success 语义
         r5 = asyncio.run(execute_tool('add_knowledge', {'name': 'k', 'content': ''}))
         assert r5['success'] is True and r5['result']['success'] is False
 

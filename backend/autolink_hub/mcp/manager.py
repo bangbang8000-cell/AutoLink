@@ -26,6 +26,10 @@ MCP_TOOL_PREFIX = "mcp:"
 CONFIG_FILENAME = "mcp_servers.json"
 SERVER_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 DEFAULT_TIMEOUT = 60.0
+# 5.2.3-523-fix3: server 握手/工具发现超时。原实现无上限：command 写错（如填成解释器
+# 本身 `python`）时对端只是一直等 stdin，`session.initialize()` 永不返回——
+# UI 侧“添加 MCP server”会永久卡住，CI 也会被单条用例挂死。此处显式收口。
+DISCOVERY_TIMEOUT = 15.0
 
 
 def mcp_available() -> bool:
@@ -184,16 +188,29 @@ class MCPManager:
             env=dict(cfg.get("env") or {}) or None,
         )
         tools: list[dict] = []
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                listed = await session.list_tools()
-                for t in getattr(listed, "tools", []) or []:
-                    tools.append({
-                        "name": t.name,
-                        "description": t.description or "",
-                        "inputSchema": getattr(t, "inputSchema", None) or {},
-                    })
+
+        async def _run() -> list[dict]:
+            found: list[dict] = []
+            async with stdio_client(params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    listed = await session.list_tools()
+                    for t in getattr(listed, "tools", []) or []:
+                        found.append({
+                            "name": t.name,
+                            "description": t.description or "",
+                            "inputSchema": getattr(t, "inputSchema", None) or {},
+                        })
+            return found
+
+        try:
+            tools = await asyncio.wait_for(_run(), timeout=DISCOVERY_TIMEOUT)
+        except asyncio.TimeoutError:
+            raise RuntimeError(
+                f"MCP server 连接超时（>{DISCOVERY_TIMEOUT:.0f}s）："
+                f"启动命令 {cfg.get('command')!r} 未按 MCP stdio 协议响应，"
+                "请检查命令/参数是否正确（例如不要直接填解释器本身）"
+            ) from None
         return tools
 
     async def sync_server(self, name: str) -> dict:

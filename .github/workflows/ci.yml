@@ -8,6 +8,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # 5.2.3-523-fix2: 作业级硬超时 —— 单条用例挂死曾把本作业拖到 48 分钟仍无输出，
+    # 只有人工取消才结束。这里给整作业兜底，配合 pytest --timeout 双保险。
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v5
@@ -49,8 +52,16 @@ jobs:
       # V3.0.0-T0-8: 后端全量 pytest
       # 4.6.0-F6-1: 后端覆盖率门禁（.coveragerc fail_under=55，低于即失败）+ junit/coverage-json 产物
       # 5.0.3-503-c: 重样本校验测试拆出覆盖率运行（--no-cov），避免覆盖率插桩下 CI 超时；test_report 合并两 junit
-      - run: python -m pytest tests/backend -q --ignore=tests/backend/test_sample_assets.py --cov=backend --cov-report=term --cov-fail-under=55 --cov-report=json:reports/coverage-backend.json --junitxml=reports/pytest.xml
-      - run: python -m pytest tests/backend/test_sample_assets.py -q --no-cov --junitxml=reports/pytest-sample.xml
+      # 5.2.3-523-fix2: --timeout=180 单用例护栏（pytest-timeout）——挂死用例立即 FAIL 并点名，不再无限阻塞
+      - run: python -m pytest tests/backend -q --ignore=tests/backend/test_sample_assets.py --timeout=180 --timeout-method=thread --cov=backend --cov-report=term --cov-fail-under=55 --cov-report=json:reports/coverage-backend.json --junitxml=reports/pytest.xml
+      - run: python -m pytest tests/backend/test_sample_assets.py -q --no-cov --timeout=300 --junitxml=reports/pytest-sample.xml
+      # 5.2.3-523-fix1: MCP SDK 兼容性门禁 —— 未锁版本时上游上大版本（如 mcp 2.x 改名 MCPServer）
+      # 会让 Agent Connect 静默起不来。此步先行失败，暴露在流水线早期而非等到 pytest。
+      - name: MCP SDK (Agent Connect) importable
+        run: python -c "from autolink_hub.mcp_server.manager import _import_fastmcp; print('FastMCP OK:', _import_fastmcp())"
+        working-directory: backend
+        env:
+          PYTHONPATH: .
       # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
       - run: python scripts/bench_perf.py --rounds 1
       # 4.6.0-F6-3: 统一测试报告（聚合 pytest/vitest/golden/bench/模板校验 → reports/）
