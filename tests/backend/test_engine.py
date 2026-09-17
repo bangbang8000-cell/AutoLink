@@ -222,7 +222,12 @@ storage_speed = 200G
         return ini_path
 
     def test_version_archiving_same_config_reuses_version(self):
-        """同配置重复渲染 → 版本不递增（新时间戳批次），manifest 落盘"""
+        """同配置重复渲染 → 版本不递增
+
+        5.2.2-522-e4（AL-E4）：同配置 + 同类型二次导出命中**指纹复用**——
+        版本不变、批次目录**复用同一份**（旧实现每次都新建时间戳批次，
+        导致工作区里堆满内容相同的 v1_<ts> 目录）。需重算时用 `regenerate`。
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             ini_path = self._write_ini(tmpdir)
             output_dir = os.path.join(tmpdir, 'output')
@@ -231,7 +236,16 @@ storage_speed = 200G
             assert r1["version"] == 1
             assert r2["version"] == 1
             assert re.match(r'^v1_[0-9_]+$', r1["batchName"])
-            assert r1["batchName"] != r2["batchName"]
+            # 复用：同一批次、不新增目录
+            assert r2["reused"] is True
+            assert r1["batchName"] == r2["batchName"]
+            assert len(os.listdir(output_dir)) == 1
+            # regenerate 强制重算 → 新批次（版本仍为 1）
+            r3 = handle_export({"configFile": ini_path, "outputDir": output_dir,
+                                "outputTypes": ["connections"], "regenerate": True})
+            assert r3["reused"] is False
+            assert r3["batchName"] != r1["batchName"]
+            assert r3["version"] == 1
             mf = os.path.join(output_dir, r1["batchName"], 'manifest.json')
             assert os.path.exists(mf)
             with open(mf, 'r', encoding='utf-8') as f:

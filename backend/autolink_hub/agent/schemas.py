@@ -25,6 +25,10 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "list_config_schema": ToolPermission.AUTO,
     # 管理域只读查询（V3.1.3-T7-1，AUTO）
     "device_query": ToolPermission.AUTO,
+    # 5.2.2-522-a5（AL-E9）：按 id 精确取设备详情 —— 只读，AUTO
+    # 未登记时 get_tool_permission 兜底为 CONFIRM，会导致编译态把它当作高危工具隐藏，
+    # 反而让下游拿不到反查入口（并触发「编译态不得暴露 confirm 档工具」断言失败）
+    "device_get": ToolPermission.AUTO,
     # 共享选型规则（V3.1.3-T7-6，AUTO：只读映射查询）
     "device_defaults": ToolPermission.AUTO,
     "template_list": ToolPermission.AUTO,
@@ -65,7 +69,7 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "project_read_file": ToolPermission.AUTO,
     "template_create": ToolPermission.NOTIFY,
     "template_update": ToolPermission.NOTIFY,
-    "template_delete": ToolPermission.NOTIFY,
+    "template_delete": ToolPermission.CONFIRM,
     "project_create": ToolPermission.NOTIFY,
     "project_write_file": ToolPermission.NOTIFY,
     "project_delete": ToolPermission.CONFIRM,

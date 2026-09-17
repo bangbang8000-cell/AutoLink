@@ -31,11 +31,33 @@ def main() -> int:
     parser.add_argument("--mode", choices=["compiled", "source"], default="compiled")
     parser.add_argument("--user-data", default="", help="用户数据目录（项目/模板/设备库/机房规划等）")
     parser.add_argument("--audit", default="", help="审计文件路径（默认 <user-data>/agent-connect-audit.jsonl）")
+    parser.add_argument(
+        "--ignore-switch", action="store_true",
+        help="忽略应用内 Agent Connect 总开关（仅排障用；默认严格遵守开关）",
+    )
     args = parser.parse_args()
 
     from autolink_hub.agent.tools import init_tools
     from autolink_hub.config import settings
     from autolink_hub.mcp_server.manager import get_agent_connect_manager
+
+    # 5.2.2-522-s3：stdio 入口必须遵守应用内总开关（原实现直接 enable，
+    # 开关关闭时 MCP Server 仍可被外部 Agent 拉起 → 开关形同虚设）。
+    if not args.ignore_switch:
+        try:
+            from autolink_hub.config import get_enable_agent_connect
+
+            if not get_enable_agent_connect():
+                print(
+                    "[agent-connect] Agent Connect 总开关未开启，拒绝启动 MCP Server。"
+                    "请在 AIDC AutoLink 设置中开启 Agent Connect 后重试"
+                    "（排障可加 --ignore-switch）。",
+                    file=sys.stderr,
+                )
+                return 2
+        except Exception as e:  # noqa: BLE001 - 配置不可读时保守拒绝
+            print(f"[agent-connect] 无法读取 Agent Connect 开关配置：{e}", file=sys.stderr)
+            return 2
 
     if args.user_data:
         settings.user_data_dir = args.user_data
@@ -54,7 +76,11 @@ def main() -> int:
     if mcp is None:  # pragma: no cover
         print("[agent-connect] 启动失败：未创建 MCP Server", file=sys.stderr)
         return 2
-    print(f"[agent-connect] AutoLink Agent Connect 已就绪 mode={mgr.agent_mode} tools={mgr.status_report()['tool_count']}", file=sys.stderr)
+    print(
+        f"[agent-connect] AutoLink Agent Connect 已就绪 "
+        f"mode={mgr.agent_mode} tools={mgr.status_report()['tool_count']} gate={mgr.gate_mode}",
+        file=sys.stderr,
+    )
     mcp.run()  # 阻塞运行 stdio server
     return 0
 

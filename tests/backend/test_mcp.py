@@ -198,10 +198,12 @@ class TestExecuteToolValidation:
     def test_missing_required_param(self, tmp_path, monkeypatch):
         init_tools()
         r = asyncio.run(execute_tool('preview_template', {}))
-        # 与既有工具缺参约定一致：外层 success=True，内层 result.success=False
-        assert r['success'] is True
-        assert r['result']['success'] is False
-        assert '缺少必填参数: name' in r['result']['error']
+        # 5.2.2-522-a2（AL-A2）：缺参即**外层 success=False**（扁平化 + error_code），
+        # 旧约「外层 success=True、内层 result.success=False」已废弃（外层恒真会让
+        # MCP 层 isError 恒 false、下游把参数错误当成功）
+        assert r['success'] is False
+        assert r['error_code'] == 'AC_ERR_INVALID_ARGS'
+        assert '缺少必填参数: name' in r['error']
 
     def test_missing_required_with_alias_ok(self, tmp_path, monkeypatch):
         """别名兼容：schema 必填 name，但 validator 归一化为 projectName 仍算存在"""

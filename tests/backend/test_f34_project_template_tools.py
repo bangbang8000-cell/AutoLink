@@ -83,9 +83,12 @@ class TestF34ProjectTemplateTools:
         assert r['success'] is True and r['result']['success'] is False
         assert '项目名不能为空' in r['result']['error']
         # 5.0.3-503-c: 缺必填 config → execute_tool 参数校验拦截
+        # 5.2.2-522-a2（AL-A2）：参数校验失败**外层 success 即为 False**（扁平化，
+        # 不再 {"success": True, "result": {"success": False}}），与 MC 端拉齐
         r0 = asyncio.run(execute_tool('update_project', {'projectName': 'x'}))
-        assert r0['success'] is True and r0['result']['success'] is False
-        assert '缺少必填参数: config' in r0['result']['error']
+        assert r0['success'] is False
+        assert r0['error_code'] == 'AC_ERR_INVALID_ARGS'
+        assert '缺少必填参数: config' in r0['error']
         r = asyncio.run(execute_tool('update_project', {'projectName': '__no_such__', 'config': {'x': 1}}))
         assert r['success'] is True and r['result']['success'] is False
         assert '项目不存在' in r['result']['error']

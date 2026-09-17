@@ -35,15 +35,18 @@ class TestStructuredErrorCodes:
         assert "未知工具" in res["error"]
 
     def test_invalid_args_code(self):
-        """AL 契约：参数校验失败在 result 内层携带 error_code。"""
+        """5.2.2 契约：参数校验失败**扁平化**返回（外层 success=False + error_code）。
+
+        改前为 ``{"success": True, "result": {"success": False, ...}}``——外层恒真，
+        导致 MCP 层 isError 恒 false、机器消费方无法判定失败。
+        """
         from autolink_hub.agent.tools import execute_tool, init_tools
 
         init_tools()
         res = asyncio.run(execute_tool("task_query", {}))  # taskId 必填
-        assert res["success"] is True
-        assert res["result"]["success"] is False
-        assert res["result"]["error_code"] == "AC_ERR_INVALID_ARGS"
-        assert "缺少必填参数" in res["result"]["error"]
+        assert res["success"] is False
+        assert res["error_code"] == "AC_ERR_INVALID_ARGS"
+        assert "缺少必填参数" in res["error"]
 
     def test_business_code_in_audit_tool_error(self):
         """audit_query 等 handler 抛 ValueError → AC_ERR_EXEC_FAILED。"""

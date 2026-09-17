@@ -935,6 +935,71 @@ def export_bom(designer, filename):
     return df
 
 
+# ================================================================
+#  5.2.2-522-e3（AL-E3）：reportData 机器契约
+#  ================================================================
+#  问题：`design`（camelCase 英文）与 `export reportData`（顶层英文 + **内层中文键**）
+#  是同一事实的两套 schema，且无版本标记 → 下游只能靠人工对照，无法安全演进。
+#
+#  对策：
+#    1) 顶层统一带 ``schema_version``；
+#    2) 新增 ``data`` 子树：**全英文 snake_case**（机器契约唯一入口）；
+#    3) 顶层原结构（内层中文键）继续保留，并在 ``legacy_data`` 中给出同一引用，
+#       **仅作渲染/展示层使用**，下个 minor 版本移除（见 ``DEPRECATIONS``）。
+REPORT_DATA_SCHEMA_VERSION = 2
+
+# 段名（既属 data 也属 legacy_data）
+_REPORT_SECTIONS = ('overview', 'architecture', 'power', 'validation',
+                    'modules', 'cost', 'racks', 'devices', 'convergence',
+                    'generated_at')
+
+# 中文键 → 英文 snake_case（实测全量 46 个，覆盖 overview/architecture/power/
+# racks/cost/devices 六段；未收录的键原样透传，不会丢字段）
+_REPORT_KEY_MAP = {
+    # overview
+    '项目名称': 'project_name', '服务器总数': 'server_total',
+    'GPU服务器数': 'gpu_server_count', '存储服务器数': 'storage_server_count',
+    '通算服务器数': 'compute_server_count', '参数网速率': 'param_network_speed',
+    '存储网速率': 'storage_network_speed', '下行模式': 'downlink_mode',
+    # architecture
+    '参数网Leaf': 'param_leaf_count', '参数网Spine': 'param_spine_count',
+    '参数网Core': 'param_core_count', '存储网Leaf': 'storage_leaf_count',
+    '存储网Spine': 'storage_spine_count', '存储网Core': 'storage_core_count',
+    '业务接入': 'biz_access_count', '业务汇聚': 'biz_agg_count',
+    'OOB接入': 'oob_access_count', 'OOB汇聚': 'oob_agg_count',
+    '交换机总数': 'switch_total', 'Scale-Up GPU节点': 'scale_up_gpu_nodes',
+    # power
+    '服务器功耗(W)': 'server_power_watts', '交换机功耗(W)': 'switch_power_watts',
+    '总IT功耗(W)': 'total_it_power_watts', '总IT功耗(kW)': 'total_it_power_kilowatts',
+    '散热方式': 'cooling_method', '机柜功率限制(W)': 'rack_power_limit_watts',
+    # racks
+    '柜号': 'cabinet_id', '类型': 'cabinet_type', '设备数': 'device_count',
+    '总功率(W)': 'total_power_watts', '功率上限(W)': 'power_limit_watts',
+    '利用率(%)': 'utilization_percent', '超限': 'over_limit', '设备': 'devices_detail',
+    # cost
+    '光模块总数': 'optical_module_total', '光模块估价低(元)': 'optical_cost_low_cny',
+    '光模块估价高(元)': 'optical_cost_high_cny', '光模块估价区间': 'optical_cost_range',
+    # devices
+    '设备类型': 'device_type', '型号': 'model', '厂商': 'vendor',
+    '数量': 'quantity', 'U位高度': 'u_height', '总U位': 'total_u',
+    '单机功耗(W)': 'unit_power_watts', '总功耗(W)': 'total_power_watts',
+}
+
+DEPRECATIONS = {
+    'legacy_data': '顶层中文内键与 legacy_data 仅作渲染/展示兼容，'
+                   '下个 minor 版本移除；机器消费方请改用 data 子树（英文 snake_case）',
+}
+
+
+def _canonicalize(obj):
+    """递归把中文键按 ``_REPORT_KEY_MAP`` 翻译为英文 snake_case（未收录键原样透传）。"""
+    if isinstance(obj, dict):
+        return {_REPORT_KEY_MAP.get(k, k): _canonicalize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_canonicalize(v) for v in obj]
+    return obj
+
+
 def generate_report_data(designer, estimation=None):
     """V2.4: 生成 PDF 报告所需的完整数据（字典格式）
 
@@ -1072,7 +1137,7 @@ def generate_report_data(designer, estimation=None):
     if _dev_df is not None and hasattr(_dev_df, 'to_dict'):
         _dev_df = _dev_df.to_dict(orient='records')
 
-    return {
+    result = {
         'overview': overview,
         'architecture': architecture,
         'power': power,
@@ -1085,6 +1150,14 @@ def generate_report_data(designer, estimation=None):
         'convergence': (estimation or {}).get('convergence', {}) if estimation else _compute_convergence(designer),
         'generated_at': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
+    # 5.2.2-522-e3（AL-E3）：schema_version + 双子树（data 英文契约 / legacy_data 兼容）
+    # legacy_data 与顶层段共享同一对象引用（不深拷贝），大方案下无额外内存开销
+    legacy = {k: result[k] for k in _REPORT_SECTIONS if k in result}
+    result['schema_version'] = REPORT_DATA_SCHEMA_VERSION
+    result['data'] = _canonicalize(legacy)
+    result['legacy_data'] = legacy
+    result['deprecations'] = dict(DEPRECATIONS)
+    return result
 
 
 def generate_snapshot(designer, estimation=None):

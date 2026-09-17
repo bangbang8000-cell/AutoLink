@@ -92,7 +92,13 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
             {'name': 'outputDir', 'flags': ['--output-dir'], 'type': str,
              'required': False, 'help': '输出目录（默认 output）'},
             {'name': 'outputTypes', 'flags': ['--output-types'], 'type': str,
-             'required': False, 'help': '输出类型逗号分隔（connections,deviceList,cablingGuide,bom,reportData,pdfReport）'},
+             'required': False,
+             'help': '输出类型逗号分隔；缺省或 all = 全部（connections,deviceList,cablingGuide,bom,reportData,pdfReport,compliance）'},
+            {'name': 'noArchive', 'flags': ['--no-archive'], 'type': 'bool_flag',
+             'required': False,
+             'help': '无副作用取值模式：不建 v<N>_<ts> 批次目录、不写 manifest、不做保留轮转'},
+            {'name': 'regenerate', 'flags': ['--regenerate'], 'type': 'bool_flag',
+             'required': False, 'help': '强制重算，忽略同配置指纹命中的既有批次'},
         ],
     },
     'room:create': {
@@ -188,9 +194,18 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
             {'name': 'category', 'flags': ['--category'], 'type': str,
              'required': False, 'help': '分类 id / 厂商 / 型号过滤'},
             {'name': 'query', 'flags': ['--query'], 'type': str,
-             'required': False, 'help': '关键词搜索（vendor/model/description）'},
+             'required': False, 'help': '关键词搜索（id/category/vendor/model/description）'},
             {'name': 'limit', 'flags': ['--limit'], 'type': int,
              'required': False, 'help': '最大返回数（默认 50）'},
+        ],
+    },
+    # 5.2.2-522-a5（AL-E9）: 按设备库 id 精确取单台设备详情
+    'device:get': {
+        'sub': 'get',
+        'domain': 'device',
+        'params': [
+            {'name': 'deviceId', 'flags': ['--id', '--device-id'], 'type': str,
+             'required': True, 'help': '设备库 id（如 hygon_k100_ai / nvidia_dgx_h100）'},
         ],
     },
     'device:defaults': {
@@ -592,6 +607,56 @@ class CLIError(Exception):
     """CLI 层错误（参数/执行失败）"""
 
 
+# ================================================================
+#  5.2.2-522-e1：退出码契约（docs/cli.md「退出码」为准）
+#  ================================================================
+#  破坏性变更（DP-AL-02 定稿）：严格退出码为唯一行为，不提供兼容开关。
+#  handler 以 `{"error": ..., "error_code": ...}` 表达业务失败（见 engine.err），
+#  main() 依 error_code 判定退出码；未标码的失败兜底为 EXIT_EXEC。
+EXIT_OK = 0        # 成功
+EXIT_INTERNAL = 1  # 内部异常（未预期异常）
+EXIT_USAGE = 2     # 参数或配置错误
+EXIT_EXEC = 3      # 执行失败
+
+_ERR_CODE_TO_EXIT = {
+    'AL_ERR_CONFIG': EXIT_USAGE,
+    'AL_ERR_INVALID_ARGS': EXIT_USAGE,
+    'AL_ERR_EXEC': EXIT_EXEC,
+    'AL_ERR_EMPTY_RESULT': EXIT_EXEC,
+    'AL_ERR_INTERNAL': EXIT_INTERNAL,
+}
+
+
+def classify_exit(result: Any) -> int:
+    """按 handler 返回结果判定退出码。
+
+    5.2.2 契约：业务失败不再返回 0。判定顺序：
+      1) 返回体含 `error` → 按 error_code 映射（未知码兜底 EXIT_EXEC）
+      2) 返回体显式 `success is False` → EXIT_EXEC
+      3) 其余 → EXIT_OK
+    """
+    if isinstance(result, dict):
+        if result.get('error'):
+            return _ERR_CODE_TO_EXIT.get(result.get('error_code') or '', EXIT_EXEC)
+        if result.get('success') is False:
+            return EXIT_EXEC
+        if not result:  # {} —— 空结果视为无声失败
+            return EXIT_EXEC
+        return EXIT_OK
+    if result is None:  # 无返回 —— 无声失败
+        return EXIT_EXEC
+    if isinstance(result, (list, tuple)) and len(result) == 0:  # [] —— 空结果
+        return EXIT_EXEC
+    return EXIT_OK
+
+
+def error_message(result: Any) -> str:
+    """取失败结果的可读原因（供 stderr 提示）"""
+    if isinstance(result, dict):
+        return str(result.get('error') or '执行失败')
+    return '执行失败'
+
+
 def execute(action: str, params: Optional[Dict[str, Any]], argv: Optional[List[str]] = None) -> Any:
     """执行 action：校验 handler → 审计 → 调 handler
 
@@ -625,7 +690,9 @@ def _add_action_parser(subparsers, domain: str, action: str) -> argparse.Argumen
         if p.get('nargs'):
             parser.add_argument(*p['flags'], dest=p['name'], nargs=p['nargs'], type=p['type'],
                                 help=p['help'])
-        elif p['type'] == bool:
+        elif p['type'] == bool or p['type'] == 'bool_flag':
+            # 'bool_flag'：schema 里显式表达的开关（store_true），避免 type=bool 的
+            # 「任何非空字符串都为 True」陷阱（如 --flag false 会被当成 True）
             parser.add_argument(*p['flags'], dest=p['name'], action='store_true', help=p['help'])
         else:
             parser.add_argument(*p['flags'], dest=p['name'], type=p['type'], help=p['help'])
@@ -760,9 +827,12 @@ def _add_output_parser(subparsers) -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    """CLI 入口：解析 → 执行 → 输出（stdout JSON/NDJSON/文本）
+    """CLI 入口（进程副作用隔离包装）→ 见 _main_impl
 
-    将后端模块 print 重定向到 stderr，保证 stdout 仅含命令输出（与 engine 进程行为一致）。
+    5.2.2-522-e12（AL-E12）：后端模块的 print 需改道 stderr，保证 stdout 仅含命令输出。
+    旧实现直接改写 ``builtins.print`` 且**从不还原**，属于进程级永久副作用：
+    库内调用 main()（如测试、engine 复用）后，整个进程后续的 print 都被污染。
+    此处改为「替换 → finally 还原」，作用域严格限于一次调用。
     """
     import builtins as _builtins
     _orig_print = _builtins.print
@@ -772,7 +842,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         _orig_print(*args, **kwargs)
 
     _builtins.print = _print
+    try:
+        return _main_impl(argv)
+    finally:
+        _builtins.print = _orig_print
 
+
+def _main_impl(argv: Optional[List[str]] = None) -> int:
+    """CLI 主体：解析 → 执行 → 输出（stdout JSON/NDJSON/文本）"""
     argv = list(sys.argv[1:] if argv is None else argv)
 
     # V3.1.0-T4-2: 域级调用自动注入默认子命令（单子命令域或存在 run），
@@ -792,7 +869,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if getattr(namespace, 'domain', None) is None:
         parser.print_help()
-        return 0
+        return EXIT_OK
 
     domain = namespace.domain
     sub = getattr(namespace, 'sub', None)
@@ -802,7 +879,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         out_cmd = getattr(namespace, 'out_cmd', None)
         if not out_cmd:
             print('output 请指定子命令：list / delete / clear', file=sys.stderr)
-            return 0
+            return EXIT_OK
         try:
             if out_cmd == 'list':
                 result = cmd_output_list(namespace.project)
@@ -811,14 +888,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             else:  # delete
                 result = cmd_output_delete(namespace.project, getattr(namespace, 'batch', None))
         except CLIError as e:
+            # 名称非法 / 批次不存在 —— 参数错误
             print(str(e), file=sys.stderr)
-            return 2
+            return EXIT_USAGE
+        code = classify_exit(result)
         if getattr(namespace, 'format', 'json') == 'json':
             sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
         else:
             for k, v in result.items():
                 sys.stdout.write(f"{k}: {json.dumps(v, ensure_ascii=False)}\n")
-        return 0
+        if code != EXIT_OK:
+            print(error_message(result), file=sys.stderr)
+        return code
 
     if sub is None:
         # 域级调用 → 单子命令域或存在 run 时自动执行，否则打印域帮助
@@ -828,7 +909,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             getattr(parser, '_run_parsers', {}).get(domain, {})
         if not domain_parsers:
             print(f"未知域: {domain}", file=sys.stderr)
-            return 2
+            return EXIT_USAGE
         if len(domain_parsers) == 1 or 'run' in domain_parsers:
             target = domain_parsers.get('run') or next(iter(domain_parsers.values()))
             namespace, rest = target.parse_known_args(argv[1:])
@@ -846,15 +927,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     fmt = getattr(namespace, 'format', 'json')
+    # 阶段一：参数收集（--json 解析失败 / 缺必填 / 文件读取失败 → 参数错误 2）
     try:
         params = _collect_params(namespace)
+    except CLIError as e:
+        print(str(e), file=sys.stderr)
+        return EXIT_USAGE
+    except Exception as e:  # 兜底：避免裸 traceback 破坏 JSON 输出
+        print(f"参数解析失败: {e}", file=sys.stderr)
+        return EXIT_USAGE
+
+    # 阶段二：执行（handler 抛未预期异常 → 内部错误 1）
+    try:
         result = execute(action, params, argv)
     except CLIError as e:
         print(str(e), file=sys.stderr)
-        return 2
+        return EXIT_INTERNAL
     except Exception as e:  # 兜底：避免裸 traceback 破坏 JSON 输出
         print(f"执行失败: {e}", file=sys.stderr)
-        return 2
+        return EXIT_INTERNAL
+
+    # 阶段三：按结果判定退出码（业务失败 / 空结果不再返回 0）
+    exit_code = classify_exit(result)
 
     if fmt == 'json':
         sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
@@ -870,7 +964,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                     sys.stdout.write(f"{k}: {v}\n")
         else:
             sys.stdout.write(f"{result}\n")
-    return 0
+
+    if exit_code != EXIT_OK:
+        # 失败原因同时输出到 stderr（stdout 仍保留结构化 JSON，便于下游解析）
+        print(f"[{result.get('error_code', 'AL_ERR_EXEC') if isinstance(result, dict) else 'AL_ERR_EXEC'}] "
+              f"{error_message(result)}", file=sys.stderr)
+    return exit_code
 
 
 if __name__ == '__main__':

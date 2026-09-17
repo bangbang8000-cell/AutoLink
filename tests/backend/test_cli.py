@@ -291,8 +291,10 @@ class TestAudit:
         audit = tmp_path / 'audit.jsonl'
         rc, out, _ = run_cli(['design', 'generate', '--config', str(tmp_path / 'missing.json')],
                              monkeypatch, capsys, audit)
-        assert rc == 0  # handler 返回 {error} 而非抛异常
-        assert 'error' in json.loads(out)
+        # 5.2.2 退出码契约（破坏性）：handler 返回 {error} 也必须非零退出
+        assert rc == 2  # 配置缺失 → AL_ERR_CONFIG → 退出码 2
+        payload = json.loads(out)
+        assert payload['error_code'] == 'AL_ERR_CONFIG'
         lines = audit.read_text(encoding='utf-8').strip().splitlines()
         record = json.loads(lines[0])
         assert record['action'] == 'design'
@@ -412,9 +414,90 @@ class TestImportExportCommands:
         assert out_zip.exists()
 
     def test_template_export_missing_template(self, monkeypatch, capsys, tmp_path):
-        """不存在的模板 → success False（命令级仍 0）"""
+        """不存在的模板 → success False；5.2.2 起命令级退出码 3（执行失败，不再是 0）"""
         audit = tmp_path / 'audit.jsonl'
         rc, out, _ = run_cli(['template', 'export', '--name', '__no_such__'],
                              monkeypatch, capsys, audit)
-        assert rc == 0
+        assert rc == 3
         assert json.loads(out)['success'] is False
+
+
+# ================================================================
+#  5.2.2-522-e1：CLI 退出码契约（0/1/2/3）
+# ================================================================
+
+class TestExitCodeContract:
+    """退出码契约：0 成功 / 1 内部异常 / 2 参数或配置错误 / 3 执行失败（无兼容态）"""
+
+    def test_classify_exit_codes(self):
+        from cli import (classify_exit, EXIT_OK, EXIT_INTERNAL, EXIT_USAGE, EXIT_EXEC)
+        assert classify_exit({'ok': 1}) == EXIT_OK
+        assert classify_exit({'error': 'x', 'error_code': 'AL_ERR_CONFIG'}) == EXIT_USAGE
+        assert classify_exit({'error': 'x', 'error_code': 'AL_ERR_INVALID_ARGS'}) == EXIT_USAGE
+        assert classify_exit({'error': 'x', 'error_code': 'AL_ERR_EXEC'}) == EXIT_EXEC
+        assert classify_exit({'error': 'x', 'error_code': 'AL_ERR_EMPTY_RESULT'}) == EXIT_EXEC
+        assert classify_exit({'error': 'x', 'error_code': 'AL_ERR_INTERNAL'}) == EXIT_INTERNAL
+        # 未标码的失败兜底为 3
+        assert classify_exit({'error': 'boom'}) == EXIT_EXEC
+        assert classify_exit({'success': False}) == EXIT_EXEC
+
+    def test_classify_exit_empty_result(self):
+        """空结果 = 无声失败，必须非零"""
+        from cli import classify_exit, EXIT_EXEC, EXIT_OK
+        assert classify_exit({}) == EXIT_EXEC
+        assert classify_exit([]) == EXIT_EXEC
+        assert classify_exit(None) == EXIT_EXEC
+        # 非空（即使 value 为 0 / False）仍算成功
+        assert classify_exit({'deleted': 0}) == EXIT_OK
+        assert classify_exit([{'a': 1}]) == EXIT_OK
+
+    def test_exit_0_on_success(self, monkeypatch, capsys, tmp_path):
+        rc, out, _ = run_cli(['room', 'create', '--rows', 'A', '--cols', '1'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 0
+        assert json.loads(out)['cells']
+
+    def test_exit_2_on_config_error(self, monkeypatch, capsys, tmp_path):
+        """配置缺失 → 退出码 2"""
+        rc, out, _ = run_cli(['design', 'generate', '--config', str(tmp_path / 'missing.json')],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 2
+        assert json.loads(out)['error_code'] == 'AL_ERR_CONFIG'
+
+    def test_exit_2_on_bad_json_param(self, monkeypatch, capsys, tmp_path):
+        """--json 解析失败 → 退出码 2"""
+        rc, _, err = run_cli(['room', 'create', '--json', '{bad'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 2
+        assert '--json 解析失败' in err
+
+    def test_exit_2_on_unknown_domain(self, monkeypatch, capsys, tmp_path):
+        rc, _, _ = run_cli(['nope', 'run'], monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 2
+
+    def test_exit_2_on_argparse_bad_type(self, monkeypatch, capsys, tmp_path):
+        """argparse 类型转换失败 --cols x → 退出码 2"""
+        rc, _, _ = run_cli(['room', 'create', '--rows', 'A', '--cols', 'x'],
+                           monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 2
+
+    def test_exit_1_on_handler_exception(self, monkeypatch, capsys, tmp_path):
+        """handler 抛未预期异常 → 退出码 1（内部错误）"""
+        rc, _, err = run_cli(
+            ['room', 'create', '--json', '{"rows": ["A"], "cols": ["x"]}'],
+            monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 1
+        assert '执行失败' in err or '失败' in err
+
+    def test_exit_3_on_export_failure(self, monkeypatch, capsys, tmp_path):
+        rc, out, _ = run_cli(['template', 'export', '--name', '__no_such__'],
+                             monkeypatch, capsys, tmp_path / 'audit.jsonl')
+        assert rc == 3
+
+    def test_no_compat_switch_exists(self):
+        """契约唯一：不存在兼容开关（DP-AL-02 定稿：无兼容期）"""
+        import cli
+        src = open(cli.__file__, encoding='utf-8').read()
+        assert 'compat' not in src.lower().replace('compatibility', '')
+        assert cli.EXIT_OK == 0 and cli.EXIT_INTERNAL == 1
+        assert cli.EXIT_USAGE == 2 and cli.EXIT_EXEC == 3

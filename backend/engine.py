@@ -281,6 +281,33 @@ def _check_cooling_consistency(recommended, configured):
         'configured': configured,
     }
 
+# ================================================================
+#  5.2.2-522-e1：CLI 退出码契约 —— 结构化错误码
+#  ================================================================
+#  契约（docs/cli.md「退出码」为准，破坏性变更、无兼容开关）：
+#    0 成功 / 1 内部异常 / 2 参数或配置错误 / 3 执行失败
+#  设计约束：handler 失败必须以 err() 返回并携带 error_code，
+#  cli.main 依 error_code 判定退出码；未标码的 {"error": ...} 兜底为 3。
+ERR_CONFIG = "AL_ERR_CONFIG"              # 参数/配置错误 → 退出码 2
+ERR_INVALID_ARGS = "AL_ERR_INVALID_ARGS"  # 参数非法 → 退出码 2
+ERR_EXEC = "AL_ERR_EXEC"                  # 执行失败 → 退出码 3
+ERR_EMPTY_RESULT = "AL_ERR_EMPTY_RESULT"  # 空结果（无声失败）→ 退出码 3
+ERR_INTERNAL = "AL_ERR_INTERNAL"          # 内部异常 → 退出码 1
+
+# 5.2.2-522-e3（AL-E3）：机器可读输出契约版本。
+# 所有对外机器可读输出（design / export / validate ...）顶层都带 ``schema_version``，
+# 下游据此判断能否安全解析；契约破坏性升级时 +1。
+SCHEMA_VERSION = 1
+
+
+def err(message, code=ERR_EXEC):
+    """构造结构化错误：机器可读 error_code + 人类可读 error。
+
+    与 agent/tools.py 的 AC_ERR_* 约定保持一致（失败必须可机读判定）。
+    """
+    return {"success": False, "error": message, "error_code": code}
+
+
 def _get_config_file(params):
     """获取配置文件路径，优先使用 project_config.json"""
     config_file = params.get('configFile')
@@ -698,7 +725,7 @@ def handle_design(params):
     _ensure_plugins_ready()
     config_file, error = _get_config_file(params)
     if error:
-        return {"error": error}
+        return err(error, ERR_CONFIG)
 
     # V3.0.0-T0-3: cluster network_mode 分派校验（未知模式明确报错，防静默走错路径）
     if config_file.endswith('.json'):
@@ -707,9 +734,9 @@ def handle_design(params):
                 _raw_config = json.load(f)
             mode_errors = _validate_cluster_network_modes(_raw_config)
             if mode_errors:
-                return {"error": "; ".join(mode_errors)}
+                return err("; ".join(mode_errors), ERR_CONFIG)
         except (OSError, json.JSONDecodeError) as e:
-            return {"error": f"读取配置失败: {e}"}
+            return err(f"读取配置失败: {e}", ERR_CONFIG)
 
     designer = NetworkDesignerV2(config_file)
     summary = {
@@ -1029,6 +1056,8 @@ def handle_design(params):
     power_data = _calculate_power_summary(designer)
 
     return {
+        # 5.2.2-522-e3（AL-E3）：机器可读输出顶层统一带 schema_version
+        "schema_version": SCHEMA_VERSION,
         "summary": summary,
         "topology": {"nodes": nodes, "edges": edges},
         "valid": is_valid,
@@ -1043,7 +1072,7 @@ def handle_estimate(params):
     """V2.4: 参数化 PUE/收敛比估算（支持用户调整散热方式等参数）"""
     config_file, error = _get_config_file(params)
     if error:
-        return {"error": error}
+        return err(error, ERR_CONFIG)
 
     designer = NetworkDesignerV2(config_file)
     return _estimate_design(designer, params.get('estimateParams', {}))
@@ -1054,7 +1083,7 @@ def handle_report(params):
     """V2.4: 生成完整报告数据（供前端可视化展示）"""
     config_file, error = _get_config_file(params)
     if error:
-        return {"error": error}
+        return err(error, ERR_CONFIG)
 
     designer = NetworkDesignerV2(config_file)
     estimation = _estimate_design(designer, params.get('estimateParams', {}))
@@ -1112,7 +1141,7 @@ def handle_validate(params):
     """处理拓扑验证请求（V3.1.1-T5-6: 返回完整校验问题 + 修复建议，供 AI 答疑）"""
     config_file, error = _get_config_file(params)
     if error:
-        return {"error": error}
+        return err(error, ERR_CONFIG)
 
     designer = NetworkDesignerV2(config_file)
     validation = _run_validation(designer)
@@ -1192,9 +1221,9 @@ def handle_room_create(params):
     rows = params.get('rows') or []
     cols = params.get('cols') or []
     if not rows or not cols:
-        return {"error": "rows/cols 不能为空"}
+        return err("rows/cols 不能为空", ERR_INVALID_ARGS)
     if len(rows) * len(cols) > MAX_MATRIX_CELLS:
-        return {"error": f"矩阵规模过大（> {MAX_MATRIX_CELLS}）"}
+        return err(f"矩阵规模过大（> {MAX_MATRIX_CELLS}）", ERR_INVALID_ARGS)
     matrix = create_default_room(rows, cols, name=str(params.get('name') or '机房'))
     project = params.get('project') or params.get('projectName')
     if project:
@@ -1688,27 +1717,119 @@ def _batch_file_manifest(batch_dir):
     return files
 
 
+# 5.2.2-522-d3（AL-E5）：全部可用导出类型（缺省即全部；亦接受 'all' / '*'）
+EXPORT_TYPES = ('connections', 'deviceList', 'cablingGuide', 'bom',
+                'reportData', 'pdfReport', 'compliance')
+# 只返回数据、不落盘的类型（不产生归档）
+DATA_ONLY_TYPES = frozenset({'reportData'})
+
+
+def _resolve_output_types(params):
+    """解析 outputTypes：缺省 / 空 / 'all' / '*' → 全部类型；字符串按逗号切分。
+
+    5.2.2-522-d3（AL-E5，`DP-AL-03`）：旧实现缺省为空 → `results: []` 且退出码 0，
+    是最危险的**无声失败**。现对齐文档：缺省 = 全部可用类型。
+    """
+    raw = params.get('outputTypes', None)
+    if raw is None:
+        return list(EXPORT_TYPES)
+    if isinstance(raw, str):
+        raw = [t.strip() for t in raw.split(',') if t.strip()]
+    raw = [t for t in (raw or []) if t]
+    if not raw or any(str(t).lower() in ('all', '*') for t in raw):
+        return list(EXPORT_TYPES)
+    return list(raw)
+
+
+def _find_reusable_batch(output_dir, config_hash, output_types):
+    """5.2.2-522-e4（AL-E4）：按配置指纹复用既有批次。
+
+    命中条件：同 ``config_hash`` 且**请求类型全部已成功产出**。
+    仅对**落盘类型**生效（纯数据结果不入档，无法复用）。
+    返回 ``(batch_name, manifest)`` 或 ``None``。
+    """
+    if not os.path.isdir(output_dir):
+        return None
+    wanted = set(output_types)
+    for name in sorted(os.listdir(output_dir), reverse=True):
+        d = os.path.join(output_dir, name)
+        if not os.path.isdir(d) or not re.match(r'^v\d+_', name):
+            continue
+        mp = os.path.join(d, 'manifest.json')
+        if not os.path.exists(mp):
+            continue
+        try:
+            with open(mp, 'r', encoding='utf-8') as f:
+                manifest = json.load(f)
+        except Exception:
+            continue
+        if manifest.get('config_hash') != config_hash:
+            continue
+        done = {r.get('type') for r in (manifest.get('results') or [])
+                if r.get('status') == 'success'}
+        if wanted <= done:
+            return name, manifest
+    return None
+
+
 @register_action('export')
 def handle_export(params):
-    """处理渲染导出请求（v1.5：版本+时间戳归档 + manifest.json + 保留策略）"""
+    """处理渲染导出请求（v1.5：版本+时间戳归档 + manifest.json + 保留策略）
+
+    5.2.2-522-d3 / -e4（AL-E4 / AL-E5）：
+      - 缺省 ``outputTypes`` = **全部可用类型**（旧为空 → 静默 no-op）
+      - 同配置指纹命中既有批次时**复用**，可用 ``regenerate`` 强制重算
+      - ``noArchive`` 无副作用取值模式：不建批次目录、不写 manifest、不做保留轮转
+      - 无任何成功产出 → 返回结构化错误（``AL_ERR_EMPTY_RESULT``），**不建空批次**
+    """
     config_file, error = _get_config_file(params)
     if error:
-        return {"error": error}
+        return err(error, ERR_CONFIG)
 
     output_dir = params.get('outputDir', 'output')
-    output_types = params.get('outputTypes', [])
+    output_types = _resolve_output_types(params)
     retention = int(params.get('outputRetention', 10) or 10)
+    no_archive = bool(params.get('noArchive', False))
+    regenerate = bool(params.get('regenerate', False))
+
+    unknown = [t for t in output_types if t not in EXPORT_TYPES]
+    if unknown:
+        return err(f"未知 outputTypes: {', '.join(map(str, unknown))}；"
+                   f"可用: {', '.join(EXPORT_TYPES)}", ERR_INVALID_ARGS)
+
+    config_hash = _config_hash(config_file)
+
+    # 指纹复用：仅当全部请求类型都是落盘类型时才有意义（数据结果不入档）
+    if not no_archive and not regenerate and not (set(output_types) & DATA_ONLY_TYPES):
+        hit = _find_reusable_batch(output_dir, config_hash, output_types)
+        if hit:
+            batch_name, manifest = hit
+            results = [dict(r) for r in (manifest.get('results') or [])
+                       if r.get('type') in output_types]
+            return {
+                "schema_version": SCHEMA_VERSION,
+                "results": results,
+                "outputDir": os.path.join(output_dir, batch_name),
+                "batchName": batch_name,
+                "version": manifest.get('version'),
+                "reused": True,
+            }
 
     designer = NetworkDesignerV2(config_file)
     os.makedirs(output_dir, exist_ok=True)
 
     # v1.5：版本号 + 时间戳批次目录（配置变化才递增版本）
-    config_hash = _config_hash(config_file)
+    # 5.2.2：仅当确有落盘产出时才建批次目录（旧实现无条件创建 → 空批次污染工作区）
+    need_archive = (not no_archive) and bool(set(output_types) - DATA_ONLY_TYPES)
     version = _next_version(output_dir, config_hash)
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S%f")
-    batch_name = f"v{version}_{ts}"
-    batch_dir = os.path.join(output_dir, batch_name)
-    os.makedirs(batch_dir, exist_ok=True)
+    if need_archive:
+        batch_name = f"v{version}_{ts}"
+        batch_dir = os.path.join(output_dir, batch_name)
+        os.makedirs(batch_dir, exist_ok=True)
+    else:
+        batch_name = None
+        batch_dir = output_dir
 
     results = []
     mode = designer.downlink_mode
@@ -1774,35 +1895,49 @@ def handle_export(params):
         except Exception as e:
             results.append({"type": "compliance", "file": fn, "status": "error", "error": str(e)})
 
+    # 5.2.2-522-d3：无任何成功产出 → 不建空批次，返回结构化错误（空结果非零退出）
+    if not any(r.get('status') == 'success' for r in results):
+        if need_archive and batch_name:
+            shutil.rmtree(batch_dir, ignore_errors=True)
+        detail = '；'.join(f"{r.get('type')}: {r.get('error', '未产出')}"
+                          for r in results if r.get('status') != 'success')
+        return err(f"导出未产生任何成功结果（{detail}）", ERR_EMPTY_RESULT)
+
     # v1.5：manifest.json（版本/配置哈希/统计）+ 保留策略轮转
-    _write_manifest(
-        batch_dir,
-        project=os.path.basename(os.path.dirname(os.path.abspath(config_file))),
-        version=version,
-        config_hash=config_hash,
-        downlink_mode=mode,
-        output_types=output_types,
-        results=[{"type": r.get("type"), "status": r.get("status")} for r in results],
-        stats={
-            "servers": len(getattr(designer, 'servers', [])),
-            "param_leaves": len(getattr(designer, 'param_leaves', [])),
-            "param_spines": len(getattr(designer, 'param_spines', [])),
-            "param_cores": len(getattr(designer, 'param_cores', [])),
-            "storage_leaves": len(getattr(designer, 'storage_leaves', [])),
-            "storage_spines": len(getattr(designer, 'storage_spines', [])),
-            "biz_access": len(getattr(designer, 'biz_access', [])),
-            "biz_agg": len(getattr(designer, 'biz_agg', [])),
-            "oob_access": len(getattr(designer, 'oob_access', [])),
-            "oob_agg": len(getattr(designer, 'oob_agg', [])),
-        },
-    )
-    _enforce_retention(output_dir, retention)
+    if need_archive:
+        _write_manifest(
+            batch_dir,
+            project=os.path.basename(os.path.dirname(os.path.abspath(config_file))),
+            version=version,
+            config_hash=config_hash,
+            downlink_mode=mode,
+            output_types=output_types,
+            # 保留 file 字段，供指纹复用时重建 results
+            results=[{"type": r.get("type"), "status": r.get("status"),
+                      "file": r.get("file")} for r in results],
+            stats={
+                "servers": len(getattr(designer, 'servers', [])),
+                "param_leaves": len(getattr(designer, 'param_leaves', [])),
+                "param_spines": len(getattr(designer, 'param_spines', [])),
+                "param_cores": len(getattr(designer, 'param_cores', [])),
+                "storage_leaves": len(getattr(designer, 'storage_leaves', [])),
+                "storage_spines": len(getattr(designer, 'storage_spines', [])),
+                "biz_access": len(getattr(designer, 'biz_access', [])),
+                "biz_agg": len(getattr(designer, 'biz_agg', [])),
+                "oob_access": len(getattr(designer, 'oob_access', [])),
+                "oob_agg": len(getattr(designer, 'oob_agg', [])),
+            },
+        )
+        _enforce_retention(output_dir, retention)
 
     return {
+        "schema_version": SCHEMA_VERSION,
         "results": results,
         "outputDir": batch_dir,
         "batchName": batch_name,
         "version": version,
+        "reused": False,
+        "archived": need_archive,
     }
 
 
@@ -1815,7 +1950,7 @@ def handle_share_snapshot(params):
     """
     config_file, error = _get_config_file(params)
     if error:
-        return {"error": error}
+        return err(error, ERR_CONFIG)
 
     designer = NetworkDesignerV2(config_file)
     estimation = _estimate_design(designer, params.get('estimateParams', {}))
@@ -1837,6 +1972,16 @@ def handle_device_list(params):
         query=params.get('query', ''),
         limit=params.get('limit', 50),
     )
+
+
+@register_action('device:get')
+def handle_device_get(params):
+    """5.2.2-522-a5（AL-E9）: 按设备库 id 精确取单台设备详情。
+
+    下游以 ``device_refs[*].library_id`` 反查设备时的稳定入口。
+    """
+    from manage import get_device
+    return get_device(params.get('deviceId', '') or params.get('id', ''))
 
 
 @register_action('device:defaults')

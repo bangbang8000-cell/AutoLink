@@ -207,9 +207,11 @@ class TestSkillTools:
         assert r['success'] is True and r['result']['success'] is False
         assert '技能名不能为空' in r['result']['error']
         # 缺必填 content → execute_tool 参数校验拦截
+        # 5.2.2-522-a2（AL-A2）：参数校验失败外层 success 即为 False（扁平化）
         r0 = asyncio.run(execute_tool('skill_update', {'name': 'x'}))
-        assert r0['success'] is True and r0['result']['success'] is False
-        assert '缺少必填参数: content' in r0['result']['error']
+        assert r0['success'] is False
+        assert r0['error_code'] == 'AC_ERR_INVALID_ARGS'
+        assert '缺少必填参数: content' in r0['error']
         # 空内容 → handler 空值校验
         r2 = asyncio.run(execute_tool('skill_update', {'name': 'x', 'content': ''}))
         assert r2['success'] is True and r2['result']['success'] is False

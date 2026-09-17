@@ -51,11 +51,31 @@ class TestCapabilities:
         assert {"run_cli", "read_file", "list_dir"}.issubset(set(SOURCE_ONLY_TOOLS))
 
     def test_compiled_blocked_tools(self):
-        from autolink_hub.mcp_server.capabilities import COMPILED_BLOCKED_TOOLS
+        """5.2.2：屏蔽改为**命名语义规则**，不再依赖易漂移的枚举名单。
 
-        assert "delete_project" in COMPILED_BLOCKED_TOOLS
-        assert "delete_template" in COMPILED_BLOCKED_TOOLS
-        assert "run_cli" in COMPILED_BLOCKED_TOOLS
+        改前用固定枚举（``delete_project`` / ``delete_template`` / ...），实际注册名
+        为 ``project_delete`` / ``template_delete`` 时屏蔽**静默失效**、危险工具泄漏。
+        """
+        from autolink_hub.mcp_server.capabilities import (
+            audit_block_rules,
+            is_blocked_in_compiled,
+        )
+
+        # 语义规则：任意 delete_/remove_/clear_ 形态均被屏蔽
+        for name in ("delete_project", "template_delete", "project_delete",
+                     "clear_device_library", "remove_device", "run_cli"):
+            assert is_blocked_in_compiled(name) is True, name
+        # 非破坏性工具不被误伤
+        for name in ("list_projects", "create_project", "generate_design"):
+            assert is_blocked_in_compiled(name) is False, name
+        # 启动期对账：命中数必须 > 0（否则说明规则失效）
+        audit = audit_block_rules(
+            ["list_projects", "create_project", "project_delete", "template_delete", "run_cli"],
+            "compiled",
+        )
+        assert audit["compiled_blocked"]
+        assert "project_delete" in audit["compiled_blocked"]
+        assert "template_delete" in audit["compiled_blocked"]
 
     def test_permission_mapping(self):
         from autolink_hub.mcp_server.capabilities import mcp_permission_meta

@@ -69,7 +69,12 @@ def _safe_read_json(path: str) -> tuple:
 # ============================================================
 
 def list_devices(category: str = '', query: str = '', limit: int = 50) -> dict:
-    """设备库列表：按 category（分类 id/厂商/型号）或关键词过滤，返回摘要字段"""
+    """设备库列表：按 category（分类 id/厂商/型号）或关键词过滤，返回摘要字段
+
+    5.2.2-522-a5（AL-E9）：检索范围补 ``id`` 与 ``category``，且 **id 精确命中优先**。
+    原实现范围为 ``vendor + model + description``，不含 ``id``；下游以 ``device_refs``
+    （id 形式）驱动反查时全部落空（实测 ``--query hygon_k100_ai`` → total: 0）。
+    """
     from device_library import get_device_library
     library = get_device_library()
     devices = []
@@ -77,15 +82,16 @@ def list_devices(category: str = '', query: str = '', limit: int = 50) -> dict:
         vendor = getattr(dev, 'vendor', '') or ''
         model = getattr(dev, 'model', '') or ''
         cid = getattr(dev, 'category', '') or ''
+        dev_id = getattr(dev, 'id', '') or ''
         # 分类匹配：精确 id 或前缀（如 'switches' 匹配 switches_param/storage/...），兼匹配厂商/型号
         if category and not (category == cid or cid.startswith(category) or category in (vendor, model)):
             continue
         if query:
-            hay = ' '.join([vendor, model, getattr(dev, 'description', '') or ''])
+            hay = ' '.join([dev_id, cid, vendor, model, getattr(dev, 'description', '') or ''])
             if query.lower() not in hay.lower():
                 continue
         devices.append({
-            'id': getattr(dev, 'id', ''),
+            'id': dev_id,
             'category': cid,
             'vendor': vendor,
             'model': model,
@@ -97,9 +103,45 @@ def list_devices(category: str = '', query: str = '', limit: int = 50) -> dict:
             'port_count': getattr(dev, 'port_count', None),
             'port_speed': getattr(dev, 'port_speed', None),
         })
-        if limit and len(devices) >= limit:
-            break
-    return {'devices': devices, 'total': len(devices)}
+    # 5.2.2-522-a5：id 精确命中优先（下游按 id 反查时结果稳定在第一项）
+    if query:
+        q = query.strip().lower()
+        devices.sort(key=lambda d: 0 if (d.get('id') or '').lower() == q else 1)
+    matched = len(devices)
+    if limit and matched > limit:
+        devices = devices[:limit]
+    return {'devices': devices, 'total': matched, 'returned': len(devices)}
+
+
+def get_device(device_id: str) -> dict:
+    """按设备库 id 精确取单台设备详情（5.2.2-522-a5，AL-E9）。
+
+    供下游以 ``device_refs[*].library_id`` 直接反查，无需先用 list 再自行过滤。
+    """
+    from device_library import get_device_library
+    library = get_device_library()
+    target = (device_id or '').strip()
+    if not target:
+        return {'found': False, 'error': 'deviceId 不能为空'}
+    for dev in library.get_all():
+        if (getattr(dev, 'id', '') or '') == target:
+            return {
+                'found': True,
+                'device': {
+                    'id': getattr(dev, 'id', ''),
+                    'category': getattr(dev, 'category', '') or '',
+                    'vendor': getattr(dev, 'vendor', '') or '',
+                    'model': getattr(dev, 'model', '') or '',
+                    'description': getattr(dev, 'description', ''),
+                    'power_watts': getattr(dev, 'power_watts', None),
+                    'u_height': getattr(dev, 'u_height', None),
+                    'gpu_count': getattr(dev, 'gpu_count', None),
+                    'gpu_model': getattr(dev, 'gpu_model', None),
+                    'port_count': getattr(dev, 'port_count', None),
+                    'port_speed': getattr(dev, 'port_speed', None),
+                },
+            }
+    return {'found': False, 'error': f'设备不存在: {target}'}
 
 
 # ============================================================

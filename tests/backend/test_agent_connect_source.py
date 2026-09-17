@@ -96,8 +96,10 @@ class TestRunCli:
         from autolink_hub.agent.tools import execute_tool
 
         res = asyncio.run(execute_tool("run_cli", {}))
-        assert res["result"]["success"] is False
-        assert "action" in res["result"]["error"]
+        # 5.2.2：参数校验失败扁平化（外层 success=False + error_code）
+        assert res["success"] is False
+        assert res["error_code"] == "AC_ERR_INVALID_ARGS"
+        assert "action" in res["error"]
 
     def test_run_cli_whitelist_passes(self, monkeypatch):
         from autolink_hub.agent.tools import execute_tool

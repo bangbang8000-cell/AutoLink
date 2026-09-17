@@ -6,14 +6,14 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-5.0.10-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-5.2.2-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
-[![Templates](https://img.shields.io/badge/templates-25-teal)](#)
-[![Devices](https://img.shields.io/badge/devices-126-purple)](#)
-[![AI Tools](https://img.shields.io/badge/Agent--Tools-60-brightgreen)](#)
-[![CI](https://img.shields.io/badge/tests-2800%2B%20passed-brightgreen)](#)
+[![Templates](https://img.shields.io/badge/templates-23-teal)](#)
+[![Devices](https://img.shields.io/badge/devices-127-purple)](#)
+[![AI Tools](https://img.shields.io/badge/Agent--Tools-72-brightgreen)](#)
+[![CI](https://img.shields.io/badge/tests-3044%20passed-brightgreen)](#)
 
 </div>
 
@@ -30,10 +30,10 @@
 | 维度 | 能力 |
 |------|------|
 | **全栈规划** | Scale-Up（卡间互联）+ Scale-Out（网间互联）双栈一体化，支持 IB / RoCE / UEC 三种 Scale-Out 协议 |
-| **真材实料** | 126 款主流设备库（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ 35 款光模块 |
-| **硬核校验** | 22 条校验规则（V001-V022）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
+| **真材实料** | **127 款**设备库 = **92 款硬件**（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ **35 款光模块** |
+| **硬核校验** | **21 条**校验规则（V001–V020、V022；**V021 缺号**）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
 | **交付级报告** | 连接表 / 布线表 / BOM / 设备清单 / 机柜表 / 9 章 PDF 报告，收敛比全部按计算值输出 |
-| **开箱即用** | 25 套场景模板（含 7 套 H100/昇腾示例）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
+| **开箱即用** | **23 套**场景模板（含 7 套 H100/昇腾示例）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
 
 ---
 
@@ -73,7 +73,7 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 ### ✅ 硬核校验与智能优化
 
-- **22 条校验规则（V001-V022）**：拓扑连通性、端口容量、光模块匹配（含分裂线缆）、功率上限、ZCube/超节点/三合一融合域专项校验
+- **21 条校验规则（V001–V020、V022，V021 缺号）**：拓扑连通性、端口容量、光模块匹配（含分裂线缆）、功率上限、ZCube/超节点/三合一融合域专项校验
 - **PUE 与能耗**：风冷 / 冷板液冷 / 浸没式三种散热，参数化重算，达标判断（<1.25）
 - **收敛比校验**：参数网 1:1 / 存储网 1:1~2:1 / 业务网 3:1~4:1，报告读取计算值
 - **光模块智能选型**：35 款库（100G~1.6T），按速率/距离/缆型自动选型 + 成本估算
@@ -81,12 +81,12 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 - **智能修复**：校验错误（rule_id 级）→ 修复 patch 预览 → 一键应用 → 复核闭环
 - **机房智能落位**：约束满足 + 多目标优化（功率均衡/散热分区/网络就近/布线最短），可对话驱动
 
-![校验结果面板 - 22 条规则严重度分组与定位](snapshot/校验报告.png)
+![校验结果面板 - 21 条规则严重度分组与定位](snapshot/校验报告.png)
 
 ### 🤖 AI 智能体（AIHUB）
 
 - **对话式管理**：设备/模板/项目对话查询，自然语言 → 项目配置预览 → 确认落盘
-- **9 大模型 Provider** + 60 个 Agent 工具 + 工具权限分级（AUTO/NOTIFY/CONFIRM）+ MCP 工具接入 + 多步自主任务编排
+- **9 大模型 Provider** + **72 个 Agent 工具** + 工具权限分级（AUTO/NOTIFY/CONFIRM）+ MCP 工具接入 + 多步自主任务编排
 - **容量规划**：17 模型档案（含 5 国产场景）→ 通信量估算 → 拓扑推荐 + TCO 成本
 - **ATOP 拓扑优化**：模型通信特征 → ZCube 2D/3D cube 推荐，一键应用到画布
 - **知识库**：KnowledgeEngine 检索式召回，AI 对话自动注入上下文
@@ -110,7 +110,7 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 - **纵深安全**：sandbox + CSP（渲染层零网络/零 Node）+ IPC zod 运行时校验 + 日志脱敏
 - **崩溃可回收**：本地崩溃转储 + 渲染进程崩溃自动恢复
-- **质量门禁**：前端 Vitest + 后端 pytest（1422+ 用例）+ E2E + 覆盖率棘轮只升不降 + golden/模板校验
+- **质量门禁**：前端 Vitest（114 文件 / 1431 用例）+ 后端 pytest（86 文件 / 1613 用例）+ E2E + 覆盖率棘轮只升不降 + golden/模板校验 + 文档数字真值校验
 - **品牌主题**：4 色品牌主题一键切换，设计 token 驱动全端
 - **国际化**：5 种语言，i18n key 完整性测试防回归
 
@@ -118,10 +118,12 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 ## 📈 版本演进
 
-与 MagicCommander 双端三位一体推进，AutoLink 历经 3.x（引擎与组网基础）、4.0 系列（工程基座 / AI 底座 / 协作 / 3D / 性能 / 质量 / 交付 / 示例）、5.0 系列（AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官）——每版独立可运行、可发布、可回滚，门禁只升不降。
+与 MagicCommander 双端三位一体推进，AutoLink 历经 3.x（引擎与组网基础）、4.0 系列（工程基座 / AI 底座 / 协作 / 3D / 性能 / 质量 / 交付 / 示例）、5.0 系列（AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官）、5.1 系列（Agent Connect：MCP Server 双场景互联）——每版独立可运行、可发布、可回滚，门禁只升不降。
 
 - **4.0 系列**（v4.0.0–v4.9.0）：工程基座与 CI 门禁、AI 项目/模板操作工具、一致性校验引擎、质量仪表盘、诊断中心、项目包往返、AIDC 四示例收官
-- **5.0 系列**（v5.0.1–v5.0.10）：统一 AgentProvider + AI 引擎三选一、多步任务编排、技能自学习、MCP 工具接入、模板市场生态、知识库与文档工作台、机房 3D、拓扑视口渲染优化、lint 清零、升级体验（断点续传/SHA-512/回滚/灰度）、示例库扩充至 7 个 + 模板 25 套全量重测
+- **5.0 系列**（v5.0.1–v5.0.10）：统一 AgentProvider + AI 引擎三选一、多步任务编排、技能自学习、MCP 工具接入、模板市场生态、知识库与文档工作台、机房 3D、拓扑视口渲染优化、lint 清零、升级体验（断点续传/SHA-512/回滚/灰度）、示例库扩充至 7 个 + 模板 23 套全量重测
+- **5.1 系列**（v5.1.0–v5.1.9）：**Agent Connect**（把 AutoLink 封装为标准 MCP Server，编译态受限 / 源码态无限制双场景）、确定性语义层、异步长任务（task_submit/query/wait/cancel）、操作审计（audit_query 脱敏）、远程模式试点、Agent 反馈自优化、自检与排错
+- **5.2 系列**（v5.2.0–v5.2.2）：工作台精细打磨与回归发布（5.2 首版）；**5.2.2 修复版**——双端契约面同构（`test_dual_end_parity_522`）、Agent Connect 权限门禁真实化（gate_mode/block_audit/启动断言）、导出产物指纹复用 + `--no-archive` + 缺省全类型、`schema_version` + 英文规范子树（`data` / `legacy_data` 过渡双子树）、CLI 退出码契约（0/1/2/3）、文档数字自动校验门禁
 
 ---
 
@@ -131,11 +133,11 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-5.0.10-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-5.0.10-mac-x64.dmg` / `AutoLink-5.0.10-mac-arm64.dmg`
-- **Linux**：`AutoLink-5.0.10-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-5.2.2-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-5.2.2-mac-x64.dmg` / `AutoLink-5.2.2-mac-arm64.dmg`
+- **Linux**：`AutoLink-5.2.2-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建示例项目，内置 **25 套场景模板**（含 7 套 H100/昇腾示例）与 **126 款设备库**。
+安装后首次启动自动创建示例项目，内置 **23 套场景模板**（含 7 套 H100/昇腾示例）与 **127 款设备库**（92 硬件 + 35 光模块）。
 
 ### 方式二：从源码运行
 
@@ -164,13 +166,14 @@ npm run dist:linux  # Linux (AppImage + DEB)
 ### 运行测试
 
 ```bash
-npm test              # 前端测试（Vitest 98 文件）
-npm run test:backend  # 后端测试（pytest 75 文件 / 1422+ 用例）
+npm test              # 前端测试（Vitest 114 文件 / 1431 用例）
+npm run test:backend  # 后端测试（pytest 86 文件 / 1613 用例）
 npm run test:all      # 全量测试（含 e2e）
 npm run typecheck     # TypeScript 类型检查（含 preload）
 npm run lint          # ESLint 代码检查（0 error 0 warning）
-python scripts/validate_templates.py  # 25 模板验证
+python scripts/validate_templates.py  # 23 套模板验证
 python scripts/gen_golden.py --check  # golden 基线比对
+python scripts/check_doc_numbers.py   # 文档数字真值校验
 ```
 
 ---
@@ -207,8 +210,8 @@ python scripts/gen_golden.py --check  # golden 基线比对
 - **前端**：React 18 + TypeScript + Zustand + Tailwind CSS + @xyflow/react + ECharts + Vite
 - **桌面**：Electron + contextBridge（安全隔离）+ electron-updater（双通道更新）
 - **后端**：Python（pandas + openpyxl + reportlab），JSON-RPC 子进程桥接，PyInstaller 免 Python 打包
-- **AI Hub**：独立 FastAPI 进程（端口 18722）+ 9 Provider + 60 Agent Tools + MCP Client + 知识库/技能/记忆
-- **测试**：Vitest（98 文件）+ pytest（75 文件 / 1422+ 用例）+ E2E（Playwright）
+- **AI Hub**：独立 FastAPI 进程（端口 18722）+ 9 Provider + 72 Agent Tools + MCP Client + MCP Server（Agent Connect）+ 知识库/技能/记忆
+- **测试**：Vitest（114 文件 / 1431 用例）+ pytest（86 文件 / 1613 用例）+ E2E（Playwright）
 - **i18n**：react-i18next（5 种语言）
 - **CI/CD**：GitHub Actions 三平台矩阵构建（win / mac / linux）+ 模板/golden 门禁
 
@@ -228,10 +231,10 @@ AutoLink/
 │   ├── rail_topology.py    #   Rail-Optimized 拓扑算法
 │   ├── rack_allocation.py  #   多约束机柜分配
 │   ├── room_optimizer.py   #   机房智能落位（约束满足 + 多目标优化）
-│   ├── validation.py       #   22 条校验规则引擎（V001-V022）
+│   ├── validation.py       #   21 条校验规则引擎（V001–V020、V022；V021 缺号）
 │   ├── optical_selector.py #   光模块智能选型（含 1 分 2 分裂线缆）
 │   ├── exporter.py         #   Excel/PDF 导出
-│   ├── device_library.py   #   设备库加载器（120 款）
+│   ├── device_library.py   #   设备库加载器（127 款 = 92 硬件 + 35 光模块）
 │   ├── optimization.py     #   批量优化（收敛比/成本/散热建议 + 应用）
 │   ├── fixit.py            #   智能修复（校验错误 → 修复 patch → 复核闭环）
 │   ├── atop/               #   ATOP 自动拓扑优化（特征解析 + ZCube 推荐）
@@ -239,7 +242,7 @@ AutoLink/
 │   └── autolink_hub/       #   AIHUB（Provider / 工具注册 / 技能 / 对话 Agent）
 ├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
-├── template/               # 设备库（126 款）+ 25 套场景模板
+├── template/               # 设备库（127 款 = 92 硬件 + 35 光模块）+ 23 套场景模板
 ├── scripts/                # pyinstaller.spec / validate_templates / gen_golden
 ├── docs/                   # 产品文档 / 用户指南 / PRD
 └── tests/backend/          # Python 后端测试
@@ -249,10 +252,18 @@ AutoLink/
 
 ## 📚 文档
 
-- [用户指南](docs/user_guide/user_guide.md)（应用内「帮助 → 用户指南」可离线查看）
-- [部署指南](docs/deployment.md)
-- [更新日志](CHANGELOG.md)
-- [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki)
+| 文档 | 面向 | 说明 |
+|------|------|------|
+| [用户指南](docs/user_guide/user_guide.md) | 使用者 | 全功能操作手册（应用内「帮助 → 用户指南」可离线查看） |
+| [MCP 接入指南](docs/user_guide/mcp_guide.md) | 使用者 | Agent Connect 接入外部 AI Agent 的配置样例 |
+| [部署指南](docs/deployment.md) | 运维 / 开发者 | 环境准备、构建打包、生产部署、自动更新、故障排查 |
+| [CLI 契约](docs/cli.md) | 集成方 | 命令行接口、退出码契约（0/1/2/3）、输出类型与归档策略 |
+| [Agent Connect 样板](docs/agent-connect/README.md) | 集成方 | Claude Desktop / Codex / Trae / VS Code 的 MCP 配置 |
+| [文档索引](docs/README.md) | 全员 | 文档体系地图与维护规约 |
+| [更新日志](CHANGELOG.md) | 全员 | 逐版本变更明细 |
+| [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki) | 全员 | 产品介绍与快速上手 |
+
+> 文档中的数字（设备库 127 / 模板 23 / 校验规则 21）由 `scripts/check_doc_numbers.py` 以**代码为唯一真值源**反向校验，CI 门禁拦截漂移。
 
 ---
 
@@ -262,7 +273,9 @@ AutoLink/
 |------|------|---------|
 | **4.0 系列** | ✅ 已完成 | 工程基座 / AI 底座 / 协作 / 3D / 性能 / 质量 / 交付 / 内容资产十版 |
 | **5.0 系列** | ✅ 已完成 | AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官十版，双端三位一体 |
-| **5.1 系列（规划）** | 🚀 规划中 | **AI Agent 互联**：MCP Server 双场景（编译态受限 / 源码态无限制），让 Claude/Codex/Trae/VS Code/Hermes 等外部 Agent 直接查询、创建、更新、渲染项目/模板/设备库/机房规划 |
+| **5.1 系列** | ✅ 已完成 | **AI Agent 互联**：Agent Connect（MCP Server 双场景：编译态受限 / 源码态无限制），让 Claude/Codex/Trae/VS Code 等外部 Agent 直接查询、创建、更新、渲染项目/模板/设备库/机房规划/输出 |
+| **5.2 系列** | ✅ 已完成 | 工作台精细打磨回归发布（5.2.0）+ **5.2.2 修复版**：双端契约同构、Agent Connect 权限门禁真实化、导出产物指纹复用 / `--no-archive`、`schema_version` 与英文规范子树、文档数字自动校验门禁 |
+| **后续方向** | 待定 | 远程模式正式化 + 多租户权限体系；模板市场社区化；CI/CD 流水线对接 |
 
 ---
 
@@ -272,7 +285,7 @@ AutoLink/
 A: Scale-Out 支持 IB、RoCE、UEC 三种；Scale-Up 支持 NVLink、UALink、UB 三种。可组合出 NVL72、CloudMatrix 384、UALink 1024 GPU Pod 等主流智算中心形态。
 
 **Q: 支持多大的集群规模？**
-A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 25 套模板（含 7 套 H100/昇腾示例，覆盖 64-512 台规模谱系）可直接使用，也可从空项目自定义。
+A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 23 套模板（含 7 套 H100/昇腾示例，覆盖 64-512 台规模谱系）可直接使用，也可从空项目自定义。
 
 **Q: 生成的报告包含哪些内容？**
 A: 连接表、布线指导表、BOM 成本、设备清单、机柜表（Excel），以及 9 章节 PDF 报告（概览/架构/功耗/光模块/成本/校验/设备清单/收敛比/机柜），全部基于真实计算值。

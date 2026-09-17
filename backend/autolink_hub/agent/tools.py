@@ -21,6 +21,37 @@ logger = logging.getLogger(__name__)
 
 _tools: dict[str, dict] = {}
 
+# ---------------------------------------------------------------------------
+# 5.2.2-522-s1：执行守卫（模式白名单兜底）
+# ---------------------------------------------------------------------------
+# 注册期过滤（filter_tools_for_mode）只决定"暴露哪些工具"；一旦有别的路径能按名字
+# 直接调 execute_tool（历史缺陷：MCP 处理器把工具名做成入参，可被调用方覆盖），
+# 过滤就被绕过。此处再加一层**入口级**白名单，由 Agent Connect 依据当前模式装载。
+_execution_guard: Optional[Callable[[str], Optional[str]]] = None
+
+
+def set_execution_guard(guard: Optional[Callable[[str], Optional[str]]]) -> None:
+    """装载/卸载执行守卫。``guard(tool_name)`` 返回拒绝原因字符串或 None（放行）。"""
+    global _execution_guard
+    _execution_guard = guard
+
+
+def get_execution_guard() -> Optional[Callable[[str], Optional[str]]]:
+    """读取当前执行守卫（未装载返回 None，此时不限制任何工具）。"""
+    return _execution_guard
+
+
+def _guard_reject(name: str) -> Optional[str]:
+    """调用守卫判定；守卫自身异常不应阻断正常调用（保守放行并告警）。"""
+    guard = _execution_guard
+    if guard is None:
+        return None
+    try:
+        return guard(name)
+    except Exception as e:  # noqa: BLE001 - 守卫异常不应让工具整体不可用
+        logger.warning("execution guard failed for '%s': %s", name, e)
+        return None
+
 
 def register_tool(name: str, description: str, parameters: dict,
                   handler: Callable[[dict], Any], permission: Optional[str] = None) -> None:
@@ -103,23 +134,30 @@ def _validate_tool_args(tool: dict, arguments: dict) -> list[str]:
 
 
 async def execute_tool(name: str, arguments: dict) -> dict:
-    """执行工具：查表 → 参数校验 → 调 handler → 统一包 {success, result/error}
+    """执行工具：查表 → 模式守卫 → 参数校验 → 调 handler → 统一包 {success, result/error}
 
-    参数校验失败按 handler 业务失败同构返回（外层 success=True + 内层 result.success=False），
-    与既有工具缺参返回约定一致（run_stream 会把内层错误回填 LLM 自愈）。
-    5.1.6-516-d：失败响应携带结构化 error_code（机器可读）与可读中文 error（人类可排）。
+    5.2.2-522-s1：入口加**模式白名单兜底**——Agent Connect 装载守卫后，未在当前模式
+    选中的工具一律拒绝（``AC_ERR_TOOL_NOT_ALLOWED``），防止绕过注册期过滤。
+    5.2.2-522-a2：**响应扁平化**。原实现在参数校验失败时返回
+    ``{"success": True, "result": {"success": False, ...}}``——外层恒为真，
+    导致 MCP 层 ``isError`` 恒为 false、机器消费方无法判定失败（下游会把参数错误
+    当成功结果处理）。现统一为 ``{"success": False, "error", "error_code"}``，
+    与 MC 侧同构（双端契约一致，见 DP-MC-04）。
     """
     tool = _tools.get(name)
     if tool is None:
         return {"success": False, "error": f"未知工具: {name}", "error_code": "AC_ERR_UNKNOWN_TOOL"}
+    rejected = _guard_reject(name)
+    if rejected:
+        return {"success": False, "error": rejected, "error_code": "AC_ERR_TOOL_NOT_ALLOWED"}
     # 5.0.3-503-c: 参数校验（必填缺失/类型错误 → 可读失败，不进入 handler）
     arg_errors = _validate_tool_args(tool, arguments or {})
     if arg_errors:
-        return {"success": True, "result": {
+        return {
             "success": False,
             "error": f"工具参数校验失败: {'；'.join(arg_errors)}",
             "error_code": "AC_ERR_INVALID_ARGS",
-        }}
+        }
     try:
         result = tool["handler"](arguments)
         if hasattr(result, "__await__") or hasattr(result, "__aiter__"):
@@ -145,6 +183,15 @@ def _make_cli_handler(action: str) -> Callable[[dict], Any]:
 
 def _str_param(name: str, description: str, required: bool = False) -> dict:
     return {"type": "string", "description": description}
+
+
+def _int_param(name: str, description: str, required: bool = False) -> dict:
+    """5.2.2-522-a1：整数参数声明。
+
+    原实现把数值型参数（如 limit）一律声明为 string，inputSchema 保真透传后
+    该类型错误会直接暴露给外部 Agent（消费方按 string 传值 → 后端 int 转换失败）。
+    """
+    return {"type": "integer", "description": description}
 
 
 def _schema(properties: dict, required: list[str]) -> dict:
@@ -703,13 +750,20 @@ def init_tools() -> None:
 
     # ---- 管理域（只读查询，V3.1.3-T7-1）----
     register_tool(
-        "device_query", "设备库查询：按分类（如 switches/gpu_servers，支持前缀）、厂商/型号关键词过滤，返回设备摘要",
+        "device_query", "设备库查询：按分类（如 switches/gpu_servers，支持前缀）、关键词（id/分类/厂商/型号/描述）过滤，返回设备摘要",
         _schema({
             "category": _str_param("category", "设备分类 id/前缀/厂商/型号，如 switches、gpu_servers"),
-            "query": _str_param("query", "关键词（匹配厂商/型号/描述）"),
-            "limit": _str_param("limit", "返回条数上限（默认 50）"),
+            "query": _str_param("query", "关键词（匹配 id/分类/厂商/型号/描述；id 精确命中优先）"),
+            "limit": _int_param("limit", "返回条数上限（默认 50）"),
         }, []),
         _make_cli_handler("device:list"),
+    )
+    register_tool(
+        "device_get", "按设备库 id 精确取单台设备详情（下游以 device_refs[*].library_id 反查设备时用）",
+        _schema({
+            "deviceId": _str_param("deviceId", "设备库 id，如 hygon_k100_ai / nvidia_dgx_h100", True),
+        }, required=["deviceId"]),
+        _make_cli_handler("device:get"),
     )
     register_tool(
         "device_defaults", "共享设备选型规则（与向导一致）：按协议（IB/RoCE/UEC）+ GPU 世代（gb300/nvl72/b200/b300 → 800G，其余 400G）返回参数网/存储网/业务网/带外网默认交换机（refKey → 设备库 id）。回答\"默认用什么交换机/设备\"时优先调用本工具",
@@ -1113,7 +1167,9 @@ def init_tools() -> None:
             "params": _str_param("params", "action 参数 JSON 对象"),
         }, required=["action"]),
         _run_cli_handler,
-        permission="notify",
+        # 5.2.2-522-s4：CLI 透传属高危能力，权限档位应为 confirm（原为 notify，
+        # 与 MC 的 run_cli=confirm 及 schemas 未注册默认值不一致 → 权限标注失真）
+        permission="confirm",
     )
     register_tool(
         "read_file", "读取文件：源码态可用 path 沙箱读（用户数据目录/仓库根），或 projectName+filePath 项目内读",
@@ -1123,7 +1179,8 @@ def init_tools() -> None:
             "path": _str_param("path", "沙箱内绝对路径（源码态通用读取，可选）"),
         }, []),
         _read_file_handler,
-        permission="notify",
+        # 5.2.2-522-s4：沙箱直读属高危能力，权限档位应为 confirm（原为 notify）
+        permission="confirm",
     )
     register_tool(
         "list_dir", "【源码态】列出沙箱内目录条目（用户数据目录/仓库根内，超范围拒绝）",
@@ -1131,7 +1188,8 @@ def init_tools() -> None:
             "path": _str_param("path", "沙箱内目录路径", True),
         }, required=["path"]),
         _list_dir_handler,
-        permission="notify",
+        # 5.2.2-522-s4：沙箱列目录属高危能力，权限档位应为 confirm（原为 notify）
+        permission="confirm",
     )
     register_tool(
         "read_source", "【源码态】读取源码/项目文件（沙箱内，超范围拒绝）",
@@ -1139,7 +1197,8 @@ def init_tools() -> None:
             "path": _str_param("path", "沙箱内文件路径", True),
         }, required=["path"]),
         _read_source_handler,
-        permission="notify",
+        # 5.2.2-522-s4：源码直读属高危能力，权限档位应为 confirm（原为 notify）
+        permission="confirm",
     )
 
     # ---- 5.1.4-514-c：异步任务工具（长耗时设计生成/导出 → task_id + 进度轮询）----

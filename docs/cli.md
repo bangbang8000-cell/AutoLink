@@ -131,7 +131,44 @@ python -m cli export run --config project_config.json --output-dir ./output \
 python -m cli export --config project_config.json        # 缺省输出类型全部导出
 ```
 
-`--output-types` 可选：`connections`（连接表）、`deviceList`（设备清单）、`cablingGuide`（布线指南）、`bom`（物料清单）、`reportData`（报告数据）、`pdfReport`（PDF 报告）。
+`--output-types` 可选：`connections`（连接表）、`deviceList`（设备清单）、`cablingGuide`（布线指南）、`bom`（物料清单）、`reportData`（报告数据）、`pdfReport`（PDF 报告）、`compliance`（信创合规报告）。
+
+> **5.2.2 起（AL-E5，`DP-AL-03`）**：缺省行为与文档一致 —— **不传 `--output-types` = 全部类型**，
+> 亦可显式写 `--output-types all`。旧实现缺省为空、静默 no-op（`results: []` 且退出码 0），属缺陷。
+> 结果为空时**退出码 3**，且**不创建空批次目录**。
+
+新增开关（`AL-E4`）：
+
+| 参数 | 说明 |
+|---|---|
+| `--no-archive` | 无副作用取值模式：不建 `v<N>_<ts>` 批次目录、不写 `manifest.json`、不做保留轮转 |
+| `--regenerate` | 强制重算（忽略同配置指纹命中的既有批次） |
+
+同配置二次导出默认命中**指纹复用**（返回 `reused: true`，不新增批次目录）。
+
+### 4.7.1 机器可读输出契约：`schema_version`（5.2.2-522-e3 / AL-E3）
+
+所有机器可读输出顶层都带 `schema_version`，下游据此判断能否安全解析：
+
+| 输出 | `schema_version` | 说明 |
+|---|---|---|
+| `design generate` | `1` | `engine.SCHEMA_VERSION` |
+| `export`（含复用路径） | `1` | 同上 |
+| `export --output-types reportData` 的 `reportData.data` | `2` | 见下 |
+
+`reportData` 采用**过渡期双子树**：
+
+```jsonc
+{
+  "schema_version": 2,
+  "data":         { "overview": { "project_name": "...", ... } },  // 机器契约：全英文 snake_case
+  "legacy_data":  { "overview": { "项目名称": "...", ... } },      // 展示层兼容（下个 minor 移除）
+  "deprecations": { "legacy_data": "..." },
+  "overview": { ... }   // 顶层中文内键继续保留 = legacy_data 同一引用
+}
+```
+
+**机器消费方请用 `data` 子树**；`legacy_data` 与顶层中文内键仅作渲染/展示兼容。
 
 ### 4.8 room create — 创建机房矩阵
 
@@ -251,14 +288,40 @@ CLI (autolink-cli) ── argparse ──► cli.execute(action, params)  ──
 
 ## 9. 退出码
 
-| 码 | 含义 |
-|----|------|
-| 0 | 成功 |
-| 2 | CLI 参数错误 / action 执行失败（错误信息在 stderr） |
+> **⚠️ 5.2.2 起为破坏性变更（唯一行为，无兼容开关）**
+> 旧行为：业务失败（如配置文件不存在）也返回 **0**，调用方无法用退出码判定成败。
+> 新行为见下表。下游脚本若依赖"恒 0"，**必须在升级前改造**。
+
+| 码 | 含义 | 触发场景 |
+|----|------|----------|
+| 0 | 成功 | handler 返回非空、无 `error`、无 `success:false` 的结果 |
+| 1 | 内部异常（未预期） | handler 抛出未捕获异常 |
+| 2 | 参数或配置错误 | argparse 类型错误 / 缺必填 / `--json` 解析失败 / 未知域 / `AL_ERR_CONFIG` / `AL_ERR_INVALID_ARGS` |
+| 3 | 执行失败 | handler 返回 `{"error": ...}`（`AL_ERR_EXEC`、`AL_ERR_EMPTY_RESULT`）或显式 `success:false` / 空结果 |
+
+**空结果即失败**：`{}` / `[]` / `null` 一律按退出码 3 处理（防止"无声失败"）。
+
+### 9.1 错误码（`error_code`）与退出码映射
+
+handler 失败以结构化错误返回，顶层含 `error_code`：
+
+```json
+{"success": false, "error": "配置文件不存在: /path/x.json", "error_code": "AL_ERR_CONFIG"}
+```
+
+| `error_code` | 退出码 | 说明 |
+|---|---|---|
+| `AL_ERR_CONFIG` | 2 | 配置缺失 / 不可读 / 模式参数非法 |
+| `AL_ERR_INVALID_ARGS` | 2 | 参数取值非法（如矩阵规模过大） |
+| `AL_ERR_EXEC` | 3 | 执行失败（默认码，未标码的失败兜底于此） |
+| `AL_ERR_EMPTY_RESULT` | 3 | 空结果（无声失败） |
+| `AL_ERR_INTERNAL` | 1 | 内部异常 |
+
+stdout **始终**输出结构化 JSON（便于解析），失败原因**同时**写入 stderr。
 
 ## 10. 打磨轮 v1.5：输出管理 / 柜内智能落位 / AI 接管
 
-> v1.5 新增：项目输出版本化管理、柜内智能落位、一键渲染的 CLI 化；命令均可 `--format json` 输出、稳定退出码（0 成功 / 2 参数或执行失败）。
+> v1.5 新增：项目输出版本化管理、柜内智能落位、一键渲染的 CLI 化；命令均可 `--format json` 输出、稳定退出码（**5.2.2 起：0 成功 / 1 内部异常 / 2 参数或配置错误 / 3 执行失败**）。
 
 ### 10.1 项目输出管理（CLI 原生 `output` 域）
 
