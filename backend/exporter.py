@@ -220,6 +220,13 @@ def generate_switch_view(designer):
 _RACK_TYPE_LABELS = {'gpu': 'GPU柜', 'compute': '通算柜', 'storage': '存储柜', 'network': '网络柜',
                      'scaleup': 'Scale-Up柜', 'security': '安全柜', 'custom': '自定义柜', 'power': '电源柜'}
 
+# V5.2.5-525-f6（AL-F6）：光模块选型状态的**展示**文案（与 optical_selector.SelectionOutcome.status 对应）
+_MODULE_STATUS_LABELS = {
+    'matched': '已匹配',
+    'not_applicable': '无需光模块',
+    'unmatched': '未匹配',
+}
+
 
 def generate_summary_data(designer):
     """生成网络设计摘要数据"""
@@ -707,7 +714,7 @@ def export_cabling_guide(designer, filename):
     - 光模块型号、规格、封装、光纤类型
     - 估算长度、价格区间
     """
-    from optical_selector import select_module_for_connection, estimate_module_cost
+    from optical_selector import resolve_module_selection, estimate_module_cost
 
     rows = []
     all_switches = designer.all_switches()  # V3.0.0-T0-3: 统一访问器
@@ -725,7 +732,10 @@ def export_cabling_guide(designer, filename):
                 continue
             seen_conns.add(pair_key)
 
-            sel = select_module_for_connection(conn)
+            # V5.2.5-525-f6（AL-F6）：改用三态解析。本表是**逐条明细**，是排查选型问题的
+            # 第一现场——原实现下"未匹配"与"本就无需光模块"的模块列**同样为空**，无法区分。
+            outcome = resolve_module_selection(conn)
+            sel = outcome.selection
             cost_lo, cost_hi = estimate_module_cost(sel.price_range) if sel else (0, 0)
 
             rows.append({
@@ -743,6 +753,9 @@ def export_cabling_guide(designer, filename):
                 # V3.0.2-T2-11: 1 分 2 扇出标注（如 "1分2 (800G→400G)"）
                 '1分2扇出': (f"1分{conn.breakout.get('count', 2)} ({conn.breakout.get('input_speed', '')}→{conn.breakout.get('output_speed', '')})"
                             if isinstance(getattr(conn, 'breakout', None), dict) else ''),
+                # V5.2.5-525-f6: 选型状态（已匹配 / 无需光模块 / 未匹配）+ 未匹配原因
+                '选型状态': _MODULE_STATUS_LABELS.get(outcome.status, outcome.status),
+                '选型说明': outcome.reason if outcome.status != 'matched' else '',
                 '光模块型号': sel.module_id if sel else '',
                 '封装': sel.form_factor if sel else '',
                 '规格': sel.spec if sel else '',
@@ -765,7 +778,7 @@ def export_cabling_guide(designer, filename):
         df.to_excel(writer, sheet_name='布线指导表', index=False)
         # 汇总 sheet
         if not df.empty:
-            summary = df.groupby(['速率', '光模块型号', '价格区间']).agg(
+            summary = df.groupby(['速率', '选型状态', '光模块型号', '价格区间']).agg(
                 数量=('A端设备', 'count'),
                 估价低合计=('估价低(元)', 'sum'),
                 估价高合计=('估价高(元)', 'sum'),
@@ -782,7 +795,7 @@ def export_bom(designer, filename):
 
     汇总所有设备 + 光模块，按型号分组，含数量和价格区间
     """
-    from optical_selector import select_module_for_connection, estimate_module_cost, PRICE_RANGE_MAP, LEAD_TIME_MAP
+    from optical_selector import resolve_module_selection, estimate_module_cost, PRICE_RANGE_MAP, LEAD_TIME_MAP
     from device_library import get_device_library
 
     try:
@@ -858,8 +871,11 @@ def export_bom(designer, filename):
 
     # 3. 光模块（按型号汇总）
     # V2.7.4-T3: 增加功耗和供货周期
+    # V5.2.5-525-f6（AL-F6）：未匹配链路**显式成行**——原实现静默跳过，表现为
+    # 「BOM 数量与连接数对不上」且无法判断是缺失还是遗漏；双绞线链路则正确忽略。
     seen_conns = set()
     module_counts = {}
+    unmatched_count = 0
     for dev in designer.servers + all_switches:
         for conn in dev.connections:
             if conn.a_device != dev.name:
@@ -870,21 +886,27 @@ def export_bom(designer, filename):
                 continue
             seen_conns.add(pair_key)
 
-            sel = select_module_for_connection(conn, library)
-            if sel:
-                key = sel.module_id
-                if key not in module_counts:
-                    module_counts[key] = {
-                        'category': '光模块',
-                        'name': sel.module_id,
-                        'model': sel.module_id,
-                        'desc': sel.description,
-                        'count': 0,
-                        'power': sel.power_w,  # V2.7.4-T3: 真实功耗
-                        'price': sel.price_range,
-                        'lead_time': sel.lead_time_weeks,  # V2.7.4-T3: 供货周期
-                    }
-                module_counts[key]['count'] += 1
+            outcome = resolve_module_selection(conn, library)
+            sel = outcome.selection
+            if outcome.status == 'not_applicable':
+                # 双绞线链路：本就无需光模块，不进 BOM
+                continue
+            if sel is None:
+                unmatched_count += 1
+                continue
+            key = sel.module_id
+            if key not in module_counts:
+                module_counts[key] = {
+                    'category': '光模块',
+                    'name': sel.module_id,
+                    'model': sel.module_id,
+                    'desc': sel.description,
+                    'count': 0,
+                    'power': sel.power_w,  # V2.7.4-T3: 真实功耗
+                    'price': sel.price_range,
+                    'lead_time': sel.lead_time_weeks,  # V2.7.4-T3: 供货周期
+                }
+            module_counts[key]['count'] += 1
 
     for mod_data in module_counts.values():
         rows.append({
@@ -896,6 +918,19 @@ def export_bom(designer, filename):
             '单位功率(W)': mod_data['power'],
             '价格区间': mod_data['price'],
             '供货周期': mod_data['lead_time'],
+        })
+
+    if unmatched_count:
+        # V5.2.5-525-f6: 让 BOM 的「光模块行合计 == 匹配数 + 未匹配数」自洽，缺口可见
+        rows.append({
+            '类别': '光模块',
+            '设备名称': '未匹配（需人工确认）',
+            '设备型号': '',
+            '描述': '设备库中无同速率档位，未计入成本估算；补齐档位后需重新生成',
+            '数量': unmatched_count,
+            '单位功率(W)': 0,
+            '价格区间': '',
+            '供货周期': '',
         })
 
     df = pd.DataFrame(rows)
@@ -952,11 +987,16 @@ REPORT_DATA_SCHEMA_VERSION = 2
 
 # 段名（既属 data 也属 legacy_data）
 _REPORT_SECTIONS = ('overview', 'architecture', 'power', 'validation',
-                    'modules', 'cost', 'racks', 'devices', 'convergence',
-                    'generated_at')
+                    'modules', 'module_selection', 'cost', 'racks', 'devices',
+                    'convergence', 'generated_at')
 
-# 中文键 → 英文 snake_case（实测全量 46 个，覆盖 overview/architecture/power/
-# racks/cost/devices 六段；未收录的键原样透传，不会丢字段）
+# V5.2.5-525-f3（AL-F3）：未匹配明细最多保留的**种类**数（按条数降序取前 N）。
+# 大方案（如 2048 台）下未匹配种类可能很多，无上限会让 reportData 响应体膨胀。
+_UNMATCHED_DETAIL_LIMIT = 20
+
+# 中文键 → 英文 snake_case（原实测全量 46 个，覆盖 overview/architecture/power/
+# racks/cost/devices 六段；V5.2.5-525-f3/f4 追加 module_selection 段与 cost 口径键，
+# 共 65 个。未收录的键原样透传，不会丢字段）
 _REPORT_KEY_MAP = {
     # overview
     '项目名称': 'project_name', '服务器总数': 'server_total',
@@ -981,6 +1021,14 @@ _REPORT_KEY_MAP = {
     # cost
     '光模块总数': 'optical_module_total', '光模块估价低(元)': 'optical_cost_low_cny',
     '光模块估价高(元)': 'optical_cost_high_cny', '光模块估价区间': 'optical_cost_range',
+    # cost（V5.2.5-525-f4 / AL-F4）：口径标注——该段是量级估算，不是报价
+    '口径': 'caliber', '价格来源': 'price_source', '可用于报价': 'quotable',
+    # module_selection（V5.2.5-525-f3 / AL-F3）：光模块选型三态台账
+    '匹配链路数': 'matched_count', '无需光模块链路数': 'not_applicable_count',
+    '未匹配链路数': 'unmatched_count', '链路总数': 'link_total',
+    '未匹配明细': 'unmatched_details', '未匹配明细截断数': 'unmatched_details_truncated',
+    '条数': 'count', '样例': 'sample', '原因': 'reason', '提示': 'note',
+    '网络类型': 'network_type', '速率': 'speed', '线缆类型': 'cable_type',
     # devices
     '设备类型': 'device_type', '型号': 'model', '厂商': 'vendor',
     '数量': 'quantity', 'U位高度': 'u_height', '总U位': 'total_u',
@@ -1016,8 +1064,9 @@ def generate_report_data(designer, estimation=None):
     8. 校验结果
 
     V2.9.3-T6: 项目名称取自配置 meta.name; 收敛比优先读 estimation 值
+    V5.2.5-525-f3: 新增 ``module_selection`` 段（光模块选型三态台账，见 PRD §3.3）
     """
-    from optical_selector import select_module_for_connection, estimate_module_cost
+    from optical_selector import resolve_module_selection, estimate_module_cost
 
     # 1. 项目概览
     pc = getattr(designer, '_project_config', None) or {}
@@ -1075,9 +1124,17 @@ def generate_report_data(designer, estimation=None):
     # 4. 校验结果
     validation = designer.validate_topology()
 
-    # 5. 光模块汇总
+    # 5. 光模块汇总 + 选型台账
+    # V5.2.5-525-f3（AL-F3）：改用 resolve_module_selection 的**三态**结果。
+    # 必须区分「无需光模块（双绞线链路）」与「缺档未匹配」——前者被正确排除，
+    # 计进光模块总数反而是错的；后者是真实缺口，静默计入 0 会让"报价基数是否完整"
+    # 无法判定（PRD §3.3、度量 M3）。
     seen_conns = set()
     module_stats = {}
+    sel_matched = 0
+    sel_not_applicable = 0
+    sel_unmatched = 0
+    unmatched_agg = {}
     for dev in designer.servers + all_switches:
         for conn in dev.connections:
             if conn.a_device != dev.name:
@@ -1087,22 +1144,60 @@ def generate_report_data(designer, estimation=None):
             if pair_key in seen_conns:
                 continue
             seen_conns.add(pair_key)
-            sel = select_module_for_connection(conn)
-            if sel:
+            outcome = resolve_module_selection(conn)
+            sel = outcome.selection
+            if outcome.status == 'matched' and sel is not None:
+                sel_matched += 1
                 if sel.module_id not in module_stats:
                     module_stats[sel.module_id] = {'count': 0, 'price': sel.price_range, 'spec': sel.spec}
                 module_stats[sel.module_id]['count'] += 1
+            elif outcome.status == 'not_applicable':
+                sel_not_applicable += 1
+            else:
+                sel_unmatched += 1
+                agg_key = (conn.network_type or '', conn.a_module or '',
+                           conn.cable_type or '', outcome.reason)
+                if agg_key not in unmatched_agg:
+                    unmatched_agg[agg_key] = {
+                        '网络类型': agg_key[0], '速率': agg_key[1],
+                        '线缆类型': agg_key[2], '原因': agg_key[3],
+                        '条数': 0,
+                        '样例': f'{conn.a_device} → {conn.z_device} (端口 {conn.a_port})',
+                    }
+                unmatched_agg[agg_key]['条数'] += 1
+
+    total_links = sel_matched + sel_not_applicable + sel_unmatched
+    _unmatched_all = sorted(unmatched_agg.values(), key=lambda d: -d['条数'])
+    _unmatched_truncated = max(0, len(_unmatched_all) - _UNMATCHED_DETAIL_LIMIT)
+    module_selection = {
+        '匹配链路数': sel_matched,
+        '无需光模块链路数': sel_not_applicable,
+        '未匹配链路数': sel_unmatched,
+        '链路总数': total_links,
+        '未匹配明细': _unmatched_all[:_UNMATCHED_DETAIL_LIMIT],
+        '未匹配明细截断数': _unmatched_truncated,
+        '提示': ('未匹配链路未计入光模块统计与成本估算；请补齐设备库档位后重新生成'
+                 if sel_unmatched else '全部链路均已判定（匹配 或 无需光模块）'),
+    }
 
     # 6. 成本估算
     price_map = {'低': (500, 2000), '中': (2000, 8000), '高': (8000, 30000), '极高': (30000, 100000)}
     module_cost_lo = sum(price_map.get(s['price'], (0, 0))[0] * s['count'] for s in module_stats.values())
     module_cost_hi = sum(price_map.get(s['price'], (0, 0))[1] * s['count'] for s in module_stats.values())
 
+    # V5.2.5-525-f4（AL-F4）：本段由设备库**定性价格档**（低/中/高/极高）推导，与真实市场价
+    # 量级可差 3–11 倍（评估实测：1.6T 档标"极高"→ 30,000–100,000 元起，而需求方价格锚点为
+    # 5,600 元）。一旦被下游当报价消费即造成商务事故，故自带**机器可判定**的护栏
+    # `可用于报价=False`，并显式给出"这段估价是不完整的"（未匹配链路数）。
     cost = {
         '光模块总数': sum(s['count'] for s in module_stats.values()),
         '光模块估价低(元)': module_cost_lo,
         '光模块估价高(元)': module_cost_hi,
         '光模块估价区间': f"¥{module_cost_lo:,} ~ ¥{module_cost_hi:,}",
+        '口径': '量级估算：按设备库定性价格档（低/中/高/极高）推导，非报价',
+        '价格来源': 'device_library.price_range',
+        '可用于报价': False,
+        '未匹配链路数': sel_unmatched,
     }
 
     # 7. 机柜规划 (V2.9.1: 机柜清单,含交换机; 类型来自 rack_allocation 分配)
@@ -1146,6 +1241,8 @@ def generate_report_data(designer, estimation=None):
         'power': power,
         'validation': validation,
         'modules': module_stats,
+        # V5.2.5-525-f3: 选型三态台账（matched / not_applicable / unmatched）
+        'module_selection': module_selection,
         'cost': cost,
         'racks': racks,
         # V2.9.3-T6: 设备清单(按型号聚合) + 收敛比(优先读 estimation)
