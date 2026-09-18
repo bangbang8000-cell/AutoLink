@@ -433,6 +433,42 @@ class TestExports:
         assert int(unmatched['数量'].iloc[0]) == ledger['未匹配链路数']
         assert os.path.exists(tmp_path / 'bom.xlsx')
 
+    def test_cabling_header_matches_e009_contract(self, designer, tmp_path):
+        """⚠️ 新增列必须同步更新 E009 表头契约（否则 CI step 18 直接红）。
+
+        本用例是**这次踩坑的直接固化**：AL-F6 给布线指导表加了 `选型状态` /
+        `选型说明` 两列，但 `validation_engine/export_check.py` 的
+        `_HEADER_CONTRACTS['cablingGuide']` 与
+        `tests/backend/test_validation_export.py::_CABLING_HEADERS` 两处硬编码
+        表头**都未同步** ⇒ `test_sample_assets` 报
+        `E009: 导出表头与契约不一致：布线指导表_*.xlsx`。
+
+        因此：**改布线表列定义时，必须同时改这两处**；本用例把"exporter 实际列"
+        与"E009 契约"钉在一起，防止再次漂移。
+        """
+        from exporter import export_cabling_guide
+        from validation_engine.export_check import _HEADER_CONTRACTS
+
+        df = export_cabling_guide(designer, str(tmp_path / 'cabling.xlsx'))
+        actual = [c for c in df.columns]
+        contract = _HEADER_CONTRACTS['cablingGuide']['headers']
+        assert actual == contract, (
+            f'布线指导表列与 E009 契约不一致\n'
+            f'  实际: {actual}\n  契约: {contract}\n'
+            f'（改列定义须同步 export_check._HEADER_CONTRACTS 与 '
+            f'test_validation_export._CABLING_HEADERS）'
+        )
+
+    def test_cabling_status_column_semantics(self, designer, tmp_path):
+        """`not_applicable` 必须渲染为「无需光模块」，与 `unmatched` 明确区分。"""
+        from exporter import export_cabling_guide
+        df = export_cabling_guide(designer, str(tmp_path / 'cabling2.xlsx'))
+        assert {'已匹配', '无需光模块', '未匹配'} <= set(df['选型状态'].unique())
+        # 「无需光模块」行不得带未匹配原因（否则两类被混在一起）
+        na = df[df['选型状态'] == '无需光模块']
+        assert (na['选型说明'].astype(str) == '双绞线链路（网线）无需光模块').all()
+
+
 
 # ============================================================
 # L2 · 文档诚实性（AL-F7 / T-525-14）
