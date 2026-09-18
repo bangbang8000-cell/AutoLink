@@ -1,0 +1,23 @@
+{
+ "id": "om_10g_sfp_sr_300m",
+ "speed": "10G",
+ "form_factor": "SFP+",
+ "spec": "SR",
+ "distance_m": 300,
+ "fiber_type": "MMF",
+ "power_watts": 1.0,
+ "vendors": [
+  "H3C",
+  "Huawei"
+ ],
+ "price_range": "低",
+ "category": "optical_modules",
+ "description": "10G SFP+ SR 多模光模块，传输距离300米（带外网OOB上联清单化选型）",
+ "tags": [
+  "10G",
+  "SFP+",
+  "SR",
+  "MMF",
+  "300m"
+ ]
+}

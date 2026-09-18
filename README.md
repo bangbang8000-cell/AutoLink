@@ -135,7 +135,7 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 - **macOS**：`AutoLink-5.0.10-mac-x64.dmg` / `AutoLink-5.0.10-mac-arm64.dmg`
 - **Linux**：`AutoLink-5.0.10-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建示例项目，内置 **25 套场景模板**（含 7 套 H100/昇腾示例）与 **126 款设备库**。
+安装后首次启动自动创建示例项目，内置 **26 套场景模板**（含 8 套示例）与 **128 款设备库**。
 
 ### 方式二：从源码运行
 
@@ -191,6 +191,7 @@ python scripts/gen_golden.py --check  # golden 基线比对
 | **H100-256台-RoCE** | H100 示例（四 POD 规模化） | 256 GPU | — |
 | **H100-512台-RoCE** | H100 示例（超大规模） | 512 GPU | — |
 | **国产-昇腾-256** | 华为昇腾 910C 国产智算 | 256 NPU | — |
+| **5090推理-500台** | RTX 5090 推理集群（RoCE 2×100G + 三合一融合网） | 500 GPU | — |
 | L20-推理-64 | L20 推理集群 | 64 GPU | — |
 | cambricon_mlu_cluster | 寒武纪 MLU 集群 | — | — |
 | hygon_dcu_cluster | 海光 DCU 集群 | — | — |
@@ -198,7 +199,34 @@ python scripts/gen_golden.py --check  # golden 基线比对
 | 中型-512 / 大型-1024 / 超大-2048 | 训练集群 | 512 / 1024 / 2048 GPU | — |
 | 空项目 | 从零开始 | — | — |
 
-> 其中 7 套为示例项目（isSample=true）：H100-64台/128台/256台/512台 × IB/RoCE + 国产-昇腾-256，覆盖 64 台到 512 台完整规模谱系。
+> 其中 8 套为示例项目（isSample=true）：H100-64台/128台/256台/512台 × IB/RoCE + 国产-昇腾-256 + 5090推理-500台，覆盖 64 台到 512 台完整规模谱系。
+>
+> **5090推理-500台** 为 RTX 5090 推理集群模板：推理加速网 RoCE 2×100G（Leaf/Spine 胖树）、存储与业务并入**三合一融合网**（networks.eth_combined=true，消除独立存储网 3-tier 冗余）、带外网 45 台/Leaf 收敛；设备档案 nvidia_5090_8u（2×100G 推理 + 2×25G 业务 + 1×1G 带外）。
+>
+> **5090推理-500台** 为 RTX 5090 推理集群模板：推理加速网 RoCE 2×100G（Leaf/Spine 胖树）、存储与业务并入**三合一融合网**（networks.eth_combined=true，消除独立存储网 3-tier 冗余）、带外网 45 台/Leaf 收敛；设备档案 nvidia_5090_8u（2×100G 推理 + 2×25G 业务 + 1×1G 带外）；**光模块清单化选型**（optical_mode=inventory，每口一模块+MPO 跳线，与历史报价口径一致）。
+
+---
+
+## 光模块清单化选型（V3.1.0-T1）
+
+为与历史报价口径（每口一模块 + MPO 跳线）保持一致，backend/optical_selector.py 新增**清单化选型模式**：
+
+- **开启方式**：project_config.json 顶层设置 optical_mode=inventory（5090 模板已开启；未设置时保持原智能选型，向后兼容）。
+- **规则**：每条连接强制选**每口一个**与端口速率匹配的 SR 系列多模光模块（10G→SR、100G→SR4、400G/800G→SR8），**不使用 DAC/AOC/DR/FR/LR**；MPO 跳线按光模块数量 1:1 配套（由报价桥接层补充）。
+- **设备库**：新增 10G SFP+ SR 光模块 om_10g_sfp_sr_300m（带外网 OOB 上联清单化选型，设备库 129 款）。
+- **源码入口**：set_inventory_mode(on) / select_inventory_module(speed, distance_m, library)；select_module_for_connection 在模式开启时自动走清单化分支。
+- **配套**：网页报价生成器（07_报价生成器）AutoLink 桥接层默认 optical_mode=inventory，将 1.6T/DAC/AOC 等非历史口径物料替换为 SR 系列 + MPO 跳线，金额按历史锚点价（越近当前越优先）计算。
+- **回归**：24 套模板闸门全过；CLI export 验证 5090 模板光模块 = 全 SR4+10G（无 1.6T/DAC/AOC），未开启清单化的模板（H100-128台-IB/RoCE 等）行为不变。
+
+---
+
+## 二层容量公式修正（V3.1.1-T1）
+
+ackend/topology.py 的 calc_max_2tier 原公式 k^2/(4p) 少算一倍（假设 Leaf=Spine=k/2），已修正为 **k^2/(2p)**（正确的 1:1 无阻塞 Clos：Leaf=k 台、Spine=k/2 台，每 Leaf 的 k/2 下行 + k/2 上行，Spine 每台 k 口收全部 Leaf 各 1 条）。
+
+- **修正前**：64口×8口/台 二层上限 128 台（1024 卡）→ 256 台 H200 被误判为三层（Leaf 128 + Spine 128 + Core 64，多出 224 台交换机）
+- **修正后**：64口×8口/台 二层上限 256 台（2048 卡）→ 256 台 H200 二层（Leaf 64 + Spine 32），与 NVIDIA DGX SuperPOD 2048 GPU 官方参考一致；128口×8口/台 二层上限 1024 台（8192 卡）
+- **回归**：H200-256(64+32)、H200-128(32+16)、H100-512(三层128+128+64，4096卡超二层合理)、H100-128(32+16)、5090-500(32+16 不变)、5090-64(4+2) 全部合理；24 套模板闸门全过
 
 ---
 

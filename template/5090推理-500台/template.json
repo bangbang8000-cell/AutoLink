@@ -1,0 +1,17 @@
+{
+  "id": "5090推理-500台",
+  "name": "5090推理-500台（RTX 5090 推理集群）",
+  "description": "500台RTX 5090推理集群: RoCE 2×100G推理加速网, 三合一融合网(eth_combined), 1P混闪+3管理+12通算, 管理业务2×25G",
+  "scenario": "5090推理-500台",
+  "tags": [
+    "5090",
+    "RTX",
+    "500台",
+    "RoCE",
+    "推理集群",
+    "融合网"
+  ],
+  "updatedAt": "2026-09-15",
+  "templateVersion": 1,
+  "isSample": true
+}
