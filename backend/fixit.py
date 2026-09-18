@@ -134,7 +134,7 @@ _FIXERS = {
 
 
 def _extract_number(message: str, keyword: str) -> float | None:
-    """从消息中提取 keyword 后第一个数值（如 '机柜 机柜1 功率 8500W 超过上限 6000W' → 8500）"""
+    """从消息中提取 keyword 后第一个数值（如 '位置 A1 功率 15000W 超过上限 12000W' → 15000）"""
     import re
     idx = message.find(keyword)
     if idx < 0:
