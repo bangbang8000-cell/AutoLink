@@ -48,7 +48,7 @@ class TestCreateDefaultConfig:
     def test_default_rack_config(self):
         config = create_default_config('test')
         assert config['rack_config']['rack_type'] == 42
-        assert config['rack_config']['power_limit_per_rack'] == 6000
+        assert config['rack_config']['power_limit_per_rack'] == 12000
 
     def test_deep_copy(self):
         """create_default_config should return a deep copy, not reference"""

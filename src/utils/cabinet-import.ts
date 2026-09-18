@@ -119,7 +119,7 @@ export function parseCabinetCSV(csvText: string): ParseResult {
       const name = nameIdx >= 0 ? cols[nameIdx] || id : id
       const typeRaw = typeIdx >= 0 ? cols[typeIdx] || 'custom' : 'custom'
       const totalU = totalUIdx >= 0 ? parseInt(cols[totalUIdx]) || 42 : 42
-      const powerLimit = powerLimitIdx >= 0 ? parseInt(cols[powerLimitIdx]) || 6000 : 6000
+      const powerLimit = powerLimitIdx >= 0 ? parseInt(cols[powerLimitIdx]) || 12000 : 12000
       const location = locationIdx >= 0 ? cols[locationIdx] || '' : ''
       const notes = notesIdx >= 0 ? cols[notesIdx] || '' : ''
 
@@ -189,7 +189,7 @@ export function parseCabinetXLSX(buffer: ArrayBuffer): ParseResult {
         const name = nameIdx >= 0 ? String(cols[nameIdx] || id) : id
         const typeRaw = typeIdx >= 0 ? String(cols[typeIdx] || 'custom') : 'custom'
         const totalU = totalUIdx >= 0 ? parseInt(String(cols[totalUIdx])) || 42 : 42
-        const powerLimit = powerLimitIdx >= 0 ? parseInt(String(cols[powerLimitIdx])) || 6000 : 6000
+        const powerLimit = powerLimitIdx >= 0 ? parseInt(String(cols[powerLimitIdx])) || 12000 : 12000
         const location = locationIdx >= 0 ? String(cols[locationIdx] || '') : ''
         const notes = notesIdx >= 0 ? String(cols[notesIdx] || '') : ''
 

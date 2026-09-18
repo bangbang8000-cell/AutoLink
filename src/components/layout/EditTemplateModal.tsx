@@ -644,7 +644,7 @@ export function EditTemplateModal({ template, onConfirm, onClose }: Props) {
                 <input
                   type="number" min={0} step={100}
                   value={config.rack_config.power_limit_per_rack}
-                  onChange={(e) => updateRackConfig({ power_limit_per_rack: num(e.target.value, 6000) })}
+                  onChange={(e) => updateRackConfig({ power_limit_per_rack: num(e.target.value, 12000) })}
                   disabled={loading}
                   className={inputCls}
                 />

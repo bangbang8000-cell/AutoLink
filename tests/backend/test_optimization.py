@@ -6,17 +6,18 @@
   - 批量应用：patch 合并 → 配置落盘 → 重新设计后指标改善（闭环）
   - action 注册 + cli.execute
 
-收敛比建议的现状（5.2.x）：
+收敛比建议（5.2.4 起恢复端到端可达）：
   V5.0.11 起 `designer._resolve_downlink_limits` 把 custom 模式的下联口数钳制到
-  `switch_ports // 2`（保证至少留一半上联口），Leaf 收敛比因此恒 ≤ 1:1。参数网目标
-  即 1.0（无阻塞）、存储网目标 2.0，故端到端 `suggest()` **不再**产出 convergence
-  类建议（规则在端到端不可达）：
-    - 端到端不可达性由 TestSuggestionRules::test_convergence_rule_inactive_* 固化；
-    - `optimization._convergence_suggestions` 的规则逻辑本身仍由
-      TestConvergenceRuleLogic 以「未钳制」的 duck-typed designer 直接覆盖，
-      避免该规则退化为无测试的死代码。
-  若产品要恢复端到端收敛比建议，需先放开钳制、或在规则内改用「配置意图值」
-  （topology.param_downlink_limit）而非 designer 的钳制值。
+  `switch_ports // 2`（保证至少留一半上联口），**实测**收敛比因此恒 ≤ 1:1；参数网目标
+  1.0、存储网目标 2.0，规则在端到端**不可达**（用户声明的下联规模被静默钳制而无人提示）。
+  5.2.4 起 `suggest()` 以 `use_configured_intent=True` 调用规则，下联口数改用
+  `topology.<key>` 的**配置意图值**（见 `optimization._configured_downlink`），恢复可达：
+    - 端到端可达性由
+      TestSuggestionRules::test_convergence_suggestion_from_configured_intent 固化；
+    - `fixit._fix_v010` 仍以实测值调用（**不**带该开关）—— V010 修的是装配后的真实拓扑，
+      5.2.0-524-d 起参数网按 1:1 建模、V010 不产出，语义不变（见 test_fixit）；
+    - 规则逻辑本身由 TestConvergenceRuleLogic 以 duck-typed designer 直接覆盖，
+      避免退化为无测试的死代码。
 """
 import json
 import types
@@ -48,8 +49,9 @@ def _base_config(name="opt-test"):
         'param_switch_ports': 64,
         'storage_switch_ports': 40,
         'storage_speed': '200G',
-        # 配置意图是 55 口下联（≈6:1 阻塞），但 V5.0.11 起 designer 会把它钳制到
-        # param_switch_ports // 2 = 32（至少留一半上联口）→ 端到端恒 1:1 无阻塞。
+        # 配置意图是 55 口下联（≈6:1 阻塞）；V5.0.11 起 designer 会钳制到
+        # param_switch_ports // 2 = 32（至少留一半上联口）→ 实测恒 1:1 无阻塞。
+        # 5.2.4 起 suggest() 按**配置意图值**评估 → 端到端可产出收敛比建议。
         'param_downlink_limit': 55,
         'storage_downlink_limit': 30,
     })
@@ -59,8 +61,10 @@ def _base_config(name="opt-test"):
 def _custom_downlink_config(tmp_path, **kw):
     """自定义下联上限配置（原 _convergence_blocking_config）
 
-    注意：受 V5.0.11 下联钳制影响，该配置在端到端 `suggest()` 中**不会**触发
-    收敛比建议；用于建议结构化 / 成本 / 散热 / 应用闭环等通用场景。
+    `param_downlink_limit=55` / `param_switch_ports=64`：配置意图为 55 口下联（≈6:1 阻塞），
+    但 V5.0.11 起 designer 会将其钳制到 `param_switch_ports // 2 = 32`（至少留一半上联口）
+    → **实测**恒 1:1。5.2.4 起 `suggest()` 以配置意图值评估，故该配置在端到端会触发
+    收敛比建议（见 TestSuggestionRules）；亦用于建议结构化 / 成本 / 散热 / 应用闭环等场景。
     """
     cfg = _base_config()
     cfg['topology'].update(kw)
@@ -110,26 +114,48 @@ class TestSuggestStructure:
 
 
 class TestSuggestionRules:
-    def test_convergence_rule_inactive_under_clamped_downlink(self, tmp_path):
-        """V5.0.11 下联钳制 → 参数/存储网恒 ≤1:1，端到端不再产出收敛比建议
+    def test_convergence_suggestion_from_configured_intent(self, tmp_path):
+        """5.2.4：端到端按「配置意图值」评估 → 恢复产出收敛比建议（钳制事实不变）
 
-        配置声明 `param_downlink_limit=55`，但 `designer._resolve_downlink_limits`
-        将其钳制到 `param_switch_ports // 2 = 32`（保证至少留一半上联口）：
-            收敛比 = 32 / (64 - 32) = 1.0 ≤ 参数网目标 1.0 → 规则不可达
-        存储网同理（40 口 → 下联 20 / 上联 20 = 1.0 ≤ 目标 2.0）。
-
-        本用例固化该现状（与 test_fixit 的 V010 不可达用例同源）；规则逻辑本身由
-        TestConvergenceRuleLogic 直接覆盖，避免退化为无测试的死代码。
+        配置声明 `param_downlink_limit=55`（实测钳到 32，但意图 55/9 = 6.11:1 > 参数网目标 1.0）、
+        `storage_downlink_limit=30`（意图 30/10 = 3.0:1 > 存储网目标 2.0）。
+        5.2.4 起 `suggest()` 以 `use_configured_intent=True` 调用规则 → 两网各产出 1 条
+        收敛比建议；本例两网下联均已受容量约束（min_dl ≥ 目标下联），故均走路径 B
+        （提升交换机端口至下一档 128）。
         """
         path = _custom_downlink_config(tmp_path)
         r = suggest({'configFile': str(path)})
         assert r['success'] is True
-        assert [s for s in r['suggestions'] if s['category'] == 'convergence'] == []
 
-        # 固化钳制事实本身：下联被压到 switch_ports // 2
+        conv = [s for s in r['suggestions'] if s['category'] == 'convergence']
+        assert len(conv) == 2, conv
+        titles = ' '.join(s['title'] for s in conv)
+        assert '参数网' in titles and '存储网' in titles
+
+        param_sug = next(s for s in conv if '参数网' in s['title'])
+        assert param_sug['patch'] == {'topology': {'param_switch_ports': 128}}
+        storage_sug = next(s for s in conv if '存储网' in s['title'])
+        assert storage_sug['patch'] == {'topology': {'storage_switch_ports': 128}}
+
+        # 固化钳制事实本身未变：实测下联仍被压到 switch_ports // 2
         d = NetworkDesignerV2(str(path))
-        assert d.param_dl == d.param_switch_ports // 2
-        assert d.storage_dl == d.storage_switch_ports // 2
+        assert d.param_dl == d.param_switch_ports // 2 == 32
+        assert d.storage_dl == d.storage_switch_ports // 2 == 20
+
+    def test_convergence_rule_ignores_intent_when_flag_off(self, tmp_path):
+        """开关关闭（`fixit._fix_v010` 走这条）→ 仍按实测值，钳制后无阻塞、不产出建议
+
+        这是 V010 语义与 5.2.0-524-d「参数网 1:1 建模」保持一致的关键：V010 修的是
+        装配后的真实拓扑，不能按用户意图报错。
+        """
+        from project_config import load_project_config
+
+        path = _custom_downlink_config(tmp_path)
+        config, err = load_project_config(str(path))
+        assert not err
+        d = NetworkDesignerV2(str(path))
+        assert _convergence_suggestions(d, config) == []
+        assert _convergence_suggestions(d, config, use_configured_intent=True) != []
 
     def test_cost_small_scale_downgrade(self, tmp_path):
         """小规模（8 GPU）IB+800G → 成本降档建议（RoCE/400G）"""

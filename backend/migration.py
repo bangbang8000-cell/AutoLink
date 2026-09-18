@@ -372,7 +372,7 @@ def project_config_to_ini(config: dict) -> str:
         lines.append('')
         lines.append('[rack]')
         _add('rack_type', rack.get('rack_type', 42))
-        _add('power_limit_per_rack', rack.get('power_limit_per_rack', 6000))
+        _add('power_limit_per_rack', rack.get('power_limit_per_rack', 12000))
         _add('naming_prefix', rack.get('naming_prefix', '机柜'))
         if 'cooling_method' in rack:
             _add('cooling_method', rack['cooling_method'])

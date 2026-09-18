@@ -33,7 +33,7 @@ import {
 /** 机柜功率使用率（%），与 datacenter.computeLayout 口径一致 */
 function cabinetUsagePercent(cabinet: RackCabinet): number {
   const used = cabinet.devices.reduce((s, d) => s + (d.power_watts || 0), 0)
-  const limit = cabinet.power_limit || 6000
+  const limit = cabinet.power_limit || 12000
   return limit > 0 ? Math.round((used / limit) * 100) : 0
 }
 

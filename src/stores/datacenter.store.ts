@@ -117,7 +117,7 @@ export const useDataCenterStore = create<DataCenterState>()((set, get) => ({
 
       // 功率使用
       const used = cab.devices.reduce((sum, d) => sum + (d.power_watts || 0), 0)
-      const limit = cab.power_limit || 6000
+      const limit = cab.power_limit || 12000
       const percent = limit > 0 ? Math.round((used / limit) * 100) : 0
       const exceeded = percent >= 100
 

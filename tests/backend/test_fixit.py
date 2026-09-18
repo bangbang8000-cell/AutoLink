@@ -179,11 +179,27 @@ class TestFixers:
         assert _fix_v018(issue, cfg) == {'scale_up': {'domain_size': 384}}
 
     def test_fix_v019_allocates_to_cabinets(self):
+        """V019：按机柜数摊分总功率 → 提升机柜功率上限
+
+        `rack_config.power_limit_per_rack` 显式给 6000（L20-推理-64 / cambricon / hygon
+        三套模板即此类）时，摊分所得 10000W > 6000W → 提升至 10000W。
+        """
+        from fixit import _fix_v019
+        issue = {'message': '整机房总功率 40000W 超过供电容量 100W'}
+        cfg = {'topology': {'num_gpu_servers': 4},
+               'rack_config': {'power_limit_per_rack': 6000}}
+        assert _fix_v019(issue, cfg) == \
+            {'rack_config': {'power_limit_per_rack': 10000}}
+
+    def test_fix_v019_uses_12000_default_baseline(self):
+        """V019 未配置功率上限时，兜底基线 = 12000（与 designer / config_schema 同源）
+
+        摊分所得 10000W ≤ 12000W → 不应把上限「下调」到 10000W，返回 None。
+        """
         from fixit import _fix_v019
         issue = {'message': '整机房总功率 40000W 超过供电容量 100W'}
         cfg = {'topology': {'num_gpu_servers': 4}, 'rack_config': {}}
-        assert _fix_v019(issue, cfg) == \
-            {'rack_config': {'power_limit_per_rack': 10000}}
+        assert _fix_v019(issue, cfg) is None
 
     def test_fix_v020_raises_switch_ports(self):
         from fixit import _fix_v020

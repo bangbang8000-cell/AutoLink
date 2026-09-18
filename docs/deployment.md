@@ -1,6 +1,6 @@
 # AIDC AutoLink 部署指南
 
-> 适用于 **v5.2.3**。涵盖：环境准备、开发模式、构建打包、生产部署、Python 引擎、AI Hub、Agent Connect（MCP Server）、自动更新、数据持久化、CI/CD 与故障排查。
+> 适用于 **v5.2.4**。涵盖：环境准备、开发模式、构建打包、生产部署、Python 引擎、AI Hub、Agent Connect（MCP Server）、自动更新、数据持久化、CI/CD 与故障排查。
 >
 > 本文档中的数量类事实（设备库 **127** 款 = 92 硬件 + 35 光模块 / 模板 **23** 套 / 校验规则 **21** 条）以代码为唯一真值源，由 `scripts/check_doc_numbers.py` 在 CI 中反向校验。
 
@@ -115,9 +115,9 @@ npm run dist             # 当前平台
 
 | 平台 | 产物 |
 |------|------|
-| Windows | `release/AutoLink-Setup-5.2.3-win.exe` |
-| macOS | `release/AutoLink-5.2.3-mac-x64.dmg` / `AutoLink-5.2.3-mac-arm64.dmg` |
-| Linux | `release/AutoLink-5.2.3-linux.AppImage` / `AutoLink-5.2.3-linux.deb` |
+| Windows | `release/AutoLink-Setup-5.2.4-win.exe` |
+| macOS | `release/AutoLink-5.2.4-mac-x64.dmg` / `AutoLink-5.2.4-mac-arm64.dmg` |
+| Linux | `release/AutoLink-5.2.4-linux.AppImage` / `AutoLink-5.2.4-linux.deb` |
 
 > V3.0.0 起，`electron-builder` 前会自动用 **PyInstaller** 将 Python 引擎打包为免 Python 运行的后端（`scripts/pyinstaller.spec`），产物输出到 `dist/backend-dist`，安装包内置该目录。
 
@@ -438,6 +438,7 @@ git tag -a v5.2.3 -m "5.2.3" && git push origin v5.2.3   # 4. 触发三平台打
 
 | 日期 | 版本 | 说明 |
 |------|------|------|
+| 2026-09-18 | v5.2.4 | 版本对齐 5.2.4；产物名随版本更新（正文无实质变更——5.2.4 为「代码向既有文档真值对齐」） |
 | 2026-09-18 | v5.2.3 | 版本对齐 5.2.3；产物名随版本更新；发版流程补充「仅 tag 触发 Release」与「tag 前须先写 CHANGELOG 段」的硬约束 |
 | 2026-09-17 | v5.2.2 | 全面重写：版本对齐 5.2.2；修正模板 19→23、设备库 126→127、规则 22→21（V021 缺号）；新增 Agent Connect 部署章节、AI Hub 端口/鉴权、导出归档与复用策略、CI 双工作流说明；补充依赖清单与故障排查项 |
 | 2026-08-19 | v3.6.0 | 原版（环境准备 / 构建 / 生产部署 / 自动更新 / 数据持久化） |

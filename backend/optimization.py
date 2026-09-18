@@ -51,12 +51,40 @@ def _new_suggestion(category: str, title: str, description: str,
     }
 
 
-def _convergence_suggestions(designer, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _configured_downlink(config: Dict[str, Any], key: str, fallback: int) -> int:
+    """读取「配置意图值」`topology.<key>`（用户声明的下联口数）。
+
+    缺失 / 非正整数时退回 `fallback`（designer 装配后的实测值）。
+    """
+    topo = (config or {}).get('topology') or {}
+    raw = topo.get(key)
+    if raw is not None:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = 0
+        if value > 0:
+            return value
+    return fallback or 0
+
+
+def _convergence_suggestions(designer, config: Dict[str, Any],
+                             use_configured_intent: bool = False) -> List[Dict[str, Any]]:
     """收敛比建议：参数网/存储网收敛比超标 → 降低下联端口 / 提高交换机端口
 
     两条修复路径：
       A. 容量允许时降低 Leaf 下联端口数（上行占比提升）；
       B. 容量约束（下联端口已是最低必需）时提高交换机端口数（上行带宽增大）。
+
+    `use_configured_intent`（5.2.4 起由 `suggest()` 传 True）：
+      下联口数改用 `topology.<key>` 的**配置意图值**，而非 `designer` 装配后的实测值。
+      原因：V5.0.11 起 `designer._resolve_downlink_limits` 把 custom 模式下联口数钳制到
+      `switch_ports // 2`（保证至少留一半上联口），实测值恒 ≤ 1:1 收敛比，规则永不触发 ——
+      用户声明的下联规模被静默钳制而无人提示。改用意图值后，规则能如实反映
+      「声明值 → 收敛比超标」并给出可执行 patch（patch 同样写回 `topology.<key>`）。
+
+      ⚠️ `fixit._fix_v010` 复用本函数但**不**传该开关：V010 是「校验出错的自动修复」，
+      修的是装配后的真实拓扑；5.2.0-524-d 起参数网按 1:1 建模、V010 不产出，故保持实测语义。
     """
     from estimation import calc_convergence_ratio
 
@@ -90,7 +118,8 @@ def _convergence_suggestions(designer, config: Dict[str, Any]) -> List[Dict[str,
                 f'{net_label}收敛比 {r.convergence_ratio}:1 超过目标 {target}:1'
                 f'（上行带宽不足），建议降低 Leaf 下联端口数',
                 {'topology': {dl_key: ratio_dl}},
-                f'{net_label}收敛比降至约 {round(dl / ratio_dl, 1)}:1，缓解上行拥塞',
+                f'{net_label}收敛比降至约 {round(ratio_dl / max(1, ports - ratio_dl), 2)}:1'
+                f'（下联 {dl} → {ratio_dl}），缓解上行拥塞',
             ))
             return
 
@@ -107,15 +136,21 @@ def _convergence_suggestions(designer, config: Dict[str, Any]) -> List[Dict[str,
                 f'收敛比降至约 {round(dl / (ports_new - dl), 1)}:1',
             ))
 
+    param_dl = getattr(designer, 'param_dl', 0) or 0
+    storage_dl = getattr(designer, 'storage_dl', 0) or 0
+    if use_configured_intent:
+        param_dl = _configured_downlink(config, 'param_downlink_limit', param_dl)
+        storage_dl = _configured_downlink(config, 'storage_downlink_limit', storage_dl)
+
     is_zcube = getattr(designer, 'param_network_mode', 'standard') == 'zcube'
     if not is_zcube:
         _gen('param', getattr(designer, 'param_leaf_count', 0),
-             getattr(designer, 'param_dl', 0) or 0,
+             param_dl,
              getattr(designer, 'param_switch_ports', 0),
              getattr(designer, 'param_speed', '400G'),
              1.0, 'param_downlink_limit', 'param_switch_ports')
     _gen('storage', getattr(designer, 'storage_leaf_count', 0),
-         getattr(designer, 'storage_dl', 0) or 0,
+         storage_dl,
          getattr(designer, 'storage_switch_ports', 0),
          getattr(designer, 'storage_speed', '200G'),
          2.0, 'storage_downlink_limit', 'storage_switch_ports')
@@ -180,7 +215,7 @@ def _thermal_suggestions(designer, config: Dict[str, Any]) -> List[Dict[str, Any
     out: List[Dict[str, Any]] = []
     rack = config.get('rack_config') or {}
     configured_cooling = designer.cooling_method or 'air'
-    power_limit = designer.power_limit_per_rack or 6000
+    power_limit = designer.power_limit_per_rack or 12000
 
     # 机柜功率密度（复用 designer 服务器+交换机功率）
     all_switches = (getattr(designer, 'param_leaves', []) + getattr(designer, 'param_spines', [])
@@ -273,7 +308,8 @@ def suggest(params: dict) -> dict:
         return {'success': False, 'error': f'读取配置失败: {e}'}
 
     suggestions = (
-        _convergence_suggestions(designer, config)
+        # 5.2.4：收敛比建议改用「配置意图值」，否则 V5.0.11 的下联钳制使其端到端不可达
+        _convergence_suggestions(designer, config, use_configured_intent=True)
         + _cost_suggestions(designer, config)
         + _thermal_suggestions(designer, config)
     )

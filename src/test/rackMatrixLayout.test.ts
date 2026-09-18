@@ -68,7 +68,7 @@ describe('layoutRacksFromMatrix', () => {
     expect(res.stats.overflow).toBe(1)
   })
 
-  it('GPU 单柜功率上限 ≥ 柜内设备功率和（超默认 6000 时抬高上限）', () => {
+  it('GPU 单柜功率上限 ≥ 柜内设备功率和（设备功率和超上限时抬高）', () => {
     const res = layoutRacksFromMatrix(
       makeMatrix([{ row: 'A', col: 1, type: 'gpu' }]),
       [makeNode({ id: 'gpu-hot', powerWatts: 7500 })],

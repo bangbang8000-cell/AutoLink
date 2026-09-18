@@ -32,7 +32,7 @@ def _find_slot(cab: Dict[str, Any], height: int, power: int, gpu_count: int, gpu
     M5 方向化：from_top=True 时从最高可用位向下找（网络设备），否则从底部向上找（服务器类）；顶部预留 top_reserved_u"""
     total_u = int(cab.get('totalU') or 42)
     usable_u = max(1, total_u - top_reserved_u)
-    power_limit = int(cab.get('power_limit') or 6000)
+    power_limit = int(cab.get('power_limit') or 12000)
     devices = list(cab.get('devices') or [])
     if height <= 0 or height > usable_u:
         return None
@@ -70,7 +70,7 @@ def optimize_rack_placements(
             'id': cab.get('id'),
             'type': cab.get('type'),
             'totalU': int(cab.get('totalU') or 42),
-            'power_limit': int(cab.get('power_limit') or 6000),
+            'power_limit': int(cab.get('power_limit') or 12000),
             'devices': [dict(d) for d in (cab.get('devices') or [])],
         })
 

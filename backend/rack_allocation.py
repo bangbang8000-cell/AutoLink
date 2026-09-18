@@ -131,13 +131,13 @@ def infer_network(obj_type: str) -> str:
 class RackAllocator:
     """多约束机柜装箱分配器"""
 
-    def __init__(self, rack_type: int = 42, power_limit: int = 6000,
+    def __init__(self, rack_type: int = 42, power_limit: int = 12000,
                  naming_prefix: str = '机柜', gpu_dedicated: bool = False,
                  top_reserved_u: int = 2, server_mount_from: str = 'bottom',
                  network_mount_from: str = 'top',
                  gpu_per_cabinet: int = 1):
         self.rack_type = max(1, int(rack_type or 42))
-        self.power_limit = max(1, int(power_limit or 6000))
+        self.power_limit = max(1, int(power_limit or 12000))
         self.naming_prefix = naming_prefix or '机柜'
         self.gpu_dedicated = bool(gpu_dedicated)
         # 5.2.4-524-d: GPU 每柜台数上限（默认 1 柜 1 台，与前端矩阵硬约束对齐；显式 >1 才多台共柜）

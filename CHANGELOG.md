@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## [5.2.4] - 2026-09-18
+
+> 收敛两处「代码与文档/设计真值不一致」：**收敛比优化建议恢复可达**、**单柜功率上限默认值全链路统一为 12000W**。
+> 两处都是**代码向既有文档真值靠拢**（用户手册第 6.1 节早已写「默认 12000W」；第 664 行早已写「生成建议…批量产出收敛比 / 成本 / 散热三类建议」），不是新增需求。
+
+### 缺陷修复
+
+- **「收敛比优化建议」端到端不可达 → 改用配置意图值后恢复产出**
+  - 背景：V5.0.11 起 `designer._resolve_downlink_limits` 把 custom 模式下联口数钳制到 `switch_ports // 2`（保证至少留一半上联口），**实测**收敛比因此恒 ≤ 1:1；而参数网目标 1.0、存储网目标 2.0 ⇒ `optimization._convergence_suggestions` 永不触发。用户声明的下联规模被**静默钳制**且无人提示。
+  - 修复：`suggest()` 以 `use_configured_intent=True` 调用规则，下联口数改用 `topology.<key>` 的**配置意图值**（新增 `_configured_downlink()`：取意图值，缺失/非法时回退实测值）。
+  - 效果示例：`param_downlink_limit=55` + 64 口交换机 → 意图收敛比 **6.11:1** > 目标 1.0，产出建议；本例下联已受容量约束，走「提升交换机端口」路径（64 → 128 口）。
+  - **边界（有意保留）**：`fixit._fix_v010` 复用同一函数但**不**开启该开关 —— V010 是「校验出错的自动修复」，修的是装配后的**真实**拓扑；5.2.0-524-d 起参数网按 1:1 建模、V010 不产出，语义与既有用例一致，未被本版改变。
+  - 顺带修正路径 A 的影响文案：原文案写的是 `下联 / 新下联`，并非收敛比；改为真实的新收敛比 `新下联 ÷ (端口 − 新下联)`。
+
+- **单柜功率上限默认值「不同源」 → 全链路统一为 12000W**
+  - 现状：`config_schema` / `designer` / `engine` / `frontend rack.store` 早已是 **12000**，而 `project_config.create_default_config` / `room` / `migration` / `fixit` / `optimization` / `rack_allocation` / `rack_optimizer` 以及 6 处前端兜底仍是 **6000** —— 与用户手册「默认 12000W（12KW）」不符，且会让缺省路径下的机柜装箱偏保守。
+  - 修复：上述**默认值/兜底**统一为 12000（后端 `project_config`、`room`、`migration`、`fixit`、`optimization`、`rack_allocation`、`rack_optimizer`；前端 `DataCenterLayout`、`EditTemplateModal`、`Room3DView`、`datacenter.store`、`cabinet-import`、`rackMatrixLayout`）。创建向导中的 `6KW` 仍作为**可选预设**保留，不再是缺省。
+  - **基线影响（已同批重生成）**：`dual_plane_*`（3 个）与 `zcube_*`（2 个）场景由 `create_default_config()` 构造且**未显式指定**功率上限，因此受默认值影响，机柜数下降（装箱更充分）：
+    `dual_plane_1024_b300_800g` 1178→1106、`dual_plane_288_gb300_800g` 304→299、`dual_plane_128_h200_cx7` 135→134、`zcube_1024_quad_nic` 1038→1036、`zcube_512_dual_nic` 521→520。
+    这些快照的**其余字段全部不变**（拓扑哈希 / 连接数 / 总功率 / 各角色计数）。
+  - 23 套模板均在各自的 `project_config.json` 中**显式**声明 `power_limit_per_rack`，不受默认值影响。
+
+### 测试与文档
+
+- 用例更新（均为「随真值对齐」，未放宽断言）：
+  - `test_optimization.py`：原「端到端不可达」用例改写为**可达**用例（参数网 + 存储网各产出一条建议），并新增「开关关闭时仍按实测值」用例固化 `_fix_v010` 的边界。
+  - `test_project_config.py`、`test_fixit.py`（V019）、`test_room_edit.py`（功率上限）改为**显式传参**，不再依赖默认值取值，避免随默认值漂移而失效。
+  - `rackMatrixLayout.test.ts` 用例名同步。
+- 文档：`README.md` 5.2 系列与 `docs/README.md` 变更记录登记 5.2.4。
+
+### 内容真值（以代码为唯一真值源）
+
+- 设备库 **127** 款（92 硬件 + 35 光模块）、场景模板 **23** 套、校验规则 **21** 条（V021 缺号）、CLI 退出码 0/1/2/3。
+- 单柜功率上限默认 **12000W**；散热联动上限：风冷 ≤ 15KW / 柜、冷板液冷 ≤ 60KW / 柜、浸没式 ≤ 100KW / 柜。
+- 收敛比目标：参数网 `1.0`、存储网 `2.0`。
+- golden 快照：23 套模板 + 3 个双平面 + 2 个 ZCube 场景。
+
 ## [5.2.3] - 2026-09-18
 
 ### 缺陷修复

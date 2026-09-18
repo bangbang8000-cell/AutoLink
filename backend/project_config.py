@@ -48,7 +48,7 @@ DEFAULT_PROJECT_CONFIG = {
     "device_refs": {},
     "rack_config": {
         "rack_type": 42,
-        "power_limit_per_rack": 6000,
+        "power_limit_per_rack": 12000,
         "naming_prefix": "机柜",
     },
     # V2.9.3-T1: 可选 Scale-Up 配置段 (未启用时为空对象)

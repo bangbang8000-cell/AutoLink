@@ -12,7 +12,7 @@ import type { RoomCellData, RoomMatrixData } from '@/stores/room.store'
 export interface RackMatrixLayoutOptions {
   /** 单柜总 U，默认 42 */
   rackType?: number
-  /** 单柜功率上限(W)，默认 6000 */
+  /** 单柜功率上限(W)，默认 12000 */
   powerLimit?: number
   /** GPU 每柜台数，默认 1（GPU 1柜1台） */
   gpuPerCabinet?: number
@@ -62,7 +62,7 @@ export function layoutRacksFromMatrix(
   opts: RackMatrixLayoutOptions = {},
 ): RackMatrixLayoutResult {
   const rackType = opts.rackType ?? 42
-  const powerLimit = opts.powerLimit ?? 6000
+  const powerLimit = opts.powerLimit ?? 12000
   const gpuPerCabinet = Math.max(1, opts.gpuPerCabinet ?? 1)
   // M5: 顶部预留 U（默认 2）→ 可用 U = rackType - topReservedU；网络从顶部向下、服务器从底部向上
   const topReservedU = Math.max(0, opts.topReservedU ?? 2)

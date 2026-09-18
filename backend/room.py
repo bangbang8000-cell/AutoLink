@@ -234,10 +234,10 @@ class RoomConstraints:
 
     def __init__(
         self,
-        power_limit_per_rack: int = 6000,
+        power_limit_per_rack: int = 12000,
         type_device_map: Optional[Dict[str, List[str]]] = None,
     ) -> None:
-        self.power_limit_per_rack = max(1, int(power_limit_per_rack or 6000))
+        self.power_limit_per_rack = max(1, int(power_limit_per_rack or 12000))
         # 机柜类型 → 允许设备类型域（combined 与 empty 不设限）
         self.type_device_map = type_device_map or {
             ROOM_TYPE_GPU: [DEVICE_TYPE_GPU],
@@ -283,7 +283,7 @@ class RoomConstraints:
     @classmethod
     def from_dict(cls, data: dict) -> 'RoomConstraints':
         return cls(
-            power_limit_per_rack=int(data.get('powerLimitPerRack', 6000) or 6000),
+            power_limit_per_rack=int(data.get('powerLimitPerRack', 12000) or 12000),
             type_device_map=data.get('typeDeviceMap') or None,
         )
 

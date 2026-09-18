@@ -96,12 +96,25 @@ class TestRoomPlace:
         assert '不允许放置' in res['error']
 
     def test_power_limit_rejected(self, tmp_path, monkeypatch):
+        """显式给约束 6000W → 9000W 超限被拒
+
+        显式传参，避免用例随「默认上限」取值变化而失效（5.2.4 起默认由 6000 统一为 12000）。
+        """
+        monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
+        setup_project(tmp_path)
+        res = execute('room:place', {'project': 'P', 'position': 'A1', 'cabinet_id': 5,
+                                     'power_watts': 9000,
+                                     'constraints': {'powerLimitPerRack': 6000}})
+        assert res['success'] is False
+        assert '功率' in res['error']
+
+    def test_power_limit_default_allows_9000(self, tmp_path, monkeypatch):
+        """未给约束时默认上限 = 12000W（5.2.4 起与 designer / config_schema 同源）→ 9000W 允许"""
         monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))
         setup_project(tmp_path)
         res = execute('room:place', {'project': 'P', 'position': 'A1', 'cabinet_id': 5,
                                      'power_watts': 9000})
-        assert res['success'] is False
-        assert '功率' in res['error']
+        assert res['success'] is True
 
     def test_power_limit_ok_with_constraints(self, tmp_path, monkeypatch):
         monkeypatch.setenv('AUTOLINK_USER_DATA', str(tmp_path))

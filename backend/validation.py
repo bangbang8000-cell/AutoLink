@@ -117,7 +117,7 @@ def _rule_cabinet_power(ctx: ValidationContext) -> List[ValidationIssue]:
     """V002: 机柜功率密度校验
 
     V2.9.0: 阈值取 min(散热方式上限, power_limit_per_rack)，
-    使机柜功率上限与 rack_config 配置一致（默认 6000W 机柜不再等 15000W 才报警）。
+    使机柜功率上限与 rack_config 配置一致（默认 12000W 机柜不再等 15000W 才报警）。
     """
     issues = []
     for cab in ctx.cabinets:

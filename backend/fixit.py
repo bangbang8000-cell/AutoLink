@@ -32,7 +32,7 @@ def _fix_v002(issue: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any] |
     """V002: 机柜功率超限 → 提升机柜功率上限（上取整到 1000W 档位）"""
     rack = config.get('rack_config') or {}
     power = _extract_number(issue.get('message', ''), '功率')
-    current = int(rack.get('power_limit_per_rack', 6000) or 6000)
+    current = int(rack.get('power_limit_per_rack', 12000) or 12000)
     if power and power > current:
         new_limit = int(math.ceil(power / 1000.0) * 1000)
         return {'rack_config': {'power_limit_per_rack': max(new_limit, current)}}
@@ -102,7 +102,7 @@ def _fix_v019(issue: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any] |
     rack = config.get('rack_config') or {}
     total_power = _extract_number(issue.get('message', ''), '总功率')
     num_cabinets = _estimate_num_cabinets(config)
-    current = int(rack.get('power_limit_per_rack', 6000) or 6000)
+    current = int(rack.get('power_limit_per_rack', 12000) or 12000)
     if total_power and num_cabinets > 0:
         per_rack = math.ceil(total_power / num_cabinets / 1000.0) * 1000
         if per_rack > current:

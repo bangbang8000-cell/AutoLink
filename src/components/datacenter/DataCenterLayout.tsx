@@ -206,7 +206,7 @@ function CabinetEditModal({ cabinetId, onClose }: { cabinetId: number | null; on
   const [name, setName] = useState(cabinet?.name ?? '')
   const [type, setType] = useState<CabinetType>(cabinet?.type ?? 'gpu')
   const [totalU, setTotalU] = useState(cabinet?.totalU ?? 42)
-  const [powerLimit, setPowerLimit] = useState(cabinet?.power_limit ?? 6000)
+  const [powerLimit, setPowerLimit] = useState(cabinet?.power_limit ?? 12000)
   const [topReserved, setTopReserved] = useState(topReservedU)
   const [error, setError] = useState('')
 
