@@ -49,6 +49,14 @@
   `power` / `validation` / `modules` / `cost` / `racks` / `devices` / `convergence` / `generated_at`）。
 - 导出同步：布线指导表新增 `选型状态` / `选型说明` 两列；BOM 在未匹配 > 0 时新增
   **`未匹配（需人工确认）`** 行，且**行合计恒等于** 匹配数 + 未匹配数（不再"数量对不上"）。
+  - ⚠️ **随之必须同步 E009 表头契约**：新增列会让 `test_sample_assets` 报
+    `E009: 导出表头与契约不一致：布线指导表_*.xlsx`。已同步**两处**硬编码表头
+    （`validation_engine/export_check.py::_HEADER_CONTRACTS['cablingGuide']` 与
+    `tests/backend/test_validation_export.py::_CABLING_HEADERS`），插入位置与 exporter 一致
+    （`1分2扇出` 与 `光模块型号` 之间）。**改布线表列定义时必须同时改这两处**——
+    现已有守卫用例 `test_cabling_header_matches_e009_contract` 把"exporter 实际列"
+    与"E009 契约"钉死，防止再次漂移。
+    （该问题由 CI step 18 发现——本地因 openpyxl/zipfile 读取大 xlsx 挂起无法复现全量。）
 - 前端 `ReportViewPanel` 新增 `module_selection` 展示区（三分类 + 未匹配明细表），
   **旧数据无该段时不报错、不渲染警示**（向后兼容）。
 
@@ -82,6 +90,10 @@
 - **后端全量**（排除已知本地挂起的 `test_sample_assets.py`；以 CI step 18 为权威）：**1666 passed / 1 skipped**。
 - **新增回归**：`tests/backend/test_optical_selection_gap_525.py`（含"**汇总→明细回填**"这一
   发现本缺陷的**原始手法**固化为 M1 断言）——同类"汇总与明细不一致"的缺陷此后会在 CI 直接暴露。
+- **CI 把关记录（诚实披露）**：首发 push 的 CI 在 **step 18 `test_sample_assets.py`** 报出
+  `E009: 导出表头与契约不一致`（AL-F6 加列未同步 E009 契约），**已修复并补守卫用例**。
+  该用例**只在 CI 能全量跑通**——本地 Python 3.13 + openpyxl 读取大 xlsx 会挂起
+  （`zipfile._read1` 卡死），因此**本地绿灯不能替代 CI**。
 - **golden 基线不变**：**28/28 零内容差异**（本版本**不动建模层**，故不得重生成）。
 - **双端 parity / Agent Connect 契约**：不下降。
 - **前端**：`typecheck` + `eslint` 均通过。
