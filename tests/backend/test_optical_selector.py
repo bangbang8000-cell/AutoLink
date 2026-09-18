@@ -6,6 +6,10 @@ AutoLink v2.7.1 T4 — optical_selector.py 光模块选型测试
   - select_optical_module: 速率匹配 + 距离分级
   - select_module_for_connection
   - estimate_module_cost: 4 档价格区间
+
+V5.2.5（R0 止血）补充说明：本文件中的 `test_no_speed_match_returns_none` 原为
+`test_no_speed_match_fallback`，断言的正是「降级忽略速率」这一缺陷行为，已按新语义
+改写为断言返回 None。缺陷回归用例见 `test_optical_selection_gap_525.py`。
 """
 import pytest
 from unittest.mock import MagicMock, patch
@@ -192,11 +196,15 @@ class TestSelectOpticalModule:
         assert result is not None
         assert result.module_id == "800G-SR8"
 
-    def test_no_speed_match_fallback(self, mock_library):
-        """速率不匹配时降级选距离足够的"""
-        result = select_optical_module("999G", 50.0, "", library=mock_library)
-        # 降级:忽略速率,选距离足够的
-        assert result is not None
+    def test_no_speed_match_returns_none(self, mock_library):
+        """V5.2.5-525-f2（AL-F2）：速率不匹配时**不得**降级到其他速率档。
+
+        ⚠️ 本用例是**语义反转**：旧断言（`assert result is not None`，配注释
+        "降级:忽略速率,选距离足够的"）把缺陷行为固化成了期望值——正是这条降级路径
+        让 25G 业务链路被装配 100G/400G 模块。新实现返回 None，由
+        `resolve_module_selection` 归类为 'unmatched' 并给出可排期的原因。
+        """
+        assert select_optical_module("999G", 50.0, "", library=mock_library) is None
 
     def test_invalid_speed(self, mock_library):
         """无效速率返回 None"""
