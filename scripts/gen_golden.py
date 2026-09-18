@@ -51,7 +51,8 @@ def _connections(d):
         for c in dev.connections:
             if c.a_device != dev.name:
                 continue
-            key = tuple(sorted([c.a_device, c.z_device])) + (c.a_port,)
+            # 方向敏感键：A/Z 两端各存一条属正常，不可跨方向折叠（否则同号端口反向连接被误删）
+            key = (c.a_device, c.z_device, c.a_port)
             if key in seen:
                 continue
             seen.add(key)

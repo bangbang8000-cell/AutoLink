@@ -719,7 +719,8 @@ def export_cabling_guide(designer, filename):
             if conn.a_device != dev.name:
                 continue
             # 去重（每条连接在 A 端和 Z 端各存一份）
-            pair_key = tuple(sorted([conn.a_device, conn.z_device])) + (conn.a_port,)
+            # 方向敏感键：A/Z 两端各存一条属正常，不可跨方向折叠（否则同号端口反向连接被误删）
+            pair_key = (conn.a_device, conn.z_device, conn.a_port)
             if pair_key in seen_conns:
                 continue
             seen_conns.add(pair_key)
@@ -863,7 +864,8 @@ def export_bom(designer, filename):
         for conn in dev.connections:
             if conn.a_device != dev.name:
                 continue
-            pair_key = tuple(sorted([conn.a_device, conn.z_device])) + (conn.a_port,)
+            # 方向敏感键：A/Z 两端各存一条属正常，不可跨方向折叠（否则同号端口反向连接被误删）
+            pair_key = (conn.a_device, conn.z_device, conn.a_port)
             if pair_key in seen_conns:
                 continue
             seen_conns.add(pair_key)
@@ -1080,7 +1082,8 @@ def generate_report_data(designer, estimation=None):
         for conn in dev.connections:
             if conn.a_device != dev.name:
                 continue
-            pair_key = tuple(sorted([conn.a_device, conn.z_device])) + (conn.a_port,)
+            # 方向敏感键：A/Z 两端各存一条属正常，不可跨方向折叠（否则同号端口反向连接被误删）
+            pair_key = (conn.a_device, conn.z_device, conn.a_port)
             if pair_key in seen_conns:
                 continue
             seen_conns.add(pair_key)

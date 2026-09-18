@@ -92,7 +92,11 @@ def build_design_dict(designer: Any) -> Dict[str, Any]:
             z = getattr(conn, 'z_device', '')
             if getattr(conn, 'a_device', None) != getattr(dev, 'name', None):
                 continue
-            key = tuple(sorted([a, z])) + (getattr(conn, 'a_port', ''),)
+            # 去重键必须方向敏感：同一线缆在 A/Z 两端各存一条连接对象属正常
+            # （连接表按「交换机视角」成行，两端各一行）。旧键把端点排序后再拼 a_port，
+            # 当两端端口号巧合相等时会把反向连接误判为重复而删除
+            # （如 OOB汇聚_1 → OOB接入_26 的 端口51/52 被 OOB接入_26 的上行同号端口顶掉）
+            key = (a, z, getattr(conn, 'a_port', ''))
             if key in seen_pairs:
                 continue
             seen_pairs.add(key)
