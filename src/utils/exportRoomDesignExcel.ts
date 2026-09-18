@@ -111,7 +111,7 @@ export function buildRoomDesignWorkbook(
     ['总功率上限(W)', limit],
     ['功率使用率', `${percent}%`],
     ['柜顶预留U', rackConfig.topReservedU],
-    ['每柜GPU数', rackConfig.gpuPerCabinet],
+    ['每柜GPU服务器台数', rackConfig.gpuPerCabinet],
   ]
   const ws3 = XLSX.utils.aoa_to_sheet(summaryRows)
   ws3['!cols'] = [{ wch: 16 }, { wch: 14 }]

@@ -1,6 +1,6 @@
 # AIDC AutoLink 部署指南
 
-> 适用于 **v5.2.2**。涵盖：环境准备、开发模式、构建打包、生产部署、Python 引擎、AI Hub、Agent Connect（MCP Server）、自动更新、数据持久化、CI/CD 与故障排查。
+> 适用于 **v5.2.3**。涵盖：环境准备、开发模式、构建打包、生产部署、Python 引擎、AI Hub、Agent Connect（MCP Server）、自动更新、数据持久化、CI/CD 与故障排查。
 >
 > 本文档中的数量类事实（设备库 **127** 款 = 92 硬件 + 35 光模块 / 模板 **23** 套 / 校验规则 **21** 条）以代码为唯一真值源，由 `scripts/check_doc_numbers.py` 在 CI 中反向校验。
 
@@ -115,9 +115,9 @@ npm run dist             # 当前平台
 
 | 平台 | 产物 |
 |------|------|
-| Windows | `release/AutoLink-Setup-5.2.2-win.exe` |
-| macOS | `release/AutoLink-5.2.2-mac-x64.dmg` / `AutoLink-5.2.2-mac-arm64.dmg` |
-| Linux | `release/AutoLink-5.2.2-linux.AppImage` / `AutoLink-5.2.2-linux.deb` |
+| Windows | `release/AutoLink-Setup-5.2.3-win.exe` |
+| macOS | `release/AutoLink-5.2.3-mac-x64.dmg` / `AutoLink-5.2.3-mac-arm64.dmg` |
+| Linux | `release/AutoLink-5.2.3-linux.AppImage` / `AutoLink-5.2.3-linux.deb` |
 
 > V3.0.0 起，`electron-builder` 前会自动用 **PyInstaller** 将 Python 引擎打包为免 Python 运行的后端（`scripts/pyinstaller.spec`），产物输出到 `dist/backend-dist`，安装包内置该目录。
 
@@ -139,7 +139,7 @@ npm run test:backend                    # 后端 pytest
 `version.json` 是**唯一版本事实源**，其余文件为派生：
 
 ```bash
-python scripts/sync_version.py --set 5.2.2   # 更新单源并同步 package.json / package-lock.json / VERSION
+python scripts/sync_version.py --set 5.2.3   # 更新单源并同步 package.json / package-lock.json / VERSION
 python scripts/check_version.py              # 校验一致性（CI 门禁，等价 sync_version.py --check）
 ```
 
@@ -396,14 +396,18 @@ V2.6.2+ 拓扑与机柜数据按项目持久化：
 
 ```bash
 # 发布流程
-python scripts/sync_version.py --set 5.2.2     # 1. 更新版本单源并同步
+python scripts/sync_version.py --set 5.2.3     # 1. 更新版本单源并同步
 npm run typecheck && npm run lint && npm run build   # 2. 本地门禁
-git add -A && git commit -m "release: v5.2.2 - <摘要>"
-git push origin main                            # 3. 触发 CI 编译
-git tag v5.2.2 && git push origin v5.2.2        # 4. 触发三平台打包 + Release
+git add -A && git commit -m "release: v5.2.3 - <摘要>"
+git push origin main                            # 3. 触发 CI 编译（含 build:renderer / build:electron）
+git tag -a v5.2.3 -m "5.2.3" && git push origin v5.2.3   # 4. 触发三平台打包 + Release
 ```
 
-> ⚠️ tag 必须为 `v*` 干净格式（如 `v5.2.2`），推送在 `main` 路径上才会触发 `build.yml`。
+> ⚠️ tag 必须为 `v*` 干净格式（如 `v5.2.3`）；`build.yml` 的 `release` 作业带 `if: startsWith(github.ref, 'refs/tags/v')`，
+> 所以**只有 tag 推送才会建 Release**，在分支上手动 `workflow_dispatch` 只会产出 artifact。
+> 推荐用注释标签（`-a`，与既有 `v5.2.2` 一致）；轻量标签 `git tag v5.2.3` 也能触发。
+> Release 说明由 `scripts/extract_release_notes.py <tag> CHANGELOG.md` 从 CHANGELOG 抽取，
+> **打 tag 前必须先在 `CHANGELOG.md` 写好该版本段**，否则 release 作业会失败。
 
 ---
 
@@ -434,5 +438,6 @@ git tag v5.2.2 && git push origin v5.2.2        # 4. 触发三平台打包 + Rel
 
 | 日期 | 版本 | 说明 |
 |------|------|------|
+| 2026-09-18 | v5.2.3 | 版本对齐 5.2.3；产物名随版本更新；发版流程补充「仅 tag 触发 Release」与「tag 前须先写 CHANGELOG 段」的硬约束 |
 | 2026-09-17 | v5.2.2 | 全面重写：版本对齐 5.2.2；修正模板 19→23、设备库 126→127、规则 22→21（V021 缺号）；新增 Agent Connect 部署章节、AI Hub 端口/鉴权、导出归档与复用策略、CI 双工作流说明；补充依赖清单与故障排查项 |
 | 2026-08-19 | v3.6.0 | 原版（环境准备 / 构建 / 生产部署 / 自动更新 / 数据持久化） |

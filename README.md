@@ -6,7 +6,7 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-5.2.2-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-5.2.3-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
@@ -123,7 +123,7 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 - **4.0 系列**（v4.0.0–v4.9.0）：工程基座与 CI 门禁、AI 项目/模板操作工具、一致性校验引擎、质量仪表盘、诊断中心、项目包往返、AIDC 四示例收官
 - **5.0 系列**（v5.0.1–v5.0.10）：统一 AgentProvider + AI 引擎三选一、多步任务编排、技能自学习、MCP 工具接入、模板市场生态、知识库与文档工作台、机房 3D、拓扑视口渲染优化、lint 清零、升级体验（断点续传/SHA-512/回滚/灰度）、示例库扩充至 7 个 + 模板 23 套全量重测
 - **5.1 系列**（v5.1.0–v5.1.9）：**Agent Connect**（把 AutoLink 封装为标准 MCP Server，编译态受限 / 源码态无限制双场景）、确定性语义层、异步长任务（task_submit/query/wait/cancel）、操作审计（audit_query 脱敏）、远程模式试点、Agent 反馈自优化、自检与排错
-- **5.2 系列**（v5.2.0–v5.2.2）：工作台精细打磨与回归发布（5.2 首版）；**5.2.2 修复版**——双端契约面同构（`test_dual_end_parity_522`）、Agent Connect 权限门禁真实化（gate_mode/block_audit/启动断言）、导出产物指纹复用 + `--no-archive` + 缺省全类型、`schema_version` + 英文规范子树（`data` / `legacy_data` 过渡双子树）、CLI 退出码契约（0/1/2/3）、文档数字自动校验门禁
+- **5.2 系列**（v5.2.0–v5.2.3）：工作台精细打磨与回归发布（5.2 首版）；**5.2.2 修复版**——双端契约面同构（`test_dual_end_parity_522`）、Agent Connect 权限门禁真实化（gate_mode/block_audit/启动断言）、导出产物指纹复用 + `--no-archive` + 缺省全类型、`schema_version` + 英文规范子树（`data` / `legacy_data` 过渡双子树）、CLI 退出码契约（0/1/2/3）、文档数字自动校验门禁；**5.2.3 修复版**——连接去重键方向不敏感缺陷（E005/E011，误删双向连接）、CI 红灯清零（mcp 依赖上限 / 挂死用例超时护栏 / 旧契约断言对齐）、机柜台数文案与手册更正（每柜 GPU **服务器台数**、功率默认 12000W、一柜多台需两处同设）
 
 ---
 
@@ -133,9 +133,9 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-5.2.2-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-5.2.2-mac-x64.dmg` / `AutoLink-5.2.2-mac-arm64.dmg`
-- **Linux**：`AutoLink-5.2.2-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-5.2.3-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-5.2.3-mac-x64.dmg` / `AutoLink-5.2.3-mac-arm64.dmg`
+- **Linux**：`AutoLink-5.2.3-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建示例项目，内置 **23 套场景模板**（含 7 套 H100/昇腾示例）与 **127 款设备库**（92 硬件 + 35 光模块）。
 
@@ -274,7 +274,7 @@ AutoLink/
 | **4.0 系列** | ✅ 已完成 | 工程基座 / AI 底座 / 协作 / 3D / 性能 / 质量 / 交付 / 内容资产十版 |
 | **5.0 系列** | ✅ 已完成 | AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官十版，双端三位一体 |
 | **5.1 系列** | ✅ 已完成 | **AI Agent 互联**：Agent Connect（MCP Server 双场景：编译态受限 / 源码态无限制），让 Claude/Codex/Trae/VS Code 等外部 Agent 直接查询、创建、更新、渲染项目/模板/设备库/机房规划/输出 |
-| **5.2 系列** | ✅ 已完成 | 工作台精细打磨回归发布（5.2.0）+ **5.2.2 修复版**：双端契约同构、Agent Connect 权限门禁真实化、导出产物指纹复用 / `--no-archive`、`schema_version` 与英文规范子树、文档数字自动校验门禁 |
+| **5.2 系列** | ✅ 已完成 | 工作台精细打磨回归发布（5.2.0）+ **5.2.2 修复版**：双端契约同构、Agent Connect 权限门禁真实化、导出产物指纹复用 / `--no-archive`、`schema_version` 与英文规范子树、文档数字自动校验门禁 + **5.2.3 修复版**：双向连接去重缺陷（E005/E011）、CI 红灯清零、机柜台数文案与手册更正 |
 | **后续方向** | 待定 | 远程模式正式化 + 多租户权限体系；模板市场社区化；CI/CD 流水线对接 |
 
 ---

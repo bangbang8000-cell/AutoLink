@@ -15,7 +15,7 @@ export const SNAPSHOT_VERSION = 1
 /** 单快照序列化字节上限（超出跳过保存并提示） */
 export const SNAPSHOT_MAX_BYTES = 2 * 1024 * 1024
 
-/** 快照内附带的机柜配置（顶部预留 U / 每柜 GPU 数），恢复时随快照还原 */
+/** 快照内附带的机柜配置（顶部预留 U / 每柜 GPU 服务器台数），恢复时随快照还原 */
 export interface SnapshotRackConfig {
   topReservedU: number
   gpuPerCabinet: number

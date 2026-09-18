@@ -111,7 +111,7 @@ describe('buildRoomDesignWorkbook（机房设计 Excel 三 sheet）', () => {
     expect(kv('总功率上限(W)')).toBe(10000)
     expect(kv('功率使用率')).toBe('10%')
     expect(kv('柜顶预留U')).toBe(2)
-    expect(kv('每柜GPU数')).toBe(1)
+    expect(kv('每柜GPU服务器台数')).toBe(1)
   })
 
   it('E-4 空机柜：不崩溃，三 sheet 仍生成，类型清单仅表头、汇总计数为 0', () => {

@@ -338,7 +338,7 @@ interface RackState {
   updateCabinetsBulk: (ids: number[], patch: CabinetPatch) => BulkUpdateResult
   /** M4（AL-ED2）：按机柜类型批量更新属性（同类型柜全量） */
   updateCabinetsByType: (type: CabinetType, patch: CabinetPatch) => BulkUpdateResult
-  /** M4/M5: 项目机柜配置（顶部预留 U / 每柜 GPU 数量），上架校验与优化按此生效 */
+  /** M4/M5: 项目机柜配置（顶部预留 U / 每柜 GPU 服务器台数），上架校验与优化按此生效 */
   topReservedU: number
   gpuPerCabinet: number
   setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number }) => void

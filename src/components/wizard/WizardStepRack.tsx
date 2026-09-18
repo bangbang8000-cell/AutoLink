@@ -192,10 +192,11 @@ export function WizardStepRack() {
         </p>
       </div>
 
-      {/* M4：每柜 GPU 数量（非超节点方案默认 1；超节点方案由模板指定） */}
+      {/* M4：每柜 GPU 服务器台数（非超节点方案默认 1，即 1 柜 1 台；超节点方案由模板指定）
+          5.2.3：原「每柜 GPU 数量」易被误读为 GPU 卡数（8 卡节点下会误导用户按卡折算机柜），明确为「台数」 */}
       <div>
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">
-          每柜 GPU 数量
+          每柜 GPU 服务器台数
         </label>
         <input
           type="number"
@@ -208,7 +209,7 @@ export function WizardStepRack() {
           className="w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-app text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400"
         />
         <p className="text-2xs text-gray-400 mt-1">
-          普通方案每柜 GPU 台数（默认 1）；超节点方案（如 NVL72）由对应模板的上架布局决定
+          按 GPU 服务器「台数」计（默认 1，即 1 柜 1 台；非 GPU 卡数）；一柜多台需同时提高功率上限。超节点方案（如 NVL72）由对应模板的上架布局决定
         </p>
       </div>
 
