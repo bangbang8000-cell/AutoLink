@@ -106,6 +106,70 @@ _SPEC_FIBER_MAP: Dict[str, str] = {
     'DAC': 'copper',
 }
 
+# ================= V3.1.0-T1: 清单化选型模式 =================
+# 每口一模块 + MPO 跳线, 与历史报价口径一致:
+#   - 强制 SR 系列多模光模块(100G->SR4, 400G/800G->SR8), 不使用 DAC/AOC/DR/FR/LR
+#   - MPO 跳线由调用方按光模块数量 1:1 配套(历史口径)
+# 通过 set_inventory_mode(True) 或 project_config.json 顶层 optical_mode="inventory" 开启
+INVENTORY_MODE = False
+
+_INVENTORY_MODULE = {
+    10: ("om_10g_sfp_sr_300m", "SR"),
+    100: ("om_100g_qsfp28_sr4_100m", "SR4"),
+    400: ("om_400g_qsfpdd_sr8_100m", "SR8"),
+    800: ("om_1600g_osfp_xd_sr8_100m", "SR8"),
+}
+
+
+def set_inventory_mode(on: bool) -> None:
+    """开启/关闭清单化选型模式(每口一模块+MPO, 与历史口径一致)"""
+    global INVENTORY_MODE
+    INVENTORY_MODE = bool(on)
+
+
+def select_inventory_module(speed: str, distance_m: float,
+                            library=None) -> Optional[OpticalSelection]:
+    """清单化选型: 每口一个与端口速率匹配的 SR 多模光模块(100G->SR4 / 400G->SR8 / 800G->SR8)。
+
+    不使用 DAC/AOC/DR/FR/LR; 与历史报价口径一致(每口一模块, 配套 MPO 跳线由外部按 1:1 补充)。
+    """
+    if library is None:
+        try:
+            library = get_device_library()
+        except Exception:
+            return None
+    target = _parse_speed(speed)
+    if target == 0:
+        return None
+    mod_id, spec = _INVENTORY_MODULE.get(target, (None, None))
+    if not mod_id:
+        return None
+    dev = library.get(mod_id)
+    if dev is None:
+        return None
+    price_range = getattr(dev, 'price_range', '') or ''
+    cost_lo, cost_hi = estimate_module_cost(price_range)
+    return OpticalSelection(
+        module_id=dev.id,
+        speed=speed,
+        form_factor=getattr(dev, 'form_factor', '') or '',
+        spec=spec,
+        distance_m=getattr(dev, 'distance_m', 0) or 0,
+        fiber_type='MMF',
+        price_range=price_range,
+        description=getattr(dev, 'description', '') or f"清单化选型 {speed} {spec} 多模",
+        vendors=getattr(dev, 'vendors', [])[:3],
+        estimated_length_m=distance_m,
+        match_reason=f"清单化选型: {speed} 每口一模块({spec}), 配套MPO跳线, 与历史口径一致",
+        power_w=float(getattr(dev, 'power_watts', 0) or 0),
+        lead_time_weeks=LEAD_TIME_MAP.get(price_range, ''),
+        unit_cost_lo=cost_lo,
+        unit_cost_hi=cost_hi,
+        tech_route=getattr(dev, 'tech_route', '') or '',
+        breakout=None,
+    )
+
+
 
 def _infer_fiber_type(spec: str) -> str:
     """根据 spec 推断光纤类型（MMF/SMF/copper）"""
@@ -242,7 +306,19 @@ def select_module_for_connection(conn, library: Optional[DeviceLibrary] = None) 
 
     V3.0.2-T2-11: 1 分 2 分裂线缆（conn.breakout 携带）时按 input_speed（物理速率）
     匹配分裂光模块（如 800G 物理口 → 2×400G 线缆），否则按逻辑速率匹配常规模块。
+    V3.1.0-T1: 清单化选型模式(INVENTORY_MODE=True)时强制每口一模块+MPO, 与历史口径一致。
     """
+    if INVENTORY_MODE:
+        if library is None:
+            try:
+                library = get_device_library()
+            except Exception:
+                return None
+        distance = _estimate_distance(
+            conn.a_cabinet_name or '', conn.z_cabinet_name or '',
+            conn.a_start_u, conn.z_start_u,
+        )
+        return select_inventory_module(conn.a_module or '', distance, library)
     speed = conn.a_module or ''
     # V3.0.2-T2-11: 分裂线缆按物理速率匹配（input_speed）且只匹配分裂线缆
     bk = getattr(conn, 'breakout', None)

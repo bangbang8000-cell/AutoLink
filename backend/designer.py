@@ -93,6 +93,13 @@ class NetworkDesignerV2:
         # V3.0.0-T0-2: 旧 schema 配置自动迁移（内存态；模板目录只读不回写）
         self._project_config = migrate_config(self._project_config)
 
+        # V3.1.0-T1: 清单化选型模式 (每口一模块+MPO, 与历史口径一致; project_config 顶层 optical_mode="inventory")
+        try:
+            from optical_selector import set_inventory_mode
+            set_inventory_mode(self._project_config.get('optical_mode') == 'inventory')
+        except Exception:
+            pass
+
         # 加载设备库
         try:
             self._device_library = get_device_library()

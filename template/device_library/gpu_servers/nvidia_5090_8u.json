@@ -1,0 +1,86 @@
+{
+  "id": "nvidia_5090_8u",
+  "vendor": "NVIDIA",
+  "model": "RTX 5090 8卡推理服务器",
+  "category": "gpu_servers",
+  "description": "NVIDIA RTX 5090 8卡推理服务器，搭载8块RTX 5090 32GB GPU，单卡功耗575W，面向大模型推理/推理加速集群；推理加速网 2×100G，业务 2×25G，带外 1×1G",
+  "power_watts": 6000,
+  "weight_kg": 50,
+  "u_height": 4,
+  "depth_mm": 850,
+  "cooling": "air",
+  "cooling_method": "air",
+  "name_prefix": "GPU-5090",
+  "rail_compatible": false,
+  "spectrum_x": false,
+  "nvlink_domain": 0,
+  "rdma_type": "RoCEv2",
+  "gpu_count": 8,
+  "gpu_memory_gb": 32,
+  "gpu_model": "RTX 5090 32GB",
+  "price_range": "中",
+  "eol_date": "",
+  "interface_models": [
+    {
+      "network_type": "param",
+      "port_count": 2,
+      "port_speed": "100G",
+      "port_type": "QSFP28",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "storage",
+      "port_count": 1,
+      "port_speed": "100G",
+      "port_type": "QSFP28",
+      "cable_type": "AOC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "biz",
+      "port_count": 2,
+      "port_speed": "25G",
+      "port_type": "SFP28",
+      "cable_type": "DAC",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    },
+    {
+      "network_type": "oob",
+      "port_count": 1,
+      "port_speed": "1G",
+      "port_type": "RJ45",
+      "cable_type": "Cat6",
+      "downlink_prefix": "NIC",
+      "uplink_prefix": "NIC",
+      "port_numbering": "sequential"
+    }
+  ],
+  "tags": [
+    "GPU",
+    "NVIDIA",
+    "5090",
+    "AI推理",
+    "推理加速"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage",
+    "biz",
+    "oob"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-09-15",
+  "updated_at": "2026-09-15",
+  "recommended_scenario": [
+    "inference"
+  ]
+}

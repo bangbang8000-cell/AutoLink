@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-08-14",
+  "updated_at": "2026-09-15",
   "categories": [
     {
       "id": "gpu_servers",
@@ -16,6 +16,7 @@
         "nvidia_hgx_h200",
         "nvidia_l20_8u",
         "nvidia_l40s_8u",
+        "nvidia_5090_8u",
         "huawei_atlas_900",
         "huawei_atlas_800t_a2",
         "ascend_910c",
@@ -206,7 +207,8 @@
         "om_1600g_osfp_xd_sip_dr8_500m",
         "om_1600g_osfp_xd_lpo_sr8_100m",
         "om_1600g_osfp_xd_eml_lr8_10km",
-        "om_1600g_osfp_xd_tfln_dr8_500m"
+        "om_1600g_osfp_xd_tfln_dr8_500m",
+        "om_10g_sfp_sr_300m"
       ]
     }
   ]

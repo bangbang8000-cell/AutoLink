@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "name": "5090推理-500台",
+    "description": "500台RTX 5090推理集群: RoCE 2×100G推理加速网, 三合一融合网(eth_combined), 1P混闪+3管理+12通算, 管理业务2×25G",
+    "version": 1,
+    "schema_version": 2,
+    "created_at": "2026-09-15T00:00:00",
+    "updated_at": "2026-09-15T00:00:00"
+  },
+  "networks": {
+    "param_network": true,
+    "storage_network": true,
+    "biz_network": true,
+    "oob_network": true,
+    "eth_combined": true
+  },
+  "topology": {
+    "downlink_mode": "full",
+    "param_protocol": "RoCE",
+    "num_gpu_servers": 500,
+    "num_all_flash_storage": 0,
+    "num_hybrid_flash_storage": 4,
+    "num_compute_servers": 15,
+    "param_ports_per_server": 2,
+    "storage_ports_per_server": 1,
+    "param_switch_ports": 64,
+    "storage_switch_ports": 40,
+    "param_speed": "100G",
+    "storage_speed": "100G",
+    "param_downlink_limit": 25,
+    "storage_downlink_limit": 20,
+    "biz_downlink_limit": 45,
+    "oob_downlink_limit": 45,
+    "rail_mode": "standard",
+    "rail_count": 8
+  },
+  "device_refs": {
+    "gpu_server": {
+      "library_id": "nvidia_5090_8u"
+    },
+    "param_leaf_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "param_spine_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "param_core_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "param_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "storage_leaf_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "storage_spine_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "storage_switch": {
+      "library_id": "h3c_s9820_64h"
+    },
+    "all_flash_storage_server": {
+      "library_id": "generic_all_flash"
+    },
+    "hybrid_flash_storage_server": {
+      "library_id": "generic_hybrid_flash"
+    },
+    "storage_server": {
+      "library_id": "generic_all_flash"
+    },
+    "biz_access_switch": {
+      "library_id": "h3c_s6850_56hf"
+    },
+    "biz_agg_switch": {
+      "library_id": "h3c_s9850_32h"
+    },
+    "compute_server": {
+      "library_id": "generic_2u_compute"
+    },
+    "oob_access_switch": {
+      "library_id": "h3c_s5560x_54c_ei"
+    },
+    "oob_agg_switch": {
+      "library_id": "h3c_s6805_56hf_g"
+    }
+  },
+  "rack_config": {
+    "rack_type": 42,
+    "power_limit_per_rack": 6000,
+    "naming_prefix": "机柜",
+    "cooling_method": "air",
+    "gpu_dedicated": true
+  },
+  "scale_up": {},
+  "optical_mode": "inventory"
+}
