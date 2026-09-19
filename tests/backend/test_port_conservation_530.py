@@ -45,18 +45,20 @@ from validation import (  # noqa: E402
 _TPL_DIR = Path(__file__).resolve().parents[2] / 'template'
 
 # 修复前实测欠连的 11 套模板（PRD §1.2 表）——「修复前必红、修复后必绿」
+# ⚠️ V5.3.1-531-b：接入上联口默认 8 → 6 后，上联需求整体按 **3/4** 缩放
+#    （1504 → 1128 等），框数随之下降。下表为上联口 = 6 口径下的**实测值**。
 _UNDERCONNECTED = [
-    ('超大-2048', 1504),
-    ('大型-1024', 752),
-    ('ualink_1_0_1024', 752),
-    ('uec_1_0_cluster', 752),
-    ('DP3Tier-1024', 672),
-    ('H100-512台-RoCE', 416),
-    ('中型-512', 384),
-    ('SuperPOD-256', 224),
-    ('液冷-H100-256', 224),
-    ('H100-256台-RoCE', 208),
-    ('国产-昇腾-256', 208),
+    ('超大-2048', 1128),
+    ('大型-1024', 564),
+    ('ualink_1_0_1024', 564),
+    ('uec_1_0_cluster', 564),
+    ('DP3Tier-1024', 504),
+    ('H100-512台-RoCE', 312),
+    ('中型-512', 288),
+    ('SuperPOD-256', 168),
+    ('液冷-H100-256', 168),
+    ('H100-256台-RoCE', 156),
+    ('国产-昇腾-256', 156),
 ]
 
 
@@ -179,8 +181,11 @@ class TestRealTemplateConservation:
             assert info.get('dropped_link_count', 0) == 0, f'{tpl} 带外网有丢弃'
 
     def test_frames_derived_from_port_demand(self):
-        """T-530-12 / T-530-13：框数必须等于 ceil(需求 / 单框口)，而非按服务器数查表。"""
-        cases = [('超大-2048', 1504, 47), ('中型-512', 384, 12), ('大型-1024', 752, 24)]
+        """T-530-12 / T-530-13：框数必须等于 ceil(需求 / 单框口)，而非按服务器数查表。
+
+        ⚠️ V5.3.1-531-b：上联口 8 → 6 后需求与框数同步下降（超大-2048：1504/47 → 1128/36）。
+        """
+        cases = [('超大-2048', 1128, 36), ('中型-512', 288, 9), ('大型-1024', 564, 18)]
         for tpl, demand, expect_frames in cases:
             d = _design(tpl)
             info = d.biz_info
@@ -248,9 +253,9 @@ class TestPortConservationContract:
         data = json.loads(gf.read_text(encoding='utf-8'))
         counts = data.get('counts') or {}
         assert counts.get('biz_access', 0) == 188
-        assert counts.get('biz_agg', 0) == 47, (
-            '修复后超大-2048 的汇聚框数应为 47（按端口需求推导），'
-            f'实际 {counts.get("biz_agg")}')
+        assert counts.get('biz_agg', 0) == 36, (
+            '上联口 = 6 口径下，超大-2048 的汇聚框数应为 36'
+            f'（按端口需求 ceil(1128/32) 推导），实际 {counts.get("biz_agg")}')
         assert data.get('valid') is True
 
 
@@ -335,9 +340,9 @@ class TestV021EndToEnd:
         pc = _build_port_conservation(d)
         assert pc is not None
         biz = pc['layers']['biz']
-        # 与生产者（topology.calculate）逐字对齐
-        assert biz['上联需求总数'] == d.biz_info['port_conservation']['上联需求总数'] == 1504
-        assert biz['汇聚下行总口'] == d.biz_info['port_conservation']['汇聚下行总口'] == 1504
+        # 与生产者（topology.calculate）逐字对齐（上联口 = 6 口径）
+        assert biz['上联需求总数'] == d.biz_info['port_conservation']['上联需求总数'] == 1128
+        assert biz['汇聚下行总口'] == d.biz_info['port_conservation']['汇聚下行总口'] == 1152
         # OOB 层同验（正是此前被读成 0 的那一层）
         oob = pc['layers']['oob']
         assert oob['上联需求总数'] == d.oob_info['port_conservation']['上联需求总数'] > 0, (
@@ -371,13 +376,13 @@ class TestV021EndToEnd:
         from engine import _build_port_conservation
         d = _design('超大-2048')
         pc = _build_port_conservation(d)
-        # 构造成修复前的样子：16 框 → 512 口，需求 1504
+        # 构造成修复前的样子：框数不足 → 512 口，需求 1128
         pc['layers']['biz']['汇聚下行总口'] = 512
         issues = self._v21({'port_conservation': pc})
         assert len(issues) == 1, f'应报「biz 网不守恒」一条，实际 {len(issues)}'
         assert issues[0].severity == Severity.ERROR
         joined = issues[0].message
-        assert '1504' in joined and '512' in joined and '992' in joined, (
+        assert '1128' in joined and '512' in joined and '616' in joined, (
             f'报错信息须点明需求/容量/缺口三个数，实际：{joined}')
 
     def test_v021_reports_both_when_dropped_nonzero(self):
@@ -386,7 +391,7 @@ class TestV021EndToEnd:
         d = _design('超大-2048')
         pc = _build_port_conservation(d)
         pc['layers']['biz']['汇聚下行总口'] = 512
-        pc['layers']['biz']['丢弃链路数'] = 992     # 模拟修复前
+        pc['layers']['biz']['丢弃链路数'] = 616     # 模拟修复前（需求 1128 − 容量 512）
         issues = self._v21({'port_conservation': pc})
         assert len(issues) == 2, f'应报不守恒 + 有丢弃两条，实际 {len(issues)}'
         assert all(i.severity == Severity.ERROR for i in issues)

@@ -76,7 +76,7 @@ def _compute_convergence(designer) -> dict:
         ))
     if getattr(designer, 'biz_enabled', True) and getattr(designer, 'biz_access', None):
         biz_ports = getattr(designer, 'biz_access_ports', 48)
-        biz_uplinks = getattr(designer, 'biz_access_uplinks', 8)
+        biz_uplinks = getattr(designer, 'biz_access_uplinks', 6)
         biz_speed = _parse_speed_gbps(getattr(designer, 'biz_port_speed', '25G'))
         convergence['biz'] = _conv_to_dict(calc_convergence_ratio(
             'biz', biz_ports, biz_uplinks, biz_speed, len(designer.biz_access),

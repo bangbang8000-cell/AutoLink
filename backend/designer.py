@@ -328,7 +328,17 @@ class NetworkDesignerV2:
         # --- 业务网络配置 ---
         self.biz_port_speed = '25G'
         self.biz_access_ports = 48
-        self.biz_access_uplinks = 8
+        # V5.3.1-531-b（AL-G11 / P1-11）：接入上联口默认 8 → 6。
+        # MLAG 对中 2 口作 peer-link，北向**实际**上联仅 6 口（需求方口径）。
+        # 与验收口径自洽：64 接入 × 6 = 384 = 2 台汇聚 × 192 口（8 槽 6 板）。
+        # V5.3.1-531-b2：本键改为**项目可配**，与同族三个口径键（收敛比 / 框规格 /
+        #   分组粒度）对齐 —— 此前 JSON 项目写什么都没人读（恒取默认），是四条口径键里
+        #   唯一不可配的一条。默认仍是 6，故不改变任何现有项目的结果。
+        try:
+            uplinks = int(topo.get('biz_access_uplinks', 6))
+        except (TypeError, ValueError):
+            uplinks = 6
+        self.biz_access_uplinks = uplinks if uplinks > 0 else 6
         self.biz_uplink_speed = '100G'
         self.biz_agg_box_ports = 32
         self.biz_agg_chassis_ports = 32
@@ -344,29 +354,12 @@ class NetworkDesignerV2:
         self.biz_chassis_frames_map = topo.get('biz_chassis_frames_map', [
             [512, 4], [1024, 8], [float('inf'), 16]
         ])
-        # V5.3.0-530-g4/g5（AL-G4/G5）：默认值保持现状 —— 收敛比 1.0 = 严格守恒；
-        # 框规格 32 口/框。两者均「显式开启才偏离默认」（裁定 D2/D3 同精神）。
-        try:
-            self.biz_agg_oversubscription = float(topo.get('biz_agg_oversubscription', 1.0))
-        except (TypeError, ValueError):
-            self.biz_agg_oversubscription = 1.0
-        if self.biz_agg_oversubscription < 1.0:
-            self.biz_agg_oversubscription = 1.0  # 收敛比不得 < 1（不可能给超过 1:1 的带宽）
-        try:
-            spec = int(topo.get('biz_agg_chassis_spec', 32))
-        except (TypeError, ValueError):
-            spec = 32
-        if spec not in (32, 64, 128):
-            spec = 32  # 非法值回退默认（PRD AL-G5；测试计划 T-530-24）
-        self.biz_agg_chassis_spec = spec
-        self.biz_agg_chassis_ports = self.biz_agg_chassis_spec
-        # V5.3.0-530-g11（AL-G11 / P1-11）：接入分组粒度口径开关。
-        # 默认 'merge' = 现状（ceil 合并取整）；'classify' = 分类取整。
-        # 裁定 D3：只暴露开关，**默认值不动**（避免破坏 23 套模板与 golden）。
-        granularity = str(topo.get('biz_group_granularity', 'merge')).strip().lower()
-        if granularity not in ('merge', 'classify'):
-            granularity = 'merge'
-        self.biz_group_granularity = granularity
+        # V5.3.0-530-g4/g5/g11（AL-G4/G5/G11）：三项「数值口径」开关。
+        # ⚠️ V5.3.1-531-a：抽成与 INI 路径**共用**的方法 —— 两条初始化路径各写一份必然
+        #    漂移。5.3.0 就只在 JSON 路径赋值，INI 路径下这三个属性**根本不存在**；
+        #    当时因开关「只赋值、无人读」而未暴露，5.3.1 把 category_counts 真正接进
+        #    建链后立即炸出 AttributeError（自测逮到，见 tests/backend/test_caliber_531.py）。
+        self._init_biz_caliber_switches(topo.get)
 
         # --- 机柜配置 (V2.1新增) ---
         self.rack_type = rack.get('rack_type', 42)  # 42U or 49U
@@ -572,12 +565,22 @@ class NetworkDesignerV2:
 
         self.biz_port_speed = self.config.get('DEFAULT', 'biz_port_speed', fallback='25G')
         self.biz_access_ports = int(self.config.get('DEFAULT', 'biz_access_ports', fallback=48))
-        self.biz_access_uplinks = int(self.config.get('DEFAULT', 'biz_access_uplinks', fallback=8))
+        self.biz_access_uplinks = int(self.config.get('DEFAULT', 'biz_access_uplinks', fallback=6))
         self.biz_uplink_speed = self.config.get('DEFAULT', 'biz_uplink_speed', fallback='100G')
         self.biz_agg_box_ports = int(self.config.get('DEFAULT', 'biz_agg_box_ports', fallback=32))
         self.biz_agg_chassis_ports = int(self.config.get('DEFAULT', 'biz_agg_chassis_ports', fallback=32))
         self.cable_biz_server_access = self.config.get('DEFAULT', 'cable_biz_server_access', fallback='光纤')
         self.cable_biz_access_agg = self.config.get('DEFAULT', 'cable_biz_access_agg', fallback='光纤')
+
+        # V5.3.1-531-a（AL-G11）：三项数值口径开关 —— **与 JSON 路径共用同一初始化**。
+        # 5.3.0 只在 JSON 路径赋值，INI 项目一旦启用业务网就在建链处抛 AttributeError
+        #（当时因开关「只赋值、无人读」而未暴露）。
+        self._init_biz_caliber_switches(
+            lambda k, d=None: self.config.get('DEFAULT', k, fallback=d))
+        # 向后兼容：INI 显式给出的 biz_agg_chassis_ports 优先于 biz_agg_chassis_spec 推导
+        if self.config.has_option('DEFAULT', 'biz_agg_chassis_ports'):
+            self.biz_agg_chassis_ports = int(
+                self.config.get('DEFAULT', 'biz_agg_chassis_ports', fallback=32))
 
         # V2.7.2-T12: 业务网框式阈值参数化 (INI 模式默认值,与 project_config 保持一致)
         self.biz_chassis_threshold = int(self.config.get('DEFAULT', 'biz_chassis_threshold', fallback=128))
@@ -656,7 +659,12 @@ class NetworkDesignerV2:
             self.oob_dl = int(self.config.get('DEFAULT', 'oob_downlink_limit', fallback=48))
 
     def _load_common_config(self):
-        """加载通用配置"""
+        """加载通用配置
+
+        ⚠️ 注意：本方法当前**没有任何调用点**（历史遗留，实际生效的是
+        `_load_common_ini_config`）。此处同样初始化三项数值口径开关，是为了
+        万一将来重新接线时不至于漏掉（初始化幂等，重复调用无害）。
+        """
         self.num_servers = int(self.config.get('DEFAULT', 'num_servers', fallback=100))
         self.additional_storage = int(self.config.get('DEFAULT', 'additional_storage_servers', fallback=0))
         self.additional_compute = int(self.config.get('DEFAULT', 'additional_compute_servers', fallback=0))
@@ -696,12 +704,21 @@ class NetworkDesignerV2:
         self.biz_enabled = self.config.getboolean('DEFAULT', 'biz_enabled', fallback=True)
         self.biz_port_speed = self.config.get('DEFAULT', 'biz_port_speed', fallback='25G')
         self.biz_access_ports = int(self.config.get('DEFAULT', 'biz_access_ports', fallback=48))
-        self.biz_access_uplinks = int(self.config.get('DEFAULT', 'biz_access_uplinks', fallback=8))
+        self.biz_access_uplinks = int(self.config.get('DEFAULT', 'biz_access_uplinks', fallback=6))
         self.biz_uplink_speed = self.config.get('DEFAULT', 'biz_uplink_speed', fallback='100G')
         self.biz_agg_box_ports = int(self.config.get('DEFAULT', 'biz_agg_box_ports', fallback=32))
         self.biz_agg_chassis_ports = int(self.config.get('DEFAULT', 'biz_agg_chassis_ports', fallback=32))
         self.cable_biz_server_access = self.config.get('DEFAULT', 'cable_biz_server_access', fallback='光纤')
         self.cable_biz_access_agg = self.config.get('DEFAULT', 'cable_biz_access_agg', fallback='光纤')
+
+        # V5.3.1-531-a（AL-G11）：三项数值口径开关 —— **与 JSON 路径共用同一初始化**。
+        # 5.3.0 漏了这一步，INI 项目一旦启用业务网就在建链处抛 AttributeError。
+        self._init_biz_caliber_switches(
+            lambda k, d=None: self.config.get('DEFAULT', k, fallback=d))
+        # 向后兼容：INI 显式给出的 biz_agg_chassis_ports 优先于 biz_agg_chassis_spec 推导
+        if self.config.has_option('DEFAULT', 'biz_agg_chassis_ports'):
+            self.biz_agg_chassis_ports = int(
+                self.config.get('DEFAULT', 'biz_agg_chassis_ports', fallback=32))
 
     # ================================================================
     #  层次计算
@@ -1873,6 +1890,43 @@ class NetworkDesignerV2:
         # V2.9.0: OOB 交换机机柜分配（网络柜）并回填连接机柜字段
         self._allocate_rack_switches(self.oob_access + self.oob_agg)
 
+    def _init_biz_caliber_switches(self, get):
+        """V5.3.1-531-a（AL-G11 / P1-11）：三项「数值口径」开关的**唯一**初始化入口。
+
+        JSON 路径（`_init_from_project_config`，传 `topo.get`）与 INI 路径
+        （`_load_common_ini_config` / `_load_common_config`，传 configparser 包装）
+        必须共用本方法；两处各写一份是本项目已复现过的漂移源。
+
+        三项开关与默认值（裁定 D3：默认值一律保持现状）：
+          - `biz_agg_oversubscription` 默认 **1.0** = 严格守恒；< 1 无意义 ⇒ 回退 1.0；
+          - `biz_agg_chassis_spec`      默认 **32**；合法值仅 32/64/128，非法回退 32；
+          - `biz_group_granularity`     默认 **merge**；合法值 merge/classify，非法回退 merge。
+
+        ⚠️ 三项都必须「即使配置缺失也给出合法值」—— 属性缺失会让 `_design_biz_network`
+           在建链时抛 AttributeError（5.3.0 的 INI 路径即如此）。
+        """
+        # 收敛比（≥1.0）
+        try:
+            ratio = float(get('biz_agg_oversubscription', 1.0))
+        except (TypeError, ValueError):
+            ratio = 1.0
+        # 收敛比不得 < 1（不可能给超过 1:1 的带宽）
+        self.biz_agg_oversubscription = ratio if ratio >= 1.0 else 1.0
+
+        # 单框下行口规格（32 / 64 / 128）
+        try:
+            spec = int(get('biz_agg_chassis_spec', 32))
+        except (TypeError, ValueError):
+            spec = 32
+        if spec not in (32, 64, 128):
+            spec = 32  # 非法值回退默认（PRD AL-G5；测试计划 T-530-24）
+        self.biz_agg_chassis_spec = spec
+        self.biz_agg_chassis_ports = spec
+
+        # 接入分组粒度（merge = 历史 ceil 合并 / classify = 按类别分别取整）
+        granularity = str(get('biz_group_granularity', 'merge') or 'merge').strip().lower()
+        self.biz_group_granularity = granularity if granularity in ('merge', 'classify') else 'merge'
+
     def _calc_biz_chassis_frames(self, total_access_uplinks=None):
         """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数
 
@@ -1910,26 +1964,45 @@ class NetworkDesignerV2:
         num_access = num_access_groups * 2
         return num_access * self.biz_access_uplinks
 
+    def _biz_server_category_counts(self):
+        """V5.3.1-531-a（AL-G11 / P1-11）：按**服务器列表顺序**返回各类别台数。
+
+        顺序由服务器的构造顺序决定：GPU → 存储 → 通算（见 _create_servers），
+        必须与 AccessAggTopology.create_and_connect 收到的 servers 列表一致，
+        否则「按类别分别取整」会与按位切分脱钩。
+        """
+        return [
+            ('gpu', self.num_servers),
+            ('storage', self.additional_storage),
+            ('compute', self.additional_compute),
+        ]
+
     def _biz_num_access_groups(self, num_servers, servers_per_access):
-        """V5.3.0-530-g11（AL-G11 / 用户反馈 P1-11）：接入**分组粒度**口径开关。
+        """V5.3.1-531-a（AL-G11 / 用户反馈 P1-11）：接入**分组粒度**口径开关。
 
-        现状（默认 `merge`）：末组按 `ceil` **合并**取整 —— 1380 台 / 每台 45 口
-        ⇒ `ceil(1380/45) = 31` 组（末组不满也占满一组）。
-        另一口径 `classify`：末组按**实际余数**折算（不额外占满），
-        用于对接"按实际台数分类、余数单独计"的工程口径。
+        默认 `merge`（历史口径，逐位不变）：对全部服务器**一次性合并取整** ——
+        1380 台 @ 每组 45 台 ⇒ `ceil(1380/45) = 31` 组（MLAG ⇒ 62 台接入）。
 
-        默认 `merge` = **现状不变**（裁定 D3：P1-11 只暴露开关，不改默认值）。
-        仅当项目显式配置 `biz_group_granularity = 'classify'` 时生效。
+        `classify` = 顾客 §10.2 明确要求的「**按服务器类别分别取整**」：
+        GPU / 存储 / 通算 各自取整后求和 —— 同一场景
+        `ceil(1250/45) + ceil(70/45) + ceil(60/45) = 28 + 2 + 2 = 32` 组（⇒ 64 台）。
+
+        ⚠️ V5.3.0 曾把 classify 误实现为 `floor + 余数+1`，与 merge **数学恒等**
+           （扫描 0 差异）⇒ 开关空转、从未生效。此处按顾客原文语义重写。
+        ⚠️ 组数口径必须与 topology.AccessAggTopology 完全一致，否则框数与实际建链
+           再次脱钩（开发计划 §6-R7；本缺陷即这一类的第二次复发）。
         """
         if num_servers <= 0:
             return 1
         if self.biz_group_granularity == 'classify':
-            # 分类口径：整除用整除，余数单独一组（与 merge 的差异仅在"末组如何取整"的
-            # 语义表达上，数值上仍为保证覆盖而向上取整 —— 差异体现在契约字段的暴露，
-            # 便于下游按自身口径重算，故此处保持覆盖安全）。
-            groups = num_servers // servers_per_access
-            if num_servers % servers_per_access:
-                groups += 1
+            groups = 0
+            for _name, cnt in self._biz_server_category_counts():
+                try:
+                    cnt = int(cnt or 0)
+                except (TypeError, ValueError):
+                    cnt = 0
+                if cnt > 0:
+                    groups += max(1, math.ceil(cnt / servers_per_access))
             return max(1, groups)
         # 默认 merge：向上取整（与历史行为逐位一致）
         return max(1, math.ceil(num_servers / servers_per_access))
@@ -1967,9 +2040,14 @@ class NetworkDesignerV2:
             frames = self._calc_biz_chassis_frames(uplink_need)
             chassis_config = {'enabled': True, 'frames': frames}
             topo.agg_down_ports = self.biz_agg_chassis_ports
-        self.biz_info = topo.calculate(self.total_servers, chassis_config)
+        # V5.3.1-531-a（AL-G11 / P1-11）：分组粒度口径必须**同时**传给 calculate 与
+        # create_and_connect，否则组数与实际建链脱钩（框数够而连接不够，或反之）。
+        biz_category_counts = (self._biz_server_category_counts()
+                               if self.biz_group_granularity == 'classify' else None)
+        self.biz_info = topo.calculate(self.total_servers, chassis_config,
+                                       biz_category_counts)
         topo.create_and_connect(self.servers, self.biz_info['num_access'],
-                                self.biz_info['num_agg'])
+                                self.biz_info['num_agg'], biz_category_counts)
         # V5.3.0-530-g1（AL-G1）：把被丢弃的连接透出给上层与校验引擎。
         # 原实现它们只进 stdout，valid 因此看不到欠连（见 5.3.0 PRD §1.3）。
         self.biz_info['dropped_links'] = list(topo.dropped_links)

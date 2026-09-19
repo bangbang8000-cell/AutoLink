@@ -433,19 +433,23 @@ class AccessAggTopology:
         """被丢弃的连接总条数"""
         return sum(item['count'] for item in self.dropped_links)
 
-    def calculate(self, num_servers, chassis_config=None):
+    def calculate(self, num_servers, chassis_config=None, category_counts=None):
         """计算需要的接入和汇聚交换机数量
         chassis_config: (enabled, frames) for chassis-style aggregation
+        category_counts: V5.3.1-531-a（AL-G11 / P1-11）可选的「按服务器类别分别取整」
+            口径：[(类别名, 台数), ...]，顺序必须与 create_and_connect 的 servers 一致。
+            **None（默认）= 历史「一次性合并取整」，逐位不变。**
         """
         # 接入层: 解析下联口限制
         dl = self.downlink_limit if self.downlink_limit is not None else min(self.access_down_ports, 25)
         servers_per_access = max(1, min(self.access_down_ports, dl))
+        num_access_groups = self._num_access_groups(
+            num_servers, servers_per_access, category_counts)
         if self.redundancy:
             # MLAG对：两台交换机为一组，每组覆盖servers_per_access台服务器
-            num_access_groups = max(1, math.ceil(num_servers / servers_per_access))
             num_access = num_access_groups * 2
         else:
-            num_access = max(1, math.ceil(num_servers / servers_per_access))
+            num_access = max(1, num_access_groups)
 
         # 汇聚层
         total_access_uplinks = num_access * self.access_up_ports
@@ -482,8 +486,66 @@ class AccessAggTopology:
             },
         }
 
-    def create_and_connect(self, servers, num_access, num_agg):
-        """创建交换机并生成连接"""
+    def _num_access_groups(self, num_servers, servers_per_access, category_counts=None):
+        """V5.3.1-531-a（AL-G11 / P1-11）：接入「分组粒度」口径。
+
+        默认（category_counts is None）= 历史口径：对全部服务器**一次性合并取整**
+        （ceil(num_servers / servers_per_access)）。
+
+        给定类别台数时 = 顾客 §10.2 要求的「**按服务器类别分别取整**」：
+            组数 = Σ_类别 max(1, ceil(该类别台数 / servers_per_access))
+        例：1380 台（GPU 1250 / 存储 70 / 通算 60）@ 每组 45 台
+            ⇒ 28 + 2 + 2 = **32 组**，而合口径为 ceil(1380/45) = 31 组。
+        """
+        if category_counts:
+            total = 0
+            for _name, cnt in category_counts:
+                try:
+                    cnt = int(cnt or 0)
+                except (TypeError, ValueError):
+                    cnt = 0
+                if cnt > 0:
+                    total += max(1, math.ceil(cnt / servers_per_access))
+            if total > 0:
+                return total
+            # 类别台数全为 0 ⇒ 回退总量口径（保证至少 1 组）
+        return max(1, math.ceil(num_servers / servers_per_access))
+
+    def _server_group_indices(self, servers, category_counts, servers_per_group):
+        """V5.3.1-531-a（AL-G11 / P1-11）：把服务器映射到「接入组」序号。
+
+        默认（无类别）= 按位切分 servers[i] -> i // servers_per_group，与历史逐位一致。
+        给定类别台数时，各类别各占**一段连续的组号**，实现「按类别分别取整」——
+        必须与 `_num_access_groups` 同口径，否则设计器算出的框数与实际建链脱钩
+        （这正是 P1-11 要修的那类缺陷）。
+
+        ⚠️ 类别台数之和必须等于服务器总数；不一致则**回退按位切分**，
+           宁可保持历史行为也不要静默错配。
+        """
+        fallback = [i // servers_per_group for i in range(len(servers))]
+        if not category_counts:
+            return fallback
+        try:
+            counts = [(n, int(c or 0)) for n, c in category_counts]
+        except (TypeError, ValueError):
+            return fallback
+        if sum(c for _n, c in counts if c > 0) != len(servers):
+            return fallback
+        idx = []
+        offset = 0  # 当前类别在「组序号」上的起始位
+        for _name, cnt in counts:
+            if cnt <= 0:
+                continue
+            for j in range(cnt):
+                idx.append(offset + (j // servers_per_group))
+            offset += max(1, math.ceil(cnt / servers_per_group))
+        return idx
+
+    def create_and_connect(self, servers, num_access, num_agg, category_counts=None):
+        """创建交换机并生成连接
+
+        category_counts: V5.3.1-531-a，须与 calculate() 传入的同口径；None = 历史按位切分。
+        """
         # 创建接入交换机
         for i in range(1, num_access + 1):
             sw = NetworkObject(
@@ -517,19 +579,21 @@ class AccessAggTopology:
 
         # 服务器 → 接入交换机
         if self.redundancy:
-            self._connect_servers_redundant(servers)
+            self._connect_servers_redundant(servers, category_counts)
         else:
-            self._connect_servers_single(servers)
+            self._connect_servers_single(servers, category_counts)
 
         # 接入交换机 → 汇聚交换机 (轮转分配)
         self._connect_access_to_agg()
 
-    def _connect_servers_single(self, servers):
+    def _connect_servers_single(self, servers, category_counts=None):
         """单链路上联：每台服务器连1台接入交换机"""
         dl = self.downlink_limit if self.downlink_limit is not None else min(self.access_down_ports, 25)
         servers_per_access = max(1, min(self.access_down_ports, dl))
+        # V5.3.1-531-a（AL-G11）：口径与 calculate() 一致；None 时即历史按位切分
+        group_of = self._server_group_indices(servers, category_counts, servers_per_access)
         for si, server in enumerate(servers):
-            access_idx = si // servers_per_access
+            access_idx = group_of[si]
             if access_idx >= len(self.access_switches):
                 break
             sw = self.access_switches[access_idx]
@@ -575,12 +639,14 @@ class AccessAggTopology:
                 print(f"警告: {str(e)}")
                 continue
 
-    def _connect_servers_redundant(self, servers):
+    def _connect_servers_redundant(self, servers, category_counts=None):
         """冗余双上联：每台服务器连2台接入交换机(MLAG对)"""
         dl = self.downlink_limit if self.downlink_limit is not None else min(self.access_down_ports, 25)
         servers_per_pair = max(1, min(self.access_down_ports, dl))
+        # V5.3.1-531-a（AL-G11）：口径与 calculate() 一致；None 时即历史按位切分
+        group_of = self._server_group_indices(servers, category_counts, servers_per_pair)
         for si, server in enumerate(servers):
-            pair_idx = si // servers_per_pair
+            pair_idx = group_of[si]
             # MLAG对中的两台交换机
             base = pair_idx * 2
             if base + 1 >= len(self.access_switches):

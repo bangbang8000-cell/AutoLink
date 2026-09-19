@@ -181,8 +181,8 @@ def _build_port_conservation(designer):
         layers[key] = {
             '服务器数': designer.total_servers,
             '接入台数': int(info.get('num_access', 0) or 0),
-            '接入上联口每台': int(getattr(designer, 'biz_access_uplinks', 8) if key == 'biz'
-                                else getattr(designer, 'oob_access_uplinks', 8)) or 8,
+            '接入上联口每台': int(getattr(designer, 'biz_access_uplinks', 6) if key == 'biz'
+                                else getattr(designer, 'oob_access_uplinks', 8)) or 6,
             '上联需求总数': need,
             '汇聚框台数': int(info.get('num_agg', 0) or 0),
             '单框下行口': int(getattr(designer, 'biz_agg_chassis_ports', 32) if key == 'biz'
@@ -204,7 +204,7 @@ def _build_port_conservation(designer):
         # 目的：下游（报价/交付）能据实判断"本项目的数字是按哪套口径算的"，
         # 而不必反查项目配置。默认值一律为现状（裁定 D3）。
         '口径': {
-            '接入上联口每台': int(getattr(designer, 'biz_access_uplinks', 8) or 8),
+            '接入上联口每台': int(getattr(designer, 'biz_access_uplinks', 6) or 6),
             '汇聚单框下行口': int(getattr(designer, 'biz_agg_chassis_ports', 32) or 32),
             '框数推导方式': ('按端口需求推导'
                          if not getattr(designer, '_biz_frames_map_explicit', False)
@@ -287,7 +287,7 @@ def _estimate_design(designer, params=None):
     # 业务网
     if getattr(designer, 'biz_enabled', True) and getattr(designer, 'biz_access', None):
         biz_ports = getattr(designer, 'biz_access_ports', 48)
-        biz_uplinks = getattr(designer, 'biz_access_uplinks', 8)
+        biz_uplinks = getattr(designer, 'biz_access_uplinks', 6)
         biz_speed = _parse_speed_gbps(getattr(designer, 'biz_port_speed', '25G'))
         convergence['biz'] = _conv_to_dict(calc_convergence_ratio(
             'biz', biz_ports, biz_uplinks, biz_speed, len(designer.biz_access),

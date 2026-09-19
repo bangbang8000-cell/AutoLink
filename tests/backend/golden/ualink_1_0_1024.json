@@ -1,9 +1,9 @@
 {
   "cabinets": 2196,
-  "connections": 1142876,
+  "connections": 1142500,
   "counts": {
     "biz_access": 94,
-    "biz_agg": 24,
+    "biz_agg": 18,
     "combined_leaves": 0,
     "oob_access": 47,
     "oob_agg": 2,
@@ -18,7 +18,7 @@
   },
   "downlink_mode": "custom",
   "network_connections": {
-    "biz": 6112,
+    "biz": 5736,
     "oob": 2492,
     "param": 81920,
     "scale_up": 1047552,
@@ -28,7 +28,7 @@
   "param_speed": "400G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "5451146520afbf3a",
-  "total_power_w": 12166500,
+  "topology_hash": "aacbe3dc47456e47",
+  "total_power_w": 12165300,
   "valid": true
 }
