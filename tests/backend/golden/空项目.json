@@ -3,7 +3,7 @@
   "connections": 5188,
   "counts": {
     "biz_access": 12,
-    "biz_agg": 4,
+    "biz_agg": 3,
     "combined_leaves": 0,
     "oob_access": 6,
     "oob_agg": 1,
@@ -27,7 +27,7 @@
   "param_speed": "400G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "cea1a115e9fdbd7e",
-  "total_power_w": 1112650,
+  "topology_hash": "494528ef67d4fbab",
+  "total_power_w": 1112450,
   "valid": true
 }

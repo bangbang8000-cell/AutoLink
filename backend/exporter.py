@@ -987,8 +987,8 @@ REPORT_DATA_SCHEMA_VERSION = 2
 
 # 段名（既属 data 也属 legacy_data）
 _REPORT_SECTIONS = ('overview', 'architecture', 'power', 'validation',
-                    'modules', 'module_selection', 'cost', 'racks', 'devices',
-                    'convergence', 'generated_at')
+                    'modules', 'module_selection', 'port_conservation', 'cost',
+                    'racks', 'devices', 'convergence', 'generated_at')
 
 # V5.2.5-525-f3（AL-F3）：未匹配明细最多保留的**种类**数（按条数降序取前 N）。
 # 大方案（如 2048 台）下未匹配种类可能很多，无上限会让 reportData 响应体膨胀。
@@ -1033,6 +1033,18 @@ _REPORT_KEY_MAP = {
     '设备类型': 'device_type', '型号': 'model', '厂商': 'vendor',
     '数量': 'quantity', 'U位高度': 'u_height', '总U位': 'total_u',
     '单机功耗(W)': 'unit_power_watts', '总功耗(W)': 'total_power_watts',
+    # port_conservation（V5.3.0-530-g7 / AL-G7）：逐层端口守恒台账
+    '服务器数': 'server_count', '接入台数': 'access_count',
+    '接入上联口每台': 'uplinks_per_access', '上联需求总数': 'uplink_demand_total',
+    '汇聚框台数': 'agg_unit_count', '单框下行口': 'downlink_per_unit',
+    '汇聚下行总口': 'agg_downlink_total', '收敛比': 'oversubscription_ratio',
+    '是否守恒': 'conserved', '余量百分比': 'margin_percent',
+    '丢弃链路数': 'dropped_link_count', '检查层数': 'checked_layers',
+    '守恒层数': 'conserved_layers', '不守恒层数': 'unconserved_layers',
+    '总丢弃链路数': 'dropped_link_total',
+    # 口径（V5.3.0-530-g11 / AL-G11）：三项口径开关的当前取值
+    '口径': 'calibers', '汇聚单框下行口': 'agg_downlink_per_unit',
+    '框数推导方式': 'agg_frames_derivation', '分组粒度': 'group_granularity',
 }
 
 DEPRECATIONS = {
@@ -1048,6 +1060,19 @@ def _canonicalize(obj):
     if isinstance(obj, list):
         return [_canonicalize(v) for v in obj]
     return obj
+
+
+def _build_port_conservation_section(designer):
+    """V5.3.0-530-g7（AL-G7）：逐层端口守恒台账（契约见 PRD §3.1）。
+
+    复用 engine._build_port_conservation 的口径，避免与 V021 校验各写一份
+    （开发计划 §6-R7：口径分裂会再次让框数与连接数脱钩）。
+    """
+    try:
+        import engine as _engine
+        return _engine._build_port_conservation(designer)
+    except Exception:
+        return None
 
 
 def generate_report_data(designer, estimation=None):
@@ -1180,6 +1205,11 @@ def generate_report_data(designer, estimation=None):
                  if sel_unmatched else '全部链路均已判定（匹配 或 无需光模块）'),
     }
 
+    # 5.1 逐层端口守恒台账（V5.3.0-530-g7 / AL-G7）
+    # 让下游**能自行判断**拓扑是否物理成立，而不只依赖 validation.valid ——
+    # 后者曾是欠连被放行的唯一依据（PRD §1.3、裁定 D2）。
+    port_conservation = _build_port_conservation_section(designer)
+
     # 6. 成本估算
     price_map = {'低': (500, 2000), '中': (2000, 8000), '高': (8000, 30000), '极高': (30000, 100000)}
     module_cost_lo = sum(price_map.get(s['price'], (0, 0))[0] * s['count'] for s in module_stats.values())
@@ -1243,6 +1273,8 @@ def generate_report_data(designer, estimation=None):
         'modules': module_stats,
         # V5.2.5-525-f3: 选型三态台账（matched / not_applicable / unmatched）
         'module_selection': module_selection,
+        # V5.3.0-530-g7（AL-G7）：逐层端口守恒台账
+        'port_conservation': port_conservation,
         'cost': cost,
         'racks': racks,
         # V2.9.3-T6: 设备清单(按型号聚合) + 收敛比(优先读 estimation)

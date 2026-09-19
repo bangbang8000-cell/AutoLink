@@ -3,7 +3,7 @@
   "connections": 6296,
   "counts": {
     "biz_access": 12,
-    "biz_agg": 4,
+    "biz_agg": 3,
     "combined_leaves": 0,
     "oob_access": 6,
     "oob_agg": 1,
@@ -27,7 +27,7 @@
   "param_speed": "200G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "ab302eddf1837a97",
+  "topology_hash": "89c62f77067570a8",
   "total_power_w": 81600,
   "valid": true
 }

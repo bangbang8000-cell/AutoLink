@@ -614,6 +614,69 @@ def _rule_zcube_structure(ctx: ValidationContext) -> List[ValidationIssue]:
 
 
 
+def _rule_port_conservation(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V021: 逐层端口守恒校验 (V5.3.0-530-g6 / AL-G6)
+
+    业务网/带外网「接入 → 汇聚」的端口守恒：
+      接入上联需求总数  ≤  汇聚下行总口 × 收敛比
+
+    原实现**无此规则**（22 条 V001–V022 中缺 V021，且 `grep 端口守恒` 全仓 0 命中），
+    叠加 `topology.py` 的静默丢弃与 `designer.py` 的汇聚 2 倍豁免，
+    导致 23 套模板中 11 套欠连（最高 66.0%）而 `valid` 仍为 True。
+
+    裁定 D2：**硬错误 + 阈值可覆盖，默认 100%**。
+      - 收敛比 = 1.0（默认）⇒ 严格守恒，超限即 ERROR
+      - 收敛比 > 1 ⇒ 按比例放宽，且报告已显式标注（不静默）
+    配置缺失时**报 WARNING 而非静默通过** —— 见 5.3.0 测试计划 T-530-30。
+    """
+    issues = []
+    pc = ctx.config.get('port_conservation')
+    if not pc:
+        # 配置缺失：显式告警，绝不静默通过（同族「静默」教训，PRD §6-R8）
+        return [ValidationIssue(
+            rule_id="V021",
+            severity=Severity.WARNING,
+            category="拓扑规则",
+            message="逐层端口守恒校验未执行：上下文中缺少 port_conservation 数据",
+            affected_items=[],
+            recommendation="确认设计结果已产出 port_conservation 段（designer.biz_info / oob_info）",
+        )]
+
+    layers = pc.get('layers') or {}
+    for layer_name, layer in layers.items():
+        if not isinstance(layer, dict):
+            continue
+        # 键名以 engine._build_port_conservation 的产出为准（契约见 PRD §3.1）
+        need = int(layer.get('上联需求总数', 0) or 0)
+        have = int(layer.get('汇聚下行总口', 0) or 0)
+        ratio = float(layer.get('收敛比', 1.0) or 1.0)
+        if need <= 0:
+            continue
+        capacity = int(have * max(1.0, ratio))
+        if need > capacity:
+            issues.append(ValidationIssue(
+                rule_id="V021",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"{layer_name}网端口不守恒：接入上联需求 {need} 条，"
+                        f"汇聚下行总口仅 {have}（收敛比 {ratio:g}，可用 {capacity}），"
+                        f"缺口 {need - capacity} 条",
+                affected_items=[f"{layer_name}-access-agg"],
+                recommendation="增加汇聚交换机/框数，或调整收敛比（后者须在报告中显式标注）",
+            ))
+        dropped = int(layer.get('丢弃链路数', 0) or 0)
+        if dropped > 0:
+            issues.append(ValidationIssue(
+                rule_id="V021",
+                severity=Severity.ERROR,
+                category="拓扑规则",
+                message=f"{layer_name}网有 {dropped} 条接入上联连接被丢弃（从未创建）",
+                affected_items=[f"{layer_name}-access-agg"],
+                recommendation="这些链路在物理上不存在，拓扑不成立；须补齐汇聚端口",
+            ))
+    return issues
+
+
 def _rule_combined_eth(ctx: ValidationContext) -> List[ValidationIssue]:
     """V022: 三合一融合网校验 (V3.0.2-T2-5)
 
@@ -892,6 +955,8 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V019", "物理规则", _rule_total_power_supply)
     # V3.0.2-T2-1: ZCube 专属结构规则
     engine.register_rule("V020", "拓扑规则", _rule_zcube_structure)
+    # V5.3.0-530-g6（AL-G6）：复用 V021 缺号 —— 逐层端口守恒（裁定 D2）
+    engine.register_rule("V021", "拓扑规则", _rule_port_conservation)
     # V3.0.2-T2-5: 三合一融合网专属规则
     engine.register_rule("V022", "拓扑规则", _rule_combined_eth)
     return engine

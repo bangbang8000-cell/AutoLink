@@ -299,6 +299,8 @@ class FatTreeTopology:
                     connections.extend([conn_leaf_to_spine, conn_spine_to_leaf])
 
                 except ValueError as e:
+                    # V5.3.0-530-g1（AL-G1）：静默丢弃改结构化记录（行为等价）
+                    self._record_drop(spine.name, str(e))
                     print(f"警告: {str(e)}")
                     continue
 
@@ -322,6 +324,8 @@ class FatTreeTopology:
             for i in range(uplinks):
                 core_idx = (core_offset + i) % len(self.cores)
                 if core_port_used[core_idx] >= max_links_per_core[core_idx]:
+                    # V5.3.0-530-g1（AL-G1）：不抛异常的静默跳过，同样记录
+                    self._record_drop(self.cores[core_idx].name, 'Core端口已满', port=None)
                     continue
 
                 try:
@@ -361,6 +365,8 @@ class FatTreeTopology:
                     connections.extend([conn_spine_to_core, conn_core_to_spine])
 
                 except ValueError as e:
+                    # V5.3.0-530-g1（AL-G1）：静默丢弃改结构化记录（行为等价）
+                    self._record_drop(spine.name, str(e))
                     print(f"警告: {str(e)}")
                     continue
 
@@ -399,6 +405,34 @@ class AccessAggTopology:
         self.switch_groups = {}
         self.podid_map = {}
 
+        # V5.3.0-530-g1（AL-G1）：静默丢弃改结构化告警。
+        # 原实现把端口溢出吞成一行 stdout（print 警告 + continue），上层与
+        # validation 均不可见 ⇒ 连接被丢弃而 valid 仍为 True。此处仅记录，
+        # 不改变任何连接结果（S1 必须行为等价，见开发计划 T1.4）。
+        self.dropped_links = []  # [{network_type, device, port, reason, count}]
+
+    def _record_drop(self, device, reason, port=None, count=1):
+        """V5.3.0-530-g1（AL-G1）：记录被丢弃的连接，供上层读取并进入校验输出。
+
+        与既有 print 警告并存（行为等价）。同一 (device, port, reason) 合并计数。
+        """
+        for item in self.dropped_links:
+            if item['device'] == device and item['port'] == port and item['reason'] == reason:
+                item['count'] += count
+                return
+        self.dropped_links.append({
+            'network_type': self.network_type,
+            'device': device,
+            'port': port,
+            'reason': reason,
+            'count': count,
+        })
+
+    @property
+    def dropped_link_count(self):
+        """被丢弃的连接总条数"""
+        return sum(item['count'] for item in self.dropped_links)
+
     def calculate(self, num_servers, chassis_config=None):
         """计算需要的接入和汇聚交换机数量
         chassis_config: (enabled, frames) for chassis-style aggregation
@@ -434,7 +468,18 @@ class AccessAggTopology:
             'total_access_uplinks': total_access_uplinks,
             'total_agg_ports': total_agg_ports,
             'agg_type': agg_type,
-            'redundancy': self.redundancy
+            'redundancy': self.redundancy,
+            # V5.3.0-530-g1（AL-G1）：把「已算出却不比较」的两个量并排输出。
+            # 原实现返回 total_access_uplinks 与 total_agg_ports 却从不比较。
+            # 此处只增加输出，不改变 num_agg 的计算（后者属 S2）。
+            # ⚠️ 键名必须与 engine._build_port_conservation 的产出**逐字一致**，
+            #    否则校验读到空值会静默通过（开发计划 §6-R7）。
+            'port_conservation': {
+                '上联需求总数': total_access_uplinks,
+                '汇聚下行总口': total_agg_ports,
+                '是否守恒': total_access_uplinks <= total_agg_ports,
+                '余量': total_agg_ports - total_access_uplinks,
+            },
         }
 
     def create_and_connect(self, servers, num_access, num_agg):
@@ -525,6 +570,8 @@ class AccessAggTopology:
                 server.add_connection(conn_down)
                 sw.add_connection(conn_up)
             except ValueError as e:
+                # V5.3.0-530-g1（AL-G1）：静默丢弃改结构化记录（行为等价）
+                self._record_drop(sw.name, str(e))
                 print(f"警告: {str(e)}")
                 continue
 
@@ -578,6 +625,8 @@ class AccessAggTopology:
                     server.add_connection(conn_down)
                     sw.add_connection(conn_up)
                 except ValueError as e:
+                    # V5.3.0-530-g1（AL-G1）：静默丢弃改结构化记录（行为等价）
+                    self._record_drop(sw.name, str(e))
                     print(f"警告: {str(e)}")
                     continue
 
@@ -596,6 +645,13 @@ class AccessAggTopology:
             for i in range(uplinks_needed):
                 agg_idx = (agg_offset + i) % len(self.agg_switches)
                 if agg_used[agg_idx] >= agg_capacity[agg_idx]:
+                    # V5.3.0-530-g1（AL-G1）：这是业务网/带外网欠连的【直接原因】。
+                    # 原实现直接 continue，连异常都不抛 ⇒ 连接从未被创建，
+                    # 而自检只看「服务器覆盖」与「端口溢出」，两者都过得去。
+                    # 此处仅记录（行为等价）；S2 负责让框数满足需求、不再走到这里。
+                    self._record_drop(
+                        self.agg_switches[agg_idx].name,
+                        '汇聚端口已满', port=None)
                     continue
 
                 try:

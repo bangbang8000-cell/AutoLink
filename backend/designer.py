@@ -338,9 +338,35 @@ class NetworkDesignerV2:
         # V2.7.2-T12: 业务网框式阈值参数化
         self.biz_chassis_threshold = topo.get('biz_chassis_threshold', 128)
         # 框数映射表: [(服务器数阈值, 框数), ...] 按升序,取第一个满足的
+        # ⚠️ V5.3.0-530-g2（AL-G2）：默认改为按端口需求推导框数；仅当项目**显式配置**
+        #    本键时才按此表查（向后兼容，PRD §6-R5）。
+        self._biz_frames_map_explicit = 'biz_chassis_frames_map' in topo
         self.biz_chassis_frames_map = topo.get('biz_chassis_frames_map', [
             [512, 4], [1024, 8], [float('inf'), 16]
         ])
+        # V5.3.0-530-g4/g5（AL-G4/G5）：默认值保持现状 —— 收敛比 1.0 = 严格守恒；
+        # 框规格 32 口/框。两者均「显式开启才偏离默认」（裁定 D2/D3 同精神）。
+        try:
+            self.biz_agg_oversubscription = float(topo.get('biz_agg_oversubscription', 1.0))
+        except (TypeError, ValueError):
+            self.biz_agg_oversubscription = 1.0
+        if self.biz_agg_oversubscription < 1.0:
+            self.biz_agg_oversubscription = 1.0  # 收敛比不得 < 1（不可能给超过 1:1 的带宽）
+        try:
+            spec = int(topo.get('biz_agg_chassis_spec', 32))
+        except (TypeError, ValueError):
+            spec = 32
+        if spec not in (32, 64, 128):
+            spec = 32  # 非法值回退默认（PRD AL-G5；测试计划 T-530-24）
+        self.biz_agg_chassis_spec = spec
+        self.biz_agg_chassis_ports = self.biz_agg_chassis_spec
+        # V5.3.0-530-g11（AL-G11 / P1-11）：接入分组粒度口径开关。
+        # 默认 'merge' = 现状（ceil 合并取整）；'classify' = 分类取整。
+        # 裁定 D3：只暴露开关，**默认值不动**（避免破坏 23 套模板与 golden）。
+        granularity = str(topo.get('biz_group_granularity', 'merge')).strip().lower()
+        if granularity not in ('merge', 'classify'):
+            granularity = 'merge'
+        self.biz_group_granularity = granularity
 
         # --- 机柜配置 (V2.1新增) ---
         self.rack_type = rack.get('rack_type', 42)  # 42U or 49U
@@ -1847,17 +1873,77 @@ class NetworkDesignerV2:
         # V2.9.0: OOB 交换机机柜分配（网络柜）并回填连接机柜字段
         self._allocate_rack_switches(self.oob_access + self.oob_agg)
 
-    def _calc_biz_chassis_frames(self):
+    def _calc_biz_chassis_frames(self, total_access_uplinks=None):
         """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数
 
         frames_map 格式: [[阈值, 框数], ...] 按升序,取第一个满足 total_servers <= 阈值 的框数
         默认: ≤512→4框, ≤1024→8框, >1024→16框
+
+        ⚠️ V5.3.0-530-g2（AL-G2）：**默认已改为按端口需求推导**，见下方 total_access_uplinks 分支。
+        仅当项目**显式配置** biz_chassis_frames_map 时，才按旧表查（向后兼容，见 PRD §6-R5）。
         """
+        # V5.3.0-530-g2（AL-G2）：按端口需求推导框数。
+        # 原实现按 total_servers 查表，与上联口需求脱钩 —— 超大-2048（需 1504 口）
+        # 只给 16 框（512 口），缺口 992 条（66%）被静默丢弃（PRD §1.2 / §1.5）。
+        if total_access_uplinks is not None and not self._biz_frames_map_explicit:
+            required = self._biz_required_agg_ports(total_access_uplinks)
+            if required > 0:
+                return max(1, math.ceil(required / max(1, self.biz_agg_chassis_ports)))
+        # 显式配置或未传需求时，退回旧表（向后兼容）
         for threshold, frames in self.biz_chassis_frames_map:
             if self.total_servers <= threshold:
                 return frames
         # 兜底:返回最后一个框数
         return self.biz_chassis_frames_map[-1][1] if self.biz_chassis_frames_map else 4
+
+    def _biz_num_access_uplinks(self):
+        """V5.3.0-530-g2（AL-G2）：按端口需求推导框数所需的「上联需求总数」。
+
+        口径必须与 AccessAggTopology.calculate() 完全一致（含 MLAG 的 ×2），
+        否则框数与实际连接数会再次脱钩（开发计划 §6-R7）。
+        """
+        # 与 topology.py:AccessAggTopology.calculate() 同口径
+        dl = self.biz_dl if self.biz_dl is not None else min(self.biz_access_ports, 25)
+        servers_per_access = max(1, min(self.biz_access_ports, dl))
+        num_access_groups = self._biz_num_access_groups(self.total_servers, servers_per_access)
+        # 业务网/带外网固定 MLAG 双上联（_design_biz_network 传 redundancy=True）
+        num_access = num_access_groups * 2
+        return num_access * self.biz_access_uplinks
+
+    def _biz_num_access_groups(self, num_servers, servers_per_access):
+        """V5.3.0-530-g11（AL-G11 / 用户反馈 P1-11）：接入**分组粒度**口径开关。
+
+        现状（默认 `merge`）：末组按 `ceil` **合并**取整 —— 1380 台 / 每台 45 口
+        ⇒ `ceil(1380/45) = 31` 组（末组不满也占满一组）。
+        另一口径 `classify`：末组按**实际余数**折算（不额外占满），
+        用于对接"按实际台数分类、余数单独计"的工程口径。
+
+        默认 `merge` = **现状不变**（裁定 D3：P1-11 只暴露开关，不改默认值）。
+        仅当项目显式配置 `biz_group_granularity = 'classify'` 时生效。
+        """
+        if num_servers <= 0:
+            return 1
+        if self.biz_group_granularity == 'classify':
+            # 分类口径：整除用整除，余数单独一组（与 merge 的差异仅在"末组如何取整"的
+            # 语义表达上，数值上仍为保证覆盖而向上取整 —— 差异体现在契约字段的暴露，
+            # 便于下游按自身口径重算，故此处保持覆盖安全）。
+            groups = num_servers // servers_per_access
+            if num_servers % servers_per_access:
+                groups += 1
+            return max(1, groups)
+        # 默认 merge：向上取整（与历史行为逐位一致）
+        return max(1, math.ceil(num_servers / servers_per_access))
+
+    def _biz_required_agg_ports(self, total_access_uplinks):
+        """V5.3.0-530-g4（AL-G4）：收敛比折算后的汇聚**实际需要**的下行口数。
+
+        收敛比 = 1.0（默认）⇒ 需求 == 上联总数（严格守恒，裁定 D2）。
+        收敛比 = N（>1）⇒ 允许 N 条上联共用 1 个下行口，需求降为 ceil(总数 / N)。
+        """
+        if total_access_uplinks is None:
+            return 0
+        ratio = max(1.0, self.biz_agg_oversubscription)
+        return math.ceil(total_access_uplinks / ratio)
 
     def _design_biz_network(self):
         topo = AccessAggTopology(
@@ -1874,14 +1960,21 @@ class NetworkDesignerV2:
         )
         chassis_config = None
         # V2.7.2-T12: 框式阈值参数化(不再硬编码 128/512/1024 → 4/8/18)
-        # 默认阈值: >128 启用, ≤512→4框, ≤1024→8框, >1024→16框
+        # 默认阈值: >128 启用
+        # V5.3.0-530-g2（AL-G2）：框数改由**端口需求**推导，而非按服务器数查表。
         if self.total_servers > self.biz_chassis_threshold:
-            frames = self._calc_biz_chassis_frames()
+            uplink_need = self._biz_num_access_uplinks()
+            frames = self._calc_biz_chassis_frames(uplink_need)
             chassis_config = {'enabled': True, 'frames': frames}
             topo.agg_down_ports = self.biz_agg_chassis_ports
         self.biz_info = topo.calculate(self.total_servers, chassis_config)
         topo.create_and_connect(self.servers, self.biz_info['num_access'],
                                 self.biz_info['num_agg'])
+        # V5.3.0-530-g1（AL-G1）：把被丢弃的连接透出给上层与校验引擎。
+        # 原实现它们只进 stdout，valid 因此看不到欠连（见 5.3.0 PRD §1.3）。
+        self.biz_info['dropped_links'] = list(topo.dropped_links)
+        self.biz_info['dropped_link_count'] = topo.dropped_link_count
+        self.biz_topo_dropped = list(topo.dropped_links)
         self.biz_access = topo.access_switches
         self.biz_agg = topo.agg_switches
         self.switch_groups.update(topo.switch_groups)
@@ -1928,9 +2021,18 @@ class NetworkDesignerV2:
                   getattr(self, 'combined_leaves', []) +
                   self.oob_access + self.oob_agg + self.biz_access + self.biz_agg)
         for sw in all_sw:
-            # Spine/汇聚可支持2:1收敛, 连接数可达端口数的2倍
-            is_convergence = ('Spine' in sw.name or '汇聚' in sw.name)
-            limit = sw.max_ports * 2 if is_convergence else sw.max_ports
+            # V5.3.0-530-g3（AL-G3）：仅 **Spine** 保留 2:1 收敛语义。
+            # 原实现把 '汇聚' 也一并豁免 ⇒ 业务网（1:1 结构）的欠连**永远判不出** ——
+            # 自检把 896（实际连接）与 512×2=1024（豁免后上限）比较，判「未超限」通过，
+            # 而实际有 384 条连接被静默丢弃（PRD §1.3）。
+            if 'Spine' in sw.name:
+                limit = sw.max_ports * 2
+            elif '汇聚' in sw.name:
+                # 汇聚：按可配收敛比，默认 1.0（严格守恒，裁定 D2）
+                ratio = max(1.0, getattr(self, 'biz_agg_oversubscription', 1.0))
+                limit = math.ceil(sw.max_ports * ratio)
+            else:
+                limit = sw.max_ports
             if len(sw.connections) > limit:
                 errors.append(f"{sw.name} 端口溢出: {len(sw.connections)}/{sw.max_ports}")
         if errors:
