@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## [5.3.2] - 2026-09-19
+
+> **补丁版** —— 修 5.3.1 遗留的 INI 路径初始化缺口（5.3.0 同类缺陷的**第 2 次复发**）。
+> 对外契约**无变化**：不改段、不改字段、不改任何默认口径，`schema_version` 仍为 **2**。
+> golden 基线**零变化**（23/23 一致）—— 本版只修 V2.0 旧格式的崩溃，**不改变任何设计结果**。
+
+### 缺陷修复
+
+- **INI 路径 `AttributeError: '_biz_frames_map_explicit'`**（P0；CI 的 `validate_templates.py` 全场红）
+  - **现象**：以 V2.0 旧格式 `network_config.ini` 且 `biz_enabled = True` 的项目，设计阶段直接抛
+    `AttributeError`，业务网完全无法生成。
+  - **根因**：`_biz_frames_map_explicit` 只在 JSON 路径 `_init_from_project_config` 里赋值；
+    INI 路径 `_load_common_ini_config` / `_load_common_config` **从未赋值**，而
+    `_calc_biz_chassis_frames` 会**无条件读取**它。这与 5.3.0 的
+    `biz_group_granularity` / `biz_agg_chassis_spec` / `biz_agg_oversubscription`
+    是**同一形状**的缺陷 —— 5.3.1 修了那三项，漏掉了第 4 项。
+  - **修法**：把第 4 项**一并收进唯一初始化入口** `_init_biz_caliber_switches`（新增 `has`
+    谓词参数）：JSON 侧传 `lambda k: k in topo`；INI 侧不传 ⇒ 恒 `False`（旧格式不支持覆盖
+    该表，仍走端口需求推导）。四项口径开关自此**只有一个赋值点**。
+  - **影响面**：仅 V2.0 旧格式 INI 项目；JSON（V2.1）项目**不受影响**。
+
+### 测试
+
+- 新增 `TestCaliberSwitchCoverage531D`（见 `tests/backend/test_caliber_531.py`，4 条）：以**枚举**
+  `_CALIBER_SWITCHES` 钉死「JSON / INI 双路径均覆盖全部四项口径开关」，INI 端到端须真能建出
+  业务接入层与汇聚层，并锁定 `_biz_frames_map_explicit` 的双路径语义 ⇒ 新增口径开关若不接线即红。
+- 回归对比（`tests/backend` 全量，跳过 `test_sample_assets.py`）：
+  基线 HEAD `1737 tests / 1 failure / 1793 errors`，本版 `1741 / 1 / 1793` —— 差值恰为 **+4**
+  （新增用例数），失败数与错误数**完全一致**（其余为本机既有的 GBK 捕获污染，与代码无关）。
+- `validate_templates.py` **23/23 通过**；`gen_golden.py --check` **23/23 一致**。
+
+### 流程改进
+
+- 本机惯用的「门禁四连」**不包含** `validate_templates.py`，而它恰是 INI 路径的**唯一端到端门禁**
+  ⇒ 出现「本地全绿、CI 全红」。已把该脚本纳入改后端时的自查清单。
+
 ## [5.3.1] - 2026-09-19
 
 > **数值口径校准** —— 把 5.3.0 只「暴露开关、默认值一律不动」（裁定 D3）的三项口径，

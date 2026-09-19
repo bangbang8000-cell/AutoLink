@@ -350,16 +350,18 @@ class NetworkDesignerV2:
         # 框数映射表: [(服务器数阈值, 框数), ...] 按升序,取第一个满足的
         # ⚠️ V5.3.0-530-g2（AL-G2）：默认改为按端口需求推导框数；仅当项目**显式配置**
         #    本键时才按此表查（向后兼容，PRD §6-R5）。
-        self._biz_frames_map_explicit = 'biz_chassis_frames_map' in topo
+        #    `_biz_frames_map_explicit` 的赋值已下沉进 `_init_biz_caliber_switches`
+        #    （见下方调用）—— 原先只在此处赋值，INI 路径漏掉 ⇒ CI 的 INI 模板全红。
         self.biz_chassis_frames_map = topo.get('biz_chassis_frames_map', [
             [512, 4], [1024, 8], [float('inf'), 16]
         ])
-        # V5.3.0-530-g4/g5/g11（AL-G4/G5/G11）：三项「数值口径」开关。
+        # V5.3.0-530-g4/g5/g11（AL-G4/G5/G11）：四项「数值口径」开关。
         # ⚠️ V5.3.1-531-a：抽成与 INI 路径**共用**的方法 —— 两条初始化路径各写一份必然
-        #    漂移。5.3.0 就只在 JSON 路径赋值，INI 路径下这三个属性**根本不存在**；
+        #    漂移。5.3.0 就只在 JSON 路径赋值，INI 路径下这些属性**根本不存在**；
         #    当时因开关「只赋值、无人读」而未暴露，5.3.1 把 category_counts 真正接进
         #    建链后立即炸出 AttributeError（自测逮到，见 tests/backend/test_caliber_531.py）。
-        self._init_biz_caliber_switches(topo.get)
+        #    `has` 谓词用于判定「框数映射表是否被显式配置」。
+        self._init_biz_caliber_switches(topo.get, lambda k: k in topo)
 
         # --- 机柜配置 (V2.1新增) ---
         self.rack_type = rack.get('rack_type', 42)  # 42U or 49U
@@ -1890,20 +1892,24 @@ class NetworkDesignerV2:
         # V2.9.0: OOB 交换机机柜分配（网络柜）并回填连接机柜字段
         self._allocate_rack_switches(self.oob_access + self.oob_agg)
 
-    def _init_biz_caliber_switches(self, get):
-        """V5.3.1-531-a（AL-G11 / P1-11）：三项「数值口径」开关的**唯一**初始化入口。
+    def _init_biz_caliber_switches(self, get, has=None):
+        """V5.3.1-531-a（AL-G11 / P1-11）：四项「数值口径」开关的**唯一**初始化入口。
 
-        JSON 路径（`_init_from_project_config`，传 `topo.get`）与 INI 路径
-        （`_load_common_ini_config` / `_load_common_config`，传 configparser 包装）
-        必须共用本方法；两处各写一份是本项目已复现过的漂移源。
+        JSON 路径（`_init_from_project_config`，传 `topo.get` 与 `lambda k: k in topo`）
+        与 INI 路径（`_load_common_ini_config` / `_load_common_config`，传 configparser
+        包装）必须共用本方法；两处各写一份是本项目已复现过多次的漂移源。
 
-        三项开关与默认值（裁定 D3：默认值一律保持现状）：
+        四项开关与默认值（裁定 D3：默认值一律保持现状）：
           - `biz_agg_oversubscription` 默认 **1.0** = 严格守恒；< 1 无意义 ⇒ 回退 1.0；
           - `biz_agg_chassis_spec`      默认 **32**；合法值仅 32/64/128，非法回退 32；
-          - `biz_group_granularity`     默认 **merge**；合法值 merge/classify，非法回退 merge。
+          - `biz_group_granularity`     默认 **merge**；合法值 merge/classify，非法回退 merge；
+          - `_biz_frames_map_explicit`  默认 **False** = 按端口需求推导框数；仅当项目
+            **显式配置** `biz_chassis_frames_map` 时才为 True（走旧阈值表，PRD §6-R5）。
 
-        ⚠️ 三项都必须「即使配置缺失也给出合法值」—— 属性缺失会让 `_design_biz_network`
-           在建链时抛 AttributeError（5.3.0 的 INI 路径即如此）。
+        ⚠️ 四项都必须「即使配置缺失也给出合法值」—— 属性缺失会让 `_design_biz_network`
+           在建链时抛 AttributeError。5.3.0 的 INI 路径漏了前三项；5.3.1 修了前三项却
+           漏了第 4 项，由 CI 的 `validate_templates.py`（跑 INI 模板）当场复现。
+           本方法现覆盖全部四项，**新增口径开关一律加在这里，不要散落到各初始化路径**。
         """
         # 收敛比（≥1.0）
         try:
@@ -1926,6 +1932,10 @@ class NetworkDesignerV2:
         # 接入分组粒度（merge = 历史 ceil 合并 / classify = 按类别分别取整）
         granularity = str(get('biz_group_granularity', 'merge') or 'merge').strip().lower()
         self.biz_group_granularity = granularity if granularity in ('merge', 'classify') else 'merge'
+
+        # 框数映射表是否被**显式配置**：只有能覆盖该表的数据源（JSON project_config）才可能
+        # 为 True；INI 旧格式无此键，恒 False ⇒ 走端口需求推导（PRD §6-R5）。
+        self._biz_frames_map_explicit = bool(has('biz_chassis_frames_map')) if has else False
 
     def _calc_biz_chassis_frames(self, total_access_uplinks=None):
         """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数

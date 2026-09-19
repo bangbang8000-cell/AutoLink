@@ -346,3 +346,85 @@ class TestBizSwitchCabinet531C:
                 assert slot.name not in server_names, (
                     f'服务器 {slot.name} 混入业务网络柜 {cab.name}')
                 assert slot.device_type == 'network'
+
+
+# ----------------------------------------------------------------------
+# 531-d 口径开关「双路径全覆盖」守卫（AL-G11）
+# ----------------------------------------------------------------------
+# 枚举，**不是**照抄常量 —— 新增口径开关必须同时加进这里，否则守卫失效。
+_CALIBER_SWITCHES = (
+    'biz_agg_oversubscription',   # 汇聚收敛比
+    'biz_agg_chassis_spec',       # 单框下行口规格
+    'biz_group_granularity',      # 分组粒度
+    '_biz_frames_map_explicit',   # 框数映射表是否被显式配置
+)
+
+
+def _ini_cfg(tmp_path, extra=''):
+    ini = Path(tmp_path) / 'network_config.ini'
+    ini.write_text(
+        '[DEFAULT]\n'
+        'num_servers = 50\n'
+        'param_switch_ports = 64\n'
+        'param_ports_per_server = 8\n'
+        'param_speed = 400G\n'
+        'storage_ports_per_server = 1\n'
+        'storage_switch_ports = 48\n'
+        'storage_speed = 200G\n'
+        'oob_enabled = False\n'
+        'biz_enabled = True\n' + extra,
+        encoding='utf-8')
+    return ini
+
+
+class TestCaliberSwitchCoverage531D:
+    """531-d：`_init_biz_caliber_switches` 必须是「数值口径」开关的**唯一**初始化入口。
+
+    血训两连：
+      - 5.3.0 只在 JSON 路径赋值 ⇒ INI 路径下这些属性**根本不存在**；当时因开关
+        「只赋值、无人读」而未暴露，直到 5.3.1 把 category_counts 接进建链才炸出
+        AttributeError。
+      - 5.3.1 修了前三项，却**漏掉第 4 项** `_biz_frames_map_explicit` ⇒ CI 的
+        `validate_templates.py`（会跑 INI 模板）当场全红，而本地「门禁四连 + 后端
+        单测」全绿也没逮到 —— 因为两者都没跑 INI 模板这条路径。
+
+    ⇒ 本类用**枚举**把「漏项」钉死：新增口径开关若不接线，这里立刻红。
+    """
+
+    def test_ini_path_exposes_all_caliber_switches(self, tmp_path):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            d = NetworkDesignerV2(str(_ini_cfg(tmp_path)))
+        missing = [n for n in _CALIBER_SWITCHES if not hasattr(d, n)]
+        assert not missing, f'INI 路径缺少口径开关: {missing}'
+
+    def test_json_path_exposes_all_caliber_switches(self, tmp_path):
+        d = _design(_base_cfg(), tmp_path)
+        missing = [n for n in _CALIBER_SWITCHES if not hasattr(d, n)]
+        assert not missing, f'JSON 路径缺少口径开关: {missing}'
+
+    def test_ini_design_completes_and_builds_biz_layer(self, tmp_path):
+        """端到端：INI 路径必须真能跑完业务网设计，而非只差在属性读取那一刻。"""
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            d = NetworkDesignerV2(str(_ini_cfg(tmp_path)))
+        assert list(d.biz_access), 'INI 路径未建出业务接入层'
+        assert list(d.biz_agg), 'INI 路径未建出业务汇聚层'
+
+    def test_frames_map_explicit_flag_semantics(self, tmp_path):
+        """`_biz_frames_map_explicit`：JSON 显式配了才 True；INI 无此键恒 False。"""
+        d_plain = _design(_base_cfg(), tmp_path)
+        assert d_plain._biz_frames_map_explicit is False, (
+            '未配置框数映射表时不应标记为「显式」')
+
+        cfg = _base_cfg()
+        cfg['topology']['biz_chassis_frames_map'] = [[512, 4], [1024, 8], [999999, 16]]
+        d_exp = _design(cfg, tmp_path, name='explicit_project_config.json')
+        assert d_exp._biz_frames_map_explicit is True, (
+            '项目显式配置框数映射表时必须标记为「显式」')
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            d_ini = NetworkDesignerV2(str(_ini_cfg(tmp_path)))
+        assert d_ini._biz_frames_map_explicit is False, (
+            'INI 旧格式不支持覆盖框数映射表，应恒为 False（走端口需求推导）')
