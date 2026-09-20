@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-08-14",
+  "updated_at": "2026-09-20",
   "categories": [
     {
       "id": "gpu_servers",
@@ -86,7 +86,8 @@
       "description": "RoCEv2/IB 高速参数面交换机（含Leaf/Spine/Core，支持Rail-Optimized）",
       "directory": "switches/param",
       "device_ids": [
-        "nvidia_mqm8700_40_200g_ib",
+                "inspur_x400_128_400g",
+"nvidia_mqm8700_40_200g_ib",
         "nvidia_mqm8790_40_200g_ib",
         "nvidia_q3200_72_800g_ib",
         "nvidia_q3400_144_800g_ib",
@@ -117,7 +118,8 @@
       "description": "存储网络接入/汇聚交换机",
       "directory": "switches/storage",
       "device_ids": [
-        "huawei_ce6881_48s6cq",
+                "nvidia_mqm9700_64_400g_ib_storage",
+"huawei_ce6881_48s6cq",
         "huawei_ce6885h",
         "nvidia_sn4600c",
         "generic_48p_200g",

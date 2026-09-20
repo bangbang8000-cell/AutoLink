@@ -1,0 +1,46 @@
+{
+  "id": "inspur_x400_128_400g",
+  "vendor": "浪潮",
+  "model": "X400 (Spectrum-4)",
+  "category": "switches_param",
+  "description": "浪潮 X400 128端口400G QSFP112 以太网交换机（NVIDIA Spectrum-4 芯片 / 自研 UXOS，SONiC 兼容），适用于RoCEv2 超大规模AI训练集群（V5.4.0-640-h/W2.1：参数网每口 1 个 400G 不分光；存储网每口 1 个 200G 不分光（PRD §3.5-B））",
+  "power_watts": 800,
+  "weight_kg": 12,
+  "u_height": 1,
+  "depth_mm": 600,
+  "cooling": "air",
+  "name_prefix": "RoCE-Leaf-X400",
+  "os": "UXOS",
+  "os_family": "sonic",
+  "port_count": 128,
+  "port_speed": "400G",
+  "port_type": "QSFP112",
+  "downlink_prefix": "RoCE",
+  "uplink_prefix": "RoCE",
+  "protocol": "RoCE",
+  "tags": [
+    "交换机",
+    "浪潮",
+    "X400",
+    "Spectrum-4",
+    "400G",
+    "RoCE",
+    "UXOS",
+    "SONiC",
+    "参数网络",
+    "存储网络"
+  ],
+  "applicable_networks": [
+    "param",
+    "storage"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "",
+  "added_at": "2026-09-20",
+  "updated_at": "2026-09-20",
+  "recommended_network": [
+    "rail_optimized",
+    "dual_plane"
+  ]
+}

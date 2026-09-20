@@ -1,0 +1,51 @@
+{
+  "id": "nvidia_mqm9700_64_400g_ib_storage",
+  "vendor": "NVIDIA",
+  "model": "MQM9700-NS2F (Quantum-2)",
+  "category": "switches_storage",
+  "description": "NVIDIA Quantum-2 MQM9700-NS2F 64端口NDR 400Gb/s InfiniBand存储交换机（V5.4.0-640-j/W2.2：与 switches/param/nvidia_mqm9700_64_400g_ib **同型复用**，存储角色变体；存储网 400G 1分2 → 2×200G（PRD §3.5-B））",
+  "power_watts": 750,
+  "weight_kg": 14,
+  "u_height": 1,
+  "depth_mm": 650,
+  "cooling": "air",
+  "name_prefix": "IB-StLeaf-MQM9700",
+  "port_count": 64,
+  "port_speed": "400G",
+  "port_type": "OSFP",
+  "downlink_prefix": "IB",
+  "uplink_prefix": "IB",
+  "protocol": "IB",
+  "breakout": {
+    "physical_speed": "400G",
+    "logical_speed": "200G",
+    "count": 2,
+    "cable": "MPO-1x2",
+    "applicable_networks": [
+      "storage"
+    ]
+  },
+  "tags": [
+    "交换机",
+    "NVIDIA",
+    "Quantum-2",
+    "400G",
+    "IB",
+    "NDR",
+    "InfiniBand",
+    "存储网络",
+    "有网管口"
+  ],
+  "applicable_networks": [
+    "storage"
+  ],
+  "source": "builtin",
+  "verified": true,
+  "datasheet_url": "https://www.nvidia.com/en-us/networking/infiniband/qm9700/",
+  "added_at": "2026-09-20",
+  "updated_at": "2026-09-20",
+  "recommended_network": [
+    "rail_optimized",
+    "dual_plane"
+  ]
+}
