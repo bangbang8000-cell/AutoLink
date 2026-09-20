@@ -10,8 +10,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
-[![Templates](https://img.shields.io/badge/templates-23-teal)](#)
-[![Devices](https://img.shields.io/badge/devices-127-purple)](#)
+[![Templates](https://img.shields.io/badge/templates-29-teal)](#)
+[![Devices](https://img.shields.io/badge/devices-129-purple)](#)
 [![AI Tools](https://img.shields.io/badge/Agent--Tools-72-brightgreen)](#)
 [![CI](https://img.shields.io/badge/tests-3044%20passed-brightgreen)](#)
 
@@ -30,10 +30,10 @@
 | 维度 | 能力 |
 |------|------|
 | **全栈规划** | Scale-Up（卡间互联）+ Scale-Out（网间互联）双栈一体化，支持 IB / RoCE / UEC 三种 Scale-Out 协议 |
-| **真材实料** | **127 款**设备库 = **92 款硬件**（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ **35 款光模块** |
+| **真材实料** | **129 款**设备库 = **94 款硬件**（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ **35 款光模块** |
 | **硬核校验** | **22 条**校验规则（V001–V022；5.3.0 补齐 V021 端口守恒）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
 | **交付级报告** | 连接表 / 布线表 / BOM / 设备清单 / 机柜表 / 9 章 PDF 报告，收敛比全部按计算值输出 |
-| **开箱即用** | **23 套**场景模板（含 7 套 H100/昇腾示例）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
+| **开箱即用** | **29 套**场景模板（含 7 套 H100/昇腾示例与 6 套万卡/二层最大场景）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
 
 ---
 
@@ -137,7 +137,7 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 - **macOS**：`AutoLink-5.2.5-mac-x64.dmg` / `AutoLink-5.2.5-mac-arm64.dmg`
 - **Linux**：`AutoLink-5.2.5-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建示例项目，内置 **23 套场景模板**（含 7 套 H100/昇腾示例）与 **127 款设备库**（92 硬件 + 35 光模块）。
+安装后首次启动自动创建示例项目，内置 **29 套场景模板**（含 7 套 H100/昇腾示例与 6 套万卡/二层最大场景）与 **129 款设备库**（94 硬件 + 35 光模块）。
 
 ### 方式二：从源码运行
 
@@ -171,14 +171,14 @@ npm run test:backend  # 后端测试（pytest 86 文件 / 1613 用例）
 npm run test:all      # 全量测试（含 e2e）
 npm run typecheck     # TypeScript 类型检查（含 preload）
 npm run lint          # ESLint 代码检查（0 error 0 warning）
-python scripts/validate_templates.py  # 23 套模板验证
+python scripts/validate_templates.py  # 29 套模板验证
 python scripts/gen_golden.py --check  # golden 基线比对
 python scripts/check_doc_numbers.py   # 文档数字真值校验
 ```
 
 ---
 
-## 🗂️ 内置模板（23 套）
+## 🗂️ 内置模板（29 套）
 
 | 模板 | 场景 | 规模 | Scale-Up |
 |------|------|------|----------|
@@ -242,7 +242,7 @@ AutoLink/
 │   └── autolink_hub/       #   AIHUB（Provider / 工具注册 / 技能 / 对话 Agent）
 ├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
-├── template/               # 设备库（127 款 = 92 硬件 + 35 光模块）+ 23 套场景模板
+├── template/               # 设备库（129 款 = 94 硬件 + 35 光模块）+ 29 套场景模板
 ├── scripts/                # pyinstaller.spec / validate_templates / gen_golden
 ├── docs/                   # 产品文档 / 用户指南 / PRD
 └── tests/backend/          # Python 后端测试
@@ -263,7 +263,7 @@ AutoLink/
 | [更新日志](CHANGELOG.md) | 全员 | 逐版本变更明细 |
 | [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki) | 全员 | 产品介绍与快速上手 |
 
-> 文档中的数字（设备库 127 / 模板 23 / 校验规则 21）由 `scripts/check_doc_numbers.py` 以**代码为唯一真值源**反向校验，CI 门禁拦截漂移。
+> 文档中的数字（设备库 129 / 模板 29 / 校验规则 21）由 `scripts/check_doc_numbers.py` 以**代码为唯一真值源**反向校验，CI 门禁拦截漂移。
 
 ---
 
@@ -285,7 +285,7 @@ AutoLink/
 A: Scale-Out 支持 IB、RoCE、UEC 三种；Scale-Up 支持 NVLink、UALink、UB 三种。可组合出 NVL72、CloudMatrix 384、UALink 1024 GPU Pod 等主流智算中心形态。
 
 **Q: 支持多大的集群规模？**
-A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 23 套模板（含 7 套 H100/昇腾示例，覆盖 64-512 台规模谱系）可直接使用，也可从空项目自定义。
+A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 29 套模板（含 7 套 H100/昇腾示例与 6 套万卡/二层最大场景，覆盖 64-1250 台规模谱系）可直接使用，也可从空项目自定义。
 
 **Q: 生成的报告包含哪些内容？**
 A: 连接表、布线指导表、BOM 成本、设备清单、机柜表（Excel），以及 9 章节 PDF 报告（概览/架构/功耗/光模块/成本/校验/设备清单/收敛比/机柜），全部基于真实计算值。
