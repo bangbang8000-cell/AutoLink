@@ -103,3 +103,62 @@ describe('exportTopologyView（2026-08-24：真实渲染截图导出）', () => 
     expect(rfEdges.length).toBe(edges.length)
   })
 })
+
+/* ---------- V5.4.0-640-m（W3.2 / T-6S-D01/D03）：拓扑边分光标注 + 共享物理口归组 ---------- */
+
+describe('buildTopologyView 分光标注（FR-A9，单级为主）', () => {
+  it('单级 1分2 边：标签含「1分2 (400G→200G)」，data 带 breakout 与归组键', () => {
+    const { nodes } = buildMiniTopology()
+    const edges: TopologyEdge[] = [
+      // 同一物理口 400G → 2×200G：两条共享分光标注（共享物理口视觉归组：breakoutGroup 相同）
+      { source: '存储Leaf_1', target: '存储Spine_1', speed: '400G', cableType: '光缆', description: '存储网络', networkType: 'storage',
+        breakout: { input_speed: '400G', output_speed: '200G', count: 2 } },
+      { source: '存储Leaf_2', target: '存储Spine_1', speed: '400G', cableType: '光缆', description: '存储网络', networkType: 'storage',
+        breakout: { input_speed: '400G', output_speed: '200G', count: 2 } },
+    ]
+    const { rfEdges } = buildTopologyView(nodes, edges, null)
+    expect(rfEdges).toHaveLength(2)
+    const groups = new Set<string>()
+    for (const e of rfEdges) {
+      const label = (e.data as { label?: string }).label ?? ''
+      expect(label).toContain('1分2 (400G→200G)')
+      expect((e.data as { breakout?: unknown }).breakout).toEqual({ input_speed: '400G', output_speed: '200G', count: 2 })
+      groups.add((e.data as { breakoutGroup?: string }).breakoutGroup ?? '')
+    }
+    // 共享物理口分光 → 归组键一致（可识别"成组 ≥2 条"，T-6S-D01）
+    expect(groups.size).toBe(1)
+    expect([...groups][0]).toContain('400G->200G:2')
+  })
+
+  it('无分光边（breakout null/缺省）恒为 1:1，不加任何分光标注', () => {
+    const { nodes } = buildMiniTopology()
+    const edges: TopologyEdge[] = [
+      { source: '参数Leaf_1', target: '参数Spine_1', speed: '400G', cableType: '光缆', description: '参数网络', networkType: 'param' },
+      { source: '存储Leaf_1', target: '存储Spine_1', speed: '400G', cableType: '光缆', description: '存储网络', networkType: 'storage',
+        breakout: null },
+    ]
+    const { rfEdges } = buildTopologyView(nodes, edges, null)
+    for (const e of rfEdges) {
+      const label = (e.data as { label?: string }).label ?? ''
+      expect(label).not.toContain('分')
+      expect((e.data as { breakoutGroup?: string }).breakoutGroup ?? '').toBe('')
+      expect((e.data as { breakout?: unknown }).breakout).toBeNull()
+    }
+  })
+
+  it('两级预留（stages[]）：标签「⇉ 两级」，归组键含 stages（W3.4 载体约定）', () => {
+    const { nodes } = buildMiniTopology()
+    const edges: TopologyEdge[] = [
+      { source: '参数Leaf_1', target: '参数Spine_1', speed: '1.6T', cableType: '光缆', description: '参数网络', networkType: 'param',
+        breakout: { input_speed: '1.6T', output_speed: '800G', count: 2,
+          stages: [
+            { input_speed: '1.6T', output_speed: '800G', count: 2 },
+            { input_speed: '800G', output_speed: '400G', count: 2 },
+          ] } },
+    ]
+    const { rfEdges } = buildTopologyView(nodes, edges, null)
+    const label = (rfEdges[0].data as { label?: string }).label ?? ''
+    expect(label).toContain('⇉ 两级')
+    expect((rfEdges[0].data as { breakoutGroup?: string }).breakoutGroup).toContain(':stages')
+  })
+})

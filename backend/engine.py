@@ -447,6 +447,9 @@ def _run_validation(designer):
                 "zCabinetName": conn.z_cabinet_name,
                 "zStartU": conn.z_start_u,
                 "zEndU": conn.z_end_u,
+                # V5.4.0-640-m（W3.1 / FR-A9）: 透出分光标注（单级
+                # {input_speed,output_speed,count}；两级含 stages[]；None=1:1）
+                "breakout": conn.breakout,
             })
 
     # V2.7.2: 接入 validation.py 规则校验引擎(结构化校验)
@@ -966,6 +969,9 @@ def handle_design(params):
                 "zCabinetName": conn.z_cabinet_name,
                 "zStartU": conn.z_start_u,
                 "zEndU": conn.z_end_u,
+                # V5.4.0-640-m（W3.1 / FR-A9）: 透出分光标注（单级
+                # {input_speed,output_speed,count}；两级含 stages[]；None=1:1）
+                "breakout": conn.breakout,
             })
 
     # V2.7.2: 接入 validation.py 规则校验引擎(10 条规则结构化校验)

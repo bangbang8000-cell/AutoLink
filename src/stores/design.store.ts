@@ -90,6 +90,14 @@ export interface TopologyEdge {
   description: string
   /** V2.4.2: 网络类型 (param/storage/oob/biz) */
   networkType?: string
+  /** V5.4.0-640-m（W3.1 / FR-A9）: 分光标注（单级 {input_speed,output_speed,count}；
+   *  两级含 stages[]；null/缺省 = 1:1）。与连接表 exporter「1分2扇出」列同源。 */
+  breakout?: {
+    input_speed?: string
+    output_speed?: string
+    count?: number
+    stages?: Array<{ input_speed?: string; output_speed?: string; count?: number }>
+  } | null
 }
 
 /** v2.8.1-T1: 用户调整的拓扑布局(落盘到 topology.json 的 layout 字段) */

@@ -132,7 +132,21 @@ export function buildTopologyView(
       if (sp.y <= tp.y) { sourceHandle = 'down'; targetHandle = 'up' }
       else { sourceHandle = 'up'; targetHandle = 'down' }
     }
-    const label = `${e.speed}${e.networkType ? ` ${e.networkType}` : ''}`.trim()
+    // V5.4.0-640-m（W3.2 / FR-A9）: 单级分光标注（与连接表「1分2扇出」列同口径）
+    // 两级（stages[]）标注「⇉ 两级」；无分光（null/缺省）恒为 1:1 不加注。
+    const bk = e.breakout
+    let bkLabel = ''
+    let bkGroup = ''
+    if (bk && (bk.stages?.length || bk.count)) {
+      if (bk.stages?.length) {
+        bkLabel = '⇉ 两级'
+        bkGroup = `bk:${bk.input_speed ?? ''}->${bk.output_speed ?? ''}:stages`
+      } else {
+        bkLabel = `⇉ 1分${bk.count ?? 2} (${bk.input_speed ?? ''}→${bk.output_speed ?? ''})`
+        bkGroup = `bk:${bk.input_speed ?? ''}->${bk.output_speed ?? ''}:${bk.count ?? 2}`
+      }
+    }
+    const label = `${e.speed}${e.networkType ? ` ${e.networkType}` : ''}${bkLabel ? ` ${bkLabel}` : ''}`.trim()
     return {
       id: `e-${idx}-${e.source}-${e.target}`,
       source: e.source,
@@ -151,6 +165,8 @@ export function buildTopologyView(
         cableType: e.cableType,
         description: e.description,
         networkType: e.networkType || '',
+        breakout: bk ?? null,
+        breakoutGroup: bkGroup,
       },
     }
   })

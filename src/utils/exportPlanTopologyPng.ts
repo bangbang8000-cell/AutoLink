@@ -48,6 +48,8 @@ export async function exportPlanTopologyPng(plan: PlanSummary): Promise<string> 
       speed: c.rate ?? '',
       cableType: '',
       description: c.desc ?? '',
+      // V5.4.0-640-m（W3.3 / FR-A9）: plan 连接分光透出（plan.connections 无 breakout 时恒 1:1）
+      breakout: c.breakout ?? null,
     })
   }
 
