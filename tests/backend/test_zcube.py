@@ -199,12 +199,12 @@ def _dual_plane_3tier_config(name="dp3", servers=1024, speed="800G", nics=8):
 
 
 def test_dual_plane_3tier_structure(tmp_path):
-    cfg = _dual_plane_3tier_config(servers=1024)
+    cfg = _dual_plane_3tier_config(servers=6000)
     d = NetworkDesignerV2(str(_write(tmp_path, cfg)))
     assert d.dual_plane_enabled is True
     stats = d.dual_plane_stats
     assert len(stats) == 2
-    assert all(s['tier'] == 3 for s in stats)    # 1024 超单 Pod 容量 → 3-tier
+    assert all(s['tier'] == 3 for s in stats)    # V5.4.0（W1.1）单 Pod 容量 1296 → 6000 台触发 3-tier
     assert all(s['pods'] > 1 for s in stats)
     assert all(s['core_count'] > 0 for s in stats)
     # 3-tier 命名：参数A_Leaf_P{pod}_{n}

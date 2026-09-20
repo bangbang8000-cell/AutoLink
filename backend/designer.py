@@ -1837,6 +1837,11 @@ class NetworkDesignerV2:
 
         建链（_wire_storage）与 V016（validation.py:396-411）消费同一口径。
         """
+        # V5.4.0-640-m2（CI 2026-09-20 红灯）: 显式关闭存储（storage_ports_per_server=0，
+        # 旧格式 storage_disabled 样例）⇒ 需求 0，不按类别默认值（GPU1/存储4/通算1）推算。
+        spps = getattr(self, 'storage_ports_per_server', None)
+        if spps is not None and str(spps).strip() != '' and int(spps) == 0:
+            return 0
         return (int(getattr(self, 'num_servers', 0) or 0) * self.storage_ports_gpu
                 + int(getattr(self, 'additional_storage', 0) or 0) * self.storage_ports_storage
                 + int(getattr(self, 'additional_compute', 0) or 0) * self.storage_ports_compute)

@@ -135,7 +135,9 @@ class TestSuggestionRules:
         param_sug = next(s for s in conv if '参数网' in s['title'])
         assert param_sug['patch'] == {'topology': {'param_switch_ports': 128}}
         storage_sug = next(s for s in conv if '存储网' in s['title'])
-        assert storage_sug['patch'] == {'topology': {'storage_switch_ports': 128}}
+        # V5.4.0（W1.7 存储 Leaf 数按需求对齐后）：存储网 min_dl 变小 → 走路径 A
+        # （降低下联端口 30→20 至 2:1），patch 写回 storage_downlink_limit
+        assert storage_sug['patch'] == {'topology': {'storage_downlink_limit': 20}}
 
         # 固化钳制事实本身未变：实测下联仍被压到 switch_ports // 2
         d = NetworkDesignerV2(str(path))
