@@ -79,6 +79,10 @@ class TestExistingTemplatesZeroUnintendedChange540A:
     EXPECTED_FLIPPED = {
         'DP3Tier-1024', 'H100-256台-RoCE', 'SuperPOD-256',
         '国产-昇腾-256', '液冷-H100-256',
+        # V5.4.0-640-m（W6.2）：6 场景新模板 3 套恰落/低于新上限 ⇒ 预期翻二层
+        #（PRD §3.1 场景④⑤⑥「二层最大」：2048 卡 k=64 == 256、8192 卡 k=128 == 1024、
+        #  B300 万卡 k=144，1250 台 ≤ 1296）
+        '二层最大-2048卡-QM9700-IB', '二层最大-8192卡-X400-RoCE', '万卡-B300-Q3400-二层-IB',
     }
     _TPL = Path(__file__).resolve().parents[2] / 'template'
 
