@@ -2201,7 +2201,12 @@ class NetworkDesignerV2:
         # V5.4.0-640-m（W1.6-W1.8 遗留补全 / FR-A8）：存储需求按类别口径同源
         # （原实现 total_servers × storage_ports_per_server 为旧单值口径，与
         # _storage_port_demand / V016 不一致 ⇒ 样例级存储自检漏判）
-        storage_nic_total = self._storage_port_demand()
+        if getattr(self, 'eth_combined', False):
+            # V3.0.2-T2-5: 三合一融合网每服务器按 storage_ports_per_server（模板显式冗余，如 2 口）
+            storage_nic_total = (self.total_servers
+                                 * int(getattr(self, 'storage_ports_per_server', 2) or 2))
+        else:
+            storage_nic_total = self._storage_port_demand()
         pc, sc = 0, 0
         sp, ss = set(), set()
         for server in self.servers:
