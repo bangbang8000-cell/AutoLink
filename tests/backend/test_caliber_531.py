@@ -428,3 +428,38 @@ class TestCaliberSwitchCoverage531D:
             d_ini = NetworkDesignerV2(str(_ini_cfg(tmp_path)))
         assert d_ini._biz_frames_map_explicit is False, (
             'INI 旧格式不支持覆盖框数映射表，应恒为 False（走端口需求推导）')
+
+
+class TestDualPathSymmetry533:
+    """533-T7.0（AL-G14）：双路径对称 AST 探针 —— 真实 designer.py 必须持续通过。
+
+    运行时 hasattr 守卫（531-d）只能逮「属性缺失」那一刻；本类把 AST 静态探针接入
+    pytest 全量门禁，在合入前揪出三类漂移源：调用点缺失（A）/ 不对称散落（B）/
+    无默认值（C）。探针本体见 `scripts/check_dual_path_symmetry.py`。
+    """
+
+    _ROOT = Path(__file__).resolve().parents[2]
+    _SCRIPTS = _ROOT / 'scripts'
+
+    def _analyze_real_designer(self):
+        sys.path.insert(0, str(self._SCRIPTS))
+        from check_dual_path_symmetry import analyze
+        src = (self._ROOT / 'backend' / 'designer.py').read_text(encoding='utf-8')
+        return analyze(src)
+
+    def test_real_designer_passes_probe(self):
+        """真实 designer.py 必须通过双路径对称探针（防未来引入漂移）。"""
+        res = self._analyze_real_designer()
+        assert res['ok'], res['errors']
+
+    def test_json_and_ini_paths_both_call_entry(self):
+        """A：JSON 与 INI 两条路径都必须调用唯一初始化入口。"""
+        r = self._analyze_real_designer()['report']
+        assert r['json_hit'] is True, 'JSON 路径未调用唯一初始化入口'
+        assert r['ini_hit'] is True, 'INI 路径未调用唯一初始化入口'
+
+    def test_caliber_switches_have_defaults(self):
+        """C：entry 内每个口径开关键都必须带默认值（配置缺失即 AttributeError 血训源）。"""
+        res = self._analyze_real_designer()
+        assert not res['report']['no_default_keys'], \
+            f'口径开关键缺少默认值: {res["report"]["no_default_keys"]}'

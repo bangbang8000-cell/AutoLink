@@ -1,5 +1,31 @@
 # CHANGELOG
 
+
+## [5.3.3] - 2026-09-20
+
+> **门禁加固版（评估整改，AL-G14 / 5.3.0 附录 C T7.0–T7.2）** —— 新增双路径对称 AST 探针
+> 与门禁五连；**对外契约无变化、golden 基线零变化**（纯门禁/工具，不改任何设计结果）。
+
+### 新增（AL-G14 双路径初始化对称性门禁）
+
+- **`scripts/check_dual_path_symmetry.py`**（T7.0）：AST 静态分析 `_init_biz_caliber_switches` ——
+  ① **调用点覆盖**（JSON `_init_from_project_config` 与 INI `_load_common_ini_config` / `_load_common_config` 都必须调用唯一入口）；
+  ② **不对称散落赋值**（口径开关属性在 entry 外被赋值且仅覆盖单一路径 ⇒ 阻断；两路径都有的向后兼容覆盖如 `biz_agg_chassis_ports` 记入对称信息）；
+  ③ **无默认值**（entry 内 `get(KEY)` 不带默认值 ⇒ 阻断，防配置缺失 AttributeError）。
+  退出码 0/1/2；`--allow` 支持人工判定后的安全候选豁免。
+- **`tests/scripts/test_dual_path_symmetry.py`**（11 条）：正常双路径 / 单路径缺失 / 散落赋值 / 无默认值 / 豁免 / has 键 / 边界。
+- **`TestDualPathSymmetry533`**（`tests/backend/test_caliber_531.py`，3 条）：真实 `designer.py` 必须持续通过探针 —— 防未来引入漂移源。
+
+### 流程（门禁五连）
+
+- 本地必跑门禁由「四连」升级为「**五连**」：版本单源 / 文档数字 / CHANGELOG 宣称↔代码 / golden / **`validate_templates.py`**（INI 端到端）；
+  AST 双路径探针与 `_CALIBER_SWITCHES` 枚举守卫双保险。
+
+### 测试
+
+- `tests/scripts` 11 条全绿；`TestCaliberSwitchCoverage531D` 既有 4 条保持绿。
+- 行为变更：**无** —— 本版不触碰任何设计逻辑。
+
 ## [5.3.2] - 2026-09-19
 
 > **补丁版** —— 修 5.3.1 遗留的 INI 路径初始化缺口（5.3.0 同类缺陷的**第 2 次复发**）。
