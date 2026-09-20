@@ -150,9 +150,10 @@ biz_enabled = False
 
             assert len(designer.servers) == 2048
             assert designer.param_3tier_needed is True
-            # 64口交换机、8网卡/服务器 → 2层最大 64^2/(4*8)=128 台 → 16 个 Pod
-            assert designer.param_pods == 16
-            assert designer.param_servers_per_pod == 128
+            # 64口交换机、8网卡/服务器 → 2层最大 64^2/(2*8)=256 台 → 8 个 Pod
+            # （V5.4.0-640-a 厂商口径：旧公式 128 台/16 Pod 已废弃）
+            assert designer.param_pods == 8
+            assert designer.param_servers_per_pod == 256
             assert len(designer.param_leaves) > 0
             assert len(designer.param_spines) > 0
             # 3层拓扑应有 Core 层

@@ -21,13 +21,13 @@ class TestCalcFunctions:
         """极大端口数交换机"""
         result = calc_max_2tier(256, 8)
         assert result > 0
-        # 256^2 / (4*8) = 65536/32 = 2048
-        assert result == 2048
+        # 256^2 / (2*8) = 65536/16 = 4096（V5.4.0-640-a 厂商口径）
+        assert result == 4096
 
     def test_single_port_server(self):
         """单端口服务器"""
         result = calc_max_2tier(48, 1)
-        assert result == 576  # 48^2 / 4 = 576
+        assert result == 1152  # 48^2 / 2 = 1152（V5.4.0-640-a 厂商口径）
 
     def test_calc_leafs_per_pod_edge(self):
         """calc_leafs_per_pod 边界"""
