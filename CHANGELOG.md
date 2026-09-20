@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## [5.4.0] - 2026-09-20
+
+> **6 场景内容建设版（B-1/B-2/B-4 同日发布，详见 docs/AL-MC_6场景内容建设_ReleaseNotes_草稿_v0.9）**
+> —— 二层容量判据修正 + 存储口径同源 + breakout 链式/角色化 + 万卡互联段扩段 + 6 场景模板/golden 34；
+> 行为变更分节 §A（设计结果）§C（内容资产）§D（工具与门禁），详见 Release Notes。
+
+### 行为变更（§A 设计结果）
+
+- **A1 二层容量判据**：calc_max_2tier k²/(4p)→k²/(2p)（PRD §3.1 裁定 1）；5 套既有模板 + 4 套新场景翻转判二层。
+- **A2 存储口数三处同源**：_storage_port_demand/_wire_storage/自检统一类别口径（GPU 1 / 存储 4 / 通算 1 ×200G）；eth_combined 融合网按 total_servers×2。
+- **A3 breakout 链式/角色化**：reakout_total_count=Π(count)；applicable_networks 限定（QM9700 参数网禁用存储分光）。
+- **A4 存储层级容量式判据**：_storage_capacity=(k×breakout_count)²/2；需求>容量⇒三层。
+- **A5 万卡互联段扩段**：1024+ 档 oob=10.1.64.0/19、interconnect=10.1.96.0/19（/19 边界对齐）。
+- **A6 场景②速率对齐**：Q3400 param_speed 400G→800G、ports 288→144；EXPECTED_FLIPPED 第 9 套。
+
+### 内容资产（§C 6 场景）
+
+- 新增 template/ 6 套：万卡-H200-QM9700-三层-IB / 万卡-H200-Q3400-二层-IB / 万卡-H200-X400-三层-RoCE / 二层最大-2048卡-QM9700-IB / 二层最大-8192卡-X400-RoCE / 万卡-B300-Q3400-二层-IB（各 5 文件）。
+- 设备库新增 2 款：inspur_x400_128_400g、nvidia_mqm9700_64_400g_ib_storage；Q3400 修正（800G XDR）；golden 28→34 基线。
+- 存储/通算台数：1250→59/59/59、1024→48/48/48、256→12/12/12（O-2 裁定 A）。
+
+### 工具与门禁（§D）
+
+- gen_samples.py 13 套×10 类、alidate_samples.py 13/13、alidate_templates.py 29/29、gen_golden.py --check 29/29。
+- 
+econcile_device_library.py AL 129 ↔ MC 21 对账通过。
+
+### 测试
+
+- 守恒 32、S6 专项 79、二层翻转 9 套全绿；拓扑图分光前端/后端专项绿。
+
 ## [5.3.3] - 2026-09-20
 
 > **门禁加固版（评估整改，AL-G14 / 5.3.0 附录 C T7.0–T7.2）** —— 新增双路径对称 AST 探针
