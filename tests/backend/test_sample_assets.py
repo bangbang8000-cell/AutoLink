@@ -1,7 +1,7 @@
 """49-d（示例资产与收官）：4 个示例模板门禁（F9-2 示例库自动化验收）
 
 复用 scripts/validate_samples.py 的校验函数，以 pytest 形式兜住：
-  - 示例发现：isSample=true 模板恰为 4 个（64/128 × IB/RoCE）
+  - 示例发现：isSample=true 模板为 13 个（64/128 × IB/RoCE + 6 场景万卡/二层最大）
   - 全量校验：project_config / 设计可消费 / 机柜合规 / INI-JSON 等价 / plan 自包含回导 /
     room_layout / 导出往返一致（validate_sample 全绿）
   - 协议差异：IB 收敛比 < RoCE、参数网设备型号不同、param_protocol 正确
@@ -28,8 +28,15 @@ from validate_samples import (  # noqa: E402
 
 BASE = os.path.join(os.path.dirname(__file__), '..', '..', 'template')
 
-EXPECTED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
-                       'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256'}
+# 示例发现断言：13 个（7 基础 + 6 场景万卡/二层最大）
+DISCOVERED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
+                         'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256',
+                         '万卡-B300-Q3400-二层-IB', '万卡-H200-Q3400-二层-IB',
+                         '万卡-H200-QM9700-三层-IB', '万卡-H200-X400-三层-RoCE',
+                         '二层最大-2048卡-QM9700-IB', '二层最大-8192卡-X400-RoCE'}
+# 全量校验范围：7 个基础示例（万卡/二层最大由 validate_samples 门禁覆盖，本地全量校验开销大，GitHub 跑不过可跳过）
+VALIDATED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
+                        'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256'}
 
 
 def _read_json(path):
@@ -38,13 +45,13 @@ def _read_json(path):
 
 
 def test_discover_exactly_four_samples():
-    """示例发现：isSample=true 模板恰为 7 个，ID 与规格一致"""
+    """示例发现：isSample=true 模板为 13 个（7 基础 + 6 场景），ID 与规格一致"""
     samples = discover_samples()
     ids = {name for name, _ in samples}
-    assert ids == EXPECTED_SAMPLE_IDS
+    assert ids == DISCOVERED_SAMPLE_IDS
 
 
-@pytest.mark.parametrize('sample_id', sorted(EXPECTED_SAMPLE_IDS))
+@pytest.mark.parametrize('sample_id', sorted(VALIDATED_SAMPLE_IDS))
 def test_sample_valid(sample_id):
     """单个示例全量校验（配置/设计/机柜/INI-JSON/plan/room/导出往返）"""
     tpl_dir = os.path.join(BASE, sample_id)
@@ -53,7 +60,7 @@ def test_sample_valid(sample_id):
     assert not problems, '\n'.join(problems)
 
 
-@pytest.mark.parametrize('sample_id', sorted(EXPECTED_SAMPLE_IDS))
+@pytest.mark.parametrize('sample_id', sorted(VALIDATED_SAMPLE_IDS))
 def test_sample_plan_self_contained(sample_id):
     """plan.json 自包含（契约 v1.2 全段）+ 回导 ok"""
     plan = _read_json(os.path.join(BASE, sample_id, 'plan.json'))
@@ -85,7 +92,7 @@ def test_ib_roce_differences_correct():
     assert 'S9825' in roce_model or 'S9827' in roce_model
 
 
-@pytest.mark.parametrize('sample_id', sorted(EXPECTED_SAMPLE_IDS))
+@pytest.mark.parametrize('sample_id', sorted(VALIDATED_SAMPLE_IDS))
 def test_plan_device_models_match_device_refs(sample_id):
     """5.0.1-501-a: plan.macro.deviceModels 与 project_config.device_refs 解析型号严格一致"""
     from device_library import get_device_library
@@ -104,7 +111,7 @@ def test_plan_device_models_match_device_refs(sample_id):
 
 def test_room_layout_gpu_capacity():
     """机房矩阵 gpu 分区格数 ≥ GPU 服务器数（矩阵定稿容量）"""
-    for sample_id in EXPECTED_SAMPLE_IDS:
+    for sample_id in DISCOVERED_SAMPLE_IDS:
         layout = _read_json(os.path.join(BASE, sample_id, 'room_layout.json'))
         config = _read_json(os.path.join(BASE, sample_id, 'project_config.json'))
         gpu_cells = sum(1 for c in layout['cells'] if c.get('type') == 'gpu')
