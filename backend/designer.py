@@ -814,13 +814,17 @@ class NetworkDesignerV2:
                 self.storage_servers_per_pod = min(
                     math.ceil(storage_capacity / max(_avg_ports, 1)), self.total_servers)
                 # 每 Pod 内 Leaf 数 = (servers_per_pod / max_servers_per_leaf) * ports_per_server
+                # V5.4.0-640-m（W1.7 遗留补全 / FR-A8）：每 Leaf 下联容量 = storage_dl 口，
+                # Leaf 数按**类别需求**计算（原实现 ×storage_ports_per_server=1 ⇒ 容量不足丢连接）。
                 max_servers_per_storage_leaf = self.storage_switch_ports // 2
+                avg_ports_per_server = _avg_ports
                 storage_servers_per_group = max(1, min(
-                    self.storage_servers_per_pod // self.storage_ports_per_server,
+                    math.ceil(self.storage_servers_per_pod / max(avg_ports_per_server, 1)),
                     max_servers_per_storage_leaf
                 ))
                 storage_groups_per_pod = max(1, self.storage_servers_per_pod // storage_servers_per_group)
-                self.storage_leaf_per_group = self.storage_ports_per_server
+                self.storage_leaf_per_group = max(
+                    1, math.ceil(storage_servers_per_group * avg_ports_per_server / max(self.storage_dl, 1)))
                 self.storage_groups = self.storage_pods * storage_groups_per_pod
                 self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
                 self.storage_spine_count = max(1, self.storage_leaf_count // 2)
@@ -836,7 +840,9 @@ class NetworkDesignerV2:
                     self.storage_servers_per_group = 1
                 self.storage_groups = math.ceil(self.total_servers / self.storage_servers_per_group)
                 self.storage_leaf_per_group = self.storage_ports_per_server
-                self.storage_leaf_count = self.storage_groups * self.storage_leaf_per_group
+                # V5.4.0-640-m（W1.7 遗留补全 / FR-A8）：Leaf 数按类别需求/每 Leaf 下联容量
+                self.storage_leaf_count = max(
+                    1, math.ceil(storage_demand / max(self.storage_dl, 1)))
                 self.storage_spine_count = max(1, self.storage_leaf_count // 2)
                 self.storage_core_count = 0
 
@@ -1660,24 +1666,27 @@ class NetworkDesignerV2:
         inf.generate_connections(inference_servers)
 
     def _create_storage_switches(self, profile=None):
-        for group in range(1, self.storage_groups + 1):
-            for leaf_idx in range(1, self.storage_leaf_per_group + 1):
-                sw = NetworkObject(name=f"存储Leaf_{group}_{leaf_idx}",
-                                   obj_type='storage_leaf', group=f"存储Leaf组{group}",
-                                   max_ports=self.storage_switch_ports,
-                                   podid=f"pod-storage-{group}",
-                                   device_profile=profile)
-                sw.downlink_limit = self.storage_dl
-                sw.uplink_counter = self.storage_dl + 1
-                if profile:
-                    sw.downlink_prefix = profile.downlink_prefix or ""
-                    sw.uplink_prefix = profile.uplink_prefix or ""
-                else:
-                    sw.downlink_prefix = self._storage_switch_downlink_prefix or ""
-                    sw.uplink_prefix = self._storage_switch_uplink_prefix or ""
-                self.storage_leaves.append(sw)
-                self.switch_groups[sw.name] = sw.group
-                self.podid_map[sw.name] = sw.podid
+        # V5.4.0-640-m（W1.7 遗留补全 / FR-A8）：Leaf 实建数按 storage_leaf_count
+        # （类别需求/下联容量），原 groups×leaf_per_group(旧=1) 少于需求 ⇒ 静默丢连接。
+        for leaf_idx in range(1, self.storage_leaf_count + 1):
+            group = (leaf_idx - 1) // max(self.storage_leaf_per_group, 1) + 1
+            group_leaf = (leaf_idx - 1) % max(self.storage_leaf_per_group, 1) + 1
+            sw = NetworkObject(name=f"存储Leaf_{group}_{group_leaf}",
+                               obj_type='storage_leaf', group=f"存储Leaf组{group}",
+                               max_ports=self.storage_switch_ports,
+                               podid=f"pod-storage-{group}",
+                               device_profile=profile)
+            sw.downlink_limit = self.storage_dl
+            sw.uplink_counter = self.storage_dl + 1
+            if profile:
+                sw.downlink_prefix = profile.downlink_prefix or ""
+                sw.uplink_prefix = profile.uplink_prefix or ""
+            else:
+                sw.downlink_prefix = self._storage_switch_downlink_prefix or ""
+                sw.uplink_prefix = self._storage_switch_uplink_prefix or ""
+            self.storage_leaves.append(sw)
+            self.switch_groups[sw.name] = sw.group
+            self.podid_map[sw.name] = sw.podid
         for i in range(1, self.storage_spine_count + 1):
             sw = NetworkObject(name=f"存储Spine_{i}", obj_type='storage_spine',
                                group="存储Spine组", max_ports=self.storage_switch_ports,
@@ -1847,12 +1856,17 @@ class NetworkDesignerV2:
         # Server → Leaf: 轮转分配, 每服务器按类别口数条连接（FR-A8 / W1.7:
         # GPU 1×200G / 存储 4×200G / 通算 1×200G）
         # (v2.9.1-T7 修复: 此前固定 1 条, storage_ports_per_server=2 时只连一半)
-        servers_per_leaf = math.ceil(self.total_servers / self.storage_leaf_count)
-        ports_per_leaf_block = max(1, servers_per_leaf * self.storage_ports_per_server)
+        # V5.4.0-640-m（W1.7 遗留补全 / FR-A8）：分块按**类别累计口数**而非台数×旧单值口数。
+        # 原实现 servers_per_leaf × storage_ports_per_server(旧=1) 低估块容量，
+        # 存储服务器 4 口/台 ⇒ 块溢出静默丢连接（样例级存储自检 80/104 等）。
+        # 每 Leaf 下联物理口 = storage_dl；Leaf 数已按需求/容量对齐（:838-845），
+        # 块容量直接用物理口数，避免平均加权块超 Leaf 实口（256台样例 17>16 丢 72 条）。
+        ports_per_leaf_block = max(1, self.storage_dl)
+        cum_ports = 0
         for si, server in enumerate(self.servers):
             s_ports = self._storage_ports_for_server(server)
             for pi in range(1, s_ports + 1):
-                li = (si * s_ports + (pi - 1)) // ports_per_leaf_block
+                li = (cum_ports + (pi - 1)) // ports_per_leaf_block
                 if li >= len(self.storage_leaves):
                     li = len(self.storage_leaves) - 1
                 leaf = self.storage_leaves[li]
@@ -1869,6 +1883,7 @@ class NetworkDesignerV2:
                                    network_type='storage', breakout=leaf.breakout_link_info)
                 except ValueError:
                     continue
+            cum_ports += s_ports
 
         # Leaf → Spine
         uplink_avail = self.storage_switch_ports - self.storage_dl
@@ -2183,7 +2198,10 @@ class NetworkDesignerV2:
             param_nic_total = self.num_servers * int(self.zcube_config.get('nics_per_gpu', 2))
         else:
             param_nic_total = self.num_servers * self.param_ports_per_server
-        storage_nic_total = self.total_servers * self.storage_ports_per_server
+        # V5.4.0-640-m（W1.6-W1.8 遗留补全 / FR-A8）：存储需求按类别口径同源
+        # （原实现 total_servers × storage_ports_per_server 为旧单值口径，与
+        # _storage_port_demand / V016 不一致 ⇒ 样例级存储自检漏判）
+        storage_nic_total = self._storage_port_demand()
         pc, sc = 0, 0
         sp, ss = set(), set()
         for server in self.servers:

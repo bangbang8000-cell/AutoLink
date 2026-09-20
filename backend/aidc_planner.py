@@ -89,6 +89,9 @@ _SCALE = {
     256: {'SPINE': 4, 'LEAF': 16},
     512: {'SPINE': 8, 'LEAF': 16},
     1024: {'SPINE': 8, 'LEAF': 32},
+    # V5.4.0-640-m（W6.1 / PRD §3.4 场景①②③⑥）：万卡 10000 卡 / 1250 台档位
+    #（按 1024 档比例外推，SPINE 10 / LEAF 40）
+    1250: {'SPINE': 10, 'LEAF': 40},
 }
 
 
@@ -164,6 +167,16 @@ def plan_aidc(macro: dict) -> dict:
     topo = _SCALE[gpu]
     pfc, cnp = int(m['pfc_queue']), int(m['cnp_queue'])
 
+    # V5.4.0-640-m（W6.4）：互联 /31 点对点链路数随规模增长（万卡 Q3400 二层
+    # Leaf×Spine ≈ 2450 条 > 默认 /21 的 1024 条）⇒ macro 未显式给段时按规模扩段
+    if 'ip_segments' not in macro:
+        seg = dict(DEFAULTS['ip_segments'])
+        if gpu >= 1024:
+            # /19 边界对齐（10.1.64.0/19 与 10.1.96.0/19），不与既有段重叠
+            seg['oob'] = '10.1.64.0/19'
+            seg['interconnect'] = '10.1.96.0/19'
+        # 512 档保持默认 /21（既有 H100-512台-RoCE 模板零变化）
+        m['ip_segments'] = seg
     # 地址段来源：macro.ip_segments（契约 v1.1，F10 裂解）
     seg = m.get('ip_segments', DEFAULTS['ip_segments'])
     lo = AddressPool(seg['loopback'])

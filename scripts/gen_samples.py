@@ -184,6 +184,148 @@ SAMPLES = [
         'zones': {'gpu': ('A1', 'P16'), 'network': ('A17', 'D20'),
                   'storage': ('E17', 'J20'), 'compute': ('K17', 'N20')},
     },
+
+    # V5.4.0-640-m（W6.1 / FR-A6）：6 场景内容建设（PRD §3.1/§3.4，O-2 裁定 A）
+    # 台数口径：万卡 10000 卡 / 8 卡台 = 1250 台；存储/通算三类各自 3n/64（1250→59、1024→48、256→12）
+    {
+        'id': '万卡-H200-QM9700-三层-IB',
+        'name': '万卡-H200-QM9700-三层-IB（示例）',
+        'gpu_count': 1250,
+        'gpu_server': 'nvidia_hgx_h200',
+        'protocol': 'IB',
+        'num_all_flash_storage': 59,
+        'num_hybrid_flash_storage': 59,
+        'num_compute_servers': 59,
+        'storage_switch_ports': 64,
+        'param_leaf': 'nvidia_mqm9700_64_400g_ib',
+        'param_spine': 'nvidia_mqm9700_64_400g_ib',
+        'param_switch_ports': 64,
+        'param_speed': '400G',
+        'description': '万卡集群 A：1250 台 H200 / 10000 卡，NVIDIA QM9700（64×400G）k=64，IB 三层无阻塞示例项目（PRD 场景①）',
+        'scenario': '万卡-H200-QM9700-三层-IB',
+        'tags': ['H200', '万卡', 'QM9700', 'IB', '三层', '示例项目'],
+        'project_id': '6s-wq-qm9700-3l-ib-0001',
+        'rows': list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + ['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW'],
+        'cols': list(range(1, 49)),
+        'zones': {'gpu': ('A1', 'AA48'), 'network': ('AB1', 'AB6'),
+                  'storage': ('AB7', 'AK14'), 'compute': ('AL15', 'AN20')},
+    },
+    {
+        'id': '万卡-H200-Q3400-二层-IB',
+        'name': '万卡-H200-Q3400-二层-IB（示例）',
+        'gpu_count': 1250,
+        'gpu_server': 'nvidia_hgx_h200',
+        'protocol': 'IB',
+        'num_all_flash_storage': 59,
+        'num_hybrid_flash_storage': 59,
+        'num_compute_servers': 59,
+        'storage_switch_ports': 64,
+        'param_leaf': 'nvidia_q3400_144_800g_ib',
+        'param_spine': 'nvidia_q3400_144_800g_ib',
+        'param_switch_ports': 288,
+        'param_speed': '400G',
+        'description': '万卡集群 B：1250 台 H200 / 10000 卡，NVIDIA Q3400-RA（72×1.6T → 288×400G）k=288，IB 二层示例项目（PRD 场景②）',
+        'scenario': '万卡-H200-Q3400-二层-IB',
+        'tags': ['H200', '万卡', 'Q3400', 'IB', '二层', '示例项目'],
+        'project_id': '6s-wq-q3400-2l-ib-0001',
+        'rows': list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + ['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW'],
+        'cols': list(range(1, 49)),
+        'zones': {'gpu': ('A1', 'AA48'), 'network': ('AB1', 'AB6'),
+                  'storage': ('AB7', 'AK14'), 'compute': ('AL15', 'AN20')},
+    },
+    {
+        'id': '万卡-H200-X400-三层-RoCE',
+        'name': '万卡-H200-X400-三层-RoCE（示例）',
+        'gpu_count': 1250,
+        'gpu_server': 'nvidia_hgx_h200',
+        'protocol': 'RoCE',
+        'num_all_flash_storage': 59,
+        'num_hybrid_flash_storage': 59,
+        'num_compute_servers': 59,
+        'storage_switch_ports': 128,
+        'param_leaf': 'inspur_x400_128_400g',
+        'param_spine': 'inspur_x400_128_400g',
+        'param_switch_ports': 128,
+        'param_speed': '400G',
+        'description': '万卡集群 C：1250 台 H200 / 10000 卡，浪潮 X400（128×400G）k=128，RoCE 三层示例项目（PRD 场景③）',
+        'scenario': '万卡-H200-X400-三层-RoCE',
+        'tags': ['H200', '万卡', 'X400', 'RoCE', '三层', '示例项目'],
+        'project_id': '6s-wq-x400-3l-roce-0001',
+        'rows': list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + ['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW'],
+        'cols': list(range(1, 49)),
+        'zones': {'gpu': ('A1', 'AA48'), 'network': ('AB1', 'AB6'),
+                  'storage': ('AB7', 'AK14'), 'compute': ('AL15', 'AN20')},
+    },
+    {
+        'id': '二层最大-2048卡-QM9700-IB',
+        'name': '二层最大-2048卡-QM9700-IB（示例）',
+        'gpu_count': 256,
+        'gpu_server': 'nvidia_hgx_h200',
+        'protocol': 'IB',
+        'num_all_flash_storage': 12,
+        'num_hybrid_flash_storage': 12,
+        'num_compute_servers': 12,
+        'storage_switch_ports': 64,
+        'param_leaf': 'nvidia_mqm9700_64_400g_ib',
+        'param_spine': 'nvidia_mqm9700_64_400g_ib',
+        'param_switch_ports': 64,
+        'param_speed': '400G',
+        'description': '二层最大 A：256 台 H200 / 2048 卡，NVIDIA QM9700 k=64，IB 二层（恰为上限）示例项目（PRD 场景④）',
+        'scenario': '二层最大-2048卡-QM9700-IB',
+        'tags': ['H200', '2048卡', 'QM9700', 'IB', '二层最大', '示例项目'],
+        'project_id': '6s-2048-qm9700-2l-ib-0001',
+        'rows': list('ABCDEFGHIJKLMNOP'),
+        'cols': list(range(1, 25)),
+        'zones': {'gpu': ('A1', 'P16'), 'network': ('A17', 'D18'),
+                  'storage': ('E17', 'J18'), 'compute': ('K17', 'N18')},
+    },
+    {
+        'id': '二层最大-8192卡-X400-RoCE',
+        'name': '二层最大-8192卡-X400-RoCE（示例）',
+        'gpu_count': 1024,
+        'gpu_server': 'nvidia_hgx_h200',
+        'protocol': 'RoCE',
+        'num_all_flash_storage': 48,
+        'num_hybrid_flash_storage': 48,
+        'num_compute_servers': 48,
+        'storage_switch_ports': 128,
+        'param_leaf': 'inspur_x400_128_400g',
+        'param_spine': 'inspur_x400_128_400g',
+        'param_switch_ports': 128,
+        'param_speed': '400G',
+        'description': '二层最大 B：1024 台 H200 / 8192 卡，浪潮 X400 k=128，RoCE 二层（恰为上限）示例项目（PRD 场景⑤）',
+        'scenario': '二层最大-8192卡-X400-RoCE',
+        'tags': ['H200', '8192卡', 'X400', 'RoCE', '二层最大', '示例项目'],
+        'project_id': '6s-8192-x400-2l-roce-0001',
+        'rows': list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + ['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN'],
+        'cols': list(range(1, 41)),
+        'zones': {'gpu': ('A1', 'AC40'), 'network': ('AD1', 'AD4'),
+                  'storage': ('AD5', 'AG8'), 'compute': ('AH9', 'AI10')},
+    },
+    {
+        'id': '万卡-B300-Q3400-二层-IB',
+        'name': '万卡-B300-Q3400-二层-IB（示例）',
+        'gpu_count': 1250,
+        'gpu_server': 'nvidia_dgx_b300',
+        'protocol': 'IB',
+        'num_all_flash_storage': 59,
+        'num_hybrid_flash_storage': 59,
+        'num_compute_servers': 59,
+        'storage_switch_ports': 64,
+        'param_leaf': 'nvidia_q3400_144_800g_ib',
+        'param_spine': 'nvidia_q3400_144_800g_ib',
+        'param_switch_ports': 144,
+        'param_speed': '800G',
+        'rack_config_override': {'power_limit_per_rack': 30000},
+        'description': '万卡集群 D：1250 台 DGX B300 / 10000 卡，NVIDIA Q3400（72×1.6T → 144×800G）k=144，IB 二层示例项目（PRD 场景⑥）',
+        'scenario': '万卡-B300-Q3400-二层-IB',
+        'tags': ['B300', '万卡', 'Q3400', 'IB', '二层', '示例项目'],
+        'project_id': '6s-wq-b300-q3400-2l-ib-0001',
+        'rows': list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + ['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW'],
+        'cols': list(range(1, 49)),
+        'zones': {'gpu': ('A1', 'AA48'), 'network': ('AB1', 'AB6'),
+                  'storage': ('AB7', 'AK14'), 'compute': ('AL15', 'AN20')},
+    },
 ]
 
 COMMON_TOPOLOGY = {
@@ -207,17 +349,33 @@ RACK_CONFIG = {
     'gpu_dedicated': True,
 }
 
+def _rack_config_for(sample):
+    """V5.4.0-640-m（W6.1）：机柜配置 = RACK_CONFIG 打底 + 样例级 override 覆盖
+    （场景⑥ DGX B300 液冷柜：单台 14.4kW > 12kW 风冷柜限制 ⇒ 液冷柜上限 30000W，PRD §3.4）"""
+    cfg = dict(RACK_CONFIG)
+    cfg.update(sample.get('rack_config_override') or {})
+    return cfg
+
 
 def _pos(pos):
-    row = pos[0]
-    col = int(pos[1:])
-    return row, col
+    """解析坐标 'A1'/'AA48'：行=前导字母（支持多字母，万卡 AA~AW 行），列=尾部数字"""
+    i = 0
+    while i < len(pos) and not pos[i].isdigit():
+        i += 1
+    return pos[:i], int(pos[i:])
 
 
 def build_project_config(sample):
-    """project_config.json（与既有模板 schema 一致）"""
+    """project_config.json（与既有模板 schema 一致）
+
+    V5.4.0-640-m（W6.1 / FR-A6）：参数网交换机**按样例显式指定**
+    （param_leaf / param_spine），PARAM_SWITCH_BY_PROTOCOL 保留为缺省回退
+    （①②④ 同为 IB 却用 QM9700 / Q3400 不同交换机，RoCE 亦有 X400 与 H3C 之分）。
+    """
     protocol = sample['protocol']
-    sw = PARAM_SWITCH_BY_PROTOCOL[protocol]
+    default = PARAM_SWITCH_BY_PROTOCOL[protocol]
+    leaf = sample.get('param_leaf') or default['leaf']
+    spine = sample.get('param_spine') or default['spine']
     topo = dict(COMMON_TOPOLOGY)
     topo.update({
         'param_protocol': protocol,
@@ -227,6 +385,10 @@ def build_project_config(sample):
         'num_compute_servers': sample['num_compute_servers'],
         'storage_switch_ports': sample['storage_switch_ports'],
     })
+    # 逐场覆盖（6 场景 Q3400 288/144 口、X400 128 口、B300 800G 等）
+    for k in ('param_switch_ports', 'param_speed', 'param_ports_per_server', 'storage_speed'):
+        if sample.get(k) is not None:
+            topo[k] = sample[k]
     config = {
         'meta': {
             'name': sample['id'],
@@ -241,11 +403,11 @@ def build_project_config(sample):
         },
         'topology': topo,
         'device_refs': {
-            'gpu_server': {'library_id': 'nvidia_dgx_h100'},
-            'param_leaf_switch': {'library_id': sw['leaf']},
-            'param_spine_switch': {'library_id': sw['spine']},
-            'param_core_switch': {'library_id': sw['spine']},
-            'param_switch': {'library_id': sw['leaf']},
+            'gpu_server': {'library_id': sample.get('gpu_server') or 'nvidia_dgx_h100'},
+            'param_leaf_switch': {'library_id': leaf},
+            'param_spine_switch': {'library_id': spine},
+            'param_core_switch': {'library_id': spine},
+            'param_switch': {'library_id': leaf},
             # 5.0.1-501-a: 存储网 200G → S9825-128B(200G)；业务汇聚 100G 上联 → S9850-32H(100G)；
             # OOB 汇聚 10G 上联 → S6805-56HF-G(10G)；OOB 接入 1G → S5560X-54C-EI(1G)
             'storage_leaf_switch': {'library_id': 'h3c_s9825_128b'},
@@ -260,7 +422,7 @@ def build_project_config(sample):
             'oob_access_switch': {'library_id': 'h3c_s5560x_54c_ei'},
             'oob_agg_switch': {'library_id': 'h3c_s6805_56hf_g'},
         },
-        'rack_config': dict(RACK_CONFIG),
+        'rack_config': _rack_config_for(sample),
         'scale_up': {},
     }
     return config
@@ -278,9 +440,9 @@ def build_network_ini(sample):
         f'additional_compute_servers = {sample["num_compute_servers"]}',
         'param_ports_per_server = 8',
         'storage_ports_per_server = 1',
-        'param_switch_ports = 64',
+        f'param_switch_ports = {sample.get("param_switch_ports", 64)}',
         f'storage_switch_ports = {sample["storage_switch_ports"]}',
-        'param_speed = 400G',
+        f'param_speed = {sample.get("param_speed", "400G")}',
         'storage_speed = 200G',
         'param_downlink_limit = 25',
         'storage_downlink_limit = 20',
@@ -312,7 +474,7 @@ def build_network_ini(sample):
         '',
         '[rack]',
         'rack_type = 42',
-        'power_limit_per_rack = 12000',
+        f'power_limit_per_rack = {_rack_config_for(sample)["power_limit_per_rack"]}',
         'naming_prefix = 机柜',
         'cooling_method = air',
         'gpu_dedicated = true',
