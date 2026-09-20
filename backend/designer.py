@@ -1943,6 +1943,16 @@ class NetworkDesignerV2:
         # 为 True；INI 旧格式无此键，恒 False ⇒ 走端口需求推导（PRD §6-R5）。
         self._biz_frames_map_explicit = bool(has('biz_chassis_frames_map')) if has else False
 
+        # V5.4.0-640-d（FR-A3 / W1.5）: 存储网协议（可选键，缺省跟随 param_protocol；
+        # 取值 IB/RoCE/UEC，非法回退 param_protocol）。**唯一初始化入口** ——
+        # JSON/INI 双路径都经本方法，不得散落赋值（5.3.0/5.3.1/5.3.2 血训）。
+        # 默认值直接读配置源（get），不依赖 self.param_protocol 赋值顺序
+        # （INI 路径可能在 param_protocol 赋值前调用本方法）。
+        _st_proto = str(get('storage_protocol', '') or '').strip().upper()
+        _proto_canon = {'IB': 'IB', 'ROCE': 'RoCE', 'UEC': 'UEC'}
+        _def_st_proto = str(get('param_protocol', 'RoCE') or 'RoCE').strip() or 'RoCE'
+        self.storage_protocol = _proto_canon.get(_st_proto, _def_st_proto)
+
     def _calc_biz_chassis_frames(self, total_access_uplinks=None):
         """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数
 

@@ -279,6 +279,9 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
                 return f"topology.{k} 必须是数值"
         if 'param_protocol' in topo and topo.get('param_protocol') not in ('IB', 'RoCE', 'UEC'):
             return f"topology.param_protocol 必须是 'IB' / 'RoCE' / 'UEC'"
+        # V5.4.0-640-d（FR-A3 / W1.5）: 可选 storage_protocol（缺省跟随 param_protocol），存在时校验取值
+        if 'storage_protocol' in topo and topo.get('storage_protocol') not in ('IB', 'RoCE', 'UEC'):
+            return f"topology.storage_protocol 必须是 'IB' / 'RoCE' / 'UEC'（可选，缺省跟随 param_protocol）"
         if 'downlink_mode' in topo and topo.get('downlink_mode') not in ('full', 'custom'):
             return f"topology.downlink_mode 必须是 'full' 或 'custom'"
         # V5.0.1-501-b: 宽松模式同样校验 rack_config 散热/独占字段（若存在；缺失不报错向后兼容）
@@ -340,6 +343,9 @@ def validate_config(config: dict, strict: bool = True) -> str | None:
     # V2.7.6-T2 + V2.9.3-T8: 支持 UEC (Ultra Ethernet) 协议
     if topo.get('param_protocol') not in ('IB', 'RoCE', 'UEC'):
         return f"topology.param_protocol 必须是 'IB' / 'RoCE' / 'UEC'"
+    # V5.4.0-640-d（FR-A3 / W1.5）: 可选 storage_protocol（缺省跟随 param_protocol），存在时校验取值
+    if 'storage_protocol' in topo and topo.get('storage_protocol') not in ('IB', 'RoCE', 'UEC'):
+        return f"topology.storage_protocol 必须是 'IB' / 'RoCE' / 'UEC'（可选，缺省跟随 param_protocol）"
     if topo.get('downlink_mode') not in ('full', 'custom'):
         return f"topology.downlink_mode 必须是 'full' 或 'custom'"
 
