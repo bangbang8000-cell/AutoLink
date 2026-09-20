@@ -5,7 +5,8 @@ AutoLink V2.1 - 统一网络设计协调层
 """
 import math, os, json, configparser
 from typing import Optional
-from models import NetworkObject, Connection, apply_breakout
+from models import (NetworkObject, Connection, apply_breakout,
+                      breakout_total_count, breakout_for_role)
 from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier
 from device_library import get_device_library, LibraryDevice, InterfaceModel
 from rail_topology import RailOptimizedTopology
@@ -1320,12 +1321,17 @@ class NetworkDesignerV2:
 
         交换机 1 个物理高速口经 1 分 2 扇出为 count 个逻辑低速口
         （如 Q3200 800G→2×400G、MQM9700 400G→2×200G）。
+
+        V5.4.0-640-b/c（W1.3/W1.4/FR-A5）：与 `apply_breakout` 同源 ——
+        stages 链式按 Π(count) 计；`breakout.applicable_networks` 限定生效角色，
+        QM9700 参数网角色完全禁用（1:1），存储网角色 400G→2×200G。
         """
         dev = self._device_profiles.get(key)
         bk = getattr(dev, 'breakout', None) if dev else None
-        if bk and isinstance(bk, dict):
-            return int(bk.get('count', 1) or 1)
-        return 1
+        if not isinstance(bk, dict):
+            return 1
+        role = 'param' if key == 'param_switch' else 'storage'
+        return breakout_total_count(breakout_for_role(bk, role))
 
     def _apply_slot(self, obj, d):
         """将 DeviceSlot 分配结果回填到 NetworkObject"""
