@@ -38,6 +38,41 @@ interface ModuleSelection {
   '提示'?: string
 }
 
+/**
+ * V5.3.0-530-g8（AL-G8）：逐层端口守恒台账。
+ *
+ * 该段让下游**能自行判断**拓扑是否物理成立，而不只依赖 `validation.valid` ——
+ * 后者曾是「欠连被放行」的唯一依据（11/23 模板欠连最高 66% 却 valid=True）。
+ *
+ * ⚠️ 该段为**可选**：`generate_report_data` 自 v5.3.0 起才输出，接旧后端时不存在，
+ * 因此字段全部可选、段缺失时不渲染任何内容（不得抛错）。
+ */
+interface PortConservationLayer {
+  '服务器数'?: number
+  '接入台数'?: number
+  '接入上联口每台'?: number
+  '上联需求总数'?: number
+  '汇聚框台数'?: number
+  '单框下行口'?: number
+  '汇聚下行总口'?: number
+  '收敛比'?: number
+  '是否守恒'?: boolean
+  '余量百分比'?: number
+  '丢弃链路数'?: number
+}
+
+interface PortConservation {
+  schema_version?: number
+  layers?: Record<string, PortConservationLayer>
+  '汇总'?: {
+    '检查层数'?: number
+    '守恒层数'?: number
+    '不守恒层数'?: number
+    '总丢弃链路数'?: number
+  }
+  '提示'?: string
+}
+
 interface ReportData {
   overview: Record<string, unknown>
   architecture: Record<string, unknown>
@@ -46,6 +81,8 @@ interface ReportData {
   modules: Record<string, { count: number; price: string; spec: string }>
   /** V5.2.5-525-f5：选型三态台账（可选段，见 ModuleSelection 注释） */
   module_selection?: ModuleSelection
+  /** V5.3.0-530-g8：逐层端口守恒台账（可选段，见 PortConservation 注释） */
+  port_conservation?: PortConservation
   cost: Record<string, unknown>
   generated_at: string
   error?: string
@@ -207,6 +244,9 @@ export function ReportViewPanel({ projectName }: Props) {
               {/* 选型台账（V5.2.5-525-f5：未匹配链路必须显式可见） */}
               <ModuleSelectionSection data={data.module_selection} />
 
+              {/* 逐层端口守恒（V5.3.0-530-g8：不守恒必须显式可见，不能只看 valid） */}
+              <PortConservationSection data={data.port_conservation} />
+
               {/* 成本估算 */}
               <Section icon={<DollarSign size={12} />} title={t('workbench:bom')}>
                 <KvGrid data={data.cost} />
@@ -230,6 +270,84 @@ export function ReportViewPanel({ projectName }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+function PortConservationSection({ data }: { data?: PortConservation }) {
+  const layers = data?.layers ?? {}
+  const layerNames = Object.keys(layers)
+  const unconserved = layerNames.filter((k) => layers[k]?.['是否守恒'] === false)
+  const summary = data?.['汇总']
+  const totalDropped = summary?.['总丢弃链路数'] ?? 0
+
+  if (!data || layerNames.length === 0) return null
+
+  const labelOf = (k: string) => (k === 'biz' ? '业务网' : k === 'oob' ? '带外网' : k)
+
+  return (
+    <Section
+      icon={<AlertTriangle size={12} />}
+      title={unconserved.length > 0 ? `逐层端口守恒（${unconserved.length} 层不守恒）` : '逐层端口守恒'}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-edge-subtle">
+              <th className="py-1.5 pr-3 font-normal">网络层</th>
+              <th className="py-1.5 pr-3 font-normal text-right">接入台数</th>
+              <th className="py-1.5 pr-3 font-normal text-right">上联需求</th>
+              <th className="py-1.5 pr-3 font-normal text-right">汇聚下行口</th>
+              <th className="py-1.5 pr-3 font-normal text-right">收敛比</th>
+              <th className="py-1.5 pr-3 font-normal text-right">余量</th>
+              <th className="py-1.5 font-normal text-right">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            {layerNames.map((k) => {
+              const L = layers[k] ?? {}
+              const conserved = L['是否守恒'] !== false
+              const margin = L['余量百分比'] ?? 0
+              const dropped = L['丢弃链路数'] ?? 0
+              return (
+                <tr key={k} className="border-b border-gray-50 dark:border-edge-subtle/50">
+                  <td className="py-1.5 pr-3 font-medium text-gray-700 dark:text-gray-300">{labelOf(k)}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{L['接入台数'] ?? '-'}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{L['上联需求总数'] ?? '-'}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{L['汇聚下行总口'] ?? '-'}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{L['收敛比'] ?? 1}</td>
+                  <td
+                    className={`py-1.5 pr-3 tabular-nums ${
+                      conserved ? 'text-gray-700 dark:text-gray-300' : 'text-error-600 dark:text-error-400'
+                    }`}
+                  >
+                    {margin > 0 ? '+' : ''}
+                    {margin}%
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <span
+                      className={`px-1.5 py-0.5 rounded ${
+                        conserved
+                          ? 'bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-300'
+                          : 'bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300'
+                      }`}
+                    >
+                      {conserved ? '守恒' : `欠连 ${dropped}`}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {unconserved.length > 0 && (
+        <div className="mt-2 text-xs px-2 py-1.5 rounded bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-300">
+          存在<strong>端口不守恒</strong>的网络层：接入上联连接因汇聚端口不足被丢弃（共 {totalDropped} 条，
+          从未创建），拓扑在<strong>物理上不成立</strong>。请增加汇聚交换机/框数后再生成。
+        </div>
+      )}
+    </Section>
   )
 }
 

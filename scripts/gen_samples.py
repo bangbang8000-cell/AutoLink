@@ -303,7 +303,7 @@ def build_network_ini(sample):
         'biz_enabled = true',
         'biz_port_speed = 25G',
         'biz_access_ports = 48',
-        'biz_access_uplinks = 8',
+        'biz_access_uplinks = 6',
         'biz_uplink_speed = 100G',
         'biz_agg_box_ports = 32',
         'biz_agg_chassis_ports = 32',

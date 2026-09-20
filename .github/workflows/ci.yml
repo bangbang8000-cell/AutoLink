@@ -47,6 +47,19 @@ jobs:
       # README/CHANGELOG(cli.md 中的设备数/模板数/规则条数漂移即失败；docs/cli.md 退出码表缺失即失败
       - name: Doc numbers vs code
         run: python scripts/check_doc_numbers.py
+      # 5.3.0-530-g9（AL-G9）: 合并冲突残留标记扫描 —— 未清理的 <<<<<<< / ======= / >>>>>>>
+      # 会被 Python 当语法错误（CI 会红）却被 JS/TS/MD 静默接受，因此需显式门禁。
+      - name: Conflict markers
+        run: |
+          if git grep -nI -E '^(<{7}|={7}|>{7})( |$)' -- . ':!*.lock' ':!*.min.js' ':!reports'; then
+            echo "::error::发现合并冲突残留标记，请清理后再提交"
+            exit 1
+          fi
+          echo "PASS: 无冲突残留标记"
+      # 5.3.0-530-g10（AL-G10）: CHANGELOG 里程碑宣称 ↔ 代码存在性 —— 防「宣称交付了、
+      # 实际 0 命中」（5.2.2 的 522-M3 教训）。只校验**最新版本段**，历史段漂移不阻塞。
+      - name: CHANGELOG claims vs code
+        run: python scripts/check_changelog_claims.py
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
       - run: python scripts/gen_golden.py --check
       # V3.0.0-T0-8: 后端全量 pytest

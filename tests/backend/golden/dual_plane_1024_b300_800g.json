@@ -1,6 +1,6 @@
 {
   "cabinets": 1106,
-  "connections": 125384,
+  "connections": 125368,
   "counts": {
     "biz_access": 84,
     "biz_agg": 16,
@@ -18,7 +18,7 @@
   },
   "downlink_mode": "custom",
   "network_connections": {
-    "biz": 5184,
+    "biz": 5168,
     "oob": 2248,
     "param": 115712,
     "storage": 2240
@@ -27,7 +27,7 @@
   "param_speed": "800G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "e578f3ab5166e026",
+  "topology_hash": "86acbbb6d42c38d5",
   "total_power_w": 1381600,
   "valid": true
 }

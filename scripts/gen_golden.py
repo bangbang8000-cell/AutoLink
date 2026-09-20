@@ -180,7 +180,7 @@ def _run_dual_plane_scenarios(check):
                         f'    基线: {json.dumps(expected, ensure_ascii=False)}\n'
                         f'    当前: {json.dumps(snap, ensure_ascii=False)}')
             else:
-                with open(gf, 'w', encoding='utf-8') as f:
+                with open(gf, 'w', encoding='utf-8', newline='\n') as f:
                     json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
                 generated += 1
     finally:
@@ -251,7 +251,7 @@ def _run_zcube_scenarios(check):
                         f'    基线: {json.dumps(expected, ensure_ascii=False)}\n'
                         f'    当前: {json.dumps(snap, ensure_ascii=False)}')
             else:
-                with open(gf, 'w', encoding='utf-8') as f:
+                with open(gf, 'w', encoding='utf-8', newline='\n') as f:
                     json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
                 generated += 1
     finally:
@@ -290,7 +290,7 @@ def main():
                     f'    基线: {json.dumps(expected, ensure_ascii=False)}\n'
                     f'    当前: {json.dumps(snap, ensure_ascii=False)}')
         else:
-            with open(gf, 'w', encoding='utf-8') as f:
+            with open(gf, 'w', encoding='utf-8', newline='\n') as f:
                 json.dump(snap, f, ensure_ascii=False, indent=2, sort_keys=True)
             generated += 1
 

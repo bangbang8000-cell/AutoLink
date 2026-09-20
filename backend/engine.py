@@ -152,6 +152,77 @@ def _parse_speed_gbps(speed_str: str) -> float:
         return 400.0
 
 
+def _build_port_conservation(designer):
+    """V5.3.0-530-g6/g7（AL-G6/G7）：构造逐层端口守恒数据。
+
+    供 ① V021 校验规则读取；② exporter 的 `port_conservation` 契约段使用。
+
+    层级来自 AccessAggTopology 的 `calculate()` 输出（biz / oob 两网）。
+    数值口径见 5.3.0 PRD §3.1；判据「硬错误 + 阈值可覆盖，默认 100%」（裁定 D2）。
+    """
+    layers = {}
+    for key, info_attr in (('biz', 'biz_info'), ('oob', 'oob_info')):
+        info = getattr(designer, info_attr, None)
+        if not isinstance(info, dict) or 'num_access' not in info:
+            continue
+        pc = info.get('port_conservation') or {}
+        # ⚠️ 键名必须与 topology.py:calculate() 的产出**逐字一致**（'上联需求总数'）。
+        # 曾误写为 '需求上联总数'（字序颠倒）⇒ 恒读 0 ⇒ 校验静默通过且契约报 0。
+        need = int(pc.get('上联需求总数', 0) or 0)
+        have = int(pc.get('汇聚下行总口', 0) or 0)
+        # 收敛比：业务网可配，带外网固定 1:1
+        if key == 'biz':
+            ratio = float(getattr(designer, 'biz_agg_oversubscription', 1.0) or 1.0)
+        else:
+            ratio = 1.0
+        ratio = max(1.0, ratio)
+        dropped = int(info.get('dropped_link_count', 0) or 0)
+        capacity = int(have * ratio)
+        layers[key] = {
+            '服务器数': designer.total_servers,
+            '接入台数': int(info.get('num_access', 0) or 0),
+            '接入上联口每台': int(getattr(designer, 'biz_access_uplinks', 6) if key == 'biz'
+                                else getattr(designer, 'oob_access_uplinks', 8)) or 6,
+            '上联需求总数': need,
+            '汇聚框台数': int(info.get('num_agg', 0) or 0),
+            '单框下行口': int(getattr(designer, 'biz_agg_chassis_ports', 32) if key == 'biz'
+                            else getattr(designer, 'oob_agg_ports', 32)) or 32,
+            '汇聚下行总口': have,
+            '收敛比': ratio,
+            '是否守恒': need <= capacity,
+            '余量百分比': round((capacity - need) / need * 100, 1) if need else 0.0,
+            '丢弃链路数': dropped,
+        }
+    if not layers:
+        return None
+    conserved = sum(1 for v in layers.values() if v['是否守恒'])
+    total_dropped = sum(v['丢弃链路数'] for v in layers.values())
+    return {
+        'schema_version': 1,
+        'layers': layers,
+        # V5.3.0-530-g11（AL-G11 / 用户反馈 P1-11）：把**三项口径开关的当前取值**暴露给消费方。
+        # 目的：下游（报价/交付）能据实判断"本项目的数字是按哪套口径算的"，
+        # 而不必反查项目配置。默认值一律为现状（裁定 D3）。
+        '口径': {
+            '接入上联口每台': int(getattr(designer, 'biz_access_uplinks', 6) or 6),
+            '汇聚单框下行口': int(getattr(designer, 'biz_agg_chassis_ports', 32) or 32),
+            '框数推导方式': ('按端口需求推导'
+                         if not getattr(designer, '_biz_frames_map_explicit', False)
+                         else '按服务器数查表（项目显式配置）'),
+            '分组粒度': getattr(designer, 'biz_group_granularity', 'merge'),
+            '收敛比': float(getattr(designer, 'biz_agg_oversubscription', 1.0) or 1.0),
+        },
+        '汇总': {
+            '检查层数': len(layers),
+            '守恒层数': conserved,
+            '不守恒层数': len(layers) - conserved,
+            '总丢弃链路数': total_dropped,
+        },
+        '提示': ('各层端口守恒。' if conserved == len(layers) else
+                '存在端口不守恒的层：接入上联连接因汇聚端口不足被丢弃，拓扑在物理上不成立。'),
+    }
+
+
 def _estimate_design(designer, params=None):
     """V2.4: 综合 PUE/收敛比/机柜功率密度估算
 
@@ -216,7 +287,7 @@ def _estimate_design(designer, params=None):
     # 业务网
     if getattr(designer, 'biz_enabled', True) and getattr(designer, 'biz_access', None):
         biz_ports = getattr(designer, 'biz_access_ports', 48)
-        biz_uplinks = getattr(designer, 'biz_access_uplinks', 8)
+        biz_uplinks = getattr(designer, 'biz_access_uplinks', 6)
         biz_speed = _parse_speed_gbps(getattr(designer, 'biz_port_speed', '25G'))
         convergence['biz'] = _conv_to_dict(calc_convergence_ratio(
             'biz', biz_ports, biz_uplinks, biz_speed, len(designer.biz_access),
@@ -485,6 +556,8 @@ def _run_validation(designer):
         "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
         "param_spine_count": getattr(designer, 'param_spine_count', 0),
         "param_core_count": getattr(designer, 'param_core_count', 0),
+        # V5.3.0-530-g6（AL-G6）：逐层端口守恒校验数据（V021）
+        "port_conservation": _build_port_conservation(designer),
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)
@@ -1000,6 +1073,8 @@ def handle_design(params):
         "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
         "param_spine_count": getattr(designer, 'param_spine_count', 0),
         "param_core_count": getattr(designer, 'param_core_count', 0),
+        # V5.3.0-530-g6（AL-G6）：逐层端口守恒校验数据（V021）
+        "port_conservation": _build_port_conservation(designer),
     }
 
     # 4. 计算 PUE/收敛比结果(供 V001/V003/V010 读取)

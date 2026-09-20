@@ -355,9 +355,17 @@ class TestV010ParamOversubscription:
 class TestEngineBasics:
     """引擎基础功能"""
 
-    def test_default_engine_has_15_rules(self, engine):
-        """默认引擎含 21 条规则 (V001-V022 去 V021；5.2.2-522-g 移出华为超节点规则)"""
-        assert engine.get_rule_count() == 21
+    def test_default_engine_has_22_rules(self, engine):
+        """默认引擎含 22 条规则 (V001-V022 完整；5.3.0-530 补上缺失的 V021 端口守恒)"""
+        assert engine.get_rule_count() == 22
+
+    def test_v021_port_conservation_registered(self, engine):
+        """V021（端口守恒）必须在 5.3.0 补注册，且归入拓扑规则类。"""
+        hit = [r for r in engine._rules if r[0] == "V021"]
+        assert hit, "V021 必须已注册（AL-G4：此前文档有、代码无）"
+        _, category, func = hit[0]
+        assert category == "拓扑规则"
+        assert callable(func)
 
     def test_rule_exception_becomes_error_issue(self, engine):
         """规则函数抛异常时应转为 ERROR issue"""
