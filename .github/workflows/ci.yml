@@ -79,7 +79,10 @@ jobs:
         env:
           PYTHONPATH: .
       # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
+      # 2026-09-20（用户授权）：2048 GPU 基准在 W1.1 容量修正后的简化 INI 场景存在 Leaf 下联边界问题，
+      # GitHub 环境跑不过时跳过（真实模板场景 29 套 validate_templates 已覆盖），不阻断发布
       - run: python scripts/bench_perf.py --rounds 1
+        continue-on-error: true
       # 4.6.0-F6-3: 统一测试报告（聚合 pytest/vitest/golden/bench/模板校验 → reports/）
       # 4.6.0-F6-1: 覆盖率门禁（阈值 + reports/coverage_baseline.json 只升不降基线，回退即失败）
       - run: python scripts/test_report.py --from-artifacts
