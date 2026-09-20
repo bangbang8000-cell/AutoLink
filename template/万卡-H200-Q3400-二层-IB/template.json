@@ -1,0 +1,17 @@
+{
+  "id": "万卡-H200-Q3400-二层-IB",
+  "name": "万卡-H200-Q3400-二层-IB（示例）",
+  "description": "万卡集群 B：1250 台 H200 / 10000 卡，NVIDIA Q3400-RA（72×1.6T → 288×400G）k=288，IB 二层示例项目（PRD 场景②）",
+  "scenario": "万卡-H200-Q3400-二层-IB",
+  "tags": [
+    "H200",
+    "万卡",
+    "Q3400",
+    "IB",
+    "二层",
+    "示例项目"
+  ],
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
+}

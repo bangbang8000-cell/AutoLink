@@ -1,6 +1,6 @@
 {
   "cabinets": 299,
-  "connections": 13676,
+  "connections": 13756,
   "counts": {
     "biz_access": 26,
     "biz_agg": 5,
@@ -13,7 +13,7 @@
     "scale_up_gpus": 0,
     "servers": 304,
     "storage_cores": 0,
-    "storage_leaves": 16,
+    "storage_leaves": 17,
     "storage_spines": 8
   },
   "downlink_mode": "custom",
@@ -21,13 +21,13 @@
     "biz": 1528,
     "oob": 660,
     "param": 10368,
-    "storage": 1120
+    "storage": 1200
   },
   "param_protocol": "IB",
   "param_speed": "800G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "4d11069cfde10769",
+  "topology_hash": "446aa457bb6391fa",
   "total_power_w": 214400,
   "valid": true
 }
