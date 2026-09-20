@@ -160,10 +160,17 @@ class TestSpeedParsingBaseline:
         """1G 链路不得选中 1.6T 档位（T-525-08 的最小样例）。"""
         assert select_optical_module('1G', 10.0, '光纤') is None
 
-    @pytest.mark.parametrize('speed', ['1G', '10G', '25G'])
+    # V5.3.2 回归（T7.4）：本地定制新增 10G 档位（om_10g_sfp_sr_300m，
+    # 5090 推理模板业务网 10G 用）⇒ 10G 从"无档位"清单移除，断言 1G/25G 仍无
+    @pytest.mark.parametrize('speed', ['1G', '25G'])
     def test_no_module_for_low_speed_without_degrading(self, speed):
         """库内无该速率档位时返回 None——**不得**用其他速率的模块顶上。"""
         assert select_optical_module(speed, 10.0, '光纤') is None
+
+    def test_10g_has_local_module(self):
+        """本地定制：10G 档位存在（om_10g_sfp_sr_300m），业务网 10G 可选型。"""
+        m = select_optical_module('10G', 10.0, '光纤')
+        assert m is not None, '本地定制 10G 模块应可选型'
 
 
 # ============================================================
