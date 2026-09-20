@@ -255,10 +255,15 @@ class NetworkDesignerV2:
             if pool_total > 0:
                 self.num_servers = pool_total
         # Backward compat: support both old num_storage_servers and new split fields
+        # V5.4.0-640-e（FR-A4 / W1.6）: 全闪/混闪数量分别保留（供按类别映射型号）
         if 'num_all_flash_storage' in topo or 'num_hybrid_flash_storage' in topo:
-            self.additional_storage = topo.get('num_all_flash_storage', 0) + topo.get('num_hybrid_flash_storage', 0)
+            self.num_all_flash_storage = int(topo.get('num_all_flash_storage', 0) or 0)
+            self.num_hybrid_flash_storage = int(topo.get('num_hybrid_flash_storage', 0) or 0)
+            self.additional_storage = self.num_all_flash_storage + self.num_hybrid_flash_storage
         else:
             self.additional_storage = topo.get('num_storage_servers', 0)
+            self.num_all_flash_storage = self.additional_storage
+            self.num_hybrid_flash_storage = 0
         self.additional_compute = topo.get('num_compute_servers', 0)
         self.total_servers = self.num_servers + self.additional_storage + self.additional_compute
 
@@ -535,6 +540,10 @@ class NetworkDesignerV2:
         """加载 INI 格式通用配置 (向后兼容)"""
         self.num_servers = int(self.config.get('DEFAULT', 'num_servers', fallback=100))
         self.additional_storage = int(self.config.get('DEFAULT', 'additional_storage_servers', fallback=0))
+        # V5.4.0-640-e（FR-A4 / W1.6）: 全闪/混闪数量（INI 旧格式缺省全部归全闪）
+        self.num_all_flash_storage = int(self.config.get('DEFAULT', 'num_all_flash_storage',
+                                                         fallback=self.additional_storage))
+        self.num_hybrid_flash_storage = int(self.config.get('DEFAULT', 'num_hybrid_flash_storage', fallback=0))
         self.additional_compute = int(self.config.get('DEFAULT', 'additional_compute_servers', fallback=0))
         self.total_servers = self.num_servers + self.additional_storage + self.additional_compute
 
@@ -670,6 +679,10 @@ class NetworkDesignerV2:
         """
         self.num_servers = int(self.config.get('DEFAULT', 'num_servers', fallback=100))
         self.additional_storage = int(self.config.get('DEFAULT', 'additional_storage_servers', fallback=0))
+        # V5.4.0-640-e（FR-A4 / W1.6）: 全闪/混闪数量（INI 旧格式缺省全部归全闪）
+        self.num_all_flash_storage = int(self.config.get('DEFAULT', 'num_all_flash_storage',
+                                                         fallback=self.additional_storage))
+        self.num_hybrid_flash_storage = int(self.config.get('DEFAULT', 'num_hybrid_flash_storage', fallback=0))
         self.additional_compute = int(self.config.get('DEFAULT', 'additional_compute_servers', fallback=0))
         self.total_servers = self.num_servers + self.additional_storage + self.additional_compute
 
@@ -787,14 +800,19 @@ class NetworkDesignerV2:
         if getattr(self, 'eth_combined', False):
             self._calc_combined_hierarchy()
         elif self.storage_enabled:
-            # V2.7.2-T9: 放开 3-tier 限制,根据服务器数量自动判定
-            storage_max_2tier = calc_max_2tier(self.storage_switch_ports, self.storage_ports_per_server)
-            self.storage_3tier_needed = self.total_servers > storage_max_2tier if storage_max_2tier > 0 else False
+            # V5.4.0-640-g（FR-A8 / W1.8）: 层级判据改**端口容量式**（与 V016 同源）——
+            # 容量 = (k×breakout_count)²/2（PRD §3.5-C：QM9700 存储 1分2 ⇒ 逻辑 k=128，
+            # 单层容量 8192 口）；需求 = Σ(类别台数 × 类别口数)。需求 > 容量 ⇒ 三层。
+            storage_capacity = self._storage_capacity()
+            storage_demand = self._storage_port_demand()
+            self.storage_3tier_needed = storage_demand > storage_capacity
 
             if self.storage_3tier_needed:
-                # 三层组网: Leaf-Spine-Core
-                self.storage_pods = math.ceil(self.total_servers / max(storage_max_2tier, 1))
-                self.storage_servers_per_pod = min(storage_max_2tier, self.total_servers)
+                # 三层组网: Leaf-Spine-Core（V5.4.0-640-g / FR-A8: 按需求/容量分 pod）
+                self.storage_pods = math.ceil(storage_demand / max(storage_capacity, 1))
+                _avg_ports = storage_demand / max(self.total_servers, 1)
+                self.storage_servers_per_pod = min(
+                    math.ceil(storage_capacity / max(_avg_ports, 1)), self.total_servers)
                 # 每 Pod 内 Leaf 数 = (servers_per_pod / max_servers_per_leaf) * ports_per_server
                 max_servers_per_storage_leaf = self.storage_switch_ports // 2
                 storage_servers_per_group = max(1, min(
@@ -915,13 +933,29 @@ class NetworkDesignerV2:
                 podid = f"plane-ab-pod{group_id}" if self._dp3tier_pod_groups else f"pod-gpu-{group_id}"
                 s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
                 s.server_index = server_idx
+                s.server_category = 'gpu'
                 self.servers.append(s)
                 self.server_groups[s.name] = group_name
                 self.podid_map[s.name] = podid
 
-        # 额外存储服务器
-        for i in range(1, self.additional_storage + 1):
-            s = _make_server(f"存储服务器_{i}", "存储服务器组", "pod-storage", storage_profile, default_power=300, default_u=2)
+        # 额外存储服务器（V5.4.0-640-e / FR-A4 / W1.6: 全闪/混闪按类别各自映射型号；
+        # 名字/序号保持既有"存储服务器_i"约定，避免 golden 连接结构漂移）
+        _all_flash_profile = self._device_profiles.get('all_flash_storage_server') or storage_profile
+        _hybrid_profile = self._device_profiles.get('hybrid_flash_storage_server') or storage_profile
+        _st_idx = 0
+        for _n in range(self.num_all_flash_storage):
+            _st_idx += 1
+            s = _make_server(f"存储服务器_{_st_idx}", "存储服务器组", "pod-storage",
+                             _all_flash_profile, default_power=300, default_u=2)
+            s.server_category = 'storage'
+            self.servers.append(s)
+            self.server_groups[s.name] = s.group
+            self.podid_map[s.name] = s.podid
+        for _n in range(self.num_hybrid_flash_storage):
+            _st_idx += 1
+            s = _make_server(f"存储服务器_{_st_idx}", "存储服务器组", "pod-storage",
+                             _hybrid_profile, default_power=300, default_u=2)
+            s.server_category = 'storage'
             self.servers.append(s)
             self.server_groups[s.name] = s.group
             self.podid_map[s.name] = s.podid
@@ -929,6 +963,7 @@ class NetworkDesignerV2:
         # 额外通算服务器
         for i in range(1, self.additional_compute + 1):
             s = _make_server(f"通算服务器_{i}", "通算服务器组", "pod-general", compute_profile, default_power=400, default_u=2)
+            s.server_category = 'compute'
             self.servers.append(s)
             self.server_groups[s.name] = s.group
             self.podid_map[s.name] = s.podid
@@ -1776,15 +1811,48 @@ class NetworkDesignerV2:
                                    "参数Leaf到Spine",
                                    network_type='param')
 
+    def _storage_ports_for_server(self, server):
+        """V5.4.0-640-f（FR-A8 / W1.7）: 单台服务器的存储网口数（按服务器类别）。
+
+        类别标记在对象创建时打 `server_category`（gpu / storage / compute）。
+        """
+        cat = getattr(server, 'server_category', 'gpu') or 'gpu'
+        if cat == 'storage':
+            return self.storage_ports_storage
+        if cat == 'compute':
+            return self.storage_ports_compute
+        return self.storage_ports_gpu
+
+    def _storage_port_demand(self):
+        """V5.4.0-640-f（FR-A8 / W1.7）: 存储网总端口需求 = Σ(类别台数 × 类别口数)。
+
+        建链（_wire_storage）与 V016（validation.py:396-411）消费同一口径。
+        """
+        return (int(getattr(self, 'num_servers', 0) or 0) * self.storage_ports_gpu
+                + int(getattr(self, 'additional_storage', 0) or 0) * self.storage_ports_storage
+                + int(getattr(self, 'additional_compute', 0) or 0) * self.storage_ports_compute)
+
+    def _storage_capacity(self):
+        """V5.4.0-640-g（FR-A8 / W1.8）: 二层存储端口容量（逻辑口）= (k×breakout_count)²/2。
+
+        PRD §3.5-C：QM9700 存储侧 1分2 ⇒ 逻辑 k = 64×2 = 128，单层容量 = 128²/2 = 8192 口。
+        层级判据（:790）与 V016 容量校验同源。
+        """
+        k = int(getattr(self, 'storage_switch_ports', 40) or 40)
+        bc = int(getattr(self, 'storage_breakout_count', 1) or 1)
+        return ((k * bc) ** 2) // 2
+
     def _wire_storage(self):
         """存储网络: 所有服务器→Leaf + Leaf→Spine (+ Spine→Core 当 3-tier)"""
-        # Server → Leaf: 轮转分配, 每服务器 storage_ports_per_server 条连接
+        # Server → Leaf: 轮转分配, 每服务器按类别口数条连接（FR-A8 / W1.7:
+        # GPU 1×200G / 存储 4×200G / 通算 1×200G）
         # (v2.9.1-T7 修复: 此前固定 1 条, storage_ports_per_server=2 时只连一半)
         servers_per_leaf = math.ceil(self.total_servers / self.storage_leaf_count)
         ports_per_leaf_block = max(1, servers_per_leaf * self.storage_ports_per_server)
         for si, server in enumerate(self.servers):
-            for pi in range(1, self.storage_ports_per_server + 1):
-                li = (si * self.storage_ports_per_server + (pi - 1)) // ports_per_leaf_block
+            s_ports = self._storage_ports_for_server(server)
+            for pi in range(1, s_ports + 1):
+                li = (si * s_ports + (pi - 1)) // ports_per_leaf_block
                 if li >= len(self.storage_leaves):
                     li = len(self.storage_leaves) - 1
                 leaf = self.storage_leaves[li]
@@ -1952,6 +2020,19 @@ class NetworkDesignerV2:
         _proto_canon = {'IB': 'IB', 'ROCE': 'RoCE', 'UEC': 'UEC'}
         _def_st_proto = str(get('param_protocol', 'RoCE') or 'RoCE').strip() or 'RoCE'
         self.storage_protocol = _proto_canon.get(_st_proto, _def_st_proto)
+
+        # V5.4.0-640-f（FR-A8 / W1.7）: 存储网按服务器类别口数（默认 GPU 1 /
+        # 存储 4 / 通算 1（O-8））。**唯一初始化入口**，JSON/INI 双路径同源。
+        for _key, _attr, _def in (
+            ('storage_ports_gpu', 'storage_ports_gpu', 1),
+            ('storage_ports_storage', 'storage_ports_storage', 4),
+            ('storage_ports_compute', 'storage_ports_compute', 1),
+        ):
+            try:
+                _v = int(get(_key, _def))
+            except (TypeError, ValueError):
+                _v = _def
+            setattr(self, _attr, max(0, _v))
 
     def _calc_biz_chassis_frames(self, total_access_uplinks=None):
         """V2.7.2-T12: 根据 total_servers 和 biz_chassis_frames_map 计算框数

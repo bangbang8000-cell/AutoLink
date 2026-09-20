@@ -540,6 +540,8 @@ def _run_validation(designer):
         "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
         "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
         "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
+        # V5.4.0-640-f（FR-A8 / W1.7）: 存储网总端口需求（按类别，V016 同源）
+        "storage_required_ports": getattr(designer, '_storage_port_demand', lambda: 0)(),
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
         "scale_up": getattr(designer, 'scale_up_config', None),
@@ -1057,6 +1059,8 @@ def handle_design(params):
         "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
         "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
         "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
+        # V5.4.0-640-f（FR-A8 / W1.7）: 存储网总端口需求（按类别，V016 同源）
+        "storage_required_ports": getattr(designer, '_storage_port_demand', lambda: 0)(),
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
         "scale_up": getattr(designer, 'scale_up_config', None),
