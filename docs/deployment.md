@@ -115,9 +115,9 @@ npm run dist             # 当前平台
 
 | 平台 | 产物 |
 |------|------|
-| Windows | `release/AutoLink-Setup-5.2.5-win.exe` |
-| macOS | `release/AutoLink-5.2.5-mac-x64.dmg` / `AutoLink-5.2.5-mac-arm64.dmg` |
-| Linux | `release/AutoLink-5.2.5-linux.AppImage` / `AutoLink-5.2.5-linux.deb` |
+| Windows | `release/AutoLink-Setup-5.4.0-win.exe` |
+| macOS | `release/AutoLink-5.4.0-mac-x64.dmg` / `AutoLink-5.4.0-mac-arm64.dmg` |
+| Linux | `release/AutoLink-5.4.0-linux.AppImage` / `AutoLink-5.4.0-linux.deb` |
 
 > V3.0.0 起，`electron-builder` 前会自动用 **PyInstaller** 将 Python 引擎打包为免 Python 运行的后端（`scripts/pyinstaller.spec`），产物输出到 `dist/backend-dist`，安装包内置该目录。
 
@@ -127,7 +127,7 @@ npm run dist             # 当前平台
 npm run typecheck                       # TypeScript 类型检查（含 preload）
 npm run lint                            # ESLint（0 error 0 warning）
 npm run check-version                   # 版本单源一致性
-python scripts/validate_templates.py    # 23 套模板校验
+python scripts/validate_templates.py    # 29 套模板校验
 python scripts/gen_golden.py --check    # golden 基线比对
 python scripts/check_doc_numbers.py     # 文档数字真值校验
 npm test                                # 前端 Vitest
