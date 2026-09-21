@@ -243,7 +243,6 @@
   "empty.selectProject": "選擇一個專案作為目前專案：",
   "empty.gotoProjects": "前往專案面板（新建 / 匯入）",
   "empty.noProjects": "暫無專案，請在「專案」面板新建或從範本匯入。",
-  "empty.recentProjects": "最近使用的專案",
   "empty.fromTemplate": "從模板新增",
   "aidcCreate.pleaseEnterName": "請輸入專案名",
   "aidcCreate.created": "已新建 AIDC 專案 {{name}}（v1）",

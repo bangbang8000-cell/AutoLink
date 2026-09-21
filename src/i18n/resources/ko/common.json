@@ -27,7 +27,7 @@
     "visualization": "시각화",
     "visualizationWithProject": "시각화 - {{name}}",
     "deviceLibrary": "장치 라이브러리",
-    "chat": "AI 어시스턴트",
+    "chat": "AI 채팅",
     "aidcPlan": "AIDC 계획"
   },
   "confirmDelete": {
@@ -327,7 +327,7 @@
     "outputResults": "출력 결과",
     "settings": "설정",
     "search": "검색",
-    "ai": "AI 어시스턴트",
+    "ai": "AI 채팅",
     "cloud": "클라우드 센터",
     "hideSidebar": "사이드바 숨기기",
     "showSidebar": "사이드바 보기",
@@ -342,7 +342,7 @@
       "file": "파일",
       "edit": "편집",
       "view": "보기",
-      "project": "프로젝트",
+      "project": "도구",
       "help": "도움말"
     },
     "file": {
@@ -396,11 +396,11 @@
       "toggleLogPanel": "로그 패널 전환",
       "designView": "설계 보기",
       "visualizationView": "시각화 보기",
-      "projectView": "프로젝트 탐색기",
+      "projectView": "탐색기",
       "workbenchView": "작업대",
       "deviceLibraryView": "장치 라이브러리",
       "searchView": "전역 검색",
-      "aiView": "AI 어시스턴트",
+      "aiView": "AI 채팅",
       "cloudView": "클라우드 센터",
       "closeTab": "탭 닫기",
       "reopenTab": "닫힌 탭 복원",
@@ -411,7 +411,7 @@
       "renderCurrentProject": "현재 프로젝트 렌더링",
       "exportCurrentProject": "현재 프로젝트 내보내기/출력",
       "toggleLogPanelAlt": "로그 패널 전환 (추가 키)",
-      "projectViewAlt": "프로젝트 탐색기 (추가 키)"
+      "projectViewAlt": "탐색기 (추가 키)"
     },
     "toast": {
       "selectProjectFirst": "먼저 프로젝트를 선택하세요",
@@ -474,7 +474,11 @@
     "restartToInstall": "재시작하여 설치",
     "error": "업데이트 오류",
     "retry": "재시도",
-    "manualDownload": "수동 다운로드"
+    "manualDownload": "수동 다운로드",
+    "restartPromptTitle": "업데이트 다운로드 완료",
+    "restartPromptMessage": "새 버전 다운로드가 완료되었습니다. 지금 다시 시작하여 설치를 완료하시겠습니까?",
+    "restartNow": "지금 다시 시작",
+    "later": "나중에"
   },
   "about": {
     "title": "AutoLink 정보",
@@ -1117,7 +1121,7 @@
       "templateCenterHint": "템플릿 센터를 열었습니다 (마우스 우클릭으로 미리보기/생성)",
       "previewTemplate": "템플릿 미리보기",
       "createFromTemplate": "템플릿에서 생성",
-      "ai": "AI 어시스턴트",
+      "ai": "AI 채팅",
       "deviceLibrary": "장치 라이브러리",
       "search": "전역 검색",
       "cloud": "클라우드 센터",
@@ -1158,8 +1162,6 @@
       "pipelineRun": "원클릭 파이프라인 실행(계획→설계→렌더링→내보내기)",
       "pipelineTemplate": "템플릿 일괄 원클릭 파이프라인",
       "pipelineTemplateHint": "워크벤치의 \"원클릭 파이프라인\"에서 템플릿을 선택해 일괄 처리하세요",
-      "openRecent": "최근 프로젝트 열기",
-      "openedRecent": "최근 프로젝트를 열었습니다",
       "openFavorite": "즐겨찾기 프로젝트 열기",
       "openedFavorite": "즐겨찾기 프로젝트를 열었습니다",
       "favoriteEmpty": "즐겨찾기 없음(프로젝트 탐색기에서 별표를 클릭해 추가)",

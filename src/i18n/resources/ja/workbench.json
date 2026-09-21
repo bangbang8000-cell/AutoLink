@@ -243,7 +243,6 @@
   "empty.selectProject": "現在のプロジェクトを選択：",
   "empty.gotoProjects": "プロジェクトパネルへ（新規作成 / インポート）",
   "empty.noProjects": "プロジェクトがありません。「プロジェクト」パネルで新規作成またはテンプレートをインポートしてください。",
-  "empty.recentProjects": "最近使用したプロジェクト",
   "empty.fromTemplate": "テンプレートから新規作成",
   "aidcCreate.pleaseEnterName": "プロジェクト名を入力してください",
   "aidcCreate.created": "AIDC プロジェクト {{name}} を作成しました（v1）",

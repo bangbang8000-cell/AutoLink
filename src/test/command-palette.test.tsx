@@ -168,7 +168,6 @@ describe('buildCommandPaletteCommands 命令全集（E-5）', () => {
     expect(ids.has('pipeline.run')).toBe(true)
     expect(ids.has('pipeline.template')).toBe(true)
     // 最近/收藏（动态子命令）
-    expect(ids.has('recent.open.P1')).toBe(true)
     expect(ids.has('favorite.open.P2')).toBe(true)
     // 模板（动态）
     expect(ids.has('template.center')).toBe(true)

@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## [5.5.0] - 2026-09-21
+
+> **双端 UI 体验改进规划·阶段 A（AL 侧）+ 本轮三项修复，与 MC 5.4.0 同日发布。**
+
+### 行为变更（UI 对齐）
+
+- **A1 更新机制对齐 MC（AL-U1）**：更新状态收口为单点 zustand store（update.store.ts），UpdatePopover/AboutDialog 双入口状态同步；下载完成自动弹「立即重启/稍后」（RestartPromptDialog）；About 补齐 available/downloaded 订阅。
+- **A2 一级菜单命名统一（AL-U2）**：项目浏览器→资源管理器、AI 助手→AI对话（5 语言）；命令面板、快捷键对话框、页签标题全量 i18n；内部 id 与 Ctrl+Shift+E/A 不变。
+- **A3 顶部菜单分组（AL-U3）**：按已批准方案 A，「项目」组→「工具」，功能项全保留。
+- **A4 组件行为契约（AL-U4）**：Modal/Popover/Select 与 MC 契约一致；Toast 位置右上→右下，补契约测试。
+- **A5 快捷键（AL-U5）**：11 项共享键位与 MC 一致；AL 独有项（AI对话/设计/可视化/设备库等）保留单列。
+- **A6 移除「最近项目」入口**：资源管理器侧边栏、工作台空态、命令面板 recent 命令全部移除（保留全部项目列表 + 行内收藏星标）。
+
+### 缺陷修复
+
+- **undo 落盘路径修复**：rack/room undo 写入补 output/ 前缀（此前缺前缀导致 IPC 校验失败「非法输出路径」、undo 持久化实际失效），写读对称、恢复生效。
+
+### 测试
+
+- vitest **1437 passed**（另 pipeline 单跑 12/12）；tsc/eslint 双 0 错；菜单 i18n 全语言审计通过（无缺失）。
 ## [5.4.0] - 2026-09-20
 
 > **6 场景内容建设版（B-1/B-2/B-4 同日发布，详见 docs/AL-MC_6场景内容建设_ReleaseNotes_草稿_v0.9）**

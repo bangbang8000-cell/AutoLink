@@ -76,7 +76,7 @@ describe('M-F2 F2-2 撤销跨会话持久化（rack）', () => {
 
     expect(mockElectron.render.saveOutputFile).toHaveBeenCalledWith(
       'projA',
-      RACK_UNDO_PERSIST_FILE,
+      `output/${RACK_UNDO_PERSIST_FILE}`,
       expect.any(String),
     )
     const file = JSON.parse(lastWrittenFile())
@@ -160,7 +160,7 @@ describe('M-F2 F2-2 撤销跨会话持久化（rack）', () => {
     await vi.advanceTimersByTimeAsync(100)
     expect(mockElectron.render.saveOutputFile).toHaveBeenCalledWith(
       'projA',
-      RACK_UNDO_PERSIST_FILE,
+      `output/${RACK_UNDO_PERSIST_FILE}`,
       expect.any(String),
     )
     vi.useRealTimers()

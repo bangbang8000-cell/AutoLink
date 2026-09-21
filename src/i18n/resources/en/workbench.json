@@ -243,7 +243,6 @@
   "empty.selectProject": "Select a project as the current project:",
   "empty.gotoProjects": "Go to Projects panel (Create / Import)",
   "empty.noProjects": "No projects yet. Create one or import a template in the \"Projects\" panel.",
-  "empty.recentProjects": "Recent Projects",
   "empty.fromTemplate": "New from Template",
   "aidcCreate.pleaseEnterName": "Please enter a project name",
   "aidcCreate.created": "AIDC project {{name}} created (v1)",

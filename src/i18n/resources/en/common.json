@@ -27,7 +27,7 @@
     "visualization": "Visualization",
     "visualizationWithProject": "Visualization - {{name}}",
     "deviceLibrary": "Device Library",
-    "chat": "AI Assistant",
+    "chat": "AI Chat",
     "aidcPlan": "AIDC Plan"
   },
   "confirmDelete": {
@@ -327,7 +327,7 @@
     "deviceLibrary": "Device Library",
     "settings": "Settings",
     "search": "Search",
-    "ai": "AI Assistant",
+    "ai": "AI Chat",
     "cloud": "Cloud Center",
     "hideSidebar": "Hide Sidebar",
     "showSidebar": "Show Sidebar",
@@ -342,7 +342,7 @@
       "file": "File",
       "edit": "Edit",
       "view": "View",
-      "project": "Project",
+      "project": "Tools",
       "help": "Help"
     },
     "file": {
@@ -396,11 +396,11 @@
       "toggleLogPanel": "Toggle Log Panel",
       "designView": "Design View",
       "visualizationView": "Visualization View",
-      "projectView": "Project Explorer",
+      "projectView": "Explorer",
       "workbenchView": "Workbench",
       "deviceLibraryView": "Device Library",
       "searchView": "Global Search",
-      "aiView": "AI Assistant",
+      "aiView": "AI Chat",
       "cloudView": "Cloud Center",
       "closeTab": "Close Tab",
       "reopenTab": "Reopen Closed Tab",
@@ -411,7 +411,7 @@
       "renderCurrentProject": "Render Current Project",
       "exportCurrentProject": "Export / Output Current Project",
       "toggleLogPanelAlt": "Toggle Log Panel (alternate key)",
-      "projectViewAlt": "Project Explorer (alternate key)"
+      "projectViewAlt": "Explorer (alternate key)"
     },
     "toast": {
       "selectProjectFirst": "Please select a project first",
@@ -474,7 +474,11 @@
     "releaseNotes": "Release Notes",
     "newVersionAvailable": "New version v{{version}} available. Click the icon in the top right to view.",
     "integrityOk": "Download integrity check passed, ready for offline install",
-    "offlineHint": "In offline / no-network environments you can skip online updates — the installer is offline-capable and works without network after install"
+    "offlineHint": "In offline / no-network environments you can skip online updates — the installer is offline-capable and works without network after install",
+    "restartPromptTitle": "Update downloaded",
+    "restartPromptMessage": "The new version has been downloaded. Restart now to finish the installation?",
+    "restartNow": "Restart now",
+    "later": "Later"
   },
   "about": {
     "title": "About AutoLink",
@@ -1117,7 +1121,7 @@
       "templateCenterHint": "Template center opened (right-click a template to preview / create)",
       "previewTemplate": "Preview Template",
       "createFromTemplate": "Create From Template",
-      "ai": "AI Assistant",
+      "ai": "AI Chat",
       "deviceLibrary": "Device Library",
       "search": "Global Search",
       "cloud": "Cloud Center",
@@ -1158,8 +1162,6 @@
       "pipelineRun": "Run One-Click Pipeline (Plan→Design→Render→Export)",
       "pipelineTemplate": "Template Batch One-Click Pipeline",
       "pipelineTemplateHint": "Select templates in the workbench \"One-Click Pipeline\" to process in batch",
-      "openRecent": "Open Recent Project",
-      "openedRecent": "Recent project opened",
       "openFavorite": "Open Favorite Project",
       "openedFavorite": "Favorite project opened",
       "favoriteEmpty": "No favorite projects (star a project in the explorer to favorite)",

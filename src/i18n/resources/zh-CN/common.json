@@ -27,7 +27,7 @@
     "visualization": "可视化",
     "visualizationWithProject": "可视化 - {{name}}",
     "deviceLibrary": "设备库",
-    "chat": "AI 助手",
+    "chat": "AI对话",
     "aidcPlan": "AIDC 规划"
   },
   "confirmDelete": {
@@ -327,7 +327,7 @@
     "deviceLibrary": "设备库",
     "settings": "设置",
     "search": "搜索",
-    "ai": "AI 助手",
+    "ai": "AI对话",
     "cloud": "云中心",
     "hideSidebar": "隐藏侧边栏",
     "showSidebar": "显示侧边栏",
@@ -342,7 +342,7 @@
       "file": "文件",
       "edit": "编辑",
       "view": "视图",
-      "project": "项目",
+      "project": "工具",
       "help": "帮助"
     },
     "file": {
@@ -396,11 +396,11 @@
       "toggleLogPanel": "切换日志面板",
       "designView": "设计视图",
       "visualizationView": "可视化视图",
-      "projectView": "项目浏览器",
+      "projectView": "资源管理器",
       "workbenchView": "工作台",
       "deviceLibraryView": "设备库",
       "searchView": "全局搜索",
-      "aiView": "AI 助手",
+      "aiView": "AI对话",
       "cloudView": "云中心",
       "closeTab": "关闭标签页",
       "reopenTab": "恢复标签页",
@@ -411,7 +411,7 @@
       "renderCurrentProject": "渲染当前项目",
       "exportCurrentProject": "导出/输出当前项目",
       "toggleLogPanelAlt": "切换日志面板（附加键）",
-      "projectViewAlt": "项目浏览器（附加键）"
+      "projectViewAlt": "资源管理器（附加键）"
     },
     "toast": {
       "selectProjectFirst": "请先选择一个项目",
@@ -474,7 +474,11 @@
     "releaseNotes": "更新日志",
     "newVersionAvailable": "发现新版本 v{{version}}，点击右上角图标查看",
     "integrityOk": "下载完整性校验通过，可离线安装使用",
-    "offlineHint": "若处于无网络/离线环境，可跳过在线更新——安装包为离线安装包，安装后离线可用"
+    "offlineHint": "若处于无网络/离线环境，可跳过在线更新——安装包为离线安装包，安装后离线可用",
+    "restartPromptTitle": "更新已下载完成",
+    "restartPromptMessage": "新版本已下载完毕，是否立即重启以完成安装？",
+    "restartNow": "立即重启",
+    "later": "稍后"
   },
   "about": {
     "title": "关于 AutoLink",
@@ -1117,7 +1121,7 @@
       "templateCenterHint": "已打开模板中心（可右键模板预览/基于模板创建）",
       "previewTemplate": "预览模板",
       "createFromTemplate": "基于模板创建",
-      "ai": "AI 助手",
+      "ai": "AI对话",
       "deviceLibrary": "设备库",
       "search": "全局搜索",
       "cloud": "云中心",
@@ -1158,8 +1162,6 @@
       "pipelineRun": "运行一键管线（规划→设计→渲染→导出）",
       "pipelineTemplate": "模板批处理一键管线",
       "pipelineTemplateHint": "请在工作台「一键管线」中选择模板进行批量处理",
-      "openRecent": "打开最近项目",
-      "openedRecent": "已打开最近项目",
       "openFavorite": "打开收藏项目",
       "openedFavorite": "已打开收藏项目",
       "favoriteEmpty": "暂无收藏项目（在项目浏览器点击星标收藏）",

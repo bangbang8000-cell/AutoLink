@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Minus, Square, Maximize2 } from 'lucide-react'
 import { UpdatePopover } from '@/components/layout/UpdatePopover'
+import { RestartPromptDialog } from '@/components/layout/RestartPromptDialog'
 import { MenuBar } from '@/components/layout/MenuBar'
+import { useUpdateStore } from '@/stores/update.store'
 import { CloudStatusIndicator } from '@/components/cloud/CloudStatusIndicator'
 import { UserProfileView } from '@/components/cloud/UserProfileView'
 import { ThemePopover } from '@/components/ui/ThemePopover'
@@ -39,6 +41,9 @@ export function Header() {
     })
     return () => { unsub?.() }
   }, [])
+
+  // AL-U1：单点订阅 preload 更新 4 事件并聚合到 update.store（对齐 MC Header 单点订阅）
+  useEffect(() => useUpdateStore.getState().attach(), [])
 
   const handleMinimize = () => window.electron?.window?.minimize()
   const handleMaximize = () => window.electron?.window?.maximize()
@@ -122,6 +127,9 @@ export function Header() {
           </button>
         </div>
       </div>
+
+      {/* AL-U1：下载完成自动弹出的「立即重启/稍后」确认框 */}
+      <RestartPromptDialog />
     </header>
   )
 }

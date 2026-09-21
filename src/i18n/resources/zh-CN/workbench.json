@@ -257,7 +257,6 @@
   "empty.selectProject": "选择一个项目作为当前项目：",
   "empty.gotoProjects": "前往项目面板（新建 / 导入）",
   "empty.noProjects": "暂无项目，请在「项目」面板新建或从模板导入。",
-  "empty.recentProjects": "最近使用项目",
   "empty.fromTemplate": "从模板新建",
   "aidcCreate.pleaseEnterName": "请输入项目名",
   "aidcCreate.created": "已新建 AIDC 项目 {{name}}（v1）",

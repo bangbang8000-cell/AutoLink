@@ -1,6 +1,7 @@
 import '@/i18n'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
+import { useUpdateStore } from '@/stores/update.store'
 
 // 记录实际渲染的 lucide 图标名（vi.mock 提升到模块加载前，UpdatePopover 拿到的即 mock 后的模块）
 const renderedIcons: string[] = []
@@ -30,6 +31,13 @@ describe('UpdatePopover（AL-UX-1：更新图标对齐 MC 用 RefreshCw）', () 
     app.onUpdateDownloadProgress = vi.fn(() => vi.fn())
     app.onUpdateDownloaded = vi.fn(() => vi.fn())
     app.onUpdateError = vi.fn(() => vi.fn())
+    // AL-U1：事件聚合上移到 store（Header 挂载处 attach），测试中显式挂载并在每个用例后复位
+    useUpdateStore.getState().__reset()
+    useUpdateStore.getState().attach()
+  })
+
+  afterEach(() => {
+    useUpdateStore.getState().__reset()
   })
 
   it('空闲态渲染 RefreshCw 更新图标（对齐 MC），不再使用 ArrowUpCircle', () => {

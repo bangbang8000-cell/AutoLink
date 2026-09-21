@@ -27,7 +27,7 @@
     "visualization": "視覺化",
     "visualizationWithProject": "視覺化 - {{name}}",
     "deviceLibrary": "設備庫",
-    "chat": "AI 助手",
+    "chat": "AI 對話",
     "aidcPlan": "AIDC 規劃"
   },
   "confirmDelete": {
@@ -327,7 +327,7 @@
     "outputResults": "輸出結果",
     "settings": "設定",
     "search": "搜尋",
-    "ai": "AI 助手",
+    "ai": "AI 對話",
     "cloud": "雲端中心",
     "hideSidebar": "隱藏側邊欄",
     "showSidebar": "顯示側邊欄",
@@ -342,7 +342,7 @@
       "file": "檔案",
       "edit": "編輯",
       "view": "檢視",
-      "project": "專案",
+      "project": "工具",
       "help": "說明"
     },
     "file": {
@@ -396,11 +396,11 @@
       "toggleLogPanel": "切換日誌面板",
       "designView": "設計檢視",
       "visualizationView": "視覺化檢視",
-      "projectView": "專案瀏覽器",
+      "projectView": "資源管理器",
       "workbenchView": "工作台",
       "deviceLibraryView": "裝置庫",
       "searchView": "全域搜尋",
-      "aiView": "AI 助手",
+      "aiView": "AI 對話",
       "cloudView": "雲端中心",
       "closeTab": "關閉標籤頁",
       "reopenTab": "恢復標籤頁",
@@ -411,7 +411,7 @@
       "renderCurrentProject": "渲染目前專案",
       "exportCurrentProject": "匯出/輸出目前專案",
       "toggleLogPanelAlt": "切換日誌面板（附加鍵）",
-      "projectViewAlt": "專案瀏覽器（附加鍵）"
+      "projectViewAlt": "資源管理器（附加鍵）"
     },
     "toast": {
       "selectProjectFirst": "請先選擇一個專案",
@@ -474,7 +474,11 @@
     "restartToInstall": "重啟安裝",
     "error": "更新出錯",
     "retry": "重試",
-    "manualDownload": "手動下載"
+    "manualDownload": "手動下載",
+    "restartPromptTitle": "更新已下載完成",
+    "restartPromptMessage": "新版本已下載完畢，是否立即重新啟動以完成安裝？",
+    "restartNow": "立即重新啟動",
+    "later": "稍後"
   },
   "about": {
     "title": "關於 AutoLink",
@@ -1117,7 +1121,7 @@
       "templateCenterHint": "已開啟範本中心（可右鍵範本預覽/基於範本建立）",
       "previewTemplate": "預覽範本",
       "createFromTemplate": "基於範本建立",
-      "ai": "AI 助手",
+      "ai": "AI 對話",
       "deviceLibrary": "裝置庫",
       "search": "全域搜尋",
       "cloud": "雲中心",
@@ -1158,8 +1162,6 @@
       "pipelineRun": "執行一鍵管線（規劃→設計→渲染→匯出）",
       "pipelineTemplate": "模板批次一鍵管線",
       "pipelineTemplateHint": "請在工作台「一鍵管線」中選擇模板進行批次處理",
-      "openRecent": "開啟最近專案",
-      "openedRecent": "已開啟最近專案",
       "openFavorite": "開啟收藏專案",
       "openedFavorite": "已開啟收藏專案",
       "favoriteEmpty": "暫無收藏專案（在專案瀏覽器點擊星號收藏）",
