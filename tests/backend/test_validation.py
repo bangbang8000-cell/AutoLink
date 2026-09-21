@@ -355,9 +355,9 @@ class TestV010ParamOversubscription:
 class TestEngineBasics:
     """引擎基础功能"""
 
-    def test_default_engine_has_22_rules(self, engine):
-        """默认引擎含 22 条规则 (V001-V022 完整；5.3.0-530 补上缺失的 V021 端口守恒)"""
-        assert engine.get_rule_count() == 22
+    def test_default_engine_has_23_rules(self, engine):
+        """默认引擎含 23 条规则 (V001-V023 完整；V021 端口守恒 5.3.0-530 补上，V023 5.4.2-542 新增)"""
+        assert engine.get_rule_count() == 23
 
     def test_v021_port_conservation_registered(self, engine):
         """V021（端口守恒）必须在 5.3.0 补注册，且归入拓扑规则类。"""

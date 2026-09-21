@@ -561,6 +561,9 @@ def _run_validation(designer):
         "combined_leaf_count": len(getattr(designer, 'combined_leaves', [])),
         "param_spine_count": getattr(designer, 'param_spine_count', 0),
         "param_core_count": getattr(designer, 'param_core_count', 0),
+        # V5.4.2-542-b（AL-Q2）：V023 参数网 Leaf ≤ Spine 单台下联口上限
+        "param_switch_ports": getattr(designer, 'param_switch_ports', 0),
+        "param_spine_downlink_limit": getattr(designer, 'param_spine_downlink_limit', None),
         # V5.3.0-530-g6（AL-G6）：逐层端口守恒校验数据（V021）
         "port_conservation": _build_port_conservation(designer),
     }

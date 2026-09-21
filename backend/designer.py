@@ -7,7 +7,7 @@ import math, os, json, configparser
 from typing import Optional
 from models import (NetworkObject, Connection, apply_breakout,
                       breakout_total_count, breakout_for_role)
-from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier
+from topology import FatTreeTopology, AccessAggTopology, calc_max_2tier, calc_spine_count
 from device_library import get_device_library, LibraryDevice, InterfaceModel
 from rail_topology import RailOptimizedTopology
 # V3.0.0-T0-2: 加载旧 schema 配置时自动迁移到当前版本（内存态，不回写）
@@ -277,6 +277,8 @@ class NetworkDesignerV2:
         self.param_ports_per_server = topo.get('param_ports_per_server', 8)
         self.storage_ports_per_server = topo.get('storage_ports_per_server', 1)
         self.param_switch_ports = topo.get('param_switch_ports', 64)
+        # V5.4.2-542-b（AL-Q2/Q3400）：Spine 单台下联口上限（0=自动 switch_ports//2）
+        self.param_spine_downlink_limit = int(topo.get('param_spine_downlink_limit', 0) or 0) or None
         self.storage_switch_ports = topo.get('storage_switch_ports', 40)
         self.param_speed = topo.get('param_speed', '400G')
         self.storage_speed = topo.get('storage_speed', '200G')
@@ -788,7 +790,19 @@ class NetworkDesignerV2:
                 self.param_groups = math.ceil(self.num_servers / self.param_servers_per_group)
                 self.param_leaf_per_group = self.param_ports_per_server
                 self.param_leaf_count = self.param_groups * self.param_leaf_per_group
-                self.param_spine_count = max(1, self.param_leaf_count // 2)
+                # Q3（Q3400 二层口径核查）：Spine 台数统一走 calc_spine_count。
+                # 经典 1:1 Clos（leaf=k、uplink=k/2、Spine 全口 k 下联）→ ceil(k×k/2/k)=k/2，
+                # 与旧 leaf//2 一致（零回归）；显式配置 param_spine_downlink_limit
+                # （Q3400：72）时按容量反推 → 72 Leaf×72 上行÷72 下联 = 72 台 Spine。
+                _spine_dl_limit = getattr(self, 'param_spine_downlink_limit', None)
+                if _spine_dl_limit:
+                    self.param_spine_count = calc_spine_count(
+                        self.param_leaf_count,
+                        max(1, self.param_switch_ports - self.param_dl),
+                        int(_spine_dl_limit),
+                    )
+                else:
+                    self.param_spine_count = calc_spine_count(self.param_leaf_count)
                 self.param_core_count = 0
                 self.param_pods = 0
                 self.param_servers_per_pod = 0

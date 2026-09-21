@@ -24,7 +24,7 @@ import math
 from typing import Dict, List, Any, Optional
 
 from models import NetworkObject, Connection
-from topology import calc_max_2tier
+from topology import calc_max_2tier, calc_spine_count
 
 
 class DualPlaneTopology:
@@ -113,7 +113,7 @@ class DualPlaneTopology:
                 stat = {
                     'plane': pi, 'tier': 2, 'pods': 0, 'servers_per_pod': 0, 'servers_per_group': 0,
                     'leaves_per_pod': 0,
-                    'leaf_count': leaf_count, 'spine_count': max(1, leaf_count // 2), 'core_count': 0,
+                    'leaf_count': leaf_count, 'spine_count': calc_spine_count(leaf_count), 'core_count': 0,
                     'speed': speed, 'protocol': protocol, 'switch_ports': switch_ports,
                     'downlink_per_leaf': downlink_per_leaf, 'uplink': uplink,
                 }

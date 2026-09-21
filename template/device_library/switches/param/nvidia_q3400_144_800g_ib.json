@@ -3,7 +3,7 @@
   "vendor": "NVIDIA",
   "model": "Q3400 (Quantum-3)",
   "category": "switches_param",
-  "description": "NVIDIA Quantum-3 Q3400 144端口XDR 800Gb/s（1.6T 物理口）InfiniBand智能交换机，带管理端口，适用于超大规模AI训练集群高速互联（V5.4.0-640-i/W2.4：breakout 单级 1.6T→2×800G（PRD §3.5-B 场景⑥）；两级 1.6T→2×800G→4×400G 为保留能力（FR-A7：需现场确认链路预算与中继），本轮不启用）",
+  "description": "NVIDIA Quantum-3 Q3400 144端口XDR 800Gb/s（1.6T 物理口）InfiniBand智能交换机，带管理端口，适用于超大规模AI训练集群高速互联（V5.4.2-542-c/Q1：显式标注物理形态——72×OSFP-1600 笼位（每笼 1.6T=2×800G 双口=144 逻辑 XDR 800G 口），breakout 单级 1.6T→2×800G（V5.4.0-640-i/W2.4：PRD §3.5-B 场景⑥）；两级 1.6T→2×800G→4×400G 为保留能力（FR-A7：需现场确认链路预算与中继），本轮不启用）",
   "power_watts": 2200,
   "weight_kg": 22,
   "u_height": 2,
@@ -46,5 +46,8 @@
     "rail_optimized",
     "dual_plane",
     "zcube"
-  ]
+  ],
+  "physical_ports": 72,
+  "physical_port_type": "OSFP-1600",
+  "logical_port_count": 144
 }

@@ -38,6 +38,30 @@ def calc_leafs_per_pod(switch_ports, ports_per_server, servers_per_pod):
     return groups_per_pod * ports_per_server
 
 
+def calc_spine_count(leaf_count, leaf_uplink_ports=None, spine_downlink_ports=None):
+    """计算 Spine 台数（统一容量反推公式，AL-Q3 / Q3400 二层口径核查）
+
+    旧实现 `leaf_count // 2` 是「Leaf=k 台、Spine=k/2 台」经典 1:1 Clos 的推论，
+    仅当每 Leaf 恰好出 1 条上行到每台 Spine 时成立。Q3400 终版口径
+    （72×1.6T 物理口对半、每口 2×800G）下，每 Leaf 出 72 个 800G 上行口、
+    每 Spine 收 72 个 800G 下联口，故 Spine 台数 = ceil(leaf × uplink / downlink)：
+
+      - Q3400（leaf=72、uplink=72、downlink=72）：ceil(72×72/72) = 72 台
+        （旧 //2=36 少算一半，这正是反馈表格「终版需求 Spine=Leaf」的来由）
+      - 经典 1:1（leaf=k、uplink=k/2、downlink=k）：ceil(k×(k/2)/k) = k/2 台
+        （与旧 //2 完全一致，零副作用）
+
+    参数缺省时回退 `leaf_count // 2`（双平面/经典路径零回归）。
+    """
+    if leaf_count <= 0:
+        return 1
+    if leaf_uplink_ports is None or spine_downlink_ports is None:
+        return max(1, leaf_count // 2)
+    if leaf_uplink_ports <= 0 or spine_downlink_ports <= 0:
+        return max(1, leaf_count // 2)
+    return max(1, math.ceil(leaf_count * leaf_uplink_ports / spine_downlink_ports))
+
+
 class FatTreeTopology:
     """Fat-Tree网络拓扑设计器（支持二层/三层自动判定）"""
 
@@ -73,7 +97,7 @@ class FatTreeTopology:
 
         if self.leaf_count is not None:
             total_leaves = self.leaf_count
-            total_spines = max(1, total_leaves // 2)
+            total_spines = calc_spine_count(total_leaves)
             total_cores = max(1, total_spines // 2)
             return True, total_leaves, total_spines, total_cores
 
@@ -110,8 +134,11 @@ class FatTreeTopology:
                 self.switch_groups[leaf_name] = leaf.group
                 self.podid_map[leaf_name] = leaf.podid
 
-        # 创建Spine交换机
-        for spine_idx in range(1, len(self.leaves) + 1):
+        # 创建Spine交换机（Q4：与 calculate_hierarchy 的 total_spines 同源；
+        # 三层路径 Leaf↔Spine 全互联 → spine=leaf；显式 leaf 分支由
+        # calc_spine_count 统一口径，避免「算 //2 却建满」的自相矛盾）
+        spine_target = calc_spine_count(len(self.leaves)) if self.leaf_count is not None else len(self.leaves)
+        for spine_idx in range(1, spine_target + 1):
             spine_name = f"{self.prefix}Spine_{spine_idx}"
             spine = NetworkObject(
                 name=spine_name,

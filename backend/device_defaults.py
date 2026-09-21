@@ -21,7 +21,7 @@ IB_DEFAULTS_BY_GPU: Dict[str, Dict[str, str]] = {
         'param_spine_switch': 'nvidia_mqm9700_64_400g_ib',
         'param_core_switch': 'nvidia_mqm9700_64_400g_ib',
     },
-    # B200/B300 (800G NDR era): Leaf/Spine/Core 全系 Q3400(144口,支持 72 Leaf 下行 3-tier)
+    # B200/B300 (800G NDR era): Leaf/Spine/Core 全系 Q3400（72×1.6T 物理笼位 = 144×800G 逻辑口，每口 2×800G 双口；Spine 单台下联上限 72，见 V023）
     'b300': {
         'param_leaf_switch': 'nvidia_q3400_144_800g_ib',
         'param_spine_switch': 'nvidia_q3400_144_800g_ib',

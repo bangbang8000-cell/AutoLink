@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## [5.4.2] - 2026-09-21
+
+> **Q3400 二层口径核查落地（《用户反馈》AL-Q1~Q4）+ 上游 5.4.1 合并。小版本优化。**
+
+### 行为变更（AL-Q1~Q4 / Q3400 二层口径核查）
+
+- **Q2（P0）新增 V023 校验——参数网 Leaf 台数 ≤ Spine 单台下联口上限**：Q3400 终版口径（72×1.6T 物理笼位、每笼 2×800G 双口 = 144 逻辑 XDR 800G 口）下每台 Spine 仅 72 个 800G 下联口，须容纳全部 Leaf 各 1 条上行 → Leaf 台数 ≤ 72 为硬上限。旧版**无此规则**，万卡-B300-Q3400（leaf=400）等模板静默产出接不通拓扑（实证：H100-256 Leaf-Spine 连接 0 条仍 valid=True）；现仅对**二层参数网**触发（三层按 Pod 分组互联，不适用全二部口径，避免误伤），上限参数化（`param_spine_downlink_limit`，缺省 = switch_ports//2，Q3400 自动 72），超限报 ERROR + 修复建议。
+- **Q3（P1）Spine 台数统一容量反推公式 `calc_spine_count`**：designer 二层路径 / topology 显式分支 / dual_plane 共用统一函数；经典 1:1 Clos（leaf=k、uplink=k/2、Spine 全口 k）→ ceil(k×k/2/k)=k/2 与旧 leaf//2 完全一致（零回归）；显式配置 `param_spine_downlink_limit`（Q3400：72）时按容量反推 → 72 Leaf×72 上行÷72 下联 = 72 台 Spine（旧 //2=36 少算一半）。
+- **Q4（P2）topology 内部一致**：`calculate_hierarchy` 显式分支与 `create_network_objects` 建 Spine 数同源（统一走 calc_spine_count），消除「算 //2 却建满」的自相矛盾。
+- **Q1（P1）Q3400 设备物理形态显式标注**：设备库 `nvidia_q3400_144_800g_ib` 增加 `physical_ports: 72` / `physical_port_type: OSFP-1600` / `logical_port_count: 144`，description 显式标注「72×OSFP-1600 笼位（每笼 1.6T=2×800G 双口=144 逻辑 XDR 800G 口）」；`device_defaults` 注释同步。保留逻辑 144×800G 语义与既有 ID（不破坏 device_refs/测试兼容）。
+
+### 合并与治理
+
+- 合并上游 v5.4.1（5.4.0 双端 UI 阶段 A / 存储分类口径 / Q3400 二层公式 k²/2p）+ 保留本地定制（5090 模板 / 光模块清单化 / 10G 档位）；README 数字按合并后实测真值对齐（模板 30 / 设备库 131（95+36）/ 示例 14 / 规则 23）。
+- 新增专项测试 `test_q3400_542.py`（V023 触发/三层豁免/参数化 + calc_spine_count 六场景）；规则数断言 22→23 同步。
+
 ## [5.4.1] - 2026-09-21
 
 > **双端 UI 体验改进规划·阶段 A（AL 侧）+ 本轮三项修复，与 MC 5.4.1 同日发布。**

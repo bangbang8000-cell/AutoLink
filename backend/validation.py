@@ -616,6 +616,47 @@ def _rule_zcube_structure(ctx: ValidationContext) -> List[ValidationIssue]:
 
 
 
+def _rule_param_leaf_spine_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
+    """V023: 参数网 Leaf 台数 ≤ Spine 单台下联口上限（AL-Q2 / Q3400 二层口径核查）
+
+    Q3400-RA 终版口径：每台 Spine 只有 72 个 800G 下联口（72×1.6T 物理口对半、
+    每口 2×800G = 144 逻辑口），它必须容纳全部 Leaf 各 1 条上行 → Leaf 台数
+    ≤ 72 是硬上限。旧版**无此规则**（只查 Leaf 下行总容量 V016、Spine 上联侧
+    V010），万卡-B300-Q3400（leaf=400）等 Leaf 超限模板在 `_run_validation`
+    里无任何 Leaf 约束 error（实证：仅 6 条 V002 功率 error，valid=False 但
+    归因错误），H100-256（leaf=88、Leaf-Spine 连接 0 条）甚至 valid=True。
+
+    触发条件：仅「二层参数网」（param_core_count==0 且有 Leaf+Spine）——
+    三层 Leaf-Spine 是分组互联（每 Spine 只收本 Pod 的 Leaf），Leaf 台数可
+    超过 switch_ports//2 而物理可行（如 1024 GPU 三层 leaf=256>32），
+    直接套用会大面积误伤（30 模板几乎全红），故三层不触发。
+
+    上限参数化：spine_downlink_limit 缺省 = param_switch_ports // 2
+    （Q3400: 144//2=72），可经 param_spine_downlink_limit 覆盖。
+    """
+    cfg = ctx.config
+    core_count = int(cfg.get('param_core_count') or 0)
+    if core_count != 0:
+        return []  # 三层：Leaf-Spine 分组互联，不适用全二部 1:1 口径
+    leaf_count = int(cfg.get('param_leaf_count') or 0)
+    spine_count = int(cfg.get('param_spine_count') or 0)
+    switch_ports = int(cfg.get('param_switch_ports') or 0)
+    if leaf_count <= 0 or spine_count <= 0 or switch_ports <= 0:
+        return []
+    limit = int(cfg.get('param_spine_downlink_limit') or (switch_ports // 2))
+    if leaf_count <= limit:
+        return []
+    return [ValidationIssue(
+        rule_id="V023",
+        severity=Severity.ERROR,
+        category="拓扑规则",
+        message=f"参数网 Leaf 台数 {leaf_count} 超过 Spine 单台下联口上限 {limit}"
+                f"（Q3400 二层口径：每台 Spine 仅 {limit} 个 800G 下联口，须容纳全部 Leaf 各 1 条上行）",
+        affected_items=[f"param-leaf-{leaf_count}", f"param-spine-{spine_count}"],
+        recommendation="降低 Leaf 台数至 ≤{limit}，或改用三层组网，或更换更高密 Spine（如 144 口 Q3400）",
+    )]
+
+
 def _rule_port_conservation(ctx: ValidationContext) -> List[ValidationIssue]:
     """V021: 逐层端口守恒校验 (V5.3.0-530-g6 / AL-G6)
 
@@ -961,4 +1002,6 @@ def create_default_engine() -> ValidationEngine:
     engine.register_rule("V021", "拓扑规则", _rule_port_conservation)
     # V3.0.2-T2-5: 三合一融合网专属规则
     engine.register_rule("V022", "拓扑规则", _rule_combined_eth)
+    # V5.4.2-542-b（AL-Q2）：参数网 Leaf ≤ Spine 单台下联口上限（Q3400 二层口径）
+    engine.register_rule("V023", "拓扑规则", _rule_param_leaf_spine_capacity)
     return engine

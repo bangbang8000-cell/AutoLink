@@ -279,7 +279,7 @@ class TestV021Rule:
         ids = [r[0] for r in engine._rules]
         assert 'V021' in ids
         assert len(ids) == len(set(ids)), '规则 ID 不得重复'
-        assert len(ids) == 22, f'应为 21 条既有 + V021 = 22，实际 {len(ids)}'
+        assert len(ids) == 23, f'应为 21 条既有 + V021 + V023 = 23，实际 {len(ids)}'
 
     def test_before_fix_state_reports_error(self):
         """T-530-27：修复前状态（16 框 / 512 口 / 丢 992 条）必须报 ERROR。"""

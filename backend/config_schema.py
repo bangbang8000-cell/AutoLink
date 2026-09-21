@@ -86,6 +86,7 @@ PROJECT_FIELDS = [
     _f('param_ports_per_server', 'number', 8, 'param', '每服务器参数端口数', ''),
     _f('storage_ports_per_server', 'number', 1, 'storage', '每服务器存储端口数', ''),
     _f('param_switch_ports', 'number', 64, 'param', '参数交换机端口数', ''),
+    _f('param_spine_downlink_limit', 'number', 0, 'param', 'Spine单台下联口上限', '0=自动(switch_ports//2)，Q3400 配 72'),
     _f('storage_switch_ports', 'number', 40, 'storage', '存储交换机端口数', ''),
     _f('rail_mode', 'string', 'standard', 'param', 'Rail 模式', '', ['standard', 'rail_optimized']),
     _f('rail_count', 'number', 8, 'param', 'Rail 数量', ''),
