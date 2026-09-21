@@ -1,5 +1,82 @@
 # CHANGELOG
 
+
+## [5.4.1] - 2026-09-21
+
+> **双端 UI 体验改进规划·阶段 A（AL 侧）+ 本轮三项修复，与 MC 5.4.1 同日发布。**
+
+### 行为变更（UI 对齐）
+
+- **A1 更新机制对齐 MC（AL-U1）**：更新状态收口为单点 zustand store（update.store.ts），UpdatePopover/AboutDialog 双入口状态同步；下载完成自动弹「立即重启/稍后」（RestartPromptDialog）；About 补齐 available/downloaded 订阅。
+- **A2 一级菜单命名统一（AL-U2）**：项目浏览器→资源管理器、AI 助手→AI对话（5 语言）；命令面板、快捷键对话框、页签标题全量 i18n；内部 id 与 Ctrl+Shift+E/A 不变。
+- **A3 顶部菜单分组（AL-U3）**：按已批准方案 A，「项目」组→「工具」，功能项全保留。
+- **A4 组件行为契约（AL-U4）**：Modal/Popover/Select 与 MC 契约一致；Toast 位置右上→右下，补契约测试。
+- **A5 快捷键（AL-U5）**：11 项共享键位与 MC 一致；AL 独有项（AI对话/设计/可视化/设备库等）保留单列。
+- **A6 移除「最近项目」入口**：资源管理器侧边栏、工作台空态、命令面板 recent 命令全部移除（保留全部项目列表 + 行内收藏星标）。
+
+### 缺陷修复
+
+- **undo 落盘路径修复**：rack/room undo 写入补 output/ 前缀（此前缺前缀导致 IPC 校验失败「非法输出路径」、undo 持久化实际失效），写读对称、恢复生效。
+
+### 测试
+
+- vitest **1437 passed**（另 pipeline 单跑 12/12）；tsc/eslint 双 0 错；菜单 i18n 全语言审计通过（无缺失）。
+## [5.4.0] - 2026-09-20
+
+> **6 场景内容建设版（B-1/B-2/B-4 同日发布，详见 docs/AL-MC_6场景内容建设_ReleaseNotes_草稿_v0.9）**
+> —— 二层容量判据修正 + 存储口径同源 + breakout 链式/角色化 + 万卡互联段扩段 + 6 场景模板/golden 34；
+> 行为变更分节 §A（设计结果）§C（内容资产）§D（工具与门禁），详见 Release Notes。
+
+### 行为变更（§A 设计结果）
+
+- **A1 二层容量判据**：calc_max_2tier k²/(4p)→k²/(2p)（PRD §3.1 裁定 1）；5 套既有模板 + 4 套新场景翻转判二层。
+- **A2 存储口数三处同源**：_storage_port_demand/_wire_storage/自检统一类别口径（GPU 1 / 存储 4 / 通算 1 ×200G）；eth_combined 融合网按 total_servers×2。
+- **A3 breakout 链式/角色化**：reakout_total_count=Π(count)；applicable_networks 限定（QM9700 参数网禁用存储分光）。
+- **A4 存储层级容量式判据**：_storage_capacity=(k×breakout_count)²/2；需求>容量⇒三层。
+- **A5 万卡互联段扩段**：1024+ 档 oob=10.1.64.0/19、interconnect=10.1.96.0/19（/19 边界对齐）。
+- **A6 场景②速率对齐**：Q3400 param_speed 400G→800G、ports 288→144；EXPECTED_FLIPPED 第 9 套。
+
+### 内容资产（§C 6 场景）
+
+- 新增 template/ 6 套：万卡-H200-QM9700-三层-IB / 万卡-H200-Q3400-二层-IB / 万卡-H200-X400-三层-RoCE / 二层最大-2048卡-QM9700-IB / 二层最大-8192卡-X400-RoCE / 万卡-B300-Q3400-二层-IB（各 5 文件）。
+- 设备库新增 2 款：inspur_x400_128_400g、nvidia_mqm9700_64_400g_ib_storage；Q3400 修正（800G XDR）；golden 28→34 基线。
+- 存储/通算台数：1250→59/59/59、1024→48/48/48、256→12/12/12（O-2 裁定 A）。
+
+### 工具与门禁（§D）
+
+- gen_samples.py 13 套×10 类、alidate_samples.py 13/13、alidate_templates.py 29/29、gen_golden.py --check 29/29。
+- 
+econcile_device_library.py AL 129 ↔ MC 21 对账通过。
+
+### 测试
+
+- 守恒 32、S6 专项 79、二层翻转 9 套全绿；拓扑图分光前端/后端专项绿。
+
+## [5.3.3] - 2026-09-20
+
+> **门禁加固版（评估整改，AL-G14 / 5.3.0 附录 C T7.0–T7.2）** —— 新增双路径对称 AST 探针
+> 与门禁五连；**对外契约无变化、golden 基线零变化**（纯门禁/工具，不改任何设计结果）。
+
+### 新增（AL-G14 双路径初始化对称性门禁）
+
+- **`scripts/check_dual_path_symmetry.py`**（T7.0）：AST 静态分析 `_init_biz_caliber_switches` ——
+  ① **调用点覆盖**（JSON `_init_from_project_config` 与 INI `_load_common_ini_config` / `_load_common_config` 都必须调用唯一入口）；
+  ② **不对称散落赋值**（口径开关属性在 entry 外被赋值且仅覆盖单一路径 ⇒ 阻断；两路径都有的向后兼容覆盖如 `biz_agg_chassis_ports` 记入对称信息）；
+  ③ **无默认值**（entry 内 `get(KEY)` 不带默认值 ⇒ 阻断，防配置缺失 AttributeError）。
+  退出码 0/1/2；`--allow` 支持人工判定后的安全候选豁免。
+- **`tests/scripts/test_dual_path_symmetry.py`**（11 条）：正常双路径 / 单路径缺失 / 散落赋值 / 无默认值 / 豁免 / has 键 / 边界。
+- **`TestDualPathSymmetry533`**（`tests/backend/test_caliber_531.py`，3 条）：真实 `designer.py` 必须持续通过探针 —— 防未来引入漂移源。
+
+### 流程（门禁五连）
+
+- 本地必跑门禁由「四连」升级为「**五连**」：版本单源 / 文档数字 / CHANGELOG 宣称↔代码 / golden / **`validate_templates.py`**（INI 端到端）；
+  AST 双路径探针与 `_CALIBER_SWITCHES` 枚举守卫双保险。
+
+### 测试
+
+- `tests/scripts` 11 条全绿；`TestCaliberSwitchCoverage531D` 既有 4 条保持绿。
+- 行为变更：**无** —— 本版不触碰任何设计逻辑。
+
 ## [5.3.2] - 2026-09-19
 
 > **补丁版** —— 修 5.3.1 遗留的 INI 路径初始化缺口（5.3.0 同类缺陷的**第 2 次复发**）。

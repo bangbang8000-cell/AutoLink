@@ -47,6 +47,13 @@ export interface PlanConnection {
   rate?: string
   desc?: string
   trunk?: boolean
+  /** V5.4.0-640-m（W3.3 / FR-A9）: 分光标注（单级 {input_speed,output_speed,count}；两级含 stages[]；缺省=1:1） */
+  breakout?: {
+    input_speed?: string
+    output_speed?: string
+    count?: number
+    stages?: Array<{ input_speed?: string; output_speed?: string; count?: number }>
+  } | null
 }
 
 export interface PlanTerminal {

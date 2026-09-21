@@ -27,7 +27,7 @@
     "visualization": "可視化",
     "visualizationWithProject": "可視化 - {{name}}",
     "deviceLibrary": "デバイスライブラリ",
-    "chat": "AI アシスタント",
+    "chat": "AI チャット",
     "aidcPlan": "AIDC プラン"
   },
   "confirmDelete": {
@@ -327,7 +327,7 @@
     "outputResults": "出力結果",
     "settings": "設定",
     "search": "検索",
-    "ai": "AI アシスタント",
+    "ai": "AI チャット",
     "cloud": "クラウドセンター",
     "hideSidebar": "サイドバーを隠す",
     "showSidebar": "サイドバーを表示",
@@ -342,7 +342,7 @@
       "file": "ファイル",
       "edit": "編集",
       "view": "表示",
-      "project": "プロジェクト",
+      "project": "ツール",
       "help": "ヘルプ"
     },
     "file": {
@@ -396,11 +396,11 @@
       "toggleLogPanel": "ログパネルの切替",
       "designView": "設計ビュー",
       "visualizationView": "可視化ビュー",
-      "projectView": "プロジェクトエクスプローラー",
+      "projectView": "エクスプローラー",
       "workbenchView": "ワークベンチ",
       "deviceLibraryView": "デバイスライブラリ",
       "searchView": "グローバル検索",
-      "aiView": "AI アシスタント",
+      "aiView": "AI チャット",
       "cloudView": "クラウドセンター",
       "closeTab": "タブを閉じる",
       "reopenTab": "閉じたタブを復元",
@@ -411,7 +411,7 @@
       "renderCurrentProject": "現在のプロジェクトをレンダリング",
       "exportCurrentProject": "現在のプロジェクトをエクスポート/出力",
       "toggleLogPanelAlt": "ログパネルの切替（追加キー）",
-      "projectViewAlt": "プロジェクトエクスプローラー（追加キー）"
+      "projectViewAlt": "エクスプローラー（追加キー）"
     },
     "toast": {
       "selectProjectFirst": "最初にプロジェクトを選択してください",
@@ -474,7 +474,11 @@
     "restartToInstall": "再起動してインストール",
     "error": "更新エラー",
     "retry": "再試行",
-    "manualDownload": "手動ダウンロード"
+    "manualDownload": "手動ダウンロード",
+    "restartPromptTitle": "更新のダウンロードが完了しました",
+    "restartPromptMessage": "新しいバージョンのダウンロードが完了しました。今すぐ再起動してインストールを完了しますか？",
+    "restartNow": "今すぐ再起動",
+    "later": "あとで"
   },
   "about": {
     "title": "AutoLink について",
@@ -1117,7 +1121,7 @@
       "templateCenterHint": "テンプレートセンターを開きました（右クリックでプレビュー/作成）",
       "previewTemplate": "テンプレートをプレビュー",
       "createFromTemplate": "テンプレートから作成",
-      "ai": "AI アシスタント",
+      "ai": "AI チャット",
       "deviceLibrary": "デバイスライブラリ",
       "search": "グローバル検索",
       "cloud": "クラウドセンター",
@@ -1158,8 +1162,6 @@
       "pipelineRun": "ワンクリックパイプラインを実行（計画→設計→レンダリング→エクスポート）",
       "pipelineTemplate": "テンプレート一括ワンクリックパイプライン",
       "pipelineTemplateHint": "ワークベンチの「ワンクリックパイプライン」でテンプレートを選択して一括処理",
-      "openRecent": "最近のプロジェクトを開く",
-      "openedRecent": "最近のプロジェクトを開きました",
       "openFavorite": "お気に入りのプロジェクトを開く",
       "openedFavorite": "お気に入りのプロジェクトを開きました",
       "favoriteEmpty": "お気に入りがありません（プロジェクトエクスプローラーでスターをクリックして追加）",

@@ -894,7 +894,7 @@ export async function persistRoomUndoHistory(projectName: string): Promise<void>
   const json = JSON.stringify(buildRoomUndoPersistFile(capped.undoStack, capped.redoStack))
   try {
     if (window.electron?.render?.saveOutputFile) {
-      await window.electron.render.saveOutputFile(projectName, ROOM_UNDO_PERSIST_FILE, roomUtf8ToBase64(json))
+      await window.electron.render.saveOutputFile(projectName, `output/${ROOM_UNDO_PERSIST_FILE}`, roomUtf8ToBase64(json))
       return
     }
   } catch (err) {

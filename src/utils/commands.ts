@@ -25,9 +25,9 @@ export interface CommandItem {
 }
 
 /** 打开 AI 对话标签页（复用 App.handleActivityClick 语义） */
-function openAIChat(): void {
+function openAIChat(title: string): void {
   useUIStore.getState().setActiveActivity('ai')
-  useWorkspaceStore.getState().openTab({ type: 'chat', title: 'AI 助手', closable: true })
+  useWorkspaceStore.getState().openTab({ type: 'chat', title, closable: true })
 }
 
 /** 打开工作台并聚焦子视图 */
@@ -399,21 +399,6 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
   })
 
   // ============ 最近/收藏 ============
-  // 动态：最近使用项目
-  for (const name of projectStore.recentProjects) {
-    if (!projectStore.projects.some((p) => p.name === name)) continue
-    commands.push({
-      id: `recent.open.${name}`,
-      label: `${t('common:commandPalette.commands.openRecent')}: ${name}`,
-      category: catRecent,
-      action: () => {
-        const st = useProjectStore.getState()
-        const p = st.projects.find((x) => x.name === name)
-        if (p) st.selectProject(p)
-        toast.addToast('success', `${t('common:commandPalette.commands.openedRecent')}: ${name}`)
-      },
-    })
-  }
   // 动态：收藏项目
   for (const name of projectStore.favoriteProjects) {
     if (!projectStore.projects.some((p) => p.name === name)) continue
@@ -472,7 +457,7 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     id: 'common.ai',
     label: t('common:commandPalette.commands.ai'),
     category: catCommon,
-    action: openAIChat,
+    action: () => openAIChat(t('common:menu.ai')),
   })
   commands.push({
     id: 'common.deviceLibrary',
@@ -510,7 +495,7 @@ export function buildCommandPaletteCommands(t: TFunction): CommandItem[] {
     category: catCommon,
     action: () => {
       useChatStore.getState().createSession()
-      openAIChat()
+      openAIChat(t('common:menu.ai'))
     },
   })
   commands.push({

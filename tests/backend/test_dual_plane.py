@@ -135,31 +135,34 @@ def test_h200_topology_valid(tmp_path):
     assert result['valid'], result['errors']
 
 
-# ---------- 1024×B300（CX8 2×400G）800G IB：逐平面 3-tier ----------
+# ---------- 1024×B300（CX8 2×400G）800G IB：逐平面 2-tier（V5.4.0 W1.1 容量修正） ----------
 
 def test_b300_800g_dual_plane(tmp_path):
     d = _designer(tmp_path, servers=1024, speed="800G", storage=32, compute=16)
-    # 1024 > 单 Pod 容量 648 → 每平面 3-tier（Pod=2，每 Pod 72 Leaf）
+    # V5.4.0（W1.1）：二层容量判据 k²/(2p) ⇒ 单 Pod 容量 1296 ≥ 1024 → 2-tier（每平面 64 Leaf）
     from collections import Counter
-    assert dict(Counter(getattr(l, 'plane_id', None) for l in d.param_leaves)) == {0: 144, 1: 144}
-    assert len(d.param_leaves) == 288
-    assert d.dual_plane_stats[0]['tier'] == 3
-    assert d.dual_plane_stats[0]['pods'] == 2
+    assert dict(Counter(getattr(l, 'plane_id', None) for l in d.param_leaves)) == {0: 64, 1: 64}
+    assert len(d.param_leaves) == 128
+    assert d.dual_plane_stats[0]['tier'] == 2
+    assert d.dual_plane_stats[0]['pods'] == 0  # 2-tier 无 Pod 语义
     assert d.validate_topology()['valid']
 
 
 def test_dual_plane_3tier_server_pod_alignment(tmp_path):
     """3-tier 服务器按逻辑超级 Pod 分组（plane-ab-pod{N}），与平面 A/B Leaf Pod 对齐"""
-    d = _designer(tmp_path, servers=1024, speed="800G")
+    d = _designer(tmp_path, servers=6000, speed="800G")
     from collections import Counter
-    # 服务器 podid：servers_per_pod=648 → 2 个超级 Pod（648 + 376）
-    sps = Counter(s.podid for s in d.servers[:1024])
-    assert sps == {'plane-ab-pod1': 648, 'plane-ab-pod2': 376}
+    # V5.4.0（W1.1）：单 Pod 容量 1296 → 6000 台 = 4×1296 + 816（5 个超级 Pod）
+    sps = Counter(s.podid for s in d.servers[:6000])
+    assert sps == {'plane-ab-pod1': 1296, 'plane-ab-pod2': 1296,
+                   'plane-ab-pod3': 1296, 'plane-ab-pod4': 1296,
+                   'plane-ab-pod5': 816}
     # Leaf podid 按平面 A/B 展开，Pod 号与超级 Pod 对应
     leaf_pods = {l.podid for l in d.param_leaves}
-    assert leaf_pods == {'plane-A-pod1', 'plane-A-pod2', 'plane-B-pod1', 'plane-B-pod2'}
+    assert leaf_pods == {'plane-A-pod1', 'plane-A-pod2', 'plane-A-pod3', 'plane-A-pod4', 'plane-A-pod5',
+                         'plane-B-pod1', 'plane-B-pod2', 'plane-B-pod3', 'plane-B-pod4', 'plane-B-pod5'}
     # 每服务器连平面 A/B 同一 Pod 号（plane-ab-pod{N} = A{N} + B{N}）
-    s0 = next(s for s in d.servers[:1024] if s.podid == 'plane-ab-pod1')
+    s0 = next(s for s in d.servers[:6000] if s.podid == 'plane-ab-pod1')
     leaf_names = {c.z_device for c in s0.connections if c.network_type == 'param'}
     assert any('参数A_Leaf_P1_' in n for n in leaf_names)
     assert any('参数B_Leaf_P1_' in n for n in leaf_names)

@@ -1,0 +1,17 @@
+{
+  "id": "二层最大-2048卡-QM9700-IB",
+  "name": "二层最大-2048卡-QM9700-IB（示例）",
+  "description": "二层最大 A：256 台 H200 / 2048 卡，NVIDIA QM9700 k=64，IB 二层（恰为上限）示例项目（PRD 场景④）",
+  "scenario": "二层最大-2048卡-QM9700-IB",
+  "tags": [
+    "H200",
+    "2048卡",
+    "QM9700",
+    "IB",
+    "二层最大",
+    "示例项目"
+  ],
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
+}

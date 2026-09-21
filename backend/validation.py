@@ -397,7 +397,9 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
     storage_ports = int(ctx.config.get('storage_ports_per_server', 1) or 1)
     storage_leaf = int(ctx.config.get('storage_leaf_count', 0) or 0)
     storage_dl = int(ctx.config.get('storage_dl', 0) or 0)
-    s_required = total_servers * storage_ports
+    # V5.4.0-640-f（FR-A8 / W1.7）: 需求按类别口数（engine 透出 designer._storage_port_demand），
+    # 与层级判据（designer.py:790）同源；缺省回退旧口径 total_servers × 单值。
+    s_required = int(ctx.config.get('storage_required_ports', total_servers * storage_ports) or 0)
     # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量（如 TH5 400G 口 1 分 2 接 2×200G 存储）
     s_capacity = storage_leaf * storage_dl * int(ctx.config.get('storage_breakout_count', 1) or 1)
     if s_capacity > 0 and s_required > s_capacity:

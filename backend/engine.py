@@ -447,6 +447,9 @@ def _run_validation(designer):
                 "zCabinetName": conn.z_cabinet_name,
                 "zStartU": conn.z_start_u,
                 "zEndU": conn.z_end_u,
+                # V5.4.0-640-m（W3.1 / FR-A9）: 透出分光标注（单级
+                # {input_speed,output_speed,count}；两级含 stages[]；None=1:1）
+                "breakout": conn.breakout,
             })
 
     # V2.7.2: 接入 validation.py 规则校验引擎(结构化校验)
@@ -540,6 +543,8 @@ def _run_validation(designer):
         "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
         "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
         "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
+        # V5.4.0-640-f（FR-A8 / W1.7）: 存储网总端口需求（按类别，V016 同源）
+        "storage_required_ports": getattr(designer, '_storage_port_demand', lambda: 0)(),
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
         "scale_up": getattr(designer, 'scale_up_config', None),
@@ -964,6 +969,9 @@ def handle_design(params):
                 "zCabinetName": conn.z_cabinet_name,
                 "zStartU": conn.z_start_u,
                 "zEndU": conn.z_end_u,
+                # V5.4.0-640-m（W3.1 / FR-A9）: 透出分光标注（单级
+                # {input_speed,output_speed,count}；两级含 stages[]；None=1:1）
+                "breakout": conn.breakout,
             })
 
     # V2.7.2: 接入 validation.py 规则校验引擎(10 条规则结构化校验)
@@ -1057,6 +1065,8 @@ def handle_design(params):
         "param_breakout_count": getattr(designer, 'param_breakout_count', 1),
         "storage_breakout_count": getattr(designer, 'storage_breakout_count', 1),
         "storage_ports_per_server": getattr(designer, 'storage_ports_per_server', 1),
+        # V5.4.0-640-f（FR-A8 / W1.7）: 存储网总端口需求（按类别，V016 同源）
+        "storage_required_ports": getattr(designer, '_storage_port_demand', lambda: 0)(),
         "param_servers_per_pod": getattr(designer, 'param_servers_per_pod', 0),
         "max_2tier": calc_max_2tier(designer.param_switch_ports, designer.param_ports_per_server),
         "scale_up": getattr(designer, 'scale_up_config', None),

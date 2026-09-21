@@ -10,7 +10,6 @@ import {
   Package,
   Loader2,
   Cloud,
-  History,
 } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useProjectStore } from '@/stores/project.store'
@@ -49,7 +48,6 @@ export function ProjectExplorer() {
     batchExportProjects,
     favoriteProjects,
     toggleFavorite,
-    recentProjects,
   } = useProjectStore()
   const openTab = useWorkspaceStore((s) => s.openTab)
   const addToast = useToastStore((s) => s.addToast)
@@ -739,35 +737,6 @@ export function ProjectExplorer() {
       <div className="flex-1 overflow-auto py-1">
         {activePane === 'projects' && (
           <>
-            {/* 4.4 F4-4：最近使用项目（持久化，点击直接打开） */}
-            {recentProjects.filter((n) => sortedProjects.some((p) => p.name === n)).length > 0 && (
-              <Section
-                title={t('common:explorer.recentProjects', '最近项目')}
-                icon={<History size={14} />}
-                sectionKey="recent-projects"
-              >
-                {recentProjects
-                  .filter((n) => sortedProjects.some((p) => p.name === n))
-                  .map((n) => {
-                    const p = sortedProjects.find((x) => x.name === n)!
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => handleOpenProject(p.name)}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover/50 text-left"
-                      >
-                        <History size={12} className="text-gray-400 shrink-0" />
-                        <span className="truncate">{p.name}</span>
-                        <span className="ml-auto text-2xs text-gray-400 shrink-0">
-                          {p.updatedAt ? p.updatedAt.slice(0, 10) : ''}
-                        </span>
-                      </button>
-                    )
-                  })}
-              </Section>
-            )}
-
             {/* Projects section */}
             <Section
               title={t('common:explorer.allProjects')}

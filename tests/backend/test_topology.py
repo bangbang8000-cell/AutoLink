@@ -13,12 +13,12 @@ class TestCalcMax2Tier:
     def test_standard_case(self):
         """标准情况: 64口交换机, 8网卡/服务器"""
         result = calc_max_2tier(64, 8)
-        assert result == 128  # 64^2 / (4*8) = 4096/32 = 128
+        assert result == 256  # 64^2 / (2*8) = 4096/16 = 256（V5.4.0-640-a 厂商口径）
 
     def test_large_switch(self):
         """128口交换机"""
         result = calc_max_2tier(128, 8)
-        assert result == 512  # 128^2 / (4*8) = 16384/32 = 512
+        assert result == 1024  # 128^2 / (2*8) = 16384/16 = 1024（V5.4.0-640-a 厂商口径）
 
     def test_zero_ports_per_server(self):
         """ports_per_server 为 0"""
@@ -28,7 +28,7 @@ class TestCalcMax2Tier:
     def test_single_port(self):
         """单网卡"""
         result = calc_max_2tier(64, 1)
-        assert result == 1024  # 64^2 / 4 = 1024
+        assert result == 2048  # 64^2 / 2 = 2048（V5.4.0-640-a 厂商口径）
 
 
 class TestFatTreeTopology:
@@ -44,9 +44,9 @@ class TestFatTreeTopology:
         assert cores is None
 
     def test_calculate_hierarchy_3tier(self):
-        """大规模服务器 - 3层组网"""
+        """大规模服务器 - 3层组网（300 台 > 二层上限 256 ⇒ 三层；256 台恰在上限判二层）"""
         topo = FatTreeTopology(8, 64, "400G", {}, "param")
-        is_3tier, leaves, spines, cores = topo.calculate_hierarchy(256)
+        is_3tier, leaves, spines, cores = topo.calculate_hierarchy(300)
         assert is_3tier
         assert leaves is not None
         assert spines is not None

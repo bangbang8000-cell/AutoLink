@@ -6,11 +6,11 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-5.2.5-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-5.4.1-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
-[![Templates](https://img.shields.io/badge/templates-24-teal)](#)
+[![Templates](https://img.shields.io/badge/templates-30-teal)](#)
 [![Devices](https://img.shields.io/badge/devices-129-purple)](#)
 [![AI Tools](https://img.shields.io/badge/Agent--Tools-72-brightgreen)](#)
 [![CI](https://img.shields.io/badge/tests-3044%20passed-brightgreen)](#)
@@ -30,10 +30,10 @@
 | 维度 | 能力 |
 |------|------|
 | **全栈规划** | Scale-Up（卡间互联）+ Scale-Out（网间互联）双栈一体化，支持 IB / RoCE / UEC 三种 Scale-Out 协议 |
-| **真材实料** | **129 款**设备库 = **93 款硬件**（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ **36 款光模块** |
+| **真材实料** | **131 款**设备库 = **95 款硬件**（NVIDIA / 华为 / H3C / 锐捷 / 浪潮 / 寒武纪 / 海光）+ **36 款光模块** |
 | **硬核校验** | **22 条**校验规则（V001–V022；5.3.0 补齐 V021 端口守恒）：拓扑连通性、端口容量、光模块匹配、功率上限、三合一融合域，杜绝"设计失守" |
 | **交付级报告** | 连接表 / 布线表 / BOM / 设备清单 / 机柜表 / 9 章 PDF 报告，收敛比全部按计算值输出 |
-| **开箱即用** | **24 套**场景模板（含 8 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
+| **开箱即用** | **30 套**场景模板（含 14 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制 + 6 套万卡/二层最大场景）+ 5 种语言 + 自动更新，Windows / macOS / Linux 三平台 |
 
 ---
 
@@ -124,6 +124,9 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 - **5.0 系列**（v5.0.1–v5.0.10）：统一 AgentProvider + AI 引擎三选一、多步任务编排、技能自学习、MCP 工具接入、模板市场生态、知识库与文档工作台、机房 3D、拓扑视口渲染优化、lint 清零、升级体验（断点续传/SHA-512/回滚/灰度）、示例库扩充至 7 个 + 模板 23 套全量重测
 - **5.1 系列**（v5.1.0–v5.1.9）：**Agent Connect**（把 AutoLink 封装为标准 MCP Server，编译态受限 / 源码态无限制双场景）、确定性语义层、异步长任务（task_submit/query/wait/cancel）、操作审计（audit_query 脱敏）、远程模式试点、Agent 反馈自优化、自检与排错
 - **5.2 系列**（v5.2.0–v5.2.5）：工作台精细打磨与回归发布（5.2 首版）；**5.2.2 修复版**——双端契约面同构（`test_dual_end_parity_522`）、Agent Connect 权限门禁真实化（gate_mode/block_audit/启动断言）、导出产物指纹复用 + `--no-archive` + 缺省全类型、`schema_version` + 英文规范子树（`data` / `legacy_data` 过渡双子树）、CLI 退出码契约（0/1/2/3）、文档数字自动校验门禁；**5.2.3 修复版**——连接去重键方向不敏感缺陷（E005/E011，误删双向连接）、CI 红灯清零（mcp 依赖上限 / 挂死用例超时护栏 / 旧契约断言对齐）、机柜台数文案与手册更正（每柜 GPU **服务器台数**、功率默认 12000W、一柜多台需两处同设）；**5.2.4 修复版**——收敛比建议改用配置意图值（恢复 V5.0.11 下联钳制下不可达的收敛比建议）、单柜功率上限默认值全链路统一为 12000W（代码向用户手册既有真值对齐）；**5.2.5 修复版（R0 止血）**——**光模块选型系统性误配**：两个独立根因（`_parse_speed('1.6T')` 被解析为 **1**、降级分支忽略速率）导致 1.6T 模块被 1G 网线链路选中、25G 链路被装 100G/400G 模块，污染模块总数与成本；修复后**跨速率误配清零**，`reportData` 新增 `module_selection` 三分类守恒台账（**纯增量、不 bump `schema_version`**），`cost` 增加 `可用于报价=false` 口径标注，布线表/BOM 同步显式化未匹配链路，并更正 5.2.2 的四项过度宣称
+- **5.3 系列**（v5.3.0–v5.3.3）：**端口守恒与口径校准**——5.3.0 逐层端口守恒契约（根治业务网连接静默丢弃、补齐 V021）、5.3.1 数值口径校准（分组粒度按类别取整、接入上联口默认 8→6）、5.3.2 INI 初始化缺口补全、5.3.3 双路径对称 AST 探针（`_init_biz_caliber_switches` 调用点覆盖 / 不对称散落赋值 / 无默认值三查）
+- **5.4.1（双端 UI 阶段 A + 修复版）**——**对齐基线**：更新机制对齐 MC（单点状态源 + 自动重启弹窗）、一级命名统一（资源管理器/AI对话）、菜单分组方案 A（项目→工具）、组件行为契约（Toast 右下等）、快捷键对齐；移除「最近项目」入口；修复 undo 落盘路径（IPC 校验失败）
+- **5.4.0（6 场景内容建设版）**——**万卡与二层最大场景内容资产**：二层容量判据 `k²/(2p)`（9 套模板翻转判二层）、breakout 链式/角色化（QM9700 参数网禁用存储分光）、存储口数三处同源（GPU 1 / 存储 4 / 通算 1）、万卡互联段按规模扩段（/19）、新增 **6 套大规模场景模板**（万卡 H200×3 + 二层最大 ×2 + B300）、golden 28→34、设备库 129 款（+X400/Q3400/B300）
 
 ---
 
@@ -133,11 +136,11 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
 
-- **Windows**：`AutoLink-Setup-5.2.5-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-5.2.5-mac-x64.dmg` / `AutoLink-5.2.5-mac-arm64.dmg`
-- **Linux**：`AutoLink-5.2.5-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-5.4.1-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-5.4.1-mac-x64.dmg` / `AutoLink-5.4.1-mac-arm64.dmg`
+- **Linux**：`AutoLink-5.4.1-linux.AppImage` / `.deb`
 
-安装后首次启动自动创建示例项目，内置 **24 套场景模板**（含 8 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制）与 **129 款设备库**（93 硬件 + 36 光模块）。
+安装后首次启动自动创建示例项目，内置 **30 套场景模板**（含 14 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制 + 6 套万卡/二层最大场景）与 **131 款设备库**（95 硬件 + 36 光模块）。
 
 ### 方式二：从源码运行
 
@@ -171,14 +174,14 @@ npm run test:backend  # 后端测试（pytest 86 文件 / 1613 用例）
 npm run test:all      # 全量测试（含 e2e）
 npm run typecheck     # TypeScript 类型检查（含 preload）
 npm run lint          # ESLint 代码检查（0 error 0 warning）
-python scripts/validate_templates.py  # 24 套模板验证
+python scripts/validate_templates.py  # 30 套模板验证
 python scripts/gen_golden.py --check  # golden 基线比对
 python scripts/check_doc_numbers.py   # 文档数字真值校验
 ```
 
 ---
 
-## 🗂️ 内置模板（24 套）
+## 🗂️ 内置模板（30 套）
 
 | 模板 | 场景 | 规模 | Scale-Up |
 |------|------|------|----------|
@@ -268,7 +271,7 @@ AutoLink/
 │   └── autolink_hub/       #   AIHUB（Provider / 工具注册 / 技能 / 对话 Agent）
 ├── electron/               # Electron 主进程（IPC / 更新服务 / Python service）
 ├── src/                    # React 前端（ui 组件库 / stores / i18n）
-├── template/               # 设备库（129 款 = 93 硬件 + 36 光模块）+ 24 套场景模板
+├── template/               # 设备库（131 款 = 95 硬件 + 36 光模块）+ 30 套场景模板
 ├── scripts/                # pyinstaller.spec / validate_templates / gen_golden
 ├── docs/                   # 产品文档 / 用户指南 / PRD
 └── tests/backend/          # Python 后端测试
@@ -289,7 +292,7 @@ AutoLink/
 | [更新日志](CHANGELOG.md) | 全员 | 逐版本变更明细 |
 | [Wiki](https://github.com/bangbang8000-cell/AutoLink/wiki) | 全员 | 产品介绍与快速上手 |
 
-> 文档中的数字（设备库 129 / 模板 24 / 校验规则 21）由 `scripts/check_doc_numbers.py` 以**代码为唯一真值源**反向校验，CI 门禁拦截漂移。
+> 文档中的数字（设备库 131 / 模板 30 / 校验规则 22）由 `scripts/check_doc_numbers.py` 以**代码为唯一真值源**反向校验，CI 门禁拦截漂移。
 
 ---
 
@@ -301,6 +304,8 @@ AutoLink/
 | **5.0 系列** | ✅ 已完成 | AI 工作流 / 协作生态 / 3D / 性能 / 质量 / 交付 / 内容收官十版，双端三位一体 |
 | **5.1 系列** | ✅ 已完成 | **AI Agent 互联**：Agent Connect（MCP Server 双场景：编译态受限 / 源码态无限制），让 Claude/Codex/Trae/VS Code 等外部 Agent 直接查询、创建、更新、渲染项目/模板/设备库/机房规划/输出 |
 | **5.2 系列** | ✅ 已完成 | 工作台精细打磨回归发布（5.2.0）+ **5.2.2 修复版**：双端契约同构、Agent Connect 权限门禁真实化、导出产物指纹复用 / `--no-archive`、`schema_version` 与英文规范子树、文档数字自动校验门禁 + **5.2.3 修复版**：双向连接去重缺陷（E005/E011）、CI 红灯清零、机柜台数文案与手册更正 + **5.2.4 修复版**：收敛比建议恢复可达、单柜功率上限默认值统一为 12000W + **5.2.5 修复版（R0 止血）**：光模块选型跨速率误配清零（1.6T 误配 160→0）、`module_selection` 三分类守恒台账、`cost` 口径标注 |
+| **5.3 系列** | ✅ 已完成 | 端口守恒与口径校准（5.3.0–5.3.3）：逐层端口守恒契约 V021、数值口径校准、INI 初始化缺口、双路径对称 AST 探针 |
+| **5.4.0** | ✅ 已发布（待编译验证） | **6 场景内容建设版**：二层容量判据修正、breakout 链式/角色化、存储口径同源、万卡互联段扩段、6 套万卡/二层最大模板 + golden 34 |
 | **后续方向** | 待定 | 远程模式正式化 + 多租户权限体系；模板市场社区化；CI/CD 流水线对接 |
 
 ---
@@ -311,7 +316,7 @@ AutoLink/
 A: Scale-Out 支持 IB、RoCE、UEC 三种；Scale-Up 支持 NVLink、UALink、UB 三种。可组合出 NVL72、CloudMatrix 384、UALink 1024 GPU Pod 等主流智算中心形态。
 
 **Q: 支持多大的集群规模？**
-A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 24 套模板（含 8 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制，覆盖 64-512 台规模谱系）可直接使用，也可从空项目自定义。
+A: 支持从 64 GPU 推理集群到 2048 台服务器的超大规模训练集群，内置 30 套模板（含 14 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制 + 6 套万卡/二层最大场景）可直接使用，也可从空项目自定义。
 
 **Q: 生成的报告包含哪些内容？**
 A: 连接表、布线指导表、BOM 成本、设备清单、机柜表（Excel），以及 9 章节 PDF 报告（概览/架构/功耗/光模块/成本/校验/设备清单/收敛比/机柜），全部基于真实计算值。

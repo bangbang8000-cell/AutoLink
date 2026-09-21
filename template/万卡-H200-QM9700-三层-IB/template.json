@@ -1,0 +1,17 @@
+{
+  "id": "万卡-H200-QM9700-三层-IB",
+  "name": "万卡-H200-QM9700-三层-IB（示例）",
+  "description": "万卡集群 A：1250 台 H200 / 10000 卡，NVIDIA QM9700（64×400G）k=64，IB 三层无阻塞示例项目（PRD 场景①）",
+  "scenario": "万卡-H200-QM9700-三层-IB",
+  "tags": [
+    "H200",
+    "万卡",
+    "QM9700",
+    "IB",
+    "三层",
+    "示例项目"
+  ],
+  "updatedAt": "2026-09-03",
+  "templateVersion": 2,
+  "isSample": true
+}

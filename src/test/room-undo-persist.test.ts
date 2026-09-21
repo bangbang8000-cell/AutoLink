@@ -75,7 +75,7 @@ describe('M-F2 F2-2 撤销跨会话持久化（room）', () => {
 
     expect(mockElectron.render.saveOutputFile).toHaveBeenCalledWith(
       'projA',
-      ROOM_UNDO_PERSIST_FILE,
+      `output/${ROOM_UNDO_PERSIST_FILE}`,
       expect.any(String),
     )
     const file = JSON.parse(lastWrittenFile())

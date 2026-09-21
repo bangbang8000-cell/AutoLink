@@ -2,9 +2,10 @@
  * 47-e（F7-5）：安装/升级体验——更新 UI 离线提示 + 完整性校验显示
  */
 import '@/i18n'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { UpdatePopover } from '@/components/layout/UpdatePopover'
+import { useUpdateStore } from '@/stores/update.store'
 
 describe('UpdatePopover（47-e 安装/升级体验）', () => {
   beforeEach(() => {
@@ -12,8 +13,19 @@ describe('UpdatePopover（47-e 安装/升级体验）', () => {
     const app = (window.electron as unknown as { app: Record<string, unknown> }).app
     app.onUpdateAvailable = vi.fn(() => vi.fn())
     app.onUpdateDownloadProgress = vi.fn(() => vi.fn())
-    app.onUpdateDownloaded = vi.fn(() => vi.fn())
+    app.onUpdateDownloaded = vi.fn((cb: () => void) => {
+      // 保留占位，第二个用例会覆盖为带捕获的实现
+      void cb
+      return () => {}
+    })
     app.onUpdateError = vi.fn(() => vi.fn())
+    // AL-U1：事件聚合上移到 store，测试中显式挂载
+    useUpdateStore.getState().__reset()
+    useUpdateStore.getState().attach()
+  })
+
+  afterEach(() => {
+    useUpdateStore.getState().__reset()
   })
 
   it('检查失败（网络/离线场景）时展示离线友好提示', async () => {
@@ -41,6 +53,9 @@ describe('UpdatePopover（47-e 安装/升级体验）', () => {
       onDownloaded = cb
       return () => {}
     })
+    // 重写订阅实现后需重新 attach，store 才能拿到新的捕获回调
+    useUpdateStore.getState().__reset()
+    useUpdateStore.getState().attach()
     render(<UpdatePopover />)
     // 打开更新弹窗（idle 态 → 触发 downloaded 事件后进入 downloaded 态）
     fireEvent.click(screen.getByTitle(/更新/))

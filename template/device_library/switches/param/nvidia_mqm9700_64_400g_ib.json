@@ -3,7 +3,7 @@
   "vendor": "NVIDIA",
   "model": "MQM9700-NS2F (Quantum-2)",
   "category": "switches_param",
-  "description": "NVIDIA Quantum-2 MQM9700-NS2F 64端口NDR 400Gb/s InfiniBand智能交换机，带管理端口，适用于AI训练集群高速互联",
+  "description": "NVIDIA Quantum-2 MQM9700-NS2F 64端口NDR 400Gb/s InfiniBand智能交换机，带管理端口，适用于AI训练集群高速互联（V5.4.0-640-c/FR-A5：参数网角色 breakout 完全禁用，1:1 400G；存储网角色 400G→2×200G）",
   "power_watts": 750,
   "weight_kg": 14,
   "u_height": 1,
@@ -19,7 +19,10 @@
     "physical_speed": "400G",
     "logical_speed": "200G",
     "count": 2,
-    "cable": "MPO-1x2"
+    "cable": "MPO-1x2",
+    "applicable_networks": [
+      "storage"
+    ]
   },
   "tags": [
     "交换机",

@@ -1625,7 +1625,7 @@ export async function persistRackUndoHistory(projectName: string): Promise<void>
   const json = JSON.stringify(buildRackUndoPersistFile(capped.undoStack, capped.redoStack))
   try {
     if (window.electron?.render?.saveOutputFile) {
-      await window.electron.render.saveOutputFile(projectName, RACK_UNDO_PERSIST_FILE, utf8ToBase64(json))
+      await window.electron.render.saveOutputFile(projectName, `output/${RACK_UNDO_PERSIST_FILE}`, utf8ToBase64(json))
       return
     }
   } catch (err) {

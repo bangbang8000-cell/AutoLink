@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Zap, FolderOpen, Settings, Plus, Download, X, History, FilePlus2 } from 'lucide-react'
+import { Zap, FolderOpen, Settings, Plus, Download, X, FilePlus2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { WorkbenchScopeCard } from '@/components/workbench/WorkbenchScopeCard'
@@ -181,7 +181,6 @@ function ExportView({ projectName }: { projectName: string }) {
 export function WorkbenchTab() {
   const { t } = useTranslation()
   const projects = useProjectStore((s) => s.projects)
-  const recentProjects = useProjectStore((s) => s.recentProjects)
   const templates = useProjectStore((s) => s.templates)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const selectedProject = useProjectStore((s) => s.selectedProject)
@@ -332,36 +331,6 @@ export function WorkbenchTab() {
                     </span>
                   </button>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* 4.4 F4-4：最近使用项目（持久化，点击直接打开） */}
-          {recentProjects.filter((n) => projects.some((p) => p.name === n)).length > 0 && (
-            <div className="mb-4">
-              <p className="flex items-center gap-1 text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                <History size={11} />
-                {t('workbench:empty.recentProjects')}
-              </p>
-              <div className="space-y-1">
-                {recentProjects
-                  .filter((n) => projects.some((p) => p.name === n))
-                  .map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => {
-                        const p = projects.find((x) => x.name === n)
-                        if (p) selectProject(p)
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded border border-gray-100 dark:border-edge-subtle bg-gray-50/60 dark:bg-app/40 hover:border-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-left transition-colors"
-                    >
-                      <History size={12} className="text-gray-400 shrink-0" />
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
-                        {n}
-                      </span>
-                    </button>
-                  ))}
               </div>
             </div>
           )}

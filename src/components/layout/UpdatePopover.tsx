@@ -1,109 +1,27 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download, CheckCircle, AlertTriangle, Loader2, RefreshCw, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
-import { useToastStore } from '@/stores/toast.store'
-
-type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
-
-interface UpdateInfo {
-  version?: string
-  releaseNotes?: string | unknown
-}
+import { useUpdateStore } from '@/stores/update.store'
 
 export function UpdatePopover() {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const [status, setStatus] = useState<UpdateStatus>('idle')
-  const [updateVersion, setUpdateVersion] = useState('')
-  const [releaseNotes, setReleaseNotes] = useState('')
-  const [downloadPercent, setDownloadPercent] = useState(0)
-  const [errorMessage, setErrorMessage] = useState('')
   const [showNotes, setShowNotes] = useState(false)
-  const addToast = useToastStore((s) => s.addToast)
-  const autoNotifiedRef = useRef(false)
 
-  const parseReleaseNotes = (notes: unknown): string => {
-    if (!notes) return ''
-    if (typeof notes === 'string') return notes
-    // electron-updater may return { notes: string } or array of { version, notes }
-    if (Array.isArray(notes)) {
-      return notes.map((n: { version?: string; notes?: string }) => `## v${n.version}\n${n.notes || ''}`).join('\n\n')
-    }
-    if (typeof notes === 'object' && notes !== null) {
-      const n = notes as { notes?: string }
-      return n.notes || ''
-    }
-    return ''
-  }
+  // AL-U1：全部更新状态受控来自单点聚合 store（与 AboutDialog/RestartPromptDialog 同源）
+  const status = useUpdateStore((s) => s.status)
+  const updateVersion = useUpdateStore((s) => s.version)
+  const releaseNotes = useUpdateStore((s) => s.releaseNotes)
+  const downloadPercent = useUpdateStore((s) => s.percent)
+  const errorMessage = useUpdateStore((s) => s.error)
+  const check = useUpdateStore((s) => s.check)
+  const download = useUpdateStore((s) => s.download)
+  const quitAndInstall = useUpdateStore((s) => s.quitAndInstall)
+  const openReleasesPage = useUpdateStore((s) => s.openReleasesPage)
 
-  const handleCheckUpdate = useCallback(async () => {
-    setStatus('checking')
-    setErrorMessage('')
-    try {
-      const result = await window.electron?.app?.checkUpdate()
-      if (result?.updateAvailable) {
-        setStatus('available')
-        setUpdateVersion(result.version || '')
-      } else if (result?.error) {
-        // 检查失败(网络问题等),与"无更新"区分
-        setStatus('error')
-        setErrorMessage(t('common:update.checkFailed'))
-      } else {
-        setStatus('idle')
-        addToast('info', t('common:update.upToDate'), 3000)
-      }
-    } catch {
-      setStatus('error')
-      setErrorMessage(t('common:update.checkFailed'))
-    }
-  }, [t, addToast])
-
-  const handleDownload = useCallback(async () => {
-    setStatus('downloading')
-    setErrorMessage('')
-    try {
-      await window.electron?.app?.downloadUpdate()
-    } catch {
-      setStatus('error')
-      setErrorMessage(t('common:update.downloadFailed'))
-    }
-  }, [t])
-
-  const handleQuitAndInstall = useCallback(() => {
-    window.electron?.app?.quitAndInstall()
-  }, [])
-
-  // Listen for update events from main process
-  useEffect(() => {
-    const unsubAvailable = window.electron?.app?.onUpdateAvailable((data: UpdateInfo) => {
-      setUpdateVersion(data.version || '')
-      setReleaseNotes(parseReleaseNotes(data.releaseNotes))
-      setStatus('available')
-      // Auto toast notification on startup auto-check (only once)
-      if (!autoNotifiedRef.current) {
-        autoNotifiedRef.current = true
-        addToast('info', t('common:update.newVersionAvailable', { version: data.version }), 6000)
-      }
-    })
-    const unsubProgress = window.electron?.app?.onUpdateDownloadProgress((data: { percent: number }) => {
-      setDownloadPercent(Math.round(data.percent))
-    })
-    const unsubDownloaded = window.electron?.app?.onUpdateDownloaded(() => {
-      setStatus('downloaded')
-      addToast('success', t('common:update.downloaded'), 5000)
-    })
-    const unsubError = window.electron?.app?.onUpdateError((message: string) => {
-      setStatus('error')
-      setErrorMessage(message)
-    })
-
-    return () => {
-      unsubAvailable?.()
-      unsubProgress?.()
-      unsubDownloaded?.()
-      unsubError?.()
-    }
-  }, [addToast, t])
+  const handleCheckUpdate = () => check()
+  const handleDownload = () => download()
+  const handleQuitAndInstall = () => quitAndInstall()
 
   const hasUpdate = status === 'available' || status === 'downloading' || status === 'downloaded' || status === 'checking'
 
@@ -239,7 +157,7 @@ export function UpdatePopover() {
                       {t('common:update.retry')}
                     </button>
                     <button
-                      onClick={() => window.electron?.app?.openReleasesPage()}
+                      onClick={openReleasesPage}
                       className="flex-1 px-3 py-1.5 text-xs bg-info-500 hover:bg-info-600 text-white rounded transition-colors flex items-center justify-center gap-1"
                     >
                       <ExternalLink size={12} />

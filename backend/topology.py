@@ -13,13 +13,15 @@ from models import NetworkObject, Connection
 def calc_max_2tier(switch_ports, ports_per_server):
     """计算二层Fat-Tree最大支持服务器数量
 
-    V3.1.1-T1: 修正公式 k^2/(4p) -> k^2/(2p)。
+    V3.1.1-T1 / V5.4.0-640-a（FR-A1）: 修正公式 k^2/(4p) -> k^2/(2p)。
     原公式假设 Leaf=Spine=k/2, 少算一倍; 正确的 1:1 无阻塞 Clos 为 Leaf=k 台、Spine=k/2 台:
       - 每 Leaf: k/2 下行 + k/2 上行
       - Spine 每台 k 口, 收全部 k 个 Leaf 各 1 条上行
       - 上行总容量 = k*(k/2) = k^2/2 = Spine 总口数 (k/2)*k  ✓ 1:1 无阻塞
       - 服务器数 = 下行总口 / p = (k * k/2) / p = k^2/(2p)
     例: 64口*8口/台 -> 256台(2048卡) 二层可支持(Leaf 64 + Spine 32); 128口*8口/台 -> 1024台(8192卡)。
+    旧实现按 (k/2 × k/2)/p = k²/(4p) 把 leaf 台数当成 k/2，
+    使「二层最大」场景被误判为三层（P-1；④⑤⑥ 三个场景直接受害）。
     """
     if ports_per_server <= 0:
         return 0

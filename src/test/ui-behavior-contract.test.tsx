@@ -185,6 +185,18 @@ describe('Toast 行为契约 (G-8)', () => {
     act(() => { vi.advanceTimersByTime(1) })
     expect(screen.queryByText('悬停暂停')).toBeNull()
   })
+
+  it('容器锚定右下角(bottom-right),与 MC 契约一致,不再停留在顶部', () => {
+    render(<ToastContainer />)
+    act(() => { useToastStore.getState().addToast('info', '位置契约', 0) })
+    const container = document.querySelector('.fixed') as HTMLElement
+    expect(container).not.toBeNull()
+    expect(container.className).toContain('bottom-4')
+    expect(container.className).toContain('right-4')
+    expect(container.className).not.toContain('top-14')
+    // 纵向堆叠
+    expect(container.className).toContain('flex-col')
+  })
 })
 
 describe('ContextMenu 行为契约 (G-8)', () => {

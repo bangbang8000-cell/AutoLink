@@ -3,7 +3,7 @@
   "vendor": "NVIDIA",
   "model": "Q3400 (Quantum-3)",
   "category": "switches_param",
-  "description": "NVIDIA Quantum-3 Q3400 144端口NDR 800Gb/s InfiniBand智能交换机，带管理端口，适用于超大规模AI训练集群 Spine 层互联",
+  "description": "NVIDIA Quantum-3 Q3400 144端口XDR 800Gb/s（1.6T 物理口）InfiniBand智能交换机，带管理端口，适用于超大规模AI训练集群高速互联（V5.4.0-640-i/W2.4：breakout 单级 1.6T→2×800G（PRD §3.5-B 场景⑥）；两级 1.6T→2×800G→4×400G 为保留能力（FR-A7：需现场确认链路预算与中继），本轮不启用）",
   "power_watts": 2200,
   "weight_kg": 22,
   "u_height": 2,
@@ -16,16 +16,17 @@
   "downlink_prefix": "IB",
   "uplink_prefix": "IB",
   "breakout": {
-    "physical_speed": "800G",
-    "logical_speed": "400G",
+    "physical_speed": "1.6T",
+    "logical_speed": "800G",
     "count": 2,
-    "cable": "MPO-1x2"
+    "cable": "MPO-16"
   },
   "tags": [
     "交换机",
     "NVIDIA",
     "Quantum-3",
     "800G",
+    "XDR",
     "IB",
     "NDR",
     "InfiniBand",
@@ -40,7 +41,7 @@
   "verified": true,
   "datasheet_url": "https://www.nvidia.com/en-us/networking/infiniband/",
   "added_at": "2026-07-28",
-  "updated_at": "2026-07-28",
+  "updated_at": "2026-09-20",
   "recommended_network": [
     "rail_optimized",
     "dual_plane",

@@ -8,29 +8,99 @@ import math
 from typing import Optional, Dict, Any
 
 
+def breakout_total_count(bk):
+    """breakout 档案总逻辑口数：stages 链式 = Π(stage.count)；单级 = count；缺省 = 1。
+
+    V5.4.0-640-b（W1.3）：两级分光如 Q3400 1.6T→2×800G→4×400G 总逻辑口 = 2×2 = 4。
+    """
+    if not isinstance(bk, dict):
+        return 1
+    stages = bk.get('stages')
+    if isinstance(stages, list) and stages:
+        total = 1
+        for s in stages:
+            if isinstance(s, dict):
+                total *= int(s.get('count', 1) or 1)
+        return max(1, total)
+    return int(bk.get('count', 1) or 1)
+
+
+def breakout_for_role(bk, role):
+    """V5.4.0-640-c（W1.4 / FR-A5）：按网络角色过滤 breakout。
+
+    设备档案 breakout 可带 `applicable_networks` 子字段限定生效角色；
+    缺省（不写）= 全部角色适用（向后兼容既有单级档案）。
+    QM9700 参数网角色完全禁用（1:1 400G），存储网角色 400G→2×200G。
+    """
+    if not isinstance(bk, dict):
+        return None
+    nets = bk.get('applicable_networks')
+    if isinstance(nets, list) and nets and role in ('param', 'storage') and role not in nets:
+        return None
+    return bk
+
+
+def _breakout_stages(bk):
+    if not isinstance(bk, dict):
+        return None
+    stages = bk.get('stages')
+    if isinstance(stages, list) and stages:
+        return [s for s in stages if isinstance(s, dict)]
+    return None
+
+
 def apply_breakout(obj: "NetworkObject", device_profile: Any) -> None:
     """V3.0.2-T2-11: 应用设备档案的端口 1 分 2 扇出（breakout）逻辑口模型
 
     从设备档案 breakout 读取（如 Q3200 800G→2×400G）；缺省 count=1 = 1:1 物理口。
     供 NetworkObject.__init__ 与轨道优化路径（5.2.2-522-b）复用，保证口径一致。
+
+    V5.4.0-640-b/c（W1.3/W1.4）：支持 `stages` 链式（两级分光）与
+    `breakout.applicable_networks` 角色限定（FR-A5：QM9700 参数网角色 1:1）。
     """
     _bk = getattr(device_profile, 'breakout', None) if device_profile else None
     if not isinstance(_bk, dict):
         _bk = None
+    # W1.4/FR-A5: 按网络角色过滤（breakout.applicable_networks 限定生效域）。
+    # 角色以 obj_type 前缀为准（Leaf 的 network_type 常为空字符串，不可靠）。
+    _obj_type = (getattr(obj, 'obj_type', '') or '')
+    _role = ('param' if _obj_type.startswith('param_')
+             else 'storage' if _obj_type.startswith('storage_')
+             else (getattr(obj, 'network_type', '') or ''))
+    _bk = breakout_for_role(_bk, _role)
     obj.breakout_info = _bk
-    obj.breakout_count = int((_bk or {}).get('count', 1) or 1)
-    # 逻辑输出速率兼容两种档案键：交换机用 logical_speed，光模块用 output_speed
-    obj.breakout_output_speed = ((_bk or {}).get('logical_speed')
-                                 or (_bk or {}).get('output_speed')) if _bk else None
-    # 接线标注统一为 input_speed/output_speed（选型/导出消费）：
-    # 交换机档案 physical_speed/logical_speed → input_speed/output_speed
-    if _bk:
+    stages = _breakout_stages(_bk)
+    if stages:
+        # 链式：总逻辑口 = Π count；输出速率 = 最后一级逻辑速率
+        obj.breakout_count = breakout_total_count(_bk)
+        obj.breakout_output_speed = (stages[-1].get('logical_speed')
+                                     or stages[-1].get('output_speed'))
+        obj.breakout_link_info = {
+            'input_speed': stages[0].get('input_speed') or stages[0].get('physical_speed') or '',
+            'output_speed': obj.breakout_output_speed or '',
+            'count': obj.breakout_count,
+            'stages': [
+                {'input_speed': s.get('input_speed') or s.get('physical_speed') or '',
+                 'output_speed': s.get('output_speed') or s.get('logical_speed') or '',
+                 'count': int(s.get('count', 1) or 1)}
+                for s in stages
+            ],
+        }
+    elif _bk:
+        obj.breakout_count = breakout_total_count(_bk)
+        # 逻辑输出速率兼容两种档案键：交换机用 logical_speed，光模块用 output_speed
+        obj.breakout_output_speed = (_bk.get('logical_speed')
+                                     or _bk.get('output_speed'))
+        # 接线标注统一为 input_speed/output_speed（选型/导出消费）：
+        # 交换机档案 physical_speed/logical_speed → input_speed/output_speed
         obj.breakout_link_info = {
             'input_speed': _bk.get('input_speed') or _bk.get('physical_speed') or '',
             'output_speed': _bk.get('output_speed') or _bk.get('logical_speed') or '',
             'count': obj.breakout_count,
         }
     else:
+        obj.breakout_count = 1
+        obj.breakout_output_speed = None
         obj.breakout_link_info = None
 
 
