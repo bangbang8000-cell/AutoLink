@@ -1,6 +1,6 @@
 {
   "cabinets": 1123,
-  "connections": 60452,
+  "connections": 68324,
   "counts": {
     "biz_access": 94,
     "biz_agg": 18,
@@ -21,13 +21,13 @@
     "biz": 5736,
     "oob": 2492,
     "param": 49152,
-    "storage": 3072
+    "storage": 10944
   },
   "param_protocol": "UEC",
   "param_speed": "400G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "b8ff16ee05dd31d0",
+  "topology_hash": "4bc7722868000885",
   "total_power_w": 16240100,
   "valid": true
 }

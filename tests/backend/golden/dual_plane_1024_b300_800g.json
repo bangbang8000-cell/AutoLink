@@ -1,6 +1,6 @@
 {
   "cabinets": 1057,
-  "connections": 46728,
+  "connections": 52968,
   "counts": {
     "biz_access": 84,
     "biz_agg": 16,
@@ -21,13 +21,13 @@
     "biz": 5168,
     "oob": 2248,
     "param": 36864,
-    "storage": 2448
+    "storage": 8688
   },
   "param_protocol": "IB",
   "param_speed": "800G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "3e5307c212126275",
+  "topology_hash": "6454ed9ad5487bbc",
   "total_power_w": 748000,
   "valid": true
 }

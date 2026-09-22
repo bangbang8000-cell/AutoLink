@@ -1,6 +1,6 @@
 {
   "cabinets": 1110,
-  "connections": 60772,
+  "connections": 68068,
   "counts": {
     "biz_access": 94,
     "biz_agg": 18,
@@ -21,13 +21,13 @@
     "biz": 5800,
     "oob": 2524,
     "param": 49152,
-    "storage": 3296
+    "storage": 10592
   },
   "param_protocol": "RoCE",
   "param_speed": "400G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "fa7f5c9f69b980b1",
+  "topology_hash": "fae7032ead4615cc",
   "total_power_w": 11430600,
   "valid": true
 }

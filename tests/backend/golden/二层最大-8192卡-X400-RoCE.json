@@ -1,6 +1,6 @@
 {
-  "cabinets": 1086,
-  "connections": 43388,
+  "cabinets": 1066,
+  "connections": 59772,
   "counts": {
     "biz_access": 94,
     "biz_agg": 18,
@@ -8,8 +8,8 @@
     "oob_access": 47,
     "oob_agg": 2,
     "param_cores": 0,
-    "param_leaves": 328,
-    "param_spines": 164,
+    "param_leaves": 128,
+    "param_spines": 64,
     "scale_up_gpus": 0,
     "servers": 1168,
     "storage_cores": 0,
@@ -20,14 +20,14 @@
   "network_connections": {
     "biz": 5800,
     "oob": 2524,
-    "param": 16384,
+    "param": 32768,
     "storage": 18680
   },
   "param_protocol": "RoCE",
   "param_speed": "400G",
   "rail_count": 8,
   "rail_mode": "standard",
-  "topology_hash": "61adc599e4c12a29",
-  "total_power_w": 12974380,
+  "topology_hash": "fc68e8e696e074bb",
+  "total_power_w": 12734380,
   "valid": true
 }
