@@ -1876,3 +1876,52 @@ def _generate_module_cost_chart(modules_data, font_name='Helvetica'):
     fig.savefig(tmp_path, dpi=150)
     plt.close(fig)
     return tmp_path
+
+
+# ================================================================
+#  V5.4.3-W3: al-hwlist/1.0 零价格硬件清单（五页式）
+#  数据层 hwlist.py / 写表层 hwlist_sheets.py；价格由下游价格库按设备ID join。
+#  ================================================================
+def export_hwlist(designer, filename):
+    """导出 al-hwlist/1.0 硬件清单工作簿（设计汇总/简版/契约版/组网示意图/设计口径）"""
+    import hwlist
+    import hwlist_sheets
+
+    lines = hwlist.build_lines(designer)
+    # 零价格契约自检：命中金额特征串直接抛错（不产出带价格残留的清单）
+    hits = hwlist.check_no_price(lines)
+    if hits:
+        raise ValueError(f"硬件清单零价格契约被违反（{len(hits)} 处）：{hits[:3]}")
+    stat = hwlist.summarize(lines)
+    warns = hwlist.warnings_of(lines)
+
+    scale_rows = [
+        ('GPU 服务器', f'{designer.num_servers} 台'),
+        ('总服务器', f'{designer.total_servers} 台'),
+        ('参数网', f'Leaf {designer.param_leaf_count} / Spine {designer.param_spine_count}'),
+        ('存储网', f'Leaf {designer.storage_leaf_count} / Spine {designer.storage_spine_count}'),
+        ('模式', f'{designer.downlink_mode} · 参数速率 {designer.param_speed}'),
+    ]
+    param_rows = [
+        ('param_switch_ports', designer.param_switch_ports),
+        ('param_downlink_limit', getattr(designer, 'param_dl', '')),
+        ('rail_mode', getattr(designer, 'rail_mode', 'standard')),
+        ('param_protocol', getattr(designer, 'param_protocol', '')),
+    ]
+    # 等效口口径声明（D2：口径显式化）
+    caliber_notes = []
+    if getattr(designer, 'param_equivalent_mode', False):
+        caliber_notes.append((
+            '⚠ Leaf 计数口径',
+            '本清单采用「等效口推导」口径（param_equivalent_mode=true）：每 Leaf 服务器侧'
+            f'连接 {getattr(designer, "param_dl", 0)} 条（1.6T 物理口分光承载），'
+            f'上联走 {getattr(designer, "param_uplink_physical_ports", 0)} 个物理 1.6T 口独立池；'
+            '与 rail-optimized 口径下的 Leaf 台数结论不同，跨口径比较前请先对齐口径。'))
+
+    title = f'{getattr(designer, "num_servers", 0)} 台服务器集群'
+    wb = hwlist_sheets.build_workbook(
+        lines, title, scale_rows=scale_rows, param_rows=param_rows,
+        caliber_notes=caliber_notes, warn_extra=warns, stat=stat)
+    wb.save(filename)
+    print(f"硬件清单已导出: {filename} ({len(lines)} 行 / {stat['device_id_count']} 设备ID)")
+    return lines

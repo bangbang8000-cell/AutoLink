@@ -34,7 +34,7 @@ from topology import calc_max_2tier
 from exporter import (
     export_all_connections, generate_summary_data, generate_device_list,
     export_cabling_guide, export_bom, generate_report_data, export_pdf_report,
-    generate_snapshot, export_compliance_report,
+    generate_snapshot, export_compliance_report, export_hwlist,
 )
 from estimation import (
     estimate_pue, calc_convergence_ratio, estimate_cabinet_power_density,
@@ -564,6 +564,10 @@ def _run_validation(designer):
         # V5.4.2-542-b（AL-Q2）：V023 参数网 Leaf ≤ Spine 单台下联口上限
         "param_switch_ports": getattr(designer, 'param_switch_ports', 0),
         "param_spine_downlink_limit": getattr(designer, 'param_spine_downlink_limit', None),
+        # V5.4.3-W1.4（修复单 R4/D1+D2）：等效口口径字段（V023 联动校验与上限换算消费）
+        "param_equivalent_mode": getattr(designer, 'param_equivalent_mode', False),
+        "param_uplink_physical_ports": getattr(designer, 'param_uplink_physical_ports', 0),
+        "param_dl": getattr(designer, 'param_dl', 0),
         # V5.3.0-530-g6（AL-G6）：逐层端口守恒校验数据（V021）
         "port_conservation": _build_port_conservation(designer),
     }
@@ -1808,7 +1812,8 @@ def _batch_file_manifest(batch_dir):
 
 
 # 5.2.2-522-d3（AL-E5）：全部可用导出类型（缺省即全部；亦接受 'all' / '*'）
-EXPORT_TYPES = ('connections', 'deviceList', 'cablingGuide', 'bom',
+# V5.4.3-W3：新增 hwlist（al-hwlist/1.0 零价格硬件清单，五页式）
+EXPORT_TYPES = ('connections', 'deviceList', 'cablingGuide', 'bom', 'hwlist',
                 'reportData', 'pdfReport', 'compliance')
 # 只返回数据、不落盘的类型（不产生归档）
 DATA_ONLY_TYPES = frozenset({'reportData'})
@@ -1958,6 +1963,15 @@ def handle_export(params):
             results.append({"type": "bom", "file": fn, "status": "success"})
         except Exception as e:
             results.append({"type": "bom", "file": fn, "status": "error", "error": str(e)})
+
+    # V5.4.3-W3: al-hwlist/1.0 零价格硬件清单（五页式，价格由下游按设备ID join）
+    if 'hwlist' in output_types:
+        fn = os.path.join(batch_dir, f"硬件清单_{mode}模式_{ts}.xlsx")
+        try:
+            export_hwlist(designer, fn)
+            results.append({"type": "hwlist", "file": fn, "status": "success"})
+        except Exception as e:
+            results.append({"type": "hwlist", "file": fn, "status": "error", "error": str(e)})
 
     # V2.4: PDF 报告数据（直接返回数据，不导出文件）
     if 'reportData' in output_types:
