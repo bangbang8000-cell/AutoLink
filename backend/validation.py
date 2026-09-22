@@ -633,6 +633,17 @@ def _rule_param_leaf_spine_capacity(ctx: ValidationContext) -> List[ValidationIs
 
     上限参数化：spine_downlink_limit 缺省 = param_switch_ports // 2
     （Q3400: 144//2=72），可经 param_spine_downlink_limit 覆盖。
+
+    V5.4.3（修复单 R3/R5 更正 + 条带化接线配套）：
+      - 口径更正为「**每台 Spine 实际承载**」：per_spine = ceil(leaf × uplink_avail / spine)
+        ≤ switch_ports × 2（2:1 收敛豁免，与 validate_topology 的 Spine 豁免同源）。
+        旧「Leaf 台数 ≤ switch_ports//2」把 Q3400 的物理/逻辑对半误推广为普适规则，
+        对经典 Clos 大面积误伤（H100-128台：Leaf 48 > 32）。
+      - 条带化接线（W1.1 配套）下 Leaf 只连 Spine 子集，per-spine 承载是唯一守恒口径。
+      - 等效口口径（param_equivalent_mode）：上限 = Spine 台数 × (switch_ports//2) /
+        param_uplink_physical_ports（D1 终版：72×72/36 = 144）。
+      - recommendation 文案原「更换更高密 Spine（如 144 口 Q3400）」有误——
+        Q3400 为 72×1.6T 物理（= 144×800G 逻辑），非「144 口」。
     """
     cfg = ctx.config
     core_count = int(cfg.get('param_core_count') or 0)
@@ -643,17 +654,41 @@ def _rule_param_leaf_spine_capacity(ctx: ValidationContext) -> List[ValidationIs
     switch_ports = int(cfg.get('param_switch_ports') or 0)
     if leaf_count <= 0 or spine_count <= 0 or switch_ports <= 0:
         return []
-    limit = int(cfg.get('param_spine_downlink_limit') or (switch_ports // 2))
-    if leaf_count <= limit:
+    if bool(cfg.get('param_equivalent_mode') or False):
+        # 等效口口径：上限 = Spine 台数 × Spine 物理下联 / Leaf 物理上联（同物理单位反推）
+        uplink_phys = int(cfg.get('param_uplink_physical_ports') or 0)
+        if uplink_phys > 0:
+            limit = spine_count * (switch_ports // 2) // uplink_phys
+        else:
+            limit = switch_ports * 2
+        if leaf_count <= limit:
+            return []
+        return [ValidationIssue(
+            rule_id="V023",
+            severity=Severity.ERROR,
+            category="拓扑规则",
+            message=f"参数网 Leaf 台数 {leaf_count} 超过 Spine 侧下联容量上限 {limit}"
+                    f"（等效口口径：Leaf 上行 / Spine 下联同为 1.6T 物理口；"
+                    f"注意：该上限取决于 Leaf 计数口径——rail-optimized 与等效口推导口径下结论不同）",
+            affected_items=[f"param-leaf-{leaf_count}", f"param-spine-{spine_count}"],
+            recommendation=f"降低 Leaf 台数至 ≤{limit}，或改用三层组网，或改用更高下联容量的 Spine 型号",
+        )]
+    # 经典路径：每 Spine 实际承载 = ceil(leaf × uplink_avail / spine) ≤ sw × 2（2:1 豁免）
+    dl = int(cfg.get('param_dl') or (switch_ports // 2))
+    uplink_avail = max(0, switch_ports - dl)
+    per_spine = -(-leaf_count * uplink_avail // spine_count) if spine_count else leaf_count
+    limit = switch_ports * 2
+    if per_spine <= limit:
         return []
     return [ValidationIssue(
         rule_id="V023",
         severity=Severity.ERROR,
         category="拓扑规则",
-        message=f"参数网 Leaf 台数 {leaf_count} 超过 Spine 单台下联口上限 {limit}"
-                f"（Q3400 二层口径：每台 Spine 仅 {limit} 个 800G 下联口，须容纳全部 Leaf 各 1 条上行）",
+        message=f"参数网 Leaf↔Spine 单台下联承载 {per_spine} 超过 Spine 端口容量上限 {limit}"
+                f"（每台 Spine 须容纳 Leaf 上行链路 ×2:1 收敛豁免；"
+                f"注意：该上限取决于 Leaf 计数口径——rail-optimized 与等效口推导口径下结论不同）",
         affected_items=[f"param-leaf-{leaf_count}", f"param-spine-{spine_count}"],
-        recommendation="降低 Leaf 台数至 ≤{limit}，或改用三层组网，或更换更高密 Spine（如 144 口 Q3400）",
+        recommendation=f"降低 Leaf 台数或上行口占比至每 Spine 承载 ≤{limit}，或改用三层组网，或改用更高下联容量的 Spine 型号",
     )]
 
 

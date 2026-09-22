@@ -279,9 +279,35 @@ class NetworkDesignerV2:
         self.param_switch_ports = topo.get('param_switch_ports', 64)
         # V5.4.2-542-b（AL-Q2/Q3400）：Spine 单台下联口上限（0=自动 switch_ports//2）
         self.param_spine_downlink_limit = int(topo.get('param_spine_downlink_limit', 0) or 0) or None
-        self.storage_switch_ports = topo.get('storage_switch_ports', 40)
+        # V5.4.3-W1.4（修复单 R4 / 决策 D1+D2，2026-09-22 拍板：B300/800G → Leaf144/Spine72）：
+        # 等效口口径（standard 路径可选声明）。背景：Q3400 = 72×1.6T 物理 = 144×800G 逻辑口；
+        # 万卡二层 1:1 终版要求每 Leaf 下联 72 条服务器侧 800G 连接（36 物理 1.6T 口 1分2×800G），
+        # 上联走 36 个物理 1.6T 口独立池、以 2:1 收敛条带化接入 72 台 Spine——
+        # 两种粒度并存，旧「单一端口池」模型无法表达。
+        # param_equivalent_mode=true 时：
+        #   - param_downlink_limit = 每 Leaf 服务器侧连接数（如 72），
+        #     不再受 switch_ports//2 钳制（守卫 = switch_ports×param_equiv_breakout）；
+        #   - Leaf↔Spine 上联改走物理口独立池（param_uplink_physical_ports，1.6T 粒度），
+        #     连接速率取 param_leaf_uplink_speed（如 "1.6T"），条带化子集指派；
+        #   - 下游 V023/收敛/容量计算按等效口径解释（validation.py 同步）。
+        self.param_equivalent_mode = bool(topo.get('param_equivalent_mode', False))
+        self.param_uplink_physical_ports = int(topo.get('param_uplink_physical_ports', 0) or 0)
+        self.param_leaf_uplink_speed = str(topo.get('param_leaf_uplink_speed', '') or '')
         self.param_speed = topo.get('param_speed', '400G')
         self.storage_speed = topo.get('storage_speed', '200G')
+        # 等效口换算比：每个逻辑 800G 等效口承载的服务器侧连接数 = 800G / param_speed。
+        # B300/800G 链路（1分2×800G）⇒ 1 条/等效口；方案 02/400G 链路（两级 1分4×400G）
+        # ⇒ 2 条/等效口。可经 topology.param_equiv_breakout 显式覆盖。
+        _base_g = 800  # 等效口单位 = 800G
+        try:
+            _srv_g = float(str(self.param_speed).upper().rstrip('GB'))
+            self.param_equiv_breakout = max(1, int(_base_g / _srv_g)) if _srv_g > 0 else 1
+        except (ValueError, ZeroDivisionError):
+            self.param_equiv_breakout = 1
+        _eb_cfg = topo.get('param_equiv_breakout')
+        if _eb_cfg:
+            self.param_equiv_breakout = max(1, int(_eb_cfg))
+        self.storage_switch_ports = topo.get('storage_switch_ports', 40)
 
         # --- V3.0.1-T1-1: 双平面 16 Leaf 配置（可选段；缺省关闭走传统路径） ---
         # topology.param_planes: [{leaf_count, protocol, speed, switch_ports, uplink}]
@@ -650,8 +676,17 @@ class NetworkDesignerV2:
             else:
                 # V5.0.11: custom 模式下行口数钳制到 switch_ports//2（至少留一半上联口），
                 # 防止 downlink_limit ≥ switch_ports 时生成满口下联、无上联口的错误 Leaf 结构
-                self.param_dl = min(int(topo.get('param_downlink_limit', self.param_switch_ports // 2)),
-                                    max(1, self.param_switch_ports // 2))
+                if getattr(self, 'param_equivalent_mode', False):
+                    # V5.4.3-W1.4（R4/D1）：等效口口径——param_downlink_limit 为「每 Leaf
+                    # 服务器侧 400G 连接数」，上联走物理口独立池，不受 switch_ports//2 钳制。
+                    # 守卫 = switch_ports × param_equiv_breakout（每 800G 等效口至多 2 条
+                    # 400G 连接；Q3400: 144×2=288 上限，D1 终版取 144 = 半物理口下行）。
+                    cap = max(1, self.param_switch_ports * getattr(self, 'param_equiv_breakout', 2))
+                    self.param_dl = min(int(topo.get('param_downlink_limit',
+                                                     self.param_switch_ports)), cap)
+                else:
+                    self.param_dl = min(int(topo.get('param_downlink_limit', self.param_switch_ports // 2)),
+                                        max(1, self.param_switch_ports // 2))
                 self.storage_dl = min(int(topo.get('storage_downlink_limit', self.storage_switch_ports // 2)),
                                       max(1, self.storage_switch_ports // 2))
                 self.biz_dl = int(topo.get('biz_downlink_limit', 25))
@@ -795,7 +830,18 @@ class NetworkDesignerV2:
                 # 与旧 leaf//2 一致（零回归）；显式配置 param_spine_downlink_limit
                 # （Q3400：72）时按容量反推 → 72 Leaf×72 上行÷72 下联 = 72 台 Spine。
                 _spine_dl_limit = getattr(self, 'param_spine_downlink_limit', None)
-                if _spine_dl_limit:
+                if getattr(self, 'param_equivalent_mode', False) and self.param_uplink_physical_ports:
+                    # V5.4.3-W1.4（R4/D1 等效口口径）：Leaf 上行与 Spine 下联**同为 1.6T
+                    # 物理口**（Spine 物理下联 = switch_ports//2，Q3400: 144//2=72），
+                    # 同单位反推 → Leaf 72 × 上行 36 ÷ 下联 72 = 36 台 Spine（方案 02 终版）。
+                    self.param_spine_count = calc_spine_count(
+                        self.param_leaf_count,
+                        self.param_uplink_physical_ports,
+                        max(1, self.param_switch_ports // 2),
+                        leaf_uplink_unit='physical',
+                        spine_downlink_unit='physical',
+                    )
+                elif _spine_dl_limit:
                     self.param_spine_count = calc_spine_count(
                         self.param_leaf_count,
                         max(1, self.param_switch_ports - self.param_dl),
@@ -1822,24 +1868,89 @@ class NetworkDesignerV2:
                     continue
 
         # Leaf → Spine: 每Leaf连全部Spine, uplink_ports/spine_count 口/Spine
-        uplink_avail = self.param_switch_ports - self.param_dl
-        ports_per_spine = uplink_avail // self.param_spine_count
-        for leaf in self.param_leaves:
-            leaf.uplink_counter = self.param_dl + 1
-            leaf.uplink_limit = self.param_switch_ports
-            po = self.param_dl + 1
-            for si in range(self.param_spine_count):
-                for p in range(ports_per_spine):
+        if getattr(self, 'param_equivalent_mode', False) and self.param_uplink_physical_ports:
+            # V5.4.3-W1.4（R4/D1 等效口口径，2026-09-22 拍板：B300/800G → Leaf144/Spine72）：
+            # 上联走**物理 1.6T 口独立池**——与服务器侧 800G 连接（param_dl 条，逻辑粒度）
+            # 不同粒度，不做同一端口池扣减；收敛比 >1 时 Leaf 只连 Spine 子集（条带化指派），
+            # 非「每 Leaf 连全部 Spine」全二部。
+            _uplink_phys = self.param_uplink_physical_ports
+            _spine_cnt = self.param_spine_count
+            _total_uplinks = len(self.param_leaves) * _uplink_phys
+            # V5.4.3-W1.1（R1/决策 D3）：断链必须 error——上行链路总数覆盖不了每台 Spine
+            # 至少 1 条下行 ⇒ 物理不通拓扑，禁止静默生成。
+            if _spine_cnt <= 0 or _total_uplinks < _spine_cnt:
+                raise ValueError(
+                    f"参数网 Leaf↔Spine 断链（等效口口径）：上行链路总数 "
+                    f"{len(self.param_leaves)}×{_uplink_phys}={_total_uplinks} < "
+                    f"Spine 台数 {_spine_cnt}，存在零下联 Spine；请减少 Spine 台数或增大 Leaf 上行容量")
+            _spine_downlink_phys = max(1, self.param_switch_ports // 2)
+            _spine_ctr = [0] * _spine_cnt
+            _link_speed_up = self.param_leaf_uplink_speed or self.param_speed
+            for li, leaf in enumerate(self.param_leaves):
+                leaf.uplink_counter = self.param_dl + 1
+                leaf.uplink_limit = self.param_switch_ports
+                for j in range(_uplink_phys):
+                    # 条带化指派：leaf k 的第 j 条物理上行 → Spine[(k×uplink_phys + j) % N]
+                    # ——每 Spine 恰好收 Leaf×uplink/N 条链路（144×36/72=72=物理下联口全用满）
+                    si = (li * _uplink_phys + j) % _spine_cnt
                     spine = self.param_spines[si]
-                    lf = f"{leaf.uplink_prefix or '端口'}{po}"
-                    spn = ((po - self.param_dl - 1) % spine.downlink_limit) + 1
-                    spine.downlink_counter = max(spine.downlink_counter, spn + 1)
-                    po += 1
-                    self._add_conn(leaf, lf, self.param_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
-                                   self.param_speed,
+                    lf = f"{leaf.uplink_prefix or '端口'}{j + 1}"
+                    spn = (_spine_ctr[si] % _spine_downlink_phys) + 1
+                    _spine_ctr[si] += 1
+                    self._add_conn(leaf, lf, _link_speed_up, spine,
+                                   f"{spine.downlink_prefix or '端口'}{spn}", _link_speed_up,
                                    self.cable_types['param']['leaf_spine'],
                                    "参数Leaf到Spine",
                                    network_type='param')
+        else:
+            uplink_avail = self.param_switch_ports - self.param_dl
+            ports_per_spine = uplink_avail // self.param_spine_count
+            if ports_per_spine <= 0:
+                # V5.4.3-W1.1（R1/决策 D3）：经典路径两种情形——
+                # (a) 总上行容量可覆盖全部 Spine（leaf×uplink_avail ≥ spine_count）：
+                #     条带化子集指派（每 Leaf 只连部分 Spine，大规模 2:1 收敛的物理常态），
+                #     拓扑连通，不静默、不断链；
+                # (b) 物理不可行（leaf×uplink_avail < spine_count，必有无下联 Spine）：
+                #     按 D3 直接 error，不产出拓扑文件。
+                if self.param_leaf_count * uplink_avail < self.param_spine_count:
+                    raise ValueError(
+                        f"参数网 Leaf↔Spine 断链：上行链路总数 "
+                        f"{self.param_leaf_count}×{uplink_avail} < Spine 台数 "
+                        f"{self.param_spine_count}，必存在零下联 Spine；"
+                        f"请减少 Spine 台数或减小 param_downlink_limit")
+                for li, leaf in enumerate(self.param_leaves):
+                    leaf.uplink_counter = self.param_dl + 1
+                    leaf.uplink_limit = self.param_switch_ports
+                    for j in range(uplink_avail):
+                        si = (li * uplink_avail + j) % self.param_spine_count
+                        spine = self.param_spines[si]
+                        lf = f"{leaf.uplink_prefix or '端口'}{self.param_dl + j + 1}"
+                        spn = (((li * uplink_avail + j) % self.param_switch_ports)
+                               % max(1, spine.downlink_limit)) + 1
+                        spine.downlink_counter = max(spine.downlink_counter, spn + 1)
+                        self._add_conn(leaf, lf, self.param_speed, spine,
+                                       f"{spine.downlink_prefix or '端口'}{spn}",
+                                       self.param_speed,
+                                       self.cable_types['param']['leaf_spine'],
+                                       "参数Leaf到Spine",
+                                       network_type='param')
+            else:
+                for leaf in self.param_leaves:
+                    leaf.uplink_counter = self.param_dl + 1
+                    leaf.uplink_limit = self.param_switch_ports
+                    po = self.param_dl + 1
+                    for si in range(self.param_spine_count):
+                        for p in range(ports_per_spine):
+                            spine = self.param_spines[si]
+                            lf = f"{leaf.uplink_prefix or '端口'}{po}"
+                            spn = ((po - self.param_dl - 1) % spine.downlink_limit) + 1
+                            spine.downlink_counter = max(spine.downlink_counter, spn + 1)
+                            po += 1
+                            self._add_conn(leaf, lf, self.param_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
+                                           self.param_speed,
+                                           self.cable_types['param']['leaf_spine'],
+                                           "参数Leaf到Spine",
+                                           network_type='param')
 
     def _storage_ports_for_server(self, server):
         """V5.4.0-640-f（FR-A8 / W1.7）: 单台服务器的存储网口数（按服务器类别）。
@@ -1914,22 +2025,49 @@ class NetworkDesignerV2:
         # Leaf → Spine
         uplink_avail = self.storage_switch_ports - self.storage_dl
         ports_per_spine = uplink_avail // self.storage_spine_count
-        for leaf in self.storage_leaves:
-            leaf.uplink_counter = self.storage_dl + 1
-            leaf.uplink_limit = self.storage_switch_ports
-            po = self.storage_dl + 1
-            for si in range(self.storage_spine_count):
-                for p in range(ports_per_spine):
+        # V5.4.3-W1.1（R1/决策 D3）：存储网与参数网同构（修复单 R1「勿漏」的第二处）——
+        # 均匀分配不可行时条带化子集指派（连通）；总上行不足时按 D3 error（不产文件）。
+        if self.storage_spine_count and ports_per_spine <= 0:
+            _leaf_total = len(self.storage_leaves)
+            if _leaf_total * uplink_avail < self.storage_spine_count:
+                raise ValueError(
+                    f"存储网 Leaf↔Spine 断链：上行链路总数 "
+                    f"{_leaf_total}×{uplink_avail} < Spine 台数 {self.storage_spine_count}，"
+                    f"必存在零下联 Spine；请减少存储 Spine 台数或减小 storage_downlink_limit")
+            _spine_down_phys = max(1, self.storage_switch_ports)
+            for li, leaf in enumerate(self.storage_leaves):
+                leaf.uplink_counter = self.storage_dl + 1
+                leaf.uplink_limit = self.storage_switch_ports
+                for j in range(uplink_avail):
+                    si = (li * uplink_avail + j) % self.storage_spine_count
                     spine = self.storage_spines[si]
-                    lf = f"{leaf.uplink_prefix or '端口'}{po}"
-                    spn = ((po - self.storage_dl - 1) % spine.downlink_limit) + 1
+                    lf = f"{leaf.uplink_prefix or '端口'}{self.storage_dl + j + 1}"
+                    spn = (((li * uplink_avail + j) % _spine_down_phys)
+                           % max(1, spine.downlink_limit)) + 1
                     spine.downlink_counter = max(spine.downlink_counter, spn + 1)
-                    po += 1
-                    self._add_conn(leaf, lf, self.storage_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
+                    self._add_conn(leaf, lf, self.storage_speed, spine,
+                                   f"{spine.downlink_prefix or '端口'}{spn}",
                                    self.storage_speed,
                                    self.cable_types['storage']['leaf_spine'],
                                    "存储Leaf到Spine",
                                    network_type='storage')
+        else:
+            for leaf in self.storage_leaves:
+                leaf.uplink_counter = self.storage_dl + 1
+                leaf.uplink_limit = self.storage_switch_ports
+                po = self.storage_dl + 1
+                for si in range(self.storage_spine_count):
+                    for p in range(ports_per_spine):
+                        spine = self.storage_spines[si]
+                        lf = f"{leaf.uplink_prefix or '端口'}{po}"
+                        spn = ((po - self.storage_dl - 1) % spine.downlink_limit) + 1
+                        spine.downlink_counter = max(spine.downlink_counter, spn + 1)
+                        po += 1
+                        self._add_conn(leaf, lf, self.storage_speed, spine, f"{spine.downlink_prefix or '端口'}{spn}",
+                                       self.storage_speed,
+                                       self.cable_types['storage']['leaf_spine'],
+                                       "存储Leaf到Spine",
+                                       network_type='storage')
 
         # V2.7.2-T9: Spine → Core (仅 3-tier 模式)
         if self.storage_3tier_needed and self.storage_cores:
@@ -2265,10 +2403,30 @@ class NetworkDesignerV2:
                 # 汇聚：按可配收敛比，默认 1.0（严格守恒，裁定 D2）
                 ratio = max(1.0, getattr(self, 'biz_agg_oversubscription', 1.0))
                 limit = math.ceil(sw.max_ports * ratio)
+            elif ('参数Leaf' in sw.name
+                  and getattr(self, 'param_equivalent_mode', False)):
+                # V5.4.3-W1.4（等效口口径）：参数 Leaf 连接数 = 服务器侧 400G 连接
+                # （param_dl，逻辑粒度）+ 物理 1.6T 上联（独立池）——
+                # 容量按 max_ports × param_equiv_breakout（Q3400: 144×2=288 ≥ 180）。
+                limit = sw.max_ports * getattr(self, 'param_equiv_breakout', 2)
             else:
                 limit = sw.max_ports
             if len(sw.connections) > limit:
                 errors.append(f"{sw.name} 端口溢出: {len(sw.connections)}/{sw.max_ports}")
+        # V5.4.3-W1.1（R1）：互联段零连接判据——连接数为 0 与端口溢出同为结构性错误。
+        # 旧实现只判「连接数 > 端口数」，断链（0 条）永远不触发 ⇒ 判「通过」。
+        for _seg, _leaves, _spines in (('参数网', self.param_leaves, self.param_spines),
+                                       ('存储网', self.storage_leaves, self.storage_spines)):
+            if _leaves and _spines:
+                _spine_names = {s.name for s in _spines}
+                _ls_conns = sum(
+                    1 for lf in _leaves for c in lf.connections
+                    if (c.a_device == lf.name and c.z_device in _spine_names)
+                    or (c.z_device == lf.name and c.a_device in _spine_names))
+                if _ls_conns == 0:
+                    errors.append(
+                        f"{_seg} Leaf↔Spine 连接数为 0（互联段断链）："
+                        f"Leaf {len(_leaves)} 台 / Spine {len(_spines)} 台无任何互联")
         if errors:
             print("发现以下问题:")
             for e in errors:

@@ -20,7 +20,7 @@
     "param_speed": "400G",
     "storage_speed": "200G",
     "param_downlink_limit": 25,
-    "storage_downlink_limit": 20,
+    "storage_downlink_limit": 21,
     "biz_downlink_limit": 25,
     "oob_downlink_limit": 25,
     "param_protocol": "IB",

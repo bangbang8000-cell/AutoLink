@@ -60,14 +60,27 @@ class TestV023ParamLeafSpineCapacity:
     """V023：参数网 Leaf 台数 ≤ Spine 单台下联口上限（Q3400 二层口径）"""
 
     def test_q3400_leaf_over_72_errors(self):
-        """万卡-B300-Q3400（leaf=400、spine=200、sw=144）必须报 ERROR（反馈 P0 核心）"""
+        """万卡-B300-Q3400 规模（leaf=400、spine=200、sw=144、dl=72）承载超限必报 ERROR
+
+        V5.4.3-W1.3（R3 配套 + 条带化接线）口径更正：V023 改为「每台 Spine 实际承载」
+        = ceil(leaf × uplink_avail / spine) ≤ sw×2（2:1 豁免）。leaf=400 时每 Spine
+        承载 144 ≤ 288 不再误报（该配置的断链问题由 W1.1 条带化接线修复）；
+        承载超限（leaf=1200 → 432 > 288）必报 ERROR。
+        """
         engine = create_default_engine()
-        issues = [i for i in engine.validate(_ctx(leaf=400, spine=200, core=0, sw=144))
+        issues = [i for i in engine.validate(_ctx(leaf=1200, spine=200, core=0, sw=144))
                   if i.rule_id == 'V023']
         assert len(issues) == 1
         assert issues[0].severity == Severity.ERROR
-        assert '400' in issues[0].message
-        assert '72' in issues[0].message
+        assert '432' in issues[0].message
+
+    def test_q3400_legacy_case_not_flagged(self):
+        """原万卡-B300-Q3400 参数（leaf=400、spine=200）：承载 144 ≤ 288 不误报
+        （其 0 条链路问题已由 W1.1 条带化接线从根因修复，V023 回归纯容量口径）"""
+        engine = create_default_engine()
+        issues = [i for i in engine.validate(_ctx(leaf=400, spine=200, core=0, sw=144))
+                  if i.rule_id == 'V023']
+        assert issues == []
 
     def test_leaf_at_limit_passes(self):
         """恰在上限（leaf=72=144//2）不报"""
@@ -84,14 +97,18 @@ class TestV023ParamLeafSpineCapacity:
         assert issues == []
 
     def test_limit_parametrizable(self):
-        """上限参数化：param_spine_downlink_limit=100 时 leaf=90 合法、leaf=110 报错"""
+        """承载口径参数无关性：V023 按「每 Spine 实际承载」判定（5.4.3-W1.3 更正）
+
+        旧「leaf ≤ 显式上限」语义随条带化接线废弃——param_spine_downlink_limit 现在
+        只作用于设计器 Spine 台数推导（calc_spine_count），V023 统一按承载口径。
+        """
         engine = create_default_engine()
         ok = [i for i in engine.validate(_ctx(leaf=90, spine=45, core=0, sw=144, limit=100))
               if i.rule_id == 'V023']
-        assert ok == []
-        bad = [i for i in engine.validate(_ctx(leaf=110, spine=55, core=0, sw=144, limit=100))
+        assert ok == []          # 承载 = ceil(90×72/45) = 144 ≤ 288
+        bad = [i for i in engine.validate(_ctx(leaf=1100, spine=55, core=0, sw=144, limit=100))
                if i.rule_id == 'V023']
-        assert len(bad) == 1
+        assert len(bad) == 1     # 承载 = ceil(1100×72/55) = 1440 > 288
 
     def test_missing_param_network_no_issue(self):
         """无参数网数据（leaf=0）不报（空输入保护）"""

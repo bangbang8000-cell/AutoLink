@@ -634,6 +634,12 @@ def classify_exit(result: Any) -> int:
       1) 返回体含 `error` → 按 error_code 映射（未知码兜底 EXIT_EXEC）
       2) 返回体显式 `success is False` → EXIT_EXEC
       3) 其余 → EXIT_OK
+
+    V5.4.3-W1.3（修复单 R3）说明：design 等返回体的 `valid` 字段与 `validationIssues`
+    （含 V001~V023 结构性 ERROR）已在返回体**非阻断透出**（R3 期望修复 #1 原文
+    「哪怕不阻断」）；结构性错误对发布门禁的阻断由 validate_templates.py 消费
+    V 规则集实现（R3 期望修复 #2/#3），不通过退出码隐式承担，避免 V002 等
+    商务口径类既有告警改变 CLI 退出码语义。
     """
     if isinstance(result, dict):
         if result.get('error'):

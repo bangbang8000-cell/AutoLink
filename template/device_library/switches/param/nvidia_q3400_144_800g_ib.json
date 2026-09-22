@@ -3,7 +3,7 @@
   "vendor": "NVIDIA",
   "model": "Q3400 (Quantum-3)",
   "category": "switches_param",
-  "description": "NVIDIA Quantum-3 Q3400 144端口XDR 800Gb/s（1.6T 物理口）InfiniBand智能交换机，带管理端口，适用于超大规模AI训练集群高速互联（V5.4.2-542-c/Q1：显式标注物理形态——72×OSFP-1600 笼位（每笼 1.6T=2×800G 双口=144 逻辑 XDR 800G 口），breakout 单级 1.6T→2×800G（V5.4.0-640-i/W2.4：PRD §3.5-B 场景⑥）；两级 1.6T→2×800G→4×400G 为保留能力（FR-A7：需现场确认链路预算与中继），本轮不启用）",
+  "description": "NVIDIA Quantum-3 Q3400 144端口XDR 800Gb/s（1.6T 物理口）InfiniBand智能交换机，带管理端口，适用于超大规模AI训练集群高速互联（V5.4.2-542-c/Q1：显式标注物理形态——72×OSFP-1600 笼位（每笼 1.6T=2×800G 双口=144 逻辑 XDR 800G 口），breakout 单级 1.6T→2×800G（V5.4.0-640-i/W2.4：PRD §3.5-B 场景⑥）；V5.4.3-W1.4/D1（2026-09-22 拍板）：两级 1.6T→2×800G→4×400G 随「等效口口径」（param_equivalent_mode）在 standard 路径启用——万卡二层 1:1 终版模板 Leaf 下行 36×1.6T 物理 1分4×400G=144 服务器口）",
   "power_watts": 2200,
   "weight_kg": 22,
   "u_height": 2,
@@ -49,5 +49,7 @@
   ],
   "physical_ports": 72,
   "physical_port_type": "OSFP-1600",
-  "logical_port_count": 144
+  "logical_port_count": 144,
+  "effective_port_unit": "800G-equivalent",
+  "server_link_breakout": 2
 }

@@ -88,7 +88,8 @@ def test_mqm9700_param_breakout_disabled(lib):
 def test_q3400_xdr_description(lib):
     p = _profile(lib, 'nvidia_q3400_144_800g_ib')
     assert 'XDR 800Gb/s' in (p.description or '')
-    assert '保留能力' in (p.description or '')
+    # V5.4.3-W1.4/D1：两级 1.6T→2×800G→4×400G 随等效口口径启用（原「保留能力」更正）
+    assert '等效口口径' in (p.description or '')
 
 
 def test_q3400_single_stage_2x800g(lib):

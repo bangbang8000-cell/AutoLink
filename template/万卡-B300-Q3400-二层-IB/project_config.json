@@ -19,8 +19,8 @@
     "param_switch_ports": 144,
     "param_speed": "800G",
     "storage_speed": "200G",
-    "param_downlink_limit": 25,
-    "storage_downlink_limit": 20,
+    "param_downlink_limit": 72,
+    "storage_downlink_limit": 24,
     "biz_downlink_limit": 25,
     "oob_downlink_limit": 25,
     "param_protocol": "IB",
@@ -28,7 +28,10 @@
     "num_all_flash_storage": 59,
     "num_hybrid_flash_storage": 59,
     "num_compute_servers": 59,
-    "storage_switch_ports": 64
+    "storage_switch_ports": 64,
+    "param_equivalent_mode": true,
+    "param_uplink_physical_ports": 36,
+    "param_leaf_uplink_speed": "1.6T"
   },
   "device_refs": {
     "gpu_server": {

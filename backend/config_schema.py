@@ -86,7 +86,11 @@ PROJECT_FIELDS = [
     _f('param_ports_per_server', 'number', 8, 'param', '每服务器参数端口数', ''),
     _f('storage_ports_per_server', 'number', 1, 'storage', '每服务器存储端口数', ''),
     _f('param_switch_ports', 'number', 64, 'param', '参数交换机端口数', ''),
-    _f('param_spine_downlink_limit', 'number', 0, 'param', 'Spine单台下联口上限', '0=自动(switch_ports//2)，Q3400 配 72'),
+    # V5.4.3-W1.2（R2 修复单）：原文「0=自动(switch_ports//2)，Q3400 配 72」是「有毒配置值」——
+    # 照该注解配置会把「稀疏但连通」的拓扑变成「完全不连通」（实测 Spine 144/662 跑飞 + 断链）。
+    # 统一口径（R5 更正）：Spine 台数按 Spine 侧实际下联口容量反推，留空走自动（= Leaf/2）。
+    _f('param_spine_downlink_limit', 'number', 0, 'param', 'Spine单台下联口上限',
+       '留空（自动 = Leaf/2）；仅在明确知道 Spine 侧下联口容量时才显式配置'),
     _f('storage_switch_ports', 'number', 40, 'storage', '存储交换机端口数', ''),
     _f('rail_mode', 'string', 'standard', 'param', 'Rail 模式', '', ['standard', 'rail_optimized']),
     _f('rail_count', 'number', 8, 'param', 'Rail 数量', ''),

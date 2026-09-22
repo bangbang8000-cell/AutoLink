@@ -38,21 +38,27 @@ def calc_leafs_per_pod(switch_ports, ports_per_server, servers_per_pod):
     return groups_per_pod * ports_per_server
 
 
-def calc_spine_count(leaf_count, leaf_uplink_ports=None, spine_downlink_ports=None):
-    """计算 Spine 台数（统一容量反推公式，AL-Q3 / Q3400 二层口径核查）
+def calc_spine_count(leaf_count, leaf_uplink_ports=None, spine_downlink_ports=None,
+                     leaf_uplink_unit=None, spine_downlink_unit=None):
+    """计算 Spine 台数（统一容量反推公式；口径更正见 V5.4.3-W1.5 / 修复单 R5）
 
-    旧实现 `leaf_count // 2` 是「Leaf=k 台、Spine=k/2 台」经典 1:1 Clos 的推论，
-    仅当每 Leaf 恰好出 1 条上行到每台 Spine 时成立。Q3400 终版口径
-    （72×1.6T 物理口对半、每口 2×800G）下，每 Leaf 出 72 个 800G 上行口、
-    每 Spine 收 72 个 800G 下联口，故 Spine 台数 = ceil(leaf × uplink / downlink)：
+    机制（容量反推 ceil(leaf × uplink / downlink)）不变；**结论文本已更正**——
+    旧 docstring 中「Q3400：ceil(72×72/72)=72 台」「终版需求 Spine=Leaf」为 09-20 旧口径，
+    09-22 已被反馈方定稿推翻并撤回：**Spine 台数按 Spine 侧实际下联口容量反推，
+    且必须与 Leaf 上行口使用同一物理单位**（如 Q3400 二层 1:1 终版：Leaf 72 台、
+    每 Leaf 36 个 1.6T 上行、每 Spine 72 个 1.6T 下联 → ceil(72×36/72) = 36 台）。
 
-      - Q3400（leaf=72、uplink=72、downlink=72）：ceil(72×72/72) = 72 台
-        （旧 //2=36 少算一半，这正是反馈表格「终版需求 Spine=Leaf」的来由）
-      - 经典 1:1（leaf=k、uplink=k/2、downlink=k）：ceil(k×(k/2)/k) = k/2 台
-        （与旧 //2 完全一致，零副作用）
+    参数缺省时回退 `leaf_count // 2`（经典 1:1 / 双平面路径零回归）。
 
-    参数缺省时回退 `leaf_count // 2`（双平面/经典路径零回归）。
+    V5.4.3-W1.4（修复单 R4）：新增可选单位标注 `leaf_uplink_unit` / `spine_downlink_unit`——
+    两者同时给出且不相等时直接拒绝（防「800G 口径上行 ÷ 1.6T 口径下联」单位混算，
+    实测曾算出 662 台 Spine 的跑飞值）。
     """
+    if leaf_uplink_unit and spine_downlink_unit and leaf_uplink_unit != spine_downlink_unit:
+        raise ValueError(
+            f"calc_spine_count 单位混算拒绝：Leaf 上行口单位={leaf_uplink_unit}，"
+            f"Spine 下联口单位={spine_downlink_unit}；两个口数参数必须同物理单位"
+            f"（Leaf={leaf_count}, uplink={leaf_uplink_ports}, downlink={spine_downlink_ports}）")
     if leaf_count <= 0:
         return 1
     if leaf_uplink_ports is None or spine_downlink_ports is None:

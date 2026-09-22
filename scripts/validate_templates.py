@@ -18,6 +18,11 @@ from designer import NetworkDesignerV2
 from device_library import get_device_library
 from template_gate import check_template_config
 
+# V5.4.3-W1.3（修复单 R3）：模板门禁同时消费 validation.py V001~V023 规则集——
+# 旧实现只走 designer.validate_topology()（端口溢出），V023 等结构性规则再准
+# 模板门禁也测不出（同一拓扑「design 判通过 / validate run 判 ERROR」结论相反）。
+from engine import _run_validation
+
 base = os.path.join(os.path.dirname(__file__), '..', 'template')
 
 # 自动发现模板目录（含 network_config.ini），排除 device_library/.gitkeep 等
@@ -109,15 +114,21 @@ for t in templates:
             problems.extend(check_template_config(config, get_device_library(), tpl_dir))
 
     # 2. INI 设计 + 机柜检查（向后兼容；临时目录避免 JSON 抢占）
+    # V5.4.3-W1.4：等效口口径模板（param_equivalent_mode）跳过——INI 无该通道，
+    # 纯 INI 设计会走旧钳制路径触发断链 error（与双平面/zcube 跳过同理）
+    _equiv_mode = bool((config or {}).get('topology', {}).get('param_equivalent_mode'))
     stats_ini = None
-    try:
-        d_ini = _load_ini_only_design(tpl_dir)
-        v = d_ini.validate_topology()
-        if not v['valid']:
-            problems.append(f'INI 拓扑错误: {v["errors"]}')
-        stats_ini = _design_stats(d_ini)
-    except Exception as e:
-        problems.append(f'INI 设计失败: {e}')
+    if _equiv_mode:
+        stats_ini = None
+    else:
+        try:
+            d_ini = _load_ini_only_design(tpl_dir)
+            v = d_ini.validate_topology()
+            if not v['valid']:
+                problems.append(f'INI 拓扑错误: {v["errors"]}')
+            stats_ini = _design_stats(d_ini)
+        except Exception as e:
+            problems.append(f'INI 设计失败: {e}')
 
     # 3. JSON 设计 + 机柜检查（V2.9.4 权威）
     stats_json = None
@@ -126,6 +137,24 @@ for t in templates:
         vj = d_json.validate_topology()
         if not vj['valid']:
             problems.append(f'JSON 拓扑错误: {vj["errors"]}')
+        # V5.4.3-W1.3（修复单 R3）：消费 V 规则集，**V021/V023** 结构性 ERROR 使模板
+        # 门禁变红。范围收敛说明：
+        #   - V021（逐层端口守恒）/ V023（Leaf↔Spine 容量）是 R1~R3 对应的结构性规则；
+        #   - V016 与设计器三层 X400 分光容量口径存在既有分歧（万卡-H200-X400-三层
+        #     在 5.4.2 即 V016 误报，登记遗留），本版不纳入；
+        #   - 功率/散热等商务口径类规则（V002 按散热阈值 15000W 等）存在大量基线
+        #     既有告警，纳入会大面积翻红且超出 R3 范围，仍由 validate run 完整透出。
+        try:
+            rv = _run_validation(d_json)
+            struct_errors = [i for i in rv.get('validationIssues', [])
+                             if i.get('severity') == 'error'
+                             and i.get('rule_id') in ('V021', 'V023')]
+            for i in struct_errors[:10]:
+                problems.append(f'结构规则 {i.get("rule_id")}: {i.get("message")}')
+            if len(struct_errors) > 10:
+                problems.append(f'结构规则错误共 {len(struct_errors)} 条（仅显示前 10 条）')
+        except Exception as ve:
+            problems.append(f'结构规则校验失败: {ve}')
         ok_cab, msgs, cabinets, total_power = _check_cabinets(d_json)
         if not ok_cab:
             problems.extend(msgs)
@@ -143,6 +172,7 @@ for t in templates:
     _mode = (config or {}).get('topology', {}).get('param_network_mode')
     if config and (config.get('topology', {}).get('param_planes')
                    or _mode in ('zcube',)
+                   or (config.get('topology', {}) or {}).get('param_equivalent_mode')
                    or (config.get('networks', {}) or {}).get('eth_combined')):
         stats_ini = stats_json  # 视为等价,仅校验各自 validate 通过
     if stats_ini is not None and stats_json is not None and stats_ini != stats_json:
