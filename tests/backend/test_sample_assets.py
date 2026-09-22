@@ -28,12 +28,16 @@ from validate_samples import (  # noqa: E402
 
 BASE = os.path.join(os.path.dirname(__file__), '..', '..', 'template')
 
-# 示例发现断言：13 个（7 基础 + 6 场景万卡/二层最大）
+# 示例发现断言：14 个（7 基础 + 6 场景万卡/二层最大 + 1 本地定制 5090）
+# V5.4.3 更正：5090推理-500台 为本地定制模板（5090 模板产品线），template.json 自带
+# isSample=true（本地定制提交 2b897e6 引入，5.4.2 CI 即因缺它而红），本断言对齐现实
+# 发现集；其不进 VALIDATED_SAMPLE_IDS（全量校验开销大，同万卡/二层最大口径）
 DISCOVERED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
                          'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256',
                          '万卡-B300-Q3400-二层-IB', '万卡-H200-Q3400-二层-IB',
                          '万卡-H200-QM9700-三层-IB', '万卡-H200-X400-三层-RoCE',
-                         '二层最大-2048卡-QM9700-IB', '二层最大-8192卡-X400-RoCE'}
+                         '二层最大-2048卡-QM9700-IB', '二层最大-8192卡-X400-RoCE',
+                         '5090推理-500台'}
 # 全量校验范围：7 个基础示例（万卡/二层最大由 validate_samples 门禁覆盖，本地全量校验开销大，GitHub 跑不过可跳过）
 VALIDATED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
                         'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256'}
