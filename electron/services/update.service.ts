@@ -17,6 +17,13 @@ import {
   isBelowMinRequired,
   resolveYmlNameForChannel,
   readUpdateSettings,
+  // V5.4.3-W2（U1/U2/U4）：重试计划 / 停滞判定纯函数
+  backoffDelayMs,
+  defaultRetryConfig,
+  isStalled,
+  stallTrack,
+  type DownloadRetryConfig,
+  type StallTracker,
   type UpdateSettings,
 } from './update-delivery.js'
 
@@ -226,20 +233,64 @@ async function checkLatestYmlFallback(timeoutMs = 15000): Promise<CheckResult> {
  *  - 完成后从 .part 改名，并做完整性校验：优先 sha512，缺失退化为 Content-Length。
  *  - 支持企业部署自定义代理 proxy（走 Node http/https CONNECT）。
  */
-function downloadInstallerFile(
+/**
+ * V5.4.3-W2（U1/U2/U4）下载编排：自动重试 + 停滞熔断 + 校验自愈。
+ *  - U1：网络错误/中断自动重试（D5 默认 3 次、退避 1s/2s/4s），每次从 .part 续传；
+ *  - U2：停滞看门狗（stallTimeoutMs 无字节增长 → abort 在途流）→ 计入重试续传；
+ *  - U4：sha512/长度校验失败 → 删 .part 自动重下一次（清偏移），重试耗尽才报错。
+ * 进度回调携带 attempt 字段（U1 可见性）；transferred/total/bytesPerSecond 对齐
+ * auto 通道（U3）。
+ */
+async function downloadInstallerFile(
   url: string,
   localPath: string,
-  onProgress: (percent: number) => void,
-  opts: { sha512?: string; proxy?: string } = {},
+  onProgress: (p: DownloadProgress) => void,
+  opts: { sha512?: string; proxy?: string; stallTimeoutMs?: number } = {},
+  retryCfg: DownloadRetryConfig = defaultRetryConfig(),
 ): Promise<void> {
   const partPath = partFileFor(localPath)
-  const startOffset = resumeOffset(partPath)
-  if (opts.proxy) {
-    return streamViaNodeProxy(url, opts.proxy, partPath, startOffset, onProgress)
-      .then(() => finalizeDownload(partPath, localPath, opts.sha512))
+  const token: DownloadCancelToken = { aborted: false, abort: () => {} }
+
+  // U2：停滞看门狗——每 2s 检查一次字节基准，超阈值即 abort 在途流
+  let stall: StallTracker = { lastBytes: 0, lastAt: Date.now() }
+  const stallTimer = opts.stallTimeoutMs
+    ? setInterval(() => {
+        if (isStalled(stall, Date.now(), opts.stallTimeoutMs as number)) {
+          token.abort()
+        }
+      }, 2000)
+    : null
+
+  try {
+    let attempt = 0
+    for (;;) {
+      const startOffset = resumeOffset(partPath)
+      stall = { lastBytes: startOffset, lastAt: Date.now() }
+      const progress = (p: DownloadProgress): void => {
+        stall = stallTrack(stall, Date.now(), p.transferred)
+        onProgress(p)
+      }
+      try {
+        if (opts.proxy) {
+          await streamViaNodeProxy(url, opts.proxy, partPath, startOffset, progress, token, attempt)
+        } else {
+          await streamViaNet(url, partPath, startOffset, progress, token, attempt)
+        }
+        await finalizeDownload(partPath, localPath, opts.sha512)
+        return
+      } catch (e) {
+        // U4：finalizeDownload 校验失败已删 .part ⇒ 下轮从 0 重下（自愈）
+        const delay = backoffDelayMs(attempt, retryCfg)
+        if (delay === null) throw e
+        attempt += 1
+        // 重试前等待（指数退避）；token 状态复位（停滞 abort 属可重试错误）
+        token.aborted = false
+        await new Promise((r) => setTimeout(r, delay))
+      }
+    }
+  } finally {
+    if (stallTimer) clearInterval(stallTimer)
   }
-  return streamViaNet(url, partPath, startOffset, onProgress)
-    .then(() => finalizeDownload(partPath, localPath, opts.sha512))
 }
 
 /** 下载完成后：sha512 强校验（缺失退化为流内 Content-Length 校验）+ .part 改名 */
@@ -260,8 +311,47 @@ async function finalizeDownload(partPath: string, localPath: string, sha512?: st
 }
 
 /** 使用 Electron net 模块流式下载（支持 Range 续传 + 3xx 重定向 + Content-Length 校验） */
-function streamViaNet(url: string, partPath: string, startOffset: number, onProgress: (percent: number) => void): Promise<void> {
+/** V5.4.3-W2/U3：下载进度载荷（fallback 通道与 auto 通道字段对齐） */
+export interface DownloadProgress {
+  percent: number
+  transferred: number
+  total: number
+  bytesPerSecond: number
+  /** U1：第几次重试（0=首次尝试；中断自动续传时可见） */
+  attempt: number
+}
+
+/** V5.4.3-W2/U2：停滞熔断取消令牌（watchdog 置 aborted 并 abort 在途请求） */
+export interface DownloadCancelToken {
+  aborted: boolean
+  abort(): void
+}
+
+function streamViaNet(
+  url: string,
+  partPath: string,
+  startOffset: number,
+  onProgress: (p: DownloadProgress) => void,
+  token?: DownloadCancelToken,
+  attempt = 0,
+): Promise<void> {
   return new Promise((resolve, reject) => {
+    let currentRequest: Electron.ClientRequest | null = null
+    if (token) {
+      // U2：watchdog 触发时 abort 在途请求（停滞 = 无 data 事件，必须外部打断）
+      token.abort = () => {
+        token.aborted = true
+        try {
+          currentRequest?.abort()
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    let lastBytesForSpeed = startOffset
+    let lastAtForSpeed = Date.now()
+    let bytesPerSecond = 0
+
     const doRequest = (requestUrl: string, redirectCount: number, offset: number) => {
       if (redirectCount > 5) {
         reject(new Error('Too many redirects'))
@@ -278,6 +368,7 @@ function streamViaNet(url: string, partPath: string, startOffset: number, onProg
       const reqOpts: string | Electron.ClientRequestConstructorOptions =
         offset > 0 ? { url: requestUrl, method: 'GET', headers: { Range: `bytes=${offset}-` } } : requestUrl
       const request = net.request(reqOpts)
+      currentRequest = request
 
       request.on('response', (response) => {
         const statusCode = response.statusCode || 0
@@ -322,10 +413,38 @@ function streamViaNet(url: string, partPath: string, startOffset: number, onProg
         }
 
         response.on('data', (chunk: Buffer) => {
+          // U2：停滞熔断——watchdog 置位后立即中断在途流（.part 保留，续传重试）
+          if (token?.aborted) {
+            if (fileStream) fileStream.destroy()
+            if (!settled) {
+              settled = true
+              try {
+                request.abort()
+              } catch {
+                /* ignore */
+              }
+              reject(new Error('Download stalled (watchdog abort)'))
+            }
+            return
+          }
           receivedBytes += chunk.length
           fileStream?.write(chunk)
           if (totalBytes > 0) {
-            onProgress(Math.min(100, (receivedBytes / totalBytes) * 100))
+            // U3：速度 EMA（1s 窗口）
+            const now = Date.now()
+            const dt = (now - lastAtForSpeed) / 1000
+            if (dt >= 1) {
+              bytesPerSecond = Math.round((receivedBytes - lastBytesForSpeed) / dt)
+              lastBytesForSpeed = receivedBytes
+              lastAtForSpeed = now
+            }
+            onProgress({
+              percent: Math.min(100, (receivedBytes / totalBytes) * 100),
+              transferred: receivedBytes,
+              total: totalBytes,
+              bytesPerSecond,
+              attempt,
+            })
           }
         })
         response.on('end', () => {
@@ -374,11 +493,29 @@ function streamViaNodeProxy(
   proxyUrl: string,
   partPath: string,
   startOffset: number,
-  onProgress: (percent: number) => void,
+  onProgress: (p: DownloadProgress) => void,
+  token?: DownloadCancelToken,
+  attempt = 0,
 ): Promise<void> {
   const proxy = new URL(proxyUrl)
   const proxyHost = proxy.hostname || '127.0.0.1'
   const proxyPort = Number(proxy.port) || (proxy.protocol === 'https:' ? 443 : 80)
+
+  /** U2：watchdog 取消入口（abort 当前在途请求/隧道） */
+  let currentAbort: (() => void) | null = null
+  if (token) {
+    token.abort = () => {
+      token.aborted = true
+      try {
+        currentAbort?.()
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  let lastBytesForSpeed = startOffset
+  let lastAtForSpeed = Date.now()
+  let bytesPerSecond = 0
 
   /** 建立 https 目标的 CONNECT 隧道，返回可复用的 socket */
   const openTunnel = (host: string, port: number): Promise<nodeNet.Socket> =>
@@ -451,9 +588,34 @@ function streamViaNodeProxy(
         }
 
         res.on('data', (chunk: Buffer) => {
+          // U2：停滞熔断——watchdog 置位后立即中断在途流（.part 保留，续传重试）
+          if (token?.aborted) {
+            if (fileStream) fileStream.destroy()
+            if (!settled) {
+              settled = true
+              res.destroy()
+              reject(new Error('Download stalled (watchdog abort)'))
+            }
+            return
+          }
           receivedBytes += chunk.length
           fileStream?.write(chunk)
-          if (totalBytes > 0) onProgress(Math.min(100, (receivedBytes / totalBytes) * 100))
+          if (totalBytes > 0) {
+            const now = Date.now()
+            const dt = (now - lastAtForSpeed) / 1000
+            if (dt >= 1) {
+              bytesPerSecond = Math.round((receivedBytes - lastBytesForSpeed) / dt)
+              lastBytesForSpeed = receivedBytes
+              lastAtForSpeed = now
+            }
+            onProgress({
+              percent: Math.min(100, (receivedBytes / totalBytes) * 100),
+              transferred: receivedBytes,
+              total: totalBytes,
+              bytesPerSecond,
+              attempt,
+            })
+          }
         })
         res.on('end', () => {
           if (fileStream) {
@@ -484,6 +646,8 @@ function streamViaNodeProxy(
         reject(err)
       }
       const endRequest = (req: http.ClientRequest): void => {
+        // U2：注册 abort 入口（watchdog 熔断时打断在途请求）
+        currentAbort = () => req.destroy()
         req.on('error', settleError)
         req.end()
       }
@@ -533,6 +697,9 @@ class UpdateService {
   private checkInFlight: Promise<CheckResult> | null = null
   /** 509-a：回滚安装包管理（保守，仅保存/列出/清除，不自动反复安装） */
   private rollback = new RollbackManager(path.join(app.getPath('userData'), 'rollback'))
+  /** V5.4.3-W2/U2b：通道锁定——auto 通道失败一次后，本会话内重试直接走 fallback
+   *  （fallback 有 .part 断点续传；auto 通道无续传能力，重试会反复从头下载） */
+  private lockToFallback = false
 
   setWindow(win: BrowserWindow): void {
     this.mainWindow = win
@@ -642,7 +809,9 @@ class UpdateService {
 
     // 如果上次检查走了 fallback 通道,优先用直接下载
     // (electron-updater 内部无 updateInfo 缓存,downloadUpdate() 会抛错)
-    if (this.lastCheckUsedFallback && cachedFallbackInfo?.downloadUrl) {
+    // V5.4.3-W2/U2b：auto 通道曾失败（lockToFallback）时同样直接走 fallback——
+    // auto 通道无 .part 续传能力，重试再进 auto 会反复从头下载。
+    if ((this.lastCheckUsedFallback || this.lockToFallback) && cachedFallbackInfo?.downloadUrl) {
       console.log('[UpdateService] Using direct download (fallback mode)')
       await this.downloadInstallerDirectly()
       return
@@ -683,6 +852,8 @@ class UpdateService {
       const fallbackToDirectDownload = async (errMessage: string) => {
         if (settled) return
         console.warn('[UpdateService] electron-updater download failed, trying direct download:', errMessage)
+        // V5.4.3-W2/U2b：auto 通道失败 → 本会话锁定 fallback（续传能力）
+        this.lockToFallback = true
         try {
           // 如果还没有缓存下载信息,先检查一次
           if (!cachedFallbackInfo) {
@@ -745,10 +916,22 @@ class UpdateService {
     await downloadInstallerFile(
       downloadUrl,
       localPath,
-      (percent) => {
-        this.mainWindow?.webContents.send('update:downloadProgress', { percent: Math.round(percent) })
+      (p) => {
+        // V5.4.3-W2/U3：fallback 通道进度补齐 transferred/total/bytesPerSecond/attempt，
+        // 与 auto 通道字段对齐（渲染层 update.store 字段已就绪，直接消费）
+        this.mainWindow?.webContents.send('update:downloadProgress', {
+          percent: Math.round(p.percent),
+          transferred: p.transferred,
+          total: p.total,
+          bytesPerSecond: p.bytesPerSecond,
+          attempt: p.attempt,
+        })
       },
-      { sha512, proxy: settings.enableEnterpriseDeploy ? settings.proxy : '' },
+      {
+        sha512,
+        proxy: settings.enableEnterpriseDeploy ? settings.proxy : '',
+        stallTimeoutMs: settings.stallTimeoutMs,
+      },
     )
 
     console.log('[UpdateService] Direct download completed:', localPath)

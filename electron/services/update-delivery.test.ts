@@ -201,3 +201,92 @@ describe('配置读取：readUpdateSettings', () => {
     expect(readUpdateSettings(file)).toEqual(defaultUpdateSettings())
   })
 })
+/* ============================================================
+ * V5.4.3-W2（U1/U2/U4/D5）：重试计划 / 停滞判定 / 设置解析
+ * ============================================================ */
+import {
+  backoffDelayMs,
+  defaultRetryConfig,
+  isStalled,
+  stallTrack,
+} from './update-delivery.js'
+
+describe('W2/U1 重试计划（D5 默认 3 次 · 1s/2s/4s）', () => {
+  it('退避序列为 1000/2000/4000', () => {
+    const cfg = defaultRetryConfig()
+    expect(backoffDelayMs(0, cfg)).toBe(1000)
+    expect(backoffDelayMs(1, cfg)).toBe(2000)
+    expect(backoffDelayMs(2, cfg)).toBe(4000)
+  })
+
+  it('重试耗尽返回 null（不再重试）', () => {
+    const cfg = defaultRetryConfig()
+    expect(backoffDelayMs(3, cfg)).toBeNull()
+    expect(backoffDelayMs(5, cfg)).toBeNull()
+    expect(backoffDelayMs(-1, cfg)).toBeNull()
+  })
+
+  it('退避表超长时封顶最后一档', () => {
+    const cfg = { maxRetries: 5, backoffMs: [100, 200] }
+    expect(backoffDelayMs(4, cfg)).toBe(200)
+  })
+
+  it('maxRetries=0 时首次失败即不再重试', () => {
+    const cfg = { maxRetries: 0, backoffMs: [1000] }
+    expect(backoffDelayMs(0, cfg)).toBeNull()
+  })
+})
+
+describe('W2/U2 停滞判定', () => {
+  it('字节无增长且超过阈值 → 停滞', () => {
+    const s = { lastBytes: 100, lastAt: 1000 }
+    expect(isStalled(s, 1000 + 30000, 30000)).toBe(true)
+  })
+
+  it('未超阈值 → 未停滞', () => {
+    const s = { lastBytes: 100, lastAt: 1000 }
+    expect(isStalled(s, 1000 + 29999, 30000)).toBe(false)
+  })
+
+  it('stallTrack：字节增长刷新基准，无增长保持原状', () => {
+    const s = { lastBytes: 100, lastAt: 1000 }
+    const s2 = stallTrack(s, 2000, 500)
+    expect(s2).toEqual({ lastBytes: 500, lastAt: 2000 })
+    const s3 = stallTrack(s2, 3000, 500)
+    expect(s3).toBe(s2)
+  })
+
+  it('thresholdMs<=0 时永不判定停滞（可配关闭）', () => {
+    const s = { lastBytes: 1, lastAt: 0 }
+    expect(isStalled(s, Number.MAX_SAFE_INTEGER, 0)).toBe(false)
+  })
+})
+
+describe('W2/U1-U2 设置解析（update.config.json 可配）', () => {
+  let dir = ''
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'al543-update-'))
+  })
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('缺省 downloadMaxRetries=3 / stallTimeoutMs=30000（D5）', () => {
+    const s = defaultUpdateSettings()
+    expect(s.downloadMaxRetries).toBe(3)
+    expect(s.stallTimeoutMs).toBe(30000)
+  })
+
+  it('可从配置文件覆盖且容忍非法值', () => {
+    const file = path.join(dir, 'update.config.json')
+    fs.writeFileSync(file, JSON.stringify({ downloadMaxRetries: 5, stallTimeoutMs: 60000 }))
+    const s = readUpdateSettings(file)
+    expect(s.downloadMaxRetries).toBe(5)
+    expect(s.stallTimeoutMs).toBe(60000)
+
+    fs.writeFileSync(file, JSON.stringify({ downloadMaxRetries: -1, stallTimeoutMs: 'x' }))
+    const s2 = readUpdateSettings(file)
+    expect(s2.downloadMaxRetries).toBe(3)
+    expect(s2.stallTimeoutMs).toBe(30000)
+  })
+})

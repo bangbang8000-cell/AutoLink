@@ -30,6 +30,10 @@ export interface UpdateSettings {
   proxy: string
   /** 平台版本端点 base url（用于 /api/v1/client/version?channel=，读取 sha512/min_required_version） */
   platformBaseUrl: string
+  /** V5.4.3-W2/U1（D5）：下载失败自动重试次数（不含首次；默认 3） */
+  downloadMaxRetries: number
+  /** V5.4.3-W2/U2（D5）：下载停滞判定阈值 ms（无字节增长即熔断续传；默认 30000） */
+  stallTimeoutMs: number
 }
 
 export function defaultUpdateSettings(): UpdateSettings {
@@ -39,6 +43,8 @@ export function defaultUpdateSettings(): UpdateSettings {
     updateUrl: '',
     proxy: '',
     platformBaseUrl: '',
+    downloadMaxRetries: 3,
+    stallTimeoutMs: 30000,
   }
 }
 
@@ -64,6 +70,12 @@ export function readUpdateSettings(file?: string): UpdateSettings {
   if (typeof o.updateUrl === 'string') s.updateUrl = o.updateUrl.trim()
   if (typeof o.proxy === 'string') s.proxy = o.proxy.trim()
   if (typeof o.platformBaseUrl === 'string') s.platformBaseUrl = o.platformBaseUrl.trim().replace(/\/+$/, '')
+  if (typeof o.downloadMaxRetries === 'number' && Number.isFinite(o.downloadMaxRetries) && o.downloadMaxRetries >= 0) {
+    s.downloadMaxRetries = Math.floor(o.downloadMaxRetries)
+  }
+  if (typeof o.stallTimeoutMs === 'number' && Number.isFinite(o.stallTimeoutMs) && o.stallTimeoutMs >= 0) {
+    s.stallTimeoutMs = Math.floor(o.stallTimeoutMs)
+  }
   return s
 }
 
@@ -244,4 +256,49 @@ export class RollbackManager {
 export function isBelowMinRequired(localVersion: string, minRequiredVersion: string | undefined | null): boolean {
   if (!minRequiredVersion || !localVersion) return false
   return compareVersions(localVersion, minRequiredVersion) < 0
+}
+
+/* ============================================================
+ * V5.4.3-W2（U1/U2/U4）下载可靠性：重试计划 / 停滞判定
+ * 对应 PRD：中断自动恢复（U1）、停滞熔断（U2）、校验失败自愈（U4）。
+ * 全部为纯函数，独立于 electron 运行时，便于单测（对齐既有 14 项先例）。
+ * ============================================================ */
+
+export interface DownloadRetryConfig {
+  /** 额外重试次数（总尝试 = 1 + maxRetries） */
+  maxRetries: number
+  /** 每次重试前的退避等待（指数退避；ms） */
+  backoffMs: number[]
+}
+
+/** D5 拍板默认：重试 3 次 · 退避 1s/2s/4s */
+export function defaultRetryConfig(): DownloadRetryConfig {
+  return { maxRetries: 3, backoffMs: [1000, 2000, 4000] }
+}
+
+/**
+ * 第 retryIndex 次**重试**（0-based）前的退避等待；超出计划返回 null（不再重试）。
+ * 退避序列按 backoffMs 顺序取值，超出表长时取最后一档（封顶）。
+ */
+export function backoffDelayMs(retryIndex: number, cfg: DownloadRetryConfig): number | null {
+  if (!cfg || retryIndex < 0 || retryIndex >= cfg.maxRetries) return null
+  const table = cfg.backoffMs.length ? cfg.backoffMs : defaultRetryConfig().backoffMs
+  return table[Math.min(retryIndex, table.length - 1)]
+}
+
+export interface StallTracker {
+  lastBytes: number
+  lastAt: number
+}
+
+/** 进展更新：字节增长时刷新基准（纯函数，返回新状态） */
+export function stallTrack(state: StallTracker, now: number, currentBytes: number): StallTracker {
+  if (currentBytes !== state.lastBytes) return { lastBytes: currentBytes, lastAt: now }
+  return state
+}
+
+/** 停滞判定：now - lastAt ≥ thresholdMs 且字节无增长 */
+export function isStalled(state: StallTracker, now: number, thresholdMs: number): boolean {
+  if (thresholdMs <= 0) return false
+  return now - state.lastAt >= thresholdMs
 }
