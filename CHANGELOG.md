@@ -1,6 +1,43 @@
 # CHANGELOG
 
 
+## [5.4.3] - 2026-09-22
+
+> **用户反馈修复单（2026-09-22）R1~R5 + 更新下载可靠性强化 + al-hwlist/1.0 硬件清单输出。修复版本。**
+> 决策基线：D1=B300/800G → Leaf144/Spine72（等效口口径）；D2=双口径并存；D3=断链 error 兜底；D4=备件率采纳反馈方默认+ratio_map 可覆盖；D5=重试 3 次/1s-2s-4s/停滞 30s（可配）。
+
+### W1 用户反馈修复单（R1~R5，P0）
+
+- **R1（P0）Leaf↔Spine 静默断链修复**：`designer.py` 参数网/存储网两处 `ports_per_spine = uplink_avail // spine_count` 为 0 时旧实现**静默不建任何链路**且 `validate_topology()` 判「通过」（修复单实测：官方模板万卡-B300-Q3400-二层-IB 参数网 0 条链路 + 存储网 45 台 Spine 0 条链路）。修复为**条带化子集指派**：均匀分配不可行但总上行充足（leaf×uplink ≥ spine）时，每 Leaf 的上行链路按条带化模式指派到 Spine 子集（大规模 2:1 收敛的物理常态），拓扑保证连通；总上行不足（必存在零下联 Spine）时按 D3 直接 error 不产出文件。`validate_topology()` 新增**互联段零连接判据**（参数网/存储网 Leaf↔Spine 连接数为 0 = 校验失败）。**门禁重跑实证：11 个模板此前处于静默零链路状态，修复后 30/30 全绿**。
+- **R2（P0）有毒配置值治理**：`config_schema.py` 注解「0=自动(switch_ports//2)，Q3400 配 72」更正为「留空（自动 = Leaf/2）」——照旧注解配置实测会把「稀疏但连通」拓扑变成「完全不连通」（Spine 144/662 跑飞）；`param_spine_downlink_limit` 现仅作用于 Spine 台数推导，连通性由 R1 条带化/error 双路保证。
+- **R3（P0）双校验路径合并**：`scripts/validate_templates.py` 门禁新增消费 validation 规则集（V021 逐层端口守恒 / V023 参数网容量，结构性 ERROR 使模板门禁变红）；V023 口径更正为「**每台 Spine 实际承载** ceil(leaf×uplink_avail/spine) ≤ sw×2（2:1 豁免）」——旧「Leaf 台数 ≤ switch_ports//2」把 Q3400 物理/逻辑对半误推广为普适规则，对经典 Clos 大面积误伤。等效口模板 INI 检查跳过（INI 无该通道，与双平面/zcube 同例）。
+- **R4（P0）端口单位混算治理**：`calc_spine_count` 新增同单位断言（leaf_uplink_unit / spine_downlink_unit 不同即拒绝，防「800G 上行 ÷ 1.6T 下联」算出 662 台跑飞值）；Q3400 设备库新增 `effective_port_unit: 800G-equivalent` / `server_link_breakout: 2`；新增**等效口口径**（`param_equivalent_mode`）：standard 路径下 param_downlink_limit 不受 switch_ports//2 钳制，Leaf↔Spine 上联走物理 1.6T 口独立池条带化接入。
+- **R5（更正）旧口径文案清理（4 处）**：`topology.py` calc_spine_count docstring（「终版需求 Spine=Leaf」等 09-20 旧口径撤回，统一为「Spine 台数按 Spine 侧实际下联口容量反推，且与 Leaf 上行口同一物理单位」）；`validation.py` V023 docstring/recommendation（删「144 口 Q3400」错误表述）；`config_schema.py` 注解。
+- **官方模板重建（D1）**：`万卡-B300-Q3400-二层-IB` 重建为等效口口径——Leaf 400/Spine 200（静默零链路）→ **Leaf 144/Spine 72**（2:1 收敛，每 Spine 72 条下联全用满），storage_downlink_limit 20→24 修复存储网静默断链。
+- 新增专项测试 `test_feedback_543.py`（断链/条带化连通/零连接判据/单位断言/等效口/文案清理）。
+
+### W2 更新下载可靠性强化（仅 AL；U1~U4）
+
+- **U1 下载自动重试**：网络错误/中断自动重试（默认 3 次、指数退避 1s/2s/4s，`update.config.json` 可配），每次从 .part 断点续传；进度事件带 attempt 字段。
+- **U2 停滞熔断 + 通道锁定**：下载停滞（30s 无字节增长，可配）自动 abort 在途流并计入重试续传；auto 通道失败一次后本会话锁定 fallback 直接下载通道（auto 无续传能力，避免重试反复从头下载）。
+- **U3 fallback 进度补齐**：直接下载进度事件补齐 transferred/total/bytesPerSecond/attempt（此前仅 percent，速度与字节明细恒空），与 auto 通道字段对齐；渲染层 store 零改动消费。
+- **U4 校验失败自愈**：sha512/Content-Length 校验失败删 .part 后自动重下一次（清偏移），重试耗尽才报错。
+
+### W3 al-hwlist/1.0 硬件清单输出（新增 `hwlist` 导出类型）
+
+- 五页式工作簿：设计汇总 / 组网清单（简版）/ 组网清单（契约版）/ 组网示意图 / 设计口径；对标《10240卡海光DCU集群-四方案终版》输出材料（契约对齐、自研实现）。
+- 数据契约：network_profile / tier / line_type（hardware|optic_module|cable|license|software|service）/ device_id（稳定主键，价格库 join 键）/ qty / spare_ratio / spare_qty（Excel CEILING 公式可复算）/ total_qty / qty_basis（机读数量口径）。
+- **零价格契约**：全簿禁绝金额字段，`check_no_price` 自检兜底（含「294000/台」无元字清洗）；光模块逐链路选型与 BOM 同源（三态解析、未匹配显式成行）；线缆按分光系数聚合（qty_basis 显式承载系数）；备件率默认采纳反馈方值（D4），`ratio_map` 参数覆盖。
+- CLI：`export --output-types hwlist` 单独可用，缺省 all 包含；批次文件名 `硬件清单_{mode}模式_{ts}.xlsx`。
+- 新增专项测试 `test_hwlist_543.py`（契约完整性/ID 稳定性/备件公式/零价格/五页/公式/一致性交叉核对）。
+
+### 变更说明
+
+- 行为变化 1：此前静默产出「Leaf↔Spine 0 条链路」的模板/配置，现在要么产出连通拓扑（条带化），要么显式报错（物理不可行）——**随 patch 发布**，CHANGELOG 显著标注。
+- 行为变化 2：V023 口径由「Leaf 台数上限」更正为「每 Spine 实际承载上限」（5.4.2 测试同步更正）；模板门禁新增 V021/V023 消费。
+- MC 侧同等内容（下载可靠性强化）登记后续待排期，本版不动 MC。
+- 门禁基线：模板 30/30 全绿；新增测试 42 项全绿；electron vitest 70 项全绿。
+
 ## [5.4.2] - 2026-09-21
 
 > **Q3400 二层口径核查落地（《用户反馈》AL-Q1~Q4）+ 上游 5.4.1 合并。小版本优化。**
