@@ -21,6 +21,7 @@ import { useSnapshotStore, defaultSnapshotName } from '@/stores/snapshot.store'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
+import { WorkbenchStepBar } from '@/components/workbench/WorkbenchStepBar'
 
 export function RackDesignTab({ projectName }: { projectName: string }) {
   const { t } = useTranslation()
@@ -190,6 +191,8 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
 
   return (
     <div className="h-full flex flex-col gap-3">
+      {/* F3（5.4.4）：子视图常驻步骤条 */}
+      <WorkbenchStepBar projectName={projectName} />
       {/* 工具栏 */}
       <div className="flex items-center gap-2 flex-wrap shrink-0">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">

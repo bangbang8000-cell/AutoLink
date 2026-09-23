@@ -621,6 +621,14 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       useToastStore.getState().addToast('warning', '拓扑为空，未生成机柜', 4000)
       return { ok: true, errors: [], stats: { gpu: 0, network: 0, storage: 0, compute: 0, mounted: 0, overflow: 0 } }
     }
+    // F4（5.4.4 可用性修复）：大规模落位进度提示——千柜级同步计算前给出可感知反馈
+    if (nodes.length > 500) {
+      useToastStore.getState().addToast(
+        'info',
+        `正在按矩阵落位 ${nodes.length} 台设备（大规模约需数秒）…`,
+        6000,
+      )
+    }
     const { cabinets, unplacedDevices, cells, stats } = layoutRacksFromMatrix(matrix, nodes, opts)
     useRackStore.getState().setRacks(cabinets, unplacedDevices, cabinets.length ? cabinets[0].id : null)
     // M2（AL-UR1）：按矩阵落位为跨 store 批量操作——room/rack 各压一次快照（撤销后矩阵↔柜内一致）

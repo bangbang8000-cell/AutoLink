@@ -654,19 +654,24 @@ function layoutBottomRegion(
 export function computeTopologyLayout(
   nodes: TopologyNode[],
   _edges: TopologyEdge[],
+  /** F4（5.4.4 可用性修复）：布局阶段进度回调（0-100；Worker 模式经 postMessage 上报） */
+  onProgress?: (percent: number) => void,
 ): LayoutResult {
   if (nodes.length === 0) {
     return { layoutNodes: [], pods: [], totalWidth: 0, totalHeight: 0 }
   }
 
   /* === Step 1: 按节点分组 === */
+  onProgress?.(10)
   const { pods, networks } = groupNodes(nodes)
 
   /* === Step 2: 计算服务器区尺寸 === */
+  onProgress?.(25)
   const { pods: dims, totalWidth: serverAreaWidth, maxHeight: serverAreaHeight } =
     calculateServerArea(pods)
 
   /* === Step 3: 计算画布尺寸（16:9 比例自适应 + 网络设备宽度）=== */
+  onProgress?.(40)
   const canvas = calculateCanvasSize(
     serverAreaWidth,
     serverAreaHeight,
@@ -689,19 +694,23 @@ export function computeTopologyLayout(
   )
 
   /* === Step 4: 布局服务器区（V2.4.5: 服务器节点在概念宽度内居中）=== */
+  onProgress?.(55)
   const { nodes: serverNodes, podLayouts } = layoutServerArea(
     pods, dims, canvas.serverAreaX, canvas.serverAreaY, canvas.serverAreaWidth,
   )
 
   /* === Step 5: 布局顶部网络设备区 === */
+  onProgress?.(75)
   const topNodes = layoutTopRegion(networks, canvas)
 
   /* === Step 6: 布局底部网络设备区 === */
+  onProgress?.(90)
   const bottomNodes = layoutBottomRegion(networks, canvas)
 
   /* === 合并所有节点 === */
   const allNodes = [...topNodes, ...serverNodes, ...bottomNodes]
 
+  onProgress?.(100)
   return {
     layoutNodes: allNodes,
     pods: podLayouts,

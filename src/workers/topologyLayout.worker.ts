@@ -11,6 +11,9 @@ import type { TopologyNode, TopologyEdge } from '@/stores/design.store'
 
 self.onmessage = (e: MessageEvent<{ nodes: TopologyNode[]; edges: TopologyEdge[]; token: number }>) => {
   const { nodes, edges, token } = e.data
-  const result = computeTopologyLayout(nodes, edges)
-  ;(self as unknown as Worker).postMessage({ result, token })
+  // F4（5.4.4 可用性修复）：阶段进度上报（type=progress 中间消息；type=result 终态）
+  const result = computeTopologyLayout(nodes, edges, (percent) => {
+    ;(self as unknown as Worker).postMessage({ type: 'progress', percent, token })
+  })
+  ;(self as unknown as Worker).postMessage({ type: 'result', result, token })
 }

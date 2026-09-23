@@ -1,6 +1,61 @@
 # CHANGELOG
 
 
+## [5.4.4] - 2026-09-22
+
+> **工作台可用性修复版（用户实测 6 条反馈 F1~F6 一次收口）**——8K+ 卡集群全流程可走通。
+> 决策基线：D1=模板柜重新编号复制；D2=聚合束流默认；F3=子视图常驻步骤条；F1~F6 一次收口。
+
+### F1 设备跨柜唯一性守卫（P0，用户实测#4：一个设备重复落到多个机柜）
+
+三处根因同批修复：
+- **placeDevice 跨柜守卫**：已在他柜的设备不可再次上架（旧实现只查本柜 U 冲突/功率）；
+- **applyCabinetTemplate 重新编号复制（D1）**：源柜设备复制到同类柜时 id 重新编号（`原id-柜N`），
+  全柜 id 唯一可溯源（旧实现 id 原样复制 → 一键即双落位）；
+- **initFromTopology 不再双入池**：已落位设备不再同时进待分配池（旧实现从池再上架即双落位），
+  手动调整走 removeDevice → placeDevice 正常路径；
+- **pasteDevice/pasteCabinet 编号池全柜化**：跨柜粘贴不产生同号设备；
+- **loadRackLayout 存量脏数据自动去重**：跨柜同 id 保留首个落位并明确告警。
+- 新增专项测试 `rack-uniqueness-544.test.ts`（T1~T5 五场景）。
+
+### F2 机柜功率/柜型配置接线（P0，前后端功率上限不一致根因）
+
+- `ensureMatrixRacks` 落位参数优先读项目 `rack_config`（power_limit_per_rack / rack_type /
+  gpu_per_cabinet / top_reserved_u）——旧实现不传 opts ⇒ 硬编码 12000，与后端
+  rack_allocation（如 8192 模板=30000）前后端不一致；
+- 机房设计页新增「默认机柜功率」设置入口（`rack.store.defaultPowerLimit` + setRackConfig）；
+- DesignTab「按矩阵自动落位」显式传项目机柜配置。
+
+### F3 子视图常驻步骤条（三步状态一目了然）
+
+- 新组件 `WorkbenchStepBar`：①配置与就绪 → ②渲染材料与操作 → ③渲染结果，状态
+  （待开始/进行中/已定稿/需更新）复用 `deriveWorkbenchState` 单一推导；
+- 挂载到设计 / 机房设计 / 机柜设计三个子视图顶部；含就地定稿按钮（机房矩阵定稿 /
+  AIDC 标记完成）与设备总数。
+
+### F4 进度提示全覆盖（每个 >2s 环节必有反馈）
+
+- **拓扑布局进度**：布局算法 6 阶段进度回调（Worker postMessage 上报），工具栏
+  进度徽章（百分比 + 迷你进度条）替代角落小字；
+- **大规模落位提示**：500+ 设备按矩阵落位前 toast 前置提示（千柜级同步计算可感知）。
+
+### F5 聚合束流模式（D2：大规模默认，8K+ 卡保真渲染）
+
+- `aggregateEdgesToBundles`：按 (source,target) 对把多条物理链路聚为一束——1 束边 =
+  N 条物理边，束宽按 log2(N) 缩放、label 标注 ×N；信息保真度高于步长抽样（抽样丢边，聚束不丢对）；
+- 边数 > 5000 自动开启（auto），工具栏「束流 ×N / 逐条」开关可切换。
+
+### F6 交换机间隔 U + 落位方向确认
+
+- 网络柜相邻交换机之间默认留 **1U 理线间隔**（`interSwitchGapU` 可配，0=紧密堆叠）；
+- 服务器贴底 / 交换机自顶向下 + 顶部预留 2U 为既有 M5 行为（确认无回归）。
+
+### 门禁
+
+- 专项 20 项（rack-uniqueness + rackMatrixLayout F6 口径）全绿；electron vitest 全绿；
+  tsc --noEmit 0 错误；全量 vitest 回归通过（详见提交信息）。
+- **MC 不跟随**（AL 侧工作台专属）。
+
 ## [5.4.3] - 2026-09-22
 
 > **用户反馈修复单（2026-09-22）R1~R5 + 更新下载可靠性强化 + al-hwlist/1.0 硬件清单输出。修复版本。**

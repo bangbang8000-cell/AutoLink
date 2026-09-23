@@ -188,6 +188,46 @@ function useIsDark(): boolean {
 
 /* ---------- inner component (has access to react-flow context) ---------- */
 
+/**
+ * F5（5.4.4 可用性修复，D2 拍板「聚合束流」）：大规模拓扑边聚合——
+ * 按 (source,target) 对把多条物理链路聚为一束：1 条束边 = N 条物理边，
+ * 束宽随 N 缩放、label 标注 ×N。信息保真度高于步长抽样（抽样丢边，聚束不丢对）。
+ */
+export function aggregateEdgesToBundles(
+  edges: Edge[],
+  opts: { minBundle?: number } = {},
+): Edge[] {
+  const minBundle = opts.minBundle ?? 2
+  const byPair = new Map<string, Edge[]>()
+  for (const e of edges) {
+    const key = `${e.source}→${e.target}`
+    const arr = byPair.get(key)
+    if (arr) arr.push(e)
+    else byPair.set(key, [e])
+  }
+  const out: Edge[] = []
+  for (const arr of byPair.values()) {
+    if (arr.length < minBundle) {
+      out.push(...arr)
+      continue
+    }
+    const first = arr[0]
+    const width = Math.min(2 + Math.log2(arr.length) * 1.5, 8)
+    out.push({
+      ...first,
+      id: `bundle-${first.source}-${first.target}-${arr.length}`,
+      style: { ...first.style, strokeWidth: width, opacity: 0.75 },
+      data: {
+        ...(first.data ?? {}),
+        label: `${(first.data as { label?: string } | undefined)?.label ?? ''} ×${arr.length}`,
+        bundleCount: arr.length,
+      },
+    })
+  }
+  return out
+}
+
+
 function TopologyFlowInner() {
   const { t } = useTranslation()
   const topology = useDesignStore((s) => s.topology)
@@ -233,6 +273,9 @@ function TopologyFlowInner() {
   const [atopOpen, setAtopOpen] = useState(false)
   // AL-M4e: 抽样简化横幅关闭——关闭后本次拓扑不再提示,切换拓扑(节点/边规模变化)恢复提示
   const [simplifyDismissedKey, setSimplifyDismissedKey] = useState<string | null>(null)
+  // F5（5.4.4，D2 拍板）：聚合束流模式——大规模默认开启，用户可切换
+  //（bundleActive 的计算在 MAX_DISPLAY_EDGES 常量声明后，见 effectiveCollapsed 附近）
+  const [bundleMode, setBundleMode] = useState<'auto' | 'on' | 'off'>('auto')
   const simplifyFingerprint = useMemo(
     () => `${topology?.nodes?.length ?? 0}:${topology?.edges?.length ?? 0}`,
     [topology?.nodes?.length, topology?.edges?.length],
@@ -449,6 +492,11 @@ const MAX_DISPLAY_EDGES = 5000
 // AL-M4f: 超大拓扑（节点 ≥ 该阈值）关闭节点变换/透明度过渡动画,降低千节点场景下的重排卡顿
 const ANIMATION_DISABLE_THRESHOLD = 1000
 
+  // F5（5.4.4，D2）：束流激活判定——显式 on/off 优先；auto 模式在边数超抽样阈值时自动聚束
+  const bundleActive =
+    bundleMode === 'on' ||
+    (bundleMode === 'auto' && (topology?.edges.length ?? 0) > MAX_DISPLAY_EDGES)
+
 function collectAllPods(topology: { nodes: TopologyNode[] } | null): Set<string> {
   const pods = new Set<string>()
   if (!topology) return pods
@@ -539,7 +587,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
   }, [topology, filter, effectiveCollapsed])
 
   /* ---------- v2.7.3-T6: 通过 Web Worker 计算布局(大规模拓扑不阻塞主线程) ---------- */
-  const { layout: layoutResult, computing: layoutComputing } = useTopologyLayout(filteredNodes, filteredEdges)
+  const { layout: layoutResult, computing: layoutComputing, progress: layoutProgress } = useTopologyLayout(filteredNodes, filteredEdges)
 
   /* ---------- compute layout + build react-flow nodes/edges (pure, no setState) ---------- */
   const { nodeCount, edgeCount, computedNodes, computedEdges } = useMemo(() => {
@@ -765,7 +813,9 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     // v2.8.2-T3: 链路标签可见性(开关 + 缩放自适应)
     const showLabel = showEdgeLabels && !labelHidden
 
-    return rfEdges.map((e) => {
+    // F5：聚合束流——先按对聚束再走隐藏/高亮管线（束数 >1 的对合并为单条宽边）
+    const sourceEdges = bundleActive ? aggregateEdgesToBundles(rfEdges) : rfEdges
+    return sourceEdges.map((e) => {
       // 折叠 POD 内的边：隐藏
       if (collapsedNodeIds.has(e.source) || collapsedNodeIds.has(e.target)) {
         if (e.hidden === true) return e
@@ -783,7 +833,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
       if (e.hidden === false && !emphasized && !hasSearch && e.label === label && prevStyle === targetStyle) return e
       return { ...e, hidden: false, style: targetStyle, label }
     })
-  }, [rfNodes, rfEdges, searchQuery, effectiveCollapsed, hoverEdgeId, selectedEdgeId, showEdgeLabels, labelHidden])
+  }, [rfNodes, rfEdges, searchQuery, effectiveCollapsed, hoverEdgeId, selectedEdgeId, showEdgeLabels, labelHidden, bundleActive])
 
   /* ---------- search & focus: center on first matching node ---------- */
   const handleSearchFocus = useCallback(() => {
@@ -1227,6 +1277,21 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
               </>
             )}
           </div>
+          {/* F5（5.4.4，D2）：聚合束流开关——大规模默认开启（1 束边 = N 条物理链路，宽度按 N 缩放） */}
+          <span className="flex items-center gap-1 text-2xs">
+            <button
+              type="button"
+              onClick={() => setBundleMode(bundleActive ? 'off' : 'on')}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${
+                bundleActive
+                  ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'
+              }`}
+              title={bundleActive ? '聚合束流已开启：按设备对聚束显示（×N 标注束数）；点击切回逐条' : '聚合束流已关闭：逐条显示边；点击开启聚束'}
+            >
+              {bundleActive ? '束流 ×N' : '逐条'}
+            </button>
+          </span>
           {/* 打磨轮（v1.2 复核）：超大拓扑简化提示 */}
           {simplified && simplifyDismissedKey !== simplifyFingerprint && (
             <span className="flex items-center gap-1 text-2xs text-warning-500">
@@ -1327,8 +1392,12 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
             {exportingPng ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
           {layoutComputing && (
-            <span className="flex items-center gap-1 px-2 py-1 text-2xs text-primary-500">
-              <Activity size={12} className="animate-pulse" />{t('topology:computingLayout')}
+            <span className="flex items-center gap-1.5 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400">
+              <Activity size={12} className="animate-pulse" />
+              {t('topology:computingLayout')} {layoutProgress}%
+              <span className="w-16 h-1 rounded bg-primary-200 dark:bg-primary-800 overflow-hidden">
+                <span className="block h-full bg-primary-500 transition-all" style={{ width: `${layoutProgress}%` }} />
+              </span>
             </span>
           )}
         </div>
