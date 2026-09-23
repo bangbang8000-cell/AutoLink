@@ -341,7 +341,9 @@ interface RackState {
   /** M4/M5: 项目机柜配置（顶部预留 U / 每柜 GPU 服务器台数），上架校验与优化按此生效 */
   topReservedU: number
   gpuPerCabinet: number
-  setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number }) => void
+  /** F2（5.4.4 可用性修复）：项目级默认机柜功率上限（ensureMatrixRacks 从 rack_config 接线） */
+  defaultPowerLimit: number
+  setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number; defaultPowerLimit?: number }) => void
   /** M4: 清空柜内设计（设备回待上架池），用于改布局后重新规划 */
   clearCabinets: () => void
   placeDevice: (cabinetId: number, device: UnplacedDevice, startU: number) => boolean
@@ -596,10 +598,13 @@ export const useRackStore = create<RackState>()(
   // M4/M5: 项目机柜配置默认值（由 setRackConfig 覆盖）
   topReservedU: DEFAULT_TOP_RESERVED_U,
   gpuPerCabinet: 1,
+  /** F2（5.4.4 可用性修复）：项目级默认机柜功率上限（ensureMatrixRacks 从 rack_config 接线） */
+  defaultPowerLimit: 12000,
   setRackConfig: (cfg) =>
     set((s) => ({
       topReservedU: cfg.topReservedU ?? s.topReservedU,
       gpuPerCabinet: cfg.gpuPerCabinet ?? s.gpuPerCabinet,
+      defaultPowerLimit: cfg.defaultPowerLimit ?? s.defaultPowerLimit,
     })),
 
   // ===== M2（AL-UR1/UR2）：编辑撤销/重做命令栈 =====
@@ -751,14 +756,9 @@ export const useRackStore = create<RackState>()(
         endU: node.endU ?? (startU + uHeight - 1),
         power_watts: powerWatts,
       })
-      // 同时进入待分配池，便于手动调整
-      unplacedDevices.push({
-        id: node.id,
-        name: node.id,
-        type: node.group || (node.type === 'server' ? 'GPU Server' : 'Switch'),
-        height: uHeight,
-        power_watts: powerWatts,
-      })
+      // F1（5.4.4 可用性修复）：已落位设备不再同时进入待分配池——旧实现"同时入池
+      // 便于手动调整"导致从池再上架即双落位（用户实测#4 根因之一）；手动调整走
+      // removeDevice（下架回池）→ placeDevice 的正常路径。
     }
 
     const cabinets: RackCabinet[] = Array.from(cabinetMap.values()).map((c) => ({
@@ -855,6 +855,22 @@ export const useRackStore = create<RackState>()(
     if (!source) return { applied: 0, skipped: 0, conflicts: [] }
     let applied = 0
     const conflicts: TemplateConflict[] = []
+    // F1（5.4.4 可用性修复，D1 拍板「重新编号复制」）：复制设备重新编号
+    // （原 id-柜N 后缀），消除"设备 id 原样复制到所有同类柜"的双落位根因。
+    // 编号池 = 柜内已有 id + 待分配池 id + 本轮已生成 id（保证同轮多柜不撞号）
+    const usedIds = new Set<string>()
+    for (const c of cabinets) for (const d of c.devices) usedIds.add(d.id)
+    for (const d of get().unplacedDevices) usedIds.add(d.id)
+    const nextDeviceId = (base: string, cabinetId: number): string => {
+      let candidate = `${base}-柜${cabinetId}`
+      let n = 1
+      while (usedIds.has(candidate)) {
+        candidate = `${base}-柜${cabinetId}-${n}`
+        n++
+      }
+      usedIds.add(candidate)
+      return candidate
+    }
     const newCabinets = cabinets.map((c) => {
       if (c.id === sourceId || c.type !== source.type) return c
       const devices = [...c.devices]
@@ -880,8 +896,9 @@ export const useRackStore = create<RackState>()(
           conflicts.push({ cabinetId: c.id, deviceName: sd.name, startU: sd.startU, reason: 'power' })
           continue
         }
-        // 整柜模板复制：设备对象整体复制（含名称/功率/类型），U 位按源柜布局放置
-        devices.push({ ...sd, cabinetId: c.id })
+        // 整柜模板复制：设备重新编号后复制（F1/D1——id 全柜唯一），U 位按源柜布局放置
+        const newId = nextDeviceId(sd.id, c.id)
+        devices.push({ ...sd, id: newId, name: newId, cabinetId: c.id })
         applied++
       }
       return { ...c, totalU: source.totalU, power_limit: source.power_limit, devices }
@@ -912,6 +929,26 @@ export const useRackStore = create<RackState>()(
                 power_watts: d.power_watts || 0,
               })),
             }))
+            // F1（5.4.4 可用性修复）：存量脏数据体检——跨柜同 id 设备自动去重
+            // （保留首个出现位，其余从重复柜移除），并给出明确告警（用户实测#4 的存量数据修复）
+            const seenIds = new Set<string>()
+            let dedupedCount = 0
+            for (const cab of cabinets) {
+              const before = cab.devices.length
+              cab.devices = cab.devices.filter((d) => {
+                if (seenIds.has(d.id)) return false
+                seenIds.add(d.id)
+                return true
+              })
+              dedupedCount += before - cab.devices.length
+            }
+            if (dedupedCount > 0) {
+              useToastStore.getState().addToast(
+                'warning',
+                `检测到 ${dedupedCount} 个跨柜重复设备（历史数据），已自动去重（保留首次落位）`,
+                8000,
+              )
+            }
             set((s) => ({
               ...pushRackHistory(s),
               cabinets,
@@ -1052,6 +1089,17 @@ export const useRackStore = create<RackState>()(
       (d) => !(endU < d.startU || startU > d.endU),
     )
     if (hasConflict) return false
+
+    // F1（5.4.4 可用性修复）：跨柜唯一性守卫——设备 id 全柜唯一，
+    // 已在任何柜内的设备不得再次上架（防止双落位）
+    if (get().cabinets.some((c) => c.devices.some((d) => d.id === device.id))) {
+      useToastStore.getState().addToast(
+        'error',
+        `设备 ${device.name} 已在其它机柜内，不可重复上架（请先从原柜移除）`,
+        5000,
+      )
+      return false
+    }
 
     const newDevice: RackDevice = {
       id: device.id,
@@ -1218,7 +1266,13 @@ export const useRackStore = create<RackState>()(
     }
     const added: RackDevice[] = []
     const conflicts: TemplateConflict[] = []
+    // F1（5.4.4 可用性修复）：编号池扩到全柜 + 待分配池（旧实现只查目标柜）
     const existingIds = new Set(target.devices.map((d) => d.id))
+    for (const c of s.cabinets) {
+      if (c.id === targetCabinetId) continue
+      for (const d of c.devices) existingIds.add(d.id)
+    }
+    for (const d of s.unplacedDevices) existingIds.add(d.id)
     // 设备 U 位映射 + 冲突校验（与 applyCabinetTemplate 同源：overflow/top_reserved/occupied/power）
     for (const sd of source.devices) {
       // M-F2（F2-1）：跨项目设备类型域校验（设备类型与目标柜类型域不兼容 → 跳过并返回原因）
@@ -1345,7 +1399,12 @@ export const useRackStore = create<RackState>()(
     if (!check.ok) return { ok: false, reason: check.reason ?? 'occupied' }
     const height = device.endU - device.startU + 1
     const endU = startU + height - 1
-    const copyId = freshDeviceId(new Set(target.devices.map((d) => d.id)), device.id)
+    // F1（5.4.4 可用性修复）：编号池扩到全柜 + 待分配池（旧实现只查目标柜，
+    // 粘贴到不同柜可产生跨柜同号设备）
+    const allIds = new Set<string>()
+    for (const c of s.cabinets) for (const d of c.devices) allIds.add(d.id)
+    for (const d of s.unplacedDevices) allIds.add(d.id)
+    const copyId = freshDeviceId(allIds, device.id)
     const pasted: RackDevice = { ...device, id: copyId, cabinetId: targetCabinetId, startU, endU }
     set((st) => ({
       ...pushRackHistory(st),

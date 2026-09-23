@@ -90,7 +90,8 @@ describe('RackStore', () => {
       expect(state.cabinets[3].type).toBe('network')
       expect(state.cabinets[0].devices.length).toBe(1)
       expect(state.cabinets[0].devices[0].startU).toBe(1)
-      expect(state.unplacedDevices.length).toBe(4)
+      // F1（5.4.4）：已落位设备不再双入待分配池（旧断言 4=旧行为）
+      expect(state.unplacedDevices.length).toBe(0)
     })
 
     it('无 cabinetId 的旧数据节点应进入待分配池', () => {
@@ -436,7 +437,8 @@ describe('RackStore', () => {
       expect(r.skipped).toBe(0)
       expect(r.conflicts).toEqual([])
       const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
-      const copied = target.devices.find((d) => d.name === 'GPU服务器_1')!
+      // F1/D1（5.4.4）：复制设备重新编号（原 id-柜N），属性/U 位随源柜
+      const copied = target.devices.find((d) => d.name === 'gpu-1-柜2')!
       expect(copied).toBeDefined()
       expect(copied.power_watts).toBe(5000)
       expect(copied.type).toBe('GPU Server')
@@ -461,7 +463,7 @@ describe('RackStore', () => {
       expect(r.applied).toBe(2)
       expect(r.conflicts).toEqual([])
       const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
-      expect(target.devices.map((d) => d.name).sort()).toEqual(['GPU服务器_1', '交换机_1'])
+      expect(target.devices.map((d) => d.name).sort()).toEqual(['gpu-1-柜2', 'sw-1-柜2'])
       expect(target.totalU).toBe(42)
       expect(target.power_limit).toBe(6000)
     })
@@ -480,8 +482,9 @@ describe('RackStore', () => {
         { cabinetId: 2, deviceName: 'GPU服务器_1', startU: 2, reason: 'occupied' },
       ])
       const target = useRackStore.getState().cabinets.find((c) => c.id === 2)!
-      expect(target.devices.find((d) => d.name === '交换机_1')).toBeDefined()
-      expect(target.devices.find((d) => d.name === 'GPU服务器_1')).toBeUndefined()
+      // F1/D1（5.4.4）：复制成功的设备带 -柜2 后缀；冲突设备不落柜
+      expect(target.devices.find((d) => d.name === 'sw-1-柜2')).toBeDefined()
+      expect(target.devices.find((d) => d.name === 'gpu-1-柜2')).toBeUndefined()
     })
 
     it('目标槽位冲突则跳过（旧行为兼容）', () => {

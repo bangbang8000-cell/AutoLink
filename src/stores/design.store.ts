@@ -63,6 +63,9 @@ export interface DesignSummary {
   paramDownlink: number
   storageDownlink: number
   paramPortsPerServer?: number
+  /** F2（5.4.4 可用性修复）：机柜配置透传（后端 rack_config；矩阵落位消费，消除前后端功率上限不一致） */
+  rackType?: number
+  powerLimitPerRack?: number
 }
 
 export interface TopologyNode {
