@@ -91,8 +91,8 @@ describe('F1/T3 initFromTopology 不再双入池', () => {
 
   it('已落位设备不进待分配池', () => {
     const nodes: RackTopologyNode[] = [
-      { id: 'GPU-1', type: 'server', group: 'GPU服务器组', cabinetId: 1, cabinetName: '机柜1', startU: 1, endU: 4, powerWatts: 1000, uHeight: 4 },
-      { id: 'GPU-2', type: 'server', group: 'GPU服务器组', cabinetId: 1, cabinetName: '机柜1', startU: 5, endU: 8, powerWatts: 1000, uHeight: 4 },
+      { id: 'GPU-1', type: 'server', group: 'GPU服务器组', podid: 'pod-gpu-1', cabinetId: 1, cabinetName: '机柜1', startU: 1, endU: 4, powerWatts: 1000, uHeight: 4 },
+      { id: 'GPU-2', type: 'server', group: 'GPU服务器组', podid: 'pod-gpu-1', cabinetId: 1, cabinetName: '机柜1', startU: 5, endU: 8, powerWatts: 1000, uHeight: 4 },
     ]
     useRackStore.getState().initFromTopology(nodes)
     const s = useRackStore.getState()
@@ -104,7 +104,7 @@ describe('F1/T3 initFromTopology 不再双入池', () => {
 
   it('无落位信息的设备仍进待分配池（旧数据兼容）', () => {
     const nodes: RackTopologyNode[] = [
-      { id: 'GPU-x', type: 'server', group: 'GPU服务器组', powerWatts: 1000, uHeight: 4 },
+      { id: 'GPU-x', type: 'server', group: 'GPU服务器组', podid: 'pod-gpu-1', powerWatts: 1000, uHeight: 4 },
     ]
     useRackStore.getState().initFromTopology(nodes)
     expect(useRackStore.getState().unplacedDevices).toHaveLength(1)
