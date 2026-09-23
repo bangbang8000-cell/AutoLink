@@ -95,12 +95,18 @@ describe('layoutRacksFromMatrix', () => {
     ])
     const switches = Array.from({ length: 50 }, (_, i) =>
       makeNode({ id: `sw-${i}`, type: 'leaf', group: '参数Leaf组1', uHeight: 1, powerWatts: 100 }))
+    // F6（5.4.4）：默认交换机间隔 1U —— 42U 柜（无预留）可装 21 台（每台间 1U 理线位）
     const res = layoutRacksFromMatrix(matrix, switches, { topReservedU: 0 })
-    // 42U 容量（无预留）：第 1 柜 42 台，第 2 柜 8 台
     expect(res.cabinets).toHaveLength(2)
-    expect(res.cabinets[0].devices).toHaveLength(42)
-    expect(res.cabinets[1].devices).toHaveLength(8)
-    expect(res.stats.overflow).toBe(0)
+    expect(res.cabinets[0].devices).toHaveLength(21)
+    expect(res.cabinets[1].devices).toHaveLength(21)
+    expect(res.stats.overflow).toBe(8)
+
+    // interSwitchGapU=0（紧密堆叠）恢复旧行为：42 台/柜
+    const res2 = layoutRacksFromMatrix(matrix, switches, { topReservedU: 0, interSwitchGapU: 0 })
+    expect(res2.cabinets[0].devices).toHaveLength(42)
+    expect(res2.cabinets[1].devices).toHaveLength(8)
+    expect(res2.stats.overflow).toBe(0)
   })
 
   it('存储/通算服务器按 U 打包进对应类型格', () => {

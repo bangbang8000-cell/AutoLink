@@ -23,6 +23,7 @@ import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { useSnapshotStore, defaultSnapshotName } from '@/stores/snapshot.store'
 import { DataCenterLayout } from '@/components/datacenter/DataCenterLayout'
 import { DataCenterStats } from '@/components/datacenter/DataCenterStats'
+import { WorkbenchStepBar } from '@/components/workbench/WorkbenchStepBar'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 
@@ -36,6 +37,9 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
   const selectedPosition = useRoomStore((s) => s.selectedPosition)
   const cabinets = useRackStore((s) => s.cabinets)
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
+  // F2（5.4.4 可用性修复）：默认机柜功率（项目级；按矩阵落位/新建柜消费）
+  const defaultPowerLimit = useRackStore((s) => s.defaultPowerLimit)
+  const setRackConfig = useRackStore((s) => s.setRackConfig)
   const selectCabinet = useRackStore((s) => s.selectCabinet)
   const gpuCount = useDesignStore((s) => s.config.num_servers)
   const topology = useDesignStore((s) => s.topology)
@@ -112,7 +116,14 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
       addToast('warning', t('rack:needTopologyFirst', '请先生成拓扑（「设计」子视图生成，或 AIDC 规划「应用到设计」）'), 4000)
       return
     }
-    await useRoomStore.getState().applyMatrixRackLayout(projectName, nodes)
+    // F2（5.4.4 可用性修复）：显式传项目机柜配置（顶部预留/每柜 GPU/默认功率），
+    // 避免 rackMatrixLayout 内 12000/42 硬编码与 rack_config 不一致
+    const { topReservedU, gpuPerCabinet, defaultPowerLimit } = useRackStore.getState()
+    await useRoomStore.getState().applyMatrixRackLayout(projectName, nodes, {
+      topReservedU,
+      gpuPerCabinet,
+      ...(defaultPowerLimit ? { powerLimit: defaultPowerLimit } : {}),
+    })
   }
 
   const saveAll = async () => {
@@ -152,6 +163,8 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
 
   return (
     <div className="h-full flex flex-col gap-3">
+      {/* F3（5.4.4）：子视图常驻步骤条（三步状态 + 就地定稿） */}
+      <WorkbenchStepBar projectName={projectName} />
       {/* 工具栏 */}
       <div className="flex items-center gap-2 flex-wrap shrink-0">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -205,6 +218,23 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
         {matrix && (
           <>
             <span className="text-2xs text-gray-400">{t('rack:matrixSummary', { rows: matrix.rows.length, cols: matrix.cols.length, defaultValue: '矩阵 {{rows}}排×{{cols}}列' })}</span>
+            {/* F2（5.4.4 可用性修复）：默认机柜功率上限入口——按矩阵自动落位/新建柜按此生效 */}
+            <label className="flex items-center gap-1 text-2xs text-gray-500 dark:text-gray-400"
+              title={t('rack:defaultPowerHint', { defaultValue: '按矩阵自动落位与新建机柜的功率上限（W）；已有柜批量修改请用平面图框选批量编辑' })}>
+              {t('rack:defaultPower', { defaultValue: '默认机柜功率' })}
+              <input
+                type="number"
+                min={1}
+                step={500}
+                value={defaultPowerLimit}
+                onChange={(e) => {
+                  const v = Math.max(1, Math.round(Number(e.target.value) || 0))
+                  setRackConfig({ defaultPowerLimit: v })
+                }}
+                className="w-20 px-1.5 py-0.5 text-2xs rounded border border-gray-300 dark:border-gray-600 bg-transparent"
+              />
+              W
+            </label>
             <button type="button" onClick={autoCompose}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
               <Download size={11} /> {t('rack:autoCompose')}

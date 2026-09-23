@@ -18,6 +18,7 @@ import { PUEEstimatePanel } from './PUEEstimatePanel'
 import { ReportViewPanel } from './ReportViewPanel'
 import { ValidationPanel } from './ValidationPanel'
 import { CapacityRecommendModal } from '@/components/capacity/CapacityRecommendModal'
+import { WorkbenchStepBar } from '@/components/workbench/WorkbenchStepBar'
 
 /* -------------------------------------------------- */
 /*  Sub-components (same as DesignPanel)              */
@@ -261,6 +262,8 @@ export function DesignTab() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* F3（5.4.4）：子视图常驻步骤条 */}
+      {selectedProjectName && <WorkbenchStepBar projectName={selectedProjectName} />}
       {/* Title bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-edge-subtle shrink-0 bg-gray-50 dark:bg-app/50">
         <div className="flex items-center gap-2">

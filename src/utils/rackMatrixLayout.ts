@@ -18,6 +18,8 @@ export interface RackMatrixLayoutOptions {
   gpuPerCabinet?: number
   /** M5: 顶部预留 U 数（默认 2，网络设备从顶部向下、服务器从底部向上） */
   topReservedU?: number
+  /** F6（5.4.4 可用性修复）：网络柜相邻交换机之间的理线间隔 U，默认 1 */
+  interSwitchGapU?: number
 }
 
 export interface RackMatrixLayoutStats {
@@ -67,6 +69,8 @@ export function layoutRacksFromMatrix(
   // M5: 顶部预留 U（默认 2）→ 可用 U = rackType - topReservedU；网络从顶部向下、服务器从底部向上
   const topReservedU = Math.max(0, opts.topReservedU ?? 2)
   const usableU = Math.max(1, rackType - topReservedU)
+  // F6（5.4.4 可用性修复）：交换机之间的理线间隔 U（用户反馈#4；默认 1，0=紧密堆叠）
+  const interSwitchGapU = Math.max(0, opts.interSwitchGapU ?? 1)
 
   // 整表重建：清空旧 cabinetId（矩阵权威，可重复应用）
   const cells: RoomCellData[] = matrix.cells.map((c) => ({ ...c, cabinetId: null }))
@@ -155,6 +159,7 @@ export function layoutRacksFromMatrix(
 
   // 网络/存储/通算：按 U + 功率打包（跨格填充，格子耗尽进池）
   // M5 方向化：网络柜从顶部向下、存储/通算从底部向上，均不越过顶部预留
+  // F6（5.4.4）：网络柜相邻交换机之间留 interSwitchGapU（默认 1U）理线间隔
   for (const t of ['network', 'storage', 'compute'] as const) {
     const devices = byType[t]
     let di = 0
@@ -171,11 +176,13 @@ export function layoutRacksFromMatrix(
           di++
           continue
         }
+        // F6：交换机间隔——同柜第 2 台起，先跳过理线间隔 U 再落位
+        const gap = fromTop && cabDevices.length > 0 ? interSwitchGapU : 0
         let startU: number
         let endU: number
         if (fromTop) {
-          startU = nextU - d.height
-          endU = nextU - 1
+          startU = nextU - d.height - gap
+          endU = nextU - gap - 1
           if (startU < 1) break // 顶部空间不足 → 换下一格
         } else {
           startU = nextU
