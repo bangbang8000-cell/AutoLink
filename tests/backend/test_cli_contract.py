@@ -108,7 +108,9 @@ class TestSchemaCoverage:
         sys.path.insert(0, os.path.join(REPO, 'backend'))
         from cli import ACTION_PARAM_SCHEMA  # noqa: E402
         from engine import list_registered_actions  # noqa: E402
-        actions = set(list_registered_actions())
+        # 排除测试内部动态注册的临时 action（如 test_agent_process.py 的
+        # `__t0_6_stream`）—— 它们不属于产品注册表，不应要求 schema 覆盖。
+        actions = {a for a in list_registered_actions() if not a.startswith('__')}
         have = set(ACTION_PARAM_SCHEMA.keys())
         assert not (actions - have), f'缺 schema: {sorted(actions - have)}'
         assert not (have - actions), f'多余 schema（未注册）: {sorted(have - actions)}'

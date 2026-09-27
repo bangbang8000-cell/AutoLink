@@ -82,6 +82,10 @@ def test_stream_protocol_emit():
         lines = [json.loads(l) for l in sys.stdout.getvalue().strip().split("\n")]
     finally:
         sys.stdin, sys.stdout = old_stdin, old_stdout
+        # 清理测试内动态注册的 action，避免污染其他用例的注册表断言
+        # （如 test_cli_contract.py::TestSchemaCoverage 要求 schema 覆盖全部注册 action）
+        from engine import _ACTION_REGISTRY
+        _ACTION_REGISTRY.pop('__t0_6_stream', None)
 
     assert len(lines) == 3
     assert [l["type"] for l in lines] == ["event", "event", "result"]
