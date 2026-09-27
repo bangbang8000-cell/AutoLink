@@ -7,7 +7,7 @@
 
 ### 新增：外部 Agent 授权档位 `--grant`
 
-- **三档授权（readonly / semi / full）**（`AL-GRANT`）：程序内 `full_auto` 只作用于 `AgentSession`，**MCP 路径原无授权入口** ⇒ 旁挂 agent 无法声明「已获完全授权」，批量作业需十余次人工确认。新增 `--grant` 命令行 / `AUTOLINK_AGENT_GRANT` 环境变量（优先级：命令行 > 环境变量 > 默认 `semi`）。
+- **三档授权（readonly / semi / full）**（里程碑 5.4.5-AC-grant）：程序内 `full_auto` 只作用于 `AgentSession`，**MCP 路径原无授权入口** ⇒ 旁挂 agent 无法声明「已获完全授权」，批量作业需十余次人工确认。新增 `--grant` 命令行 / `AUTOLINK_AGENT_GRANT` 环境变量（优先级：命令行 > 环境变量 > 默认 `semi`）。
   - `readonly`：仅 AUTO 放行；`semi`：AUTO+NOTIFY 放行、CONFIRM 走门禁；`full`：全放行。
   - **铁律（AG-3）**：`full` **不豁免编译态屏蔽规则** —— 授权管「要不要确认」，模式管「可不可见」，二者正交。
   - fail-fast：`full` + 无 `--audit` 路径 ⇒ 拒绝启动（授权必须可追溯）；授权写入审计（`granted` / `granted-full` / `grant-denied`）。
