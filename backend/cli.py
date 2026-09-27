@@ -491,6 +491,184 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
              'required': True, 'help': '选中的修复项 JSON 文件（[{rule_id,patch}]）', 'file_json': True},
         ],
     },
+    # ============================================================
+    #  AL-P1-4（批次 C，2026-09-27）：补齐 22 条缺失 schema
+    #  此前 45/67 action 有 schema，其余只能走通用 `--json` 兜底（无具名 flag、
+    #  无 --help 参数说明）。下列补齐 ai:* / aidc:project:* / plan:aidc:* /
+    #  skills:* / rack:optimize / share:snapshot / design:from-gpus / cli:info。
+    #  未列出 params 的（如 ai:providers / cli:info）为**无参 action**，显式给空列表
+    #  以「声明式登记」并消除「未登记」歧义。
+    # ============================================================
+    'ai:chat': {
+        'params': [
+            {'name': 'message', 'flags': ['--message', '-m'], 'type': str,
+             'required': True, 'help': '用户消息文本'},
+            {'name': 'sessionId', 'flags': ['--session-id'], 'type': str,
+             'required': False, 'help': '会话 ID（默认 default）'},
+            {'name': 'mode', 'flags': ['--mode'], 'type': str,
+             'required': False, 'help': '对话模式（默认 general）'},
+            {'name': 'provider', 'flags': ['--provider'], 'type': str,
+             'required': False, 'help': '指定 AI Provider（缺省用默认）'},
+            {'name': 'model', 'flags': ['--model'], 'type': str,
+             'required': False, 'help': '指定模型'},
+            {'name': 'autonomyMode', 'flags': ['--autonomy-mode'], 'type': str,
+             'required': False, 'help': '自主度（semi_auto / full_auto 等，默认 semi_auto）'},
+            {'name': 'projectName', 'flags': ['--project-name', '--project'], 'type': str,
+             'required': False, 'help': '关联项目名（给 AI 上下文）'},
+        ],
+    },
+    'ai:providers': {'params': []},
+    'ai:config': {
+        'params': [
+            {'name': 'provider', 'flags': ['--provider'], 'type': str,
+             'required': True, 'help': 'Provider 名（openai / deepseek / …）'},
+            {'name': 'apiKey', 'flags': ['--api-key'], 'type': str,
+             'required': False, 'help': 'API 密钥（BYO-Key；审计中脱敏）'},
+            {'name': 'model', 'flags': ['--model'], 'type': str,
+             'required': False, 'help': '默认模型'},
+            {'name': 'baseUrl', 'flags': ['--base-url'], 'type': str,
+             'required': False, 'help': '自定义端点（OpenAI 兼容）'},
+        ],
+    },
+    'ai:config-default': {
+        'params': [
+            {'name': 'provider', 'flags': ['--provider'], 'type': str,
+             'required': True, 'help': '设为默认的 Provider 名'},
+        ],
+    },
+    'ai:test': {
+        'params': [
+            {'name': 'provider', 'flags': ['--provider'], 'type': str,
+             'required': True, 'help': '待测试的 Provider 名'},
+            {'name': 'apiKey', 'flags': ['--api-key'], 'type': str,
+             'required': False, 'help': 'API 密钥（BYO-Key；审计中脱敏）'},
+            {'name': 'baseUrl', 'flags': ['--base-url'], 'type': str,
+             'required': False, 'help': '自定义端点'},
+            {'name': 'model', 'flags': ['--model'], 'type': str,
+             'required': False, 'help': '测试用模型'},
+        ],
+    },
+    'ai:models': {
+        'params': [
+            {'name': 'baseUrl', 'flags': ['--base-url'], 'type': str,
+             'required': True, 'help': 'OpenAI 兼容端点（拉取 /models）'},
+            {'name': 'apiKey', 'flags': ['--api-key'], 'type': str,
+             'required': False, 'help': 'API 密钥（BYO-Key；审计中脱敏）'},
+        ],
+    },
+    'ai:clear': {
+        'params': [
+            {'name': 'sessionId', 'flags': ['--session-id'], 'type': str,
+             'required': False, 'help': '待清除的会话 ID（默认 default）'},
+        ],
+    },
+    'aidc:project:create': {
+        'params': [
+            {'name': 'projectDir', 'flags': ['--project-dir'], 'type': str,
+             'required': True, 'help': 'AIDC 项目目录（workspace/<name>/）'},
+            {'name': 'name', 'flags': ['--name'], 'type': str,
+             'required': False, 'help': '项目名'},
+            {'name': 'projectId', 'flags': ['--project-id'], 'type': str,
+             'required': False, 'help': '显式 projectId（缺省自动 mint）'},
+            {'name': 'macro', 'flags': ['--macro'], 'type': str,
+             'required': False, 'help': '宏观参数字典 JSON（{gpu_count, site, …}）', 'file_json': True},
+        ],
+    },
+    'aidc:project:init': {
+        'params': [
+            {'name': 'projectDir', 'flags': ['--project-dir'], 'type': str,
+             'required': True, 'help': '普通项目目录（转为 AIDC：mint projectId + plan.json）'},
+            {'name': 'macro', 'flags': ['--macro'], 'type': str,
+             'required': False, 'help': '宏观参数字典 JSON（aidc_macro 注入）', 'file_json': True},
+        ],
+    },
+    'aidc:project:save': {
+        'params': [
+            {'name': 'projectDir', 'flags': ['--project-dir'], 'type': str,
+             'required': True, 'help': 'AIDC 项目目录（重新生成 plan）'},
+            {'name': 'macro', 'flags': ['--macro'], 'type': str,
+             'required': False, 'help': '宏观参数字典 JSON（planHash 变化 → planVersion+1）', 'file_json': True},
+        ],
+    },
+    'aidc:project:load': {
+        'params': [
+            {'name': 'projectDir', 'flags': ['--project-dir'], 'type': str,
+             'required': True, 'help': 'AIDC 项目目录（读元数据 + 最近 plan + macro）'},
+        ],
+    },
+    'aidc:project:list': {
+        'params': [
+            {'name': 'workspaceDir', 'flags': ['--workspace-dir'], 'type': str,
+             'required': True, 'help': '工作区目录（列出其下所有 AIDC 项目）'},
+        ],
+    },
+    'plan:aidc': {
+        'params': [
+            {'name': 'macro', 'flags': ['--macro'], 'type': str,
+             'required': True, 'help': '宏观参数字典 JSON（site/gpu_count/pfc_queue/cnp_queue/convergence…）',
+             'file_json': True},
+        ],
+    },
+    'plan:aidc:export': {
+        'params': [
+            {'name': 'filepath', 'flags': ['--filepath', '--output'], 'type': str,
+             'required': True, 'help': '导出目标路径'},
+            # 注：不得用 --format（与 CLI 全局输出形态 --format json/ndjson/text 撞名），
+            # 故改名 --export-format；params 键仍为 'format'（handler 消费口径不变）。
+            {'name': 'format', 'flags': ['--export-format'], 'type': str,
+             'required': False, 'help': '导出格式 json / excel（默认 json）'},
+            {'name': 'plan', 'flags': ['--plan'], 'type': str,
+             'required': False, 'help': 'plan 宏观参数 JSON 文件（site/gpu_count/…）', 'file_json': True},
+        ],
+    },
+    'plan:aidc:import': {
+        'params': [
+            {'name': 'plan', 'flags': ['--plan', '--plan-file'], 'type': str,
+             'required': True, 'help': '外部 plan:table JSON 文件（校验/归一化）', 'file_json': True},
+        ],
+    },
+    'design:from-gpus': {
+        'params': [
+            {'name': 'macro', 'flags': ['--macro'], 'type': str,
+             'required': True, 'help': '宏观参数字典 JSON（GPU 规模 + 宏观参数）', 'file_json': True},
+        ],
+    },
+    'rack:optimize': {
+        'params': [
+            {'name': 'cabinets', 'flags': ['--cabinets'], 'type': str,
+             'required': True, 'help': '现有柜 JSON 文件（[{id,type,totalU,power_limit,devices}]）',
+             'file_json': True},
+            {'name': 'unplaced_devices', 'flags': ['--unplaced-devices'], 'type': str,
+             'required': True, 'help': '待上架设备池 JSON 文件（[{id,type,height,power_watts}]）',
+             'file_json': True},
+            {'name': 'gpu_per_cabinet', 'flags': ['--gpu-per-cabinet'], 'type': int,
+             'required': False, 'help': 'GPU 每柜台数上限（默认 1 柜 1 台）'},
+        ],
+    },
+    'share:snapshot': {
+        'params': [
+            {'name': 'configFile', 'flags': ['--config', '--config-file'], 'type': str,
+             'required': True, 'help': 'project_config.json 或 network_config.ini 路径'},
+            {'name': 'estimateParams', 'flags': ['--estimate-params'], 'type': str,
+             'required': False, 'help': '估算参数 JSON 文件', 'file_json': True},
+        ],
+    },
+    'skills:list': {'params': []},
+    'skills:export': {
+        'params': [
+            {'name': 'filepath', 'flags': ['--filepath', '--output'], 'type': str,
+             'required': True, 'help': '导出 zip 路径'},
+        ],
+    },
+    'skills:import': {
+        'params': [
+            {'name': 'zipPath', 'flags': ['--zip-path', '--zip'], 'type': str,
+             'required': True, 'help': '技能包 zip 路径'},
+            {'name': 'overwrite', 'flags': ['--overwrite'], 'type': 'bool_flag',
+             'required': False, 'help': '覆盖同名技能'},
+        ],
+    },
+    'cli:info': {'params': []},
 }
 
 
@@ -498,14 +676,33 @@ ACTION_PARAM_SCHEMA: Dict[str, Dict[str, Any]] = {
 #  工具函数
 # ================================================================
 
-def _sub_name(action: str) -> str:
-    """子命令名：schema 指定 > 'a:b' 的 b > 'run'"""
+def _sub_path(action: str) -> List[str]:
+    """子命令**路径**（多级）：三段式 action 拆为真二级子命令。
+
+    批次 B（CLI-O6，2026-09-27 大师裁定 (a) 多级子命令树）：
+      'aidc:project:create' → ['project', 'create']   （aidc project create）
+      'plan:aidc:export'    → ['aidc', 'export']      （plan aidc export）
+      'design' / 'project:list'（两段式）→ 末段单级
+
+    规则：域取第一段（见 _domain_of），其余段全部作子命令路径（逐段 '_'→'-'）。
+    schema 的 'sub' 若显式指定则覆盖为单级（保持既有显式声明优先）。
+    """
     schema = ACTION_PARAM_SCHEMA.get(action)
     if schema and schema.get('sub'):
-        return schema['sub']
+        return [schema['sub']]
     if ':' in action:
-        return action.split(':', 1)[1].replace('_', '-')
-    return 'run'
+        rest = action.split(':', 1)[1]
+        return [seg.replace('_', '-') for seg in rest.split(':') if seg]
+    return ['run']
+
+
+def _sub_name(action: str) -> str:
+    """子命令名（**末级**，兼容旧调用）：多级路径取最后一段。
+
+    保留此函数名以兼容既有引用；新代码请优先用 :func:`_sub_path`。
+    """
+    path = _sub_path(action)
+    return path[-1] if path else 'run'
 
 
 def _domain_of(action: str) -> str:
@@ -667,6 +864,12 @@ def execute(action: str, params: Optional[Dict[str, Any]], argv: Optional[List[s
     """执行 action：校验 handler → 审计 → 调 handler
 
     engine.main() 与 cli main 共用此入口（UI 与 CLI 行为一致）。
+
+    ⚠️ AL-P1-2（批次 C）修复：审计 `ok` 必须反映**业务成败**，而非「handler 未抛异常」。
+    此前 `audit_log(..., ok=True)` 在拿到 handler 返回体**之前**无条件写入 ⇒ handler
+    以「正常返回失败体」表达失败时（`{"error": ...}` / `success: false` / 空结果，
+    即 :func:`exit_code_for` 判为 3 的情形）仍被记 `ok:true`，审计日志失真。
+    现改为：先取结果，用 :func:`classify_exit` 判定，`ok = (code == EXIT_OK)`。
     """
     handler = get_action_handler(action)
     if handler is None:
@@ -674,21 +877,31 @@ def execute(action: str, params: Optional[Dict[str, Any]], argv: Optional[List[s
     params = dict(params or {})
     try:
         result = handler(params)
-        audit_log(action, params, argv, ok=True)
-        return result
     except Exception as e:
         audit_log(action, params, argv, ok=False, error=str(e))
         raise CLIError(f"action {action} 执行失败: {e}") from e
+
+    # 业务成败以返回体判定（与退出码同源），失败体记 ok=False 并留痕原因
+    code = classify_exit(result)
+    if code == EXIT_OK:
+        audit_log(action, params, argv, ok=True)
+    else:
+        audit_log(action, params, argv, ok=False, error=error_message(result))
+    return result
 
 
 # ================================================================
 #  argparse 动态路由
 # ================================================================
 
-def _add_action_parser(subparsers, domain: str, action: str) -> argparse.ArgumentParser:
-    """为单个 action 构建子命令 parser（含 schema flags + --json 兜底 + --format）"""
+def _add_action_parser(subparsers, domain: str, action: str,
+                       name: Optional[str] = None) -> argparse.ArgumentParser:
+    """为单个 action 构建子命令 parser（含 schema flags + --json 兜底 + --format）
+
+    ``name`` 显式指定子命令名（多级树的末级）；缺省取 :func:`_sub_name`。
+    """
     schema = ACTION_PARAM_SCHEMA.get(action, {})
-    sub = _sub_name(action)
+    sub = name if name is not None else _sub_name(action)
     help_text = schema.get('help') or f"执行 {action} action"
     parser = subparsers.add_parser(sub, help=help_text, description=f"{action} — {help_text}")
     for p in schema.get('params', []):
@@ -710,8 +923,27 @@ def _add_action_parser(subparsers, domain: str, action: str) -> argparse.Argumen
     return parser
 
 
+def _domain_parser_map(parser: argparse.ArgumentParser) -> Dict[str, argparse.ArgumentParser]:
+    """取 parser 下的子命令 {名: 子 parser}（稳健版）。
+
+    argparse 的 ``parser._subparsers`` 是 ``_ArgumentGroup``（不是 _SubParsersAction），
+    真正的选择表在 ``._subparsers._group_actions[0].choices``。旧代码用
+    ``._subparsers._name_parser_map`` 恒取不到 ⇒ 域帮助/子命令帮助一直打印不出来。
+    """
+    group = getattr(parser, '_subparsers', None)
+    actions = getattr(group, '_group_actions', None) or []
+    if not actions:
+        return {}
+    return dict(getattr(actions[0], 'choices', {}) or {})
+
+
 def build_parser() -> argparse.ArgumentParser:
-    """构建完整 parser：域（subparsers）→ 子命令（action parser）"""
+    """构建完整 parser：域（subparsers）→ 子命令路径（多级）→ action parser
+
+    批次 B：三段式 action 展开为真二级子命令，如 ``aidc project create``。
+    ``_run_parsers`` 由 {sub_name: parser} 改为 {sub_path_tuple: parser}，
+    并在 ``_domain_names`` 保留各域的合法子路径首段集合（供域级注入判定）。
+    """
     parser = argparse.ArgumentParser(
         prog='autolink-cli',
         description='AutoLink 显式 CLI 能力层（与 GUI 行为一致）',
@@ -719,14 +951,49 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument('--version', action='version', version=f'autolink-cli {CLI_VERSION}')
     subparsers = parser.add_subparsers(dest='domain', metavar='<domain>')
-    run_parsers: Dict[str, Dict[str, argparse.ArgumentParser]] = {}
+    run_parsers: Dict[str, Dict[tuple, argparse.ArgumentParser]] = {}
+    domain_names: Dict[str, set] = {}
     for domain, actions in build_domain_map().items():
         domain_parser = subparsers.add_parser(domain, help=f"{domain} 域命令")
         action_sub = domain_parser.add_subparsers(dest='sub', metavar='<command>')
-        for action in actions:
-            p = _add_action_parser(action_sub, domain, action)
-            run_parsers.setdefault(domain, {})[_sub_name(action)] = p
+        # 多级树：按路径前缀逐级展开。若某前缀本身是完整 action
+        # （如 `plan aidc` 与 `plan aidc export` 共存），则复用该 action parser
+        # 并为其挂 subparsers —— argparse 不允许同名节点重复 add_parser。
+        level_sub: Dict[tuple, argparse._SubParsersAction] = {(): action_sub}
+        node_parser: Dict[tuple, argparse.ArgumentParser] = {}
+        # 先建单级（保证被引用的前缀 action 已存在），再建多级
+        ordered = sorted(actions, key=lambda a: (len(_sub_path(a)), _sub_path(a)))
+        for action in ordered:
+            path = tuple(_sub_path(action))
+            if len(path) == 1:
+                p = _add_action_parser(action_sub, domain, action, name=path[0])
+                run_parsers.setdefault(domain, {})[path] = p
+                node_parser[path] = p
+                domain_names.setdefault(domain, set()).add(path[0])
+                continue
+            # 逐级确保中间节点存在
+            for i in range(1, len(path)):
+                prefix = path[:i]
+                if prefix in level_sub:
+                    continue
+                parent_sub = level_sub[path[:i - 1]]
+                seg = path[i - 1]
+                if prefix in node_parser:
+                    # 前缀是完整 action（如 plan aidc）→ 复用其 parser 并挂子命令
+                    node = node_parser[prefix]
+                else:
+                    node = parent_sub.add_parser(seg, help=f"{seg} 子命令组")
+                level_sub[prefix] = node.add_subparsers(
+                    dest=f'sub{i}', metavar='<subcommand>')
+                if i == 1:
+                    domain_names.setdefault(domain, set()).add(seg)
+            # 末级 action
+            leaf_sub = level_sub[path[:-1]]
+            p = _add_action_parser(leaf_sub, domain, action, name=path[-1])
+            run_parsers.setdefault(domain, {})[path] = p
+            node_parser[path] = p
     parser._run_parsers = run_parsers  # 域级缺省 run 用（内部）
+    parser._domain_names = domain_names  # 各域合法子路径首段（内部）
     # 打磨轮（v1.5 / AL-C1a）：output 域（CLI 原生，非引擎 action）
     _add_output_parser(subparsers)
     return parser
@@ -860,14 +1127,16 @@ def _main_impl(argv: Optional[List[str]] = None) -> int:
 
     # V3.1.0-T4-2: 域级调用自动注入默认子命令（单子命令域或存在 run），
     # 避免 argparse 把未知 option 值误当子命令 positional（如 `cli validate --config x`）
+    # 批次 B：域下子命令首段可能为多级树中间节点（aidc → project → create），
+    # 注入判定用「首段集合」而非「完整子名集合」。
     _domains = build_domain_map()
     if argv and argv[0] in _domains:
-        _subs = {_sub_name(a) for a in _domains[argv[0]]}
+        _heads = {(tuple(_sub_path(a))[0]) for a in _domains[argv[0]]}
         _first = argv[1] if len(argv) > 1 else None
-        if _first is None or _first not in _subs:
-            if len(_subs) == 1:
-                argv = [argv[0], sorted(_subs)[0]] + argv[1:]
-            elif 'run' in _subs:
+        if _first is None or (_first not in _heads and _first not in ('-h', '--help')):
+            if len(_heads) == 1:
+                argv = [argv[0], sorted(_heads)[0]] + argv[1:]
+            elif 'run' in _heads:
                 argv = [argv[0], 'run'] + argv[1:]
 
     parser = build_parser()
@@ -911,25 +1180,42 @@ def _main_impl(argv: Optional[List[str]] = None) -> int:
         # 域级调用 → 单子命令域或存在 run 时自动执行，否则打印域帮助
         # 注意：顶层 parse_known_args 会把未知 option 的值误当作子命令 positional，
         # 故此处用 argv[1:]（去掉 domain token）交给目标 parser 完整重解析。
-        domain_parsers: Dict[str, argparse.ArgumentParser] = \
+        # 批次 B：`_run_parsers` 键为子路径 tuple（(name,) 或 (head, tail...)）。
+        domain_parsers: Dict[tuple, argparse.ArgumentParser] = \
             getattr(parser, '_run_parsers', {}).get(domain, {})
         if not domain_parsers:
             print(f"未知域: {domain}", file=sys.stderr)
             return EXIT_USAGE
-        if len(domain_parsers) == 1 or 'run' in domain_parsers:
-            target = domain_parsers.get('run') or next(iter(domain_parsers.values()))
+        _singles = {k[0] for k in domain_parsers if len(k) == 1}
+        if len(domain_parsers) == 1 or ('run',) in domain_parsers:
+            target = domain_parsers.get(('run',)) or next(iter(domain_parsers.values()))
             namespace, rest = target.parse_known_args(argv[1:])
         else:
-            domain_parser = getattr(getattr(parser, '_subparsers', None), '_name_parser_map', {}).get(domain)
+            domain_parser = _domain_parser_map(parser).get(domain)
             if domain_parser:
                 domain_parser.print_help()
             else:
-                print(f"域 {domain} 请指定子命令：{', '.join(sorted(domain_parsers))}", file=sys.stderr)
+                heads = sorted({k[0] for k in domain_parsers})
+                print(f"域 {domain} 请指定子命令：{', '.join(heads)}", file=sys.stderr)
             return 0
 
     action = getattr(namespace, '_action', None)
     if action is None:
-        parser.print_help()
+        # 批次 B：命中了中间节点（子命令组）或注入后仍未落到 action ⇒ 打印**该层级**帮助，
+        # 而非顶层帮助（旧实现一律 print_help() 顶层，导致 `aidc` 看不到子命令清单）。
+        # 注意：argparse 的 ``parser._subparsers`` 是 _ArgumentGroup，真正的选择表在
+        # ``._subparsers._group_actions[0].choices``（旧代码用 _name_parser_map 恒取不到 ⇒
+        # 域级帮助一直打不出来的根因）。
+        node = _domain_parser_map(parser).get(domain)
+        for lvl_dest in ('sub', 'sub2', 'sub3'):
+            seg = getattr(namespace, lvl_dest, None)
+            if not seg or node is None:
+                break
+            nxt = _domain_parser_map(node)
+            if seg not in nxt:
+                break
+            node = nxt[seg]
+        (node or parser).print_help()
         return 0
 
     fmt = getattr(namespace, 'format', 'json')

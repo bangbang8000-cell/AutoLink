@@ -5,7 +5,7 @@
 
 ## 1. 概览
 
-- **注册表驱动**：CLI 子命令树由 `backend/engine.py` 的 action 注册表自动构建（`a:b` → `a b`，如 `room:create` → `room create`）。新增 action 零改动自动获得 CLI 命令。
+- **注册表驱动**：CLI 子命令树由 `backend/autolink_hub/agent/capabilities.py` 的 action 注册表自动构建（`a:b` → `a b`，`a:b:c` → `a b c`，如 `room:create` → `room create`、`aidc:project:create` → `aidc project create`）。新增 action 零改动自动获得 CLI 命令。
 - **同一执行路径**：`backend/cli.py` 的 `execute(action, params)` 是唯一执行入口，GUI（Electron → Python 引擎 stdin 路由）与 CLI 均经此调用。
 - **参数 schema**：`ACTION_PARAM_SCHEMA` 定义常用 flag；未配置 schema 的 action 自动降级使用通用 `--json '<params>'` 入口。
 - **审计**：每次执行写 `cli-audit.jsonl`（时间 / action / 命令 / 参数脱敏 / 结果）。
@@ -22,21 +22,30 @@ python -m cli --help           # 列出全部域
 
 打包后（PyInstaller 收集 backend 模块）可通过内置模块或独立入口调用；独立 `autolink-cli` 可执行文件不在本版本范围（后续 3.1.x 可选）。
 
-## 3. 域速查表（18 域 37 action，注册表自动发现）
+## 3. 域速查表（24 域 67 action，注册表自动发现）
+
+> 真值源 = `backend/autolink_hub/agent/capabilities.py` 的 action 注册表；`python -m cli cli info` 输出实时清单。
+> CLI 子命令树由 action 名机械映射：`a:b` → `a b`，`a:b:c` → `a b c`。
+> **多级子命令**：`aidc:project:*` → `aidc project <create|init|list|load|save>`；`plan:aidc:*` → `plan aidc <export|import>`。
+> `plan aidc` 自身既是可执行 action（`plan:aidc`），又下挂 `export`/`import` 两级子命令（前缀复用）。
+> 三级命令的二级段（如 `aidc project` / `plan aidc`）也可单独 `--help` 查看该层子命令清单。
 
 | 域 | 子命令 | action | 说明 |
 |----|--------|--------|------|
-| `design` | `generate` | `design` | 网络拓扑自动设计（自动选型 + 拓扑生成） |
+| `design` | `generate`（可省略） | `design` | 网络拓扑自动设计（自动选型 + 拓扑生成） |
+| `design` | `from-gpus` | `design:from-gpus` | 按 GPU 规模直接设计（免 Excel） |
 | `estimate` | `run`（可省略） | `estimate` | 规模估算 |
 | `report` | `run`（可省略） | `report` | 生成设计报告 |
 | `validate` | `run`（可省略） | `validate` | 设计配置校验 |
-| `project-config` | `migrate` | `migrate` | INI → JSON 项目配置迁移 |
+| `migrate` | `run`（可省略） | `migrate` | INI → JSON 项目配置迁移 |
 | `project-config` | `to-ini` | `project_config_to_ini` | JSON 项目配置反向序列化为 network_config.ini |
 | `export` | `run`（可省略） | `export` | 导出交付物（连接表/设备清单/布线指南/BOM/报告） |
 | `room` | `create` | `room:create` | 创建机房矩阵 |
 | `room` | `validate` | `room:validate` | 校验机房布局 |
 | `room` | `optimize` | `room:optimize` | 机房布局自动优化 |
 | `room` | `place` | `room:place` | 设备落位放置 |
+| `room` | `set-type` | `room:set-type` | 设置机房单元格类型 |
+| `rack` | `optimize` | `rack:optimize` | 柜内智能落位（U 位 + 功率 + 1柜1台约束） |
 | `config` | `list-schema` | `config:list-schema` | 列出统一配置 schema 与场景预设 |
 | `config` | `apply-preset` | `config:apply-preset` | 应用场景预设（ib-allflash 等） |
 | `config` | `export` | `config:export` | 导出配置包裹（appSettings + projectConfig） |
@@ -44,17 +53,44 @@ python -m cli --help           # 列出全部域
 | `ai` | `chat` | `ai:chat` | AI 对话（AIHUB） |
 | `ai` | `providers` | `ai:providers` | 列出 AI Provider |
 | `ai` | `config` | `ai:config` | 读写 AI 配置（含 Provider 密钥） |
+| `ai` | `config-default` | `ai:config-default` | 读取 AI 默认配置 |
 | `ai` | `test` | `ai:test` | 测试 Provider 连接 |
 | `ai` | `models` | `ai:models` | 列出 Provider 模型 |
 | `ai` | `clear` | `ai:clear` | 清空 AI 会话 |
 | `device` | `list` | `device:list` | 设备库列表 |
+| `device` | `get` | `device:get` | 查询单个设备详情 |
 | `device` | `defaults` | `device:defaults` | 设备默认值 |
 | `template` | `list` | `template:list` | 模板列表 |
 | `template` | `view` | `template:view` | 模板详情 |
+| `template` | `create` | `template:create` | 新建模板 |
+| `template` | `update` | `template:update` | 更新模板 |
+| `template` | `delete` | `template:delete` | 删除模板 |
+| `template` | `recommend` | `template:recommend` | 模板推荐 |
+| `template` | `export` | `template:export` | 导出模板 |
+| `template` | `import` | `template:import` | 导入模板 |
 | `project` | `list` | `project:list` | 项目列表 |
 | `project` | `info` | `project:info` | 项目信息 |
 | `project` | `generate` | `project:generate` | 一键生成项目 |
+| `project` | `create` | `project:create` | 新建项目 |
+| `project` | `delete` | `project:delete` | 删除项目 |
+| `project` | `list-files` | `project:list-files` | 列出项目文件 |
+| `project` | `read-file` | `project:read-file` | 读取项目文件 |
+| `project` | `write-file` | `project:write-file` | 写入项目文件 |
+| `project` | `export` | `project:export` | 导出项目 |
+| `project` | `import` | `project:import` | 导入项目 |
+| `aidc` | `project create` | `aidc:project:create` | **三级**：创建 AIDC 项目 |
+| `aidc` | `project init` | `aidc:project:init` | **三级**：初始化 AIDC 项目 |
+| `aidc` | `project list` | `aidc:project:list` | **三级**：列出 AIDC 项目 |
+| `aidc` | `project load` | `aidc:project:load` | **三级**：加载 AIDC 项目 |
+| `aidc` | `project save` | `aidc:project:save` | **三级**：保存 AIDC 项目 |
+| `plan` | `aidc` | `plan:aidc` | 执行 plan:aidc action（可独立运行） |
+| `plan` | `aidc export` | `plan:aidc:export` | **三级**：导出 plan:table |
+| `plan` | `aidc import` | `plan:aidc:import` | **三级**：导入 plan:table |
 | `file` | `parse` | `file:parse` | 示例文件解析（Excel/JSON/CSV/文本） |
+| `share` | `snapshot` | `share:snapshot` | 生成分享快照 |
+| `skills` | `list` | `skills:list` | 列出技能包 |
+| `skills` | `export` | `skills:export` | 导出技能包 |
+| `skills` | `import` | `skills:import` | 导入技能包 |
 | `capacity` | `list-presets` | `capacity:list-presets` | 容量规划档案清单（17 档案含国产场景） |
 | `capacity` | `recommend` | `capacity:recommend` | 容量规划推荐（Scale-Up/Out + TCO） |
 | `atop` | `recommend` | `atop:recommend` | ATOP 拓扑推荐（ZCube 2D/3D） |
@@ -62,9 +98,10 @@ python -m cli --help           # 列出全部域
 | `optimize` | `apply` | `optimize:apply` | 应用优化建议 |
 | `repair` | `plan` | `repair:plan` | 校验错误修复方案 |
 | `repair` | `apply` | `repair:apply` | 应用修复（复核闭环） |
+| `output` | `list` / `delete` / `clear` | `output:*` | 项目输出版本批次管理 |
 | `cli` | `info` | `cli:info` | CLI 版本 + 全部 action 清单 |
 
-> 单子命令域（estimate / report / validate / export）可省略子命令：`autolink-cli validate --config x.json` 等价于 `autolink-cli validate run --config x.json`。
+> 单子命令域（estimate / report / validate / export / migrate）可省略子命令：`autolink-cli validate --config x.json` 等价于 `autolink-cli validate run --config x.json`。
 
 ## 4. 命令示例
 
@@ -239,6 +276,26 @@ python -m cli repair plan --config project_config.json
 python -m cli repair apply --config project_config.json --fixes '["fix-1"]'
 ```
 
+### 4.15 三级子命令（AIDC 项目 / plan:table 桥接）
+
+`aidc:project:*` 与 `plan:aidc:*` 是三级 action，映射为三段命令。二级段 `aidc project` / `plan aidc` 可单独 `--help` 查看子命令清单：
+
+```bash
+# AIDC 项目（MC → AL 桥接）
+python -m cli aidc project list
+python -m cli aidc project create --json '{"name": "my-aidc"}'
+python -m cli aidc project load  --json '{"projectId": "..."}'
+python -m cli aidc project save  --json '{"projectId": "..."}'
+python -m cli aidc project init  --json '{"projectId": "..."}'
+
+# plan:table 导入导出（plan:table v1.3 衔接）
+python -m cli plan aidc          --json '{"action": "..."}'   # plan:aidc 自身可执行
+python -m cli plan aidc export   --json '{"projectId": "..."}'
+python -m cli plan aidc import   --json '{"tablePath": "..."}'
+```
+
+> 三级 action 目前走通用 `--json` 入口（尚无 `ACTION_PARAM_SCHEMA`，故无具名 flag）；schema 补齐后自动获得具名 flag。
+
 ## 5. 输出格式
 
 | 格式 | 行为 |
@@ -284,6 +341,9 @@ CLI (autolink-cli) ── argparse ──► cli.execute(action, params)  ──
 - **路径优先级**：`AUTOLINK_AUDIT_PATH`（测试注入）＞ `$AUTOLINK_USER_DATA/audit/cli-audit.jsonl`（Electron spawn 注入）＞ `~/.autolink/audit/cli-audit.jsonl`。
 - **脱敏**：参数键名含 `password` / `secret` / `token` / `apiKey` 等敏感词时，值替换为 `***`。
 - **失败留痕**：执行失败也写入（`ok: false` + `error`），审计写入失败不阻塞主流程。
+  > **AL-P1-2（批次 C）修正**：`ok` 反映**业务成败**（与退出码同源），而非「handler 未抛异常」。
+  > 此前 handler 以正常返回失败体（`{"error": ...}` / `success: false` / 空结果）表达失败时
+  > 仍被记 `ok: true`，审计失真；现已修正为 `ok = (classify_exit(result) == EXIT_OK)`。
 - v3.1.1+ AIHUB `ai:*` action 已复用此审计（Provider/模型参数脱敏后留痕）。
 
 ## 9. 退出码

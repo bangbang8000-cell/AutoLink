@@ -12,12 +12,17 @@ class ToolPermission(Enum):
 
 
 # 权限分级表（AutoLink 白名单；未注册工具默认 CONFIRM）
+#
+# ⚠️ 例外说明：下表含 3 个**未注册**条目（`get_project_info` / `list_project_files` /
+# `list_templates`），为历史别名/预留位，**故意保留**（大师 2026-09-27 裁定）。
+# 一致性守卫用例 `test_agent_connect_grant.py::test_permission_table_matches_registry`
+# 以白名单方式允许这 3 项，其余任何「表中有、实现无」或「实现有、表中无」都判失败。
 TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     # 只读查询（AUTO）
     "list_projects": ToolPermission.AUTO,
-    "list_templates": ToolPermission.AUTO,
-    "get_project_info": ToolPermission.AUTO,
-    "list_project_files": ToolPermission.AUTO,
+    "list_templates": ToolPermission.AUTO,      # [历史别名/预留·未注册] 见文件头例外说明
+    "get_project_info": ToolPermission.AUTO,    # [历史别名/预留·未注册] 见文件头例外说明
+    "list_project_files": ToolPermission.AUTO,  # [历史别名/预留·未注册] 见文件头例外说明
     "validate_design": ToolPermission.AUTO,
     "estimate": ToolPermission.AUTO,
     "report": ToolPermission.AUTO,
@@ -90,6 +95,39 @@ TOOL_PERMISSIONS: dict[str, ToolPermission] = {
     "skill_update": ToolPermission.NOTIFY,
     "skill_save": ToolPermission.NOTIFY,
     "skill_optimize": ToolPermission.NOTIFY,
+    # ------------------------------------------------------------------
+    # 5.4.x 权限表补登（AG-4 复核）：此前下列工具**未登记**。
+    # AL 的 register_tool 显式传 permission（`tools.py` 中 permission= 大量出现），
+    # 因此实际行为不受兜底影响；但**表与实现不一致**本身是隐患 ——
+    # 一旦某处 register 漏传 permission，即静默降级为兜底 CONFIRM。
+    # 此处按 register 实际值补齐，使「表 == 实现」，并为下游（MCP capabilities /
+    # 权限审计 / 编译态策略）提供稳定真值。
+    # ------------------------------------------------------------------
+    # 知识库（只读 AUTO）
+    "list_knowledge": ToolPermission.AUTO,
+    "search_knowledge": ToolPermission.AUTO,
+    # 审计查询（只读 AUTO）
+    "audit_query": ToolPermission.AUTO,
+    # 反馈写入 / 知识沉淀（追加式，非破坏 NOTIFY）
+    "agent_feedback": ToolPermission.AUTO,
+    "add_knowledge": ToolPermission.NOTIFY,
+    # 任务编排原语（只读轮询 AUTO / 提交与取消属编排动作 NOTIFY）
+    "task_list": ToolPermission.AUTO,
+    "task_query": ToolPermission.AUTO,
+    "task_wait": ToolPermission.AUTO,
+    "task_submit": ToolPermission.NOTIFY,
+    "task_cancel": ToolPermission.NOTIFY,
+    # 导入导出（产出/写入，NOTIFY）
+    "template_export": ToolPermission.NOTIFY,
+    "template_import": ToolPermission.NOTIFY,
+    "project_export": ToolPermission.NOTIFY,
+    "project_import": ToolPermission.NOTIFY,
+    # 源码态专用工具（编译态经 is_source_only_tool 屏蔽）：显式登记 CONFIRM，
+    # 与 register 声明一致（run_cli / read_file / list_dir / read_source）
+    "run_cli": ToolPermission.CONFIRM,
+    "read_file": ToolPermission.CONFIRM,
+    "list_dir": ToolPermission.CONFIRM,
+    "read_source": ToolPermission.CONFIRM,
 }
 
 TOOL_NAME_ALIASES: dict[str, str] = {

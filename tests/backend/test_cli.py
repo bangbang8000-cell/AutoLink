@@ -298,7 +298,11 @@ class TestAudit:
         lines = audit.read_text(encoding='utf-8').strip().splitlines()
         record = json.loads(lines[0])
         assert record['action'] == 'design'
-        assert record['ok'] is True  # 执行本身成功，结果带 error
+        # AL-P1-2（批次 C）修复：审计 ok 必须反映**业务成败**，而非「handler 未抛异常」。
+        # 此前此断言为 `is True`（把「带 error 的失败结果」记成成功）——那是缺陷本身；
+        # 现改为 ok=False 且留痕失败原因，与退出码 2（非 0）语义一致。
+        assert record['ok'] is False
+        assert record.get('error')
 
     def test_execute_failure_audit(self, monkeypatch, tmp_path):
         """execute 对执行异常路径记录 ok=False"""

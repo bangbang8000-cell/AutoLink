@@ -62,6 +62,16 @@ jobs:
       # 实际 0 命中」（5.2.2 的 522-M3 教训）。只校验**最新版本段**，历史段漂移不阻塞。
       - name: CHANGELOG claims vs code
         run: python scripts/check_changelog_claims.py
+      # 5.4.x-AC-skills: agent-skills 文档引用一致性门禁 —— 27 份 skill 文档中反引号引用的
+      # 工具名 / 声称的工具数量 / frontmatter，须与代码注册表一致（防文档静默过期）。
+      # 注：agent-skills 已移入本仓；MC 仓在 CI 中不存在，脚本会自动跳过 MC 相关断言。
+      - name: Agent skills refs vs code
+        run: python scripts/check_skill_refs.py
+      # 5.4.x-AC-cli: CLI 契约守卫 —— 退出码常量 / 禁裸 sys.exit / docs/cli.md 域表
+      # ↔ 注册表对账（真值源 engine.list_registered_actions）/ 三级命令文档可见。
+      # 防「文档声称 18 域 37 action 而实测 24 域 67 action」式静默漂移。
+      - name: CLI contract guard
+        run: python scripts/check_cli_contract.py
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
       - run: python scripts/gen_golden.py --check
         continue-on-error: true

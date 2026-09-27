@@ -1209,7 +1209,7 @@ def init_tools() -> None:
             "arguments": _str_param("arguments", "工具入参 JSON 对象"),
         }, required=["tool"]),
         _task_submit,
-        permission="auto",
+        permission="notify",   # AG-4：编排动作（非纯只读）→ notify
     )
     register_tool(
         "task_query", "查询异步任务状态：pending/running/done/error + 进度（percent/message）+ 结果或错误",
@@ -1240,7 +1240,7 @@ def init_tools() -> None:
             "taskId": _str_param("taskId", "任务 ID", True),
         }, required=["taskId"]),
         _task_cancel,
-        permission="auto",
+        permission="notify",   # AG-4：取消运行中任务属编排动作 → notify
     )
 
     # ---- 5.1.5-515-d：审计查询工具 ----

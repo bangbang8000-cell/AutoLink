@@ -26,18 +26,22 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# 路径（脚本位于 <repo>/scripts/，agent-skills 为工作区根下目录）
+# 路径（脚本位于 <repo>/scripts/）
+#   - agent-skills 已移入本仓（<repo>/agent-skills），CI 可原样校验
+#   - MC 仓为**可选**：联合工作区本地存在，CI 中不存在 ⇒ 缺失时跳过 MC 段
 # ---------------------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-WORKSPACE = REPO.parent  # D:/MyCoding/MC-AL
-SKILLS_ROOT = WORKSPACE / "agent-skills"
+WORKSPACE = REPO.parent  # D:/MyCoding/MC-AL（本地联合工作区；CI 中不可用）
+SKILLS_ROOT = REPO / "agent-skills"
 
 AL_TOOLS = REPO / "backend" / "autolink_hub" / "agent" / "tools.py"
 AL_SCHEMAS = REPO / "backend" / "autolink_hub" / "agent" / "schemas.py"
 MC_ROOT = WORKSPACE / "MagicCommander-Client"
 MC_TOOLS = MC_ROOT / "ai_hub" / "agent" / "tools.py"
 MC_SCHEMAS = MC_ROOT / "ai_hub" / "agent" / "schemas.py"
+# MC 仓是否可用（CI 中 AL 仓独立 checkout，无 MC 仓 ⇒ 跳过 MC 相关断言）
+MC_AVAILABLE = MC_TOOLS.exists() and MC_SCHEMAS.exists()
 
 # 允许出现在文档里、但**不是工具名**的反引号标识符（参数名/字段/文件名等）
 NON_TOOL_BACKTICKS = {
@@ -199,19 +203,22 @@ def main() -> int:
     al_perms = parse_permissions(AL_SCHEMAS)
     mc_perms = parse_permissions(MC_SCHEMAS)
 
-    if not al_tools or not mc_tools:
-        print(f"[ERROR] 工具注册表解析失败：AL={len(al_tools)} MC={len(mc_tools)}")
-        print(f"  查过：{AL_TOOLS}")
-        print(f"  查过：{MC_TOOLS}")
+    # AL 段是硬性要求（本仓）；MC 段可选（CI 中 AL 仓独立 checkout，无 MC 仓）
+    if not al_tools:
+        print(f"[ERROR] AL 工具注册表解析失败：{AL_TOOLS}")
+        return 1
+    if MC_AVAILABLE and not mc_tools:
+        print(f"[ERROR] MC 工具注册表解析失败：{MC_TOOLS}")
         return 1
 
     if "--list" in sys.argv:
         print(f"AL ({len(al_tools)}):")
         for n in sorted(al_tools):
             print(f"  {n:<28} {effective_perm(n, al_tools, al_perms)}")
-        print(f"\nMC ({len(mc_tools)}):")
-        for n in sorted(mc_tools):
-            print(f"  {n:<28} {effective_perm(n, mc_tools, mc_perms)}")
+        if MC_AVAILABLE:
+            print(f"\nMC ({len(mc_tools)}):")
+            for n in sorted(mc_tools):
+                print(f"  {n:<28} {effective_perm(n, mc_tools, mc_perms)}")
         return 0
 
     all_tools = set(al_tools) | set(mc_tools)
@@ -221,6 +228,9 @@ def main() -> int:
     if not SKILLS_ROOT.exists():
         print(f"[ERROR] 技能目录不存在：{SKILLS_ROOT}")
         return 1
+
+    if not MC_AVAILABLE:
+        print(f"[INFO] 未发现 MC 仓（{MC_ROOT}）—— 跳过 MC 相关断言（CI 环境正常）")
 
     skill_files = sorted(SKILLS_ROOT.rglob("*.md"))
 
@@ -269,6 +279,8 @@ def main() -> int:
         ("cross/cross-hub-guide.md", r"MC 工具 \*\*(\d+)\*\*", "mc"),
     ]
     for rel, pat, side in count_claims:
+        if side == "mc" and not MC_AVAILABLE:
+            continue  # CI 无 MC 仓 ⇒ 不校验 MC 声称
         f = SKILLS_ROOT / rel
         if not f.exists():
             continue
@@ -280,8 +292,11 @@ def main() -> int:
                 failures.append(
                     f"{rel}: 声称 {side.upper()} 工具数 {got}，实测 {want}")
 
-    # ---- 3. 权限表 vs 注册表 对账（双端）----
-    for label, tools, perms in (("AL", al_tools, al_perms), ("MC", mc_tools, mc_perms)):
+    # ---- 3. 权限表 vs 注册表 对账（双端；MC 缺失时仅 AL）----
+    perm_checks = [("AL", al_tools, al_perms)]
+    if MC_AVAILABLE:
+        perm_checks.append(("MC", mc_tools, mc_perms))
+    for label, tools, perms in perm_checks:
         missing = sorted(set(tools) - set(perms))
         dead = sorted(set(perms) - set(tools))
         if missing:
@@ -293,8 +308,12 @@ def main() -> int:
 
     # ---- 输出 ----
     print(f"扫描 {len(skill_files)} 份文档")
-    print(f"实测：AL {len(al_tools)} 工具 / 权限表 {len(al_perms)} 条"
-          f"；MC {len(mc_tools)} 工具 / 权限表 {len(mc_perms)} 条")
+    if MC_AVAILABLE:
+        print(f"实测：AL {len(al_tools)} 工具 / 权限表 {len(al_perms)} 条"
+              f"；MC {len(mc_tools)} 工具 / 权限表 {len(mc_perms)} 条")
+    else:
+        print(f"实测：AL {len(al_tools)} 工具 / 权限表 {len(al_perms)} 条"
+              f"；MC 不可用（已跳过）")
     print()
 
     if warnings:

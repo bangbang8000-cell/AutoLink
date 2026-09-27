@@ -236,3 +236,86 @@ class TestGrantAuditAndSelfcheck:
         result = m.selfcheck()
         grant_check = next(c for c in result["checks"] if c["name"] == "grant")
         assert grant_check["ok"] is False
+
+
+# ---------------------------------------------------------------------------
+# AG-4 复核：权限表 ↔ 注册表一致性守卫
+# ---------------------------------------------------------------------------
+# 背景：MC 侧 register_tool 从不显式传 permission ⇒ 未登记即被兜底 CONFIRM，
+# 只读/编排类工具被误伤为高危。AL 侧 register 显式传值，行为正确，但「表与实现
+# 不一致」本身是隐患。本守卫把「表 == 实现」钉死，防再度静默漂移。
+#
+# 白名单：3 个历史别名/预留条目（未注册，大师 2026-09-27 裁定保留）。
+_DEAD_ENTRY_WHITELIST = {"get_project_info", "list_project_files", "list_templates"}
+
+
+class TestPermissionTableMatchesRegistry:
+    """权限表与注册表必须一致（除显式白名单）。"""
+
+    @staticmethod
+    def _registered_tool_permissions() -> dict:
+        from autolink_hub.agent.tools import init_tools, get_tool_definitions
+
+        init_tools()
+        out = {}
+        for d in get_tool_definitions():
+            fn = d.get("function", d)
+            out[fn["name"]] = fn.get("permission")
+        return out
+
+    def test_no_unregistered_but_used(self):
+        """实现有、表中无 ⇒ 失败（会被兜底 CONFIRM 静默误伤）。"""
+        from autolink_hub.agent.schemas import TOOL_PERMISSIONS
+
+        impl = self._registered_tool_permissions()
+        missing = sorted(set(impl) - set(TOOL_PERMISSIONS))
+        assert not missing, f"以下已注册工具未在权限表登记（将兜底 CONFIRM）: {missing}"
+
+    def test_no_dead_entries_outside_whitelist(self):
+        """表中有、实现无 ⇒ 失败（除白名单 3 个历史预留条目）。"""
+        from autolink_hub.agent.schemas import TOOL_PERMISSIONS
+
+        impl = self._registered_tool_permissions()
+        dead = sorted(set(TOOL_PERMISSIONS) - set(impl) - _DEAD_ENTRY_WHITELIST)
+        assert not dead, f"权限表存在未注册死条目（应删除或加入白名单）: {dead}"
+
+    def test_whitelist_entries_still_unregistered(self):
+        """白名单条目若已被注册，应移出白名单（防白名单腐化）。"""
+        impl = self._registered_tool_permissions()
+        stale = sorted(_DEAD_ENTRY_WHITELIST & set(impl))
+        assert not stale, f"白名单条目已注册，请从 _DEAD_ENTRY_WHITELIST 移除: {stale}"
+
+    def test_table_matches_register_declaration(self):
+        """表中值须与 register 声明一致（防止两边各说各话）。"""
+        from autolink_hub.agent.schemas import TOOL_PERMISSIONS
+
+        impl = self._registered_tool_permissions()
+        mismatch = {
+            n: (impl[n], TOOL_PERMISSIONS[n].value)
+            for n in (set(impl) & set(TOOL_PERMISSIONS))
+            if impl[n] != TOOL_PERMISSIONS[n].value
+        }
+        assert not mismatch, f"权限表与 register 声明不一致（工具: register值, 表值）: {mismatch}"
+
+    def test_task_orchestration_permission(self):
+        """AG-4 裁定：task_list/query/wait=AUTO；task_submit/cancel=NOTIFY。"""
+        from autolink_hub.agent.schemas import get_tool_permission
+
+        for t in ("task_list", "task_query", "task_wait"):
+            assert get_tool_permission(t).value == "auto", t
+        for t in ("task_submit", "task_cancel"):
+            assert get_tool_permission(t).value == "notify", t
+
+    def test_readonly_query_tools_not_confirm(self):
+        """只读查询类不得被兜底成 CONFIRM（compile/audit 查询、知识库只读）。"""
+        from autolink_hub.agent.schemas import get_tool_permission
+
+        for t in ("list_knowledge", "search_knowledge", "audit_query"):
+            assert get_tool_permission(t).value == "auto", t
+
+    def test_source_only_tools_are_confirm(self):
+        """源码态专用工具须显式 CONFIRM（不再依赖兜底）。"""
+        from autolink_hub.agent.schemas import get_tool_permission
+
+        for t in ("run_cli", "read_file", "list_dir", "read_source"):
+            assert get_tool_permission(t).value == "confirm", t
