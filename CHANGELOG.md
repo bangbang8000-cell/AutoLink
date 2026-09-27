@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## [5.4.5] - 2026-09-27
+
+> **CLI 契约收敛版（批次 B/C）+ 外部 Agent 授权档位**——旁挂 agent 免确认通道打通，CLI 命令形态/文档/审计三线对齐。
+
+### 新增：外部 Agent 授权档位 `--grant`
+
+- **三档授权（readonly / semi / full）**（`AL-GRANT`）：程序内 `full_auto` 只作用于 `AgentSession`，**MCP 路径原无授权入口** ⇒ 旁挂 agent 无法声明「已获完全授权」，批量作业需十余次人工确认。新增 `--grant` 命令行 / `AUTOLINK_AGENT_GRANT` 环境变量（优先级：命令行 > 环境变量 > 默认 `semi`）。
+  - `readonly`：仅 AUTO 放行；`semi`：AUTO+NOTIFY 放行、CONFIRM 走门禁；`full`：全放行。
+  - **铁律（AG-3）**：`full` **不豁免编译态屏蔽规则** —— 授权管「要不要确认」，模式管「可不可见」，二者正交。
+  - fail-fast：`full` + 无 `--audit` 路径 ⇒ 拒绝启动（授权必须可追溯）；授权写入审计（`granted` / `granted-full` / `grant-denied`）。
+  - 落点：`mcp_server/manager.py`（`GRANTS` / `_permission_gate` 重写 / `enable(grant=)`）+ `mcp_server/run.py`（`--grant`）。
+
+### 行为变更（批次 B：命令形态与文档对齐）
+
+- **三段式 action → 真·多级子命令树（AL-CLI-O6）**：`aidc:project:*` 由 `aidc:project:create` 冒号形态改为 **`aidc project create`**；`plan:aidc:*` → **`plan aidc export|import`**（`plan aidc` 自身仍是可执行 action，前缀复用）。
+  - 关键修复：`parser._subparsers` 是 `_ArgumentGroup`（非 `_SubParsersAction`），取子命令表须走 `._subparsers._group_actions[0].choices`（旧 `._name_parser_map` 恒空 ⇒ 域帮助一直打印不出）。
+  - 67 action 全量解析 0 错配。
+  - **受影响**：脚本中 `aidc:project:create` / `plan:aidc:export` 需改为多级命令形态。
+
+### 修复（批次 C：能力对齐）
+
+- **审计 `ok` 语义修正（AL-P1-2）**：`execute()` 的 `audit_log(..., ok=True)` 由「handler 未抛异常即成功」改为按 `classify_exit(result)` 判定 ⇒ 失败体（`{"error":...}` / `success:false` / 空结果）正确记 `ok:false` + `error`。此前审计日志将业务失败记成成功，失真。
+- **`ACTION_PARAM_SCHEMA` 补全（AL-P1-4）**：由 45/67 补至 **67/67**，补齐 `ai:*` / `aidc:project:*` / `plan:aidc*` / `skills:*` / `rack:optimize` / `share:snapshot` / `design:from-gpus` / `cli:info` 的具名 flag（此前只能走通用 `--json`）。
+  - 注意：`plan:aidc:export` 的导出格式改名 **`--export-format`**（避免与 CLI 全局输出形态 `--format json/ndjson/text` 撞名）。
+
+### 新增（门禁与文档）
+
+- **`scripts/check_cli_contract.py`（AL-CLI-A5）**：CLI 契约守卫，四项检查：①退出码常量取值 ②禁裸 `sys.exit(<数字>)` ③`docs/cli.md` 域表 ↔ 注册表对账（真值源 `engine.list_registered_actions()`）④三级命令文档可见。接入 `.github/workflows/ci.yml`。
+- **`docs/cli.md` 重写**：域速查表更新为实测 **24 域 67 action**（原「18 域 37 action」）；补三级子命令示例；审计段补 `ok` 语义修正说明。
+- **新增 `AGENT.md` / `CLAUDE.md`** + **`agent-skills/`（27 份）** 面向旁挂 Agent 的技能包入库。
+- 新增 `tests/backend/test_cli_contract.py`（13 用例，含负向断言）。
+
 ## [5.4.4] - 2026-09-22
 
 > **工作台可用性修复版（用户实测 6 条反馈 F1~F6 一次收口）**——8K+ 卡集群全流程可走通。
