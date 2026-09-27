@@ -9,10 +9,17 @@ MCP stdio 协议连接：
   --mode      compiled（默认，产品使用态：只读+受控写入）| source（开发态：+CLI/源码）
   --user-data 用户数据目录（项目/模板/设备库/机房规划等资产根）
   --audit     审计文件路径（默认 <user-data>/agent-connect-audit.jsonl）
+  --grant     外部 Agent 授权档位（5.4.5-AC-grant）：
+                readonly —— 仅只读（AUTO 档）工具，写操作一律拒绝
+                semi     —— **默认**：AUTO 自动执行，写操作走门禁（同程序内 semi_auto）
+                full     —— 全自动免确认（等价程序内 full_auto），**须配 --audit**，
+                            且**不豁免**编译态屏蔽规则（delete_* / run_cli / read_file
+                            等在 compiled 下仍不可见）
 
 MCP SDK 未安装时给出可读错误并退出（exit code 2）。
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -27,10 +34,19 @@ def _bootstrap() -> None:
 
 def main() -> int:
     _bootstrap()
+    from autolink_hub.mcp_server.manager import GRANTS
+
     parser = argparse.ArgumentParser(description="Agent Connect MCP Server (stdio)")
     parser.add_argument("--mode", choices=["compiled", "source"], default="compiled")
     parser.add_argument("--user-data", default="", help="用户数据目录（项目/模板/设备库/机房规划等）")
     parser.add_argument("--audit", default="", help="审计文件路径（默认 <user-data>/agent-connect-audit.jsonl）")
+    parser.add_argument(
+        "--grant", choices=list(GRANTS), default=None,
+        help=(
+            "外部 Agent 授权档位（环境变量 AUTOLINK_AGENT_GRANT 可作默认值）："
+            "readonly=仅只读 / semi=写操作走门禁（默认） / full=全自动免确认（须配 --audit）"
+        ),
+    )
     parser.add_argument(
         "--ignore-switch", action="store_true",
         help="忽略应用内 Agent Connect 总开关（仅排障用；默认严格遵守开关）",
@@ -68,7 +84,12 @@ def main() -> int:
     if audit_path:
         mgr.set_audit_path(Path(audit_path))
 
-    ok, msg = mgr.enable(agent_mode=args.mode)
+    # 5.4.5-AC-grant：授权档位来源优先级 —— 命令行 > 环境变量 > 默认 semi。
+    # 环境变量便于团队共享配置（避免命令行明文），也为 Electron 主进程注入留口。
+    grant = args.grant or os.environ.get("AUTOLINK_AGENT_GRANT") or None
+    grant = grant if grant in GRANTS else None
+
+    ok, msg = mgr.enable(agent_mode=args.mode, grant=grant)
     if not ok:
         print(f"[agent-connect] {msg}", file=sys.stderr)
         return 2
@@ -78,7 +99,8 @@ def main() -> int:
         return 2
     print(
         f"[agent-connect] AutoLink Agent Connect 已就绪 "
-        f"mode={mgr.agent_mode} tools={mgr.status_report()['tool_count']} gate={mgr.gate_mode}",
+        f"mode={mgr.agent_mode} tools={mgr.status_report()['tool_count']} "
+        f"gate={mgr.gate_mode} grant={mgr.grant}",
         file=sys.stderr,
     )
     mcp.run()  # 阻塞运行 stdio server

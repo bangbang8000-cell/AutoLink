@@ -12,5 +12,6 @@
       ],
       "cwd": "<REPO_ROOT>"
     }
-  }
+  },
+  "_comment": "默认授权档为 semi（写操作走门禁）。如需外部 Agent 免逐次确认，在 args 中追加 --grant full 并同时配置 --audit <审计路径>；授权档不豁免编译态屏蔽规则。详见 docs/agent-connect/README.md"
 }

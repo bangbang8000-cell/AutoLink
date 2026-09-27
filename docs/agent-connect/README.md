@@ -19,6 +19,32 @@ python -m autolink_hub.mcp_server.run --mode compiled --user-data <用户数据�
 2. **复制配置**：按下方你的 Agent 客户端粘贴对应配置
 3. **自检**：设置页「Agent Connect → 自检」绿灯即接入成功（或 `GET /api/chat/agent-connect/selfcheck`）
 
+## 授权档位 `--grant`（5.4.5）
+
+外部 Agent 若需**免逐次确认**地连续作业，用 `--grant` 声明授权档位：
+
+```bash
+python -m autolink_hub.mcp_server.run --mode compiled \
+  --user-data <用户数据目录> --audit <审计路径> --grant full
+```
+
+| 档位 | AUTO | NOTIFY | CONFIRM | 适用场景 |
+|---|---|---|---|---|
+| `readonly` | 放行 | **拒绝** | **拒绝** | 只读巡检、报告汇总 |
+| `semi`（默认） | 放行 | 放行 | 走门禁 | 常规辅助（同程序内 `semi_auto`） |
+| `full` | 放行 | 放行 | **放行** | 批量作业、无人值守流水线 |
+
+**约束（勿绕过）**：
+
+1. `--grant full` **必须**配 `--audit`，否则拒绝启动（授权须可追溯）
+2. `--grant full` **不豁免**编译态屏蔽规则 —— `project_delete` / `template_delete` /
+   `run_cli` / `read_file` / `list_dir` / `read_source` 在 `compiled` 模式下**仍不可见**。
+   授权档管「要不要确认」，运行模式管「可不可见」，二者正交
+3. 授权行为写入审计（`result=granted-full` / `grant-denied`），可供事后核查
+4. 优先级：`--grant` 命令行 > 环境变量 `AUTOLINK_AGENT_GRANT` > 默认 `semi`
+
+> 团队共享配置可用环境变量避免命令行明文：`export AUTOLINK_AGENT_GRANT=full`
+
 ## 开发态（源码运行，517-e）
 
 以 `npm run dev:all` 源码运行时，追加 `--mode source` 即可解锁无限制通道：

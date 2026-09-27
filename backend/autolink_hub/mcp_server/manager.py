@@ -23,6 +23,20 @@ GATE_MODES = ("notify", "enforce")
 GATE_MODE_DEFAULT = "notify"
 AC_ERR_PERMISSION_REQUIRED = "AC_ERR_PERMISSION_REQUIRED"
 
+# 5.4.5-AC-grant：外部 Agent 授权档位（AG-1/AG-2/AG-3 裁定，2026-09-27）
+#   readonly —— 仅 AUTO 档工具；NOTIFY/CONFIRM 一律拒绝
+#   semi     —— 默认：AUTO 自动执行，NOTIFY/CONFIRM 走门禁（与程序内 AI 助手 semi_auto 同义）
+#   full     —— 全部工具自动执行（等价程序内 full_auto），**须配 --audit 强制留痕**
+#
+# 设计要点（勿改，血训）：
+#   1. full **不豁免**编译态屏蔽规则（is_blocked_in_compiled）——delete_* / run_cli /
+#      read_file / list_dir / read_source 在 compiled 下仍不可见。屏蔽规则是编译态
+#      安全底线，与授权档位是**正交**的两个维度：授权管"要不要确认"，模式管"可不可见"。
+#   2. full 档必须能写审计，否则授权无从追溯 → run.py 侧 fail-fast。
+GRANTS = ("readonly", "semi", "full")
+GRANT_DEFAULT = "semi"
+AC_ERR_GRANT_DENIED = "AC_ERR_GRANT_DENIED"
+
 # 审计敏感字段（写盘/查询时脱敏，避免密钥/口令入库）
 _SENSITIVE_SUBSTR = (
     "password", "passwd", "secret", "token", "api_key", "apikey",
@@ -161,6 +175,8 @@ class AgentConnectManager:
         self._gate_hits: list[dict[str, Any]] = []
         # 5.2.2-522-s4：注册期快照的工具权限档位（门禁判定用）
         self._tool_permissions: dict[str, str] = {}
+        # 5.4.5-AC-grant：外部 Agent 授权档位（readonly/semi/full，默认 semi）
+        self._grant = GRANT_DEFAULT
 
     # -------------------- 状态机 --------------------
 
@@ -176,11 +192,13 @@ class AgentConnectManager:
     def mcp(self) -> Any:
         return self._mcp
 
-    def enable(self, agent_mode: Optional[str] = None) -> tuple[bool, str]:
+    def enable(self, agent_mode: Optional[str] = None, grant: Optional[str] = None) -> tuple[bool, str]:
         """开启 Agent Connect：创建 FastMCP 实例并注册编译态/源码态工具。
 
         返回 (ok, message)。mcp SDK 未安装时返回 (False, 可读错误)。
         5.2.2-522-s2：注册前做**屏蔽规则启动断言**，编译态选中集含受屏蔽工具即拒绝启动。
+        5.4.5-AC-grant：新增 ``grant`` 授权档位（readonly/semi/full），默认 semi。
+        ``full`` 档**不豁免**编译态屏蔽规则（正交维度，见模块常量注释）。
         """
         try:
             FastMCP = _import_fastmcp()
@@ -188,6 +206,13 @@ class AgentConnectManager:
             logger.error(f"Agent Connect enable failed: {e}")
             return False, str(e)
         mode = self._clamp_mode(agent_mode)
+        grant_mode = self._clamp_grant(grant)
+        # full 档必须能写审计：无审计路径则拒绝（授权无从追溯，安全底线）
+        if grant_mode == "full" and self._audit_path is None:
+            return False, (
+                "grant=full 需配置审计路径（--audit）以便追溯授权行为，当前未配置，拒绝启动。"
+                "请加 --audit <路径> 或改用 --grant semi。"
+            )
         try:
             mcp = FastMCP(
                 "autolink-agent-connect",
@@ -198,6 +223,7 @@ class AgentConnectManager:
                 ),
             )
             self._gate_mode = self._read_gate_mode()
+            self._grant = grant_mode
             registered = self._register_tools(mcp, mode)
             self._register_prompts(mcp)
             self._register_resources(mcp)
@@ -206,8 +232,21 @@ class AgentConnectManager:
             self._tool_count = registered
             self._status = "enabled"
             self._install_execution_guard()
-            logger.info(f"Agent Connect enabled mode={mode} tools={registered} gate={self._gate_mode}")
-            return True, f"Agent Connect 已开启（mode={mode}，暴露 {registered} 个工具，门禁={self._gate_mode}）"
+            logger.info(
+                f"Agent Connect enabled mode={mode} tools={registered} "
+                f"gate={self._gate_mode} grant={self._grant}"
+            )
+            # 5.4.5-AC-grant：授权档位写入审计首条，便于事后追溯（含进程标识）
+            if self._grant != GRANT_DEFAULT:
+                self.record_audit(
+                    "external-agent", "__grant__",
+                    {"grant": self._grant, "mode": mode, "pid": os.getpid()},
+                    "granted",
+                )
+            return True, (
+                f"Agent Connect 已开启（mode={mode}，暴露 {registered} 个工具，"
+                f"门禁={self._gate_mode}，授权={self._grant}）"
+            )
         except Exception as e:  # pragma: no cover
             logger.error(f"Agent Connect enable failed: {e}")
             self._status = "error"
@@ -300,6 +339,26 @@ class AgentConnectManager:
     @property
     def gate_mode(self) -> str:
         return self._gate_mode
+
+    @property
+    def grant(self) -> str:
+        """外部 Agent 授权档位（5.4.5-AC-grant）。"""
+        return self._grant
+
+    def set_grant(self, grant: Optional[str]) -> str:
+        """设置外部 Agent 授权档位（readonly/semi/full）。"""
+        mode = self._clamp_grant(grant)
+        if mode != self._grant:
+            self._grant = mode
+            logger.info(f"Agent Connect grant -> {mode}")
+        return mode
+
+    @staticmethod
+    def _clamp_grant(grant: Optional[str]) -> str:
+        """归一授权档位：非法值回落 GRANT_DEFAULT（不因错值放权）。"""
+        if grant in GRANTS:
+            return grant
+        return GRANT_DEFAULT
 
     @property
     def gate_hits(self) -> list[dict[str, Any]]:
@@ -627,14 +686,48 @@ class AgentConnectManager:
         )
 
     def _permission_gate(self, name: str, args: dict, control: dict, record: bool = True) -> Optional[dict]:
-        """confirm 档服务端门禁（与 write_gate 同层，顺序：模式 → 权限 → 语义）。
+        """授权 + 门禁判定（顺序：授权档 → 门禁模式 → write_gate 语义层）。
 
-        - ``enforce``：未携带 ``approvalToken`` → 拒绝（``AC_ERR_PERMISSION_REQUIRED``）
-        - ``notify``（灰度默认）：记录命中与审计，不阻断（DP-MC-02 决策）
+        5.4.5-AC-grant：授权档位（``self._grant``）优先于门禁模式判定：
+
+        - ``readonly``：仅 AUTO 档工具放行；NOTIFY/CONFIRM 一律拒绝
+        - ``semi``（默认）：AUTO 放行；NOTIFY 放行；CONFIRM 走 ``_gate_mode`` 判定
+        - ``full``：全部放行（等价程序内 full_auto），但仍写审计留痕
+
+        注意：本方法**只判定授权与确认**，不判定工具**可见性** —— 编译态屏蔽规则
+        （``is_blocked_in_compiled``）在注册期已生效，``full`` 档不会让被屏蔽的
+        破坏性工具可见（AG-3 裁定）。
         """
         from autolink_hub.mcp_server.capabilities import CONFIRM_APPROVAL_FIELD
 
-        if self._tool_permissions.get(name, "confirm") != "confirm":
+        perm = self._tool_permissions.get(name, "confirm")
+
+        # --- readonly：只放行 AUTO 档 ---
+        if self._grant == "readonly" and perm != "auto":
+            if record:
+                self._gate_hits.append({
+                    "ts": _now(), "tool": name, "mode": self._gate_mode,
+                    "grant": self._grant, "approved": False,
+                })
+                self.record_audit("external-agent", name, args, "grant-denied")
+            return {
+                "success": False,
+                "error": f"工具 {name} 在 readonly 授权档不可用（当前档位仅允许只读工具）",
+                "error_code": AC_ERR_GRANT_DENIED,
+            }
+
+        # --- full：全部放行，仅留痕 ---
+        if self._grant == "full":
+            if record:
+                self._gate_hits.append({
+                    "ts": _now(), "tool": name, "mode": self._gate_mode,
+                    "grant": self._grant, "approved": True,
+                })
+                self.record_audit("external-agent", name, args, "granted-full")
+            return None
+
+        # --- semi：沿用原 confirm 档门禁逻辑 ---
+        if perm != "confirm":
             return None
         token = (control or {}).get(CONFIRM_APPROVAL_FIELD)
         if self._gate_mode == "enforce" and not token:
@@ -645,7 +738,8 @@ class AgentConnectManager:
             }
         if record:
             self._gate_hits.append({
-                "ts": _now(), "tool": name, "mode": self._gate_mode, "approved": bool(token),
+                "ts": _now(), "tool": name, "mode": self._gate_mode,
+                "grant": self._grant, "approved": bool(token),
             })
             self.record_audit("external-agent", name, args, "notify")
         return None
@@ -857,6 +951,23 @@ class AgentConnectManager:
             ),
             "hint": "" if self._gate_mode == "enforce" else "灰度期结束后将自动转阻断模式",
         })
+        # 5.4.5-AC-grant：授权档位（外部 Agent 的自主等级）
+        checks.append({
+            "name": "grant",
+            "ok": self._grant != "full" or self._audit_path is not None,
+            "message": (
+                f"外部 Agent 授权档={self._grant}"
+                + {
+                    "readonly": "（仅只读工具）",
+                    "semi": "（写操作走门禁，与程序内 semi_auto 一致）",
+                    "full": "（全自动免确认，审计留痕中）",
+                }.get(self._grant, "")
+            ),
+            "hint": (
+                "" if self._grant != "full" or self._audit_path is not None
+                else "full 档必须配置审计路径，请加 --audit"
+            ),
+        })
         checks.append({
             "name": "audit", "ok": self._audit_path is not None,
             "message": f"审计{'已启用（' + str(self._audit_path) + '）' if self._audit_path else '未启用（默认关闭，可配置开启）'}",
@@ -865,6 +976,7 @@ class AgentConnectManager:
             "ok": all(c["ok"] for c in checks),
             "mode": self._agent_mode,
             "gate_mode": self._gate_mode,
+            "grant": self._grant,
             "checks": checks,
         }
 
@@ -877,6 +989,8 @@ class AgentConnectManager:
             "agent_mode": self._agent_mode,
             "tool_count": self._tool_count,
             "audit_enabled": self._audit_path is not None,
+            "grant": self._grant,
+            "gate_mode": self._gate_mode,
         }
 
 
