@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## [5.4.14] - 2026-10-12
+
+> **运维保障版（与 MC 5.4.14 同号同步）：支持包导出 + 本地遥测 + 耗时埋点。**
+
+### 新增
+
+- **支持包一键导出（F54-14-1）**：`backend/ops/support_bundle.py` —— 版本信息 + 配置快照 + 日志/审计尾部打包为时间戳 zip（自描述 manifest；缺失文件标记跳过）。
+- **本地遥测（F54-14-2）**：`backend/ops/telemetry.py` —— 默认关（ops_config.json 开关）、事件 JSONL 追加、**写前 PII 脱敏**（password/token/api_key/secret 等 → `***`，含递归）、`export()` 可导出供支持包使用。
+- **耗时埋点原语（F54-14-4）**：`timed_telemetry(tel, stage, detail)` 上下文管理器 —— 记录工作台耗时环节（matrix_layout / design_generate 等）cost_ms，配合 5.4.9 性能基线；遥测关闭时零副作用。
+
+### 测试
+
+- `tests/backend/test_ops_5414.py`（14 用例）：支持包内容/缺失标记/manifest 自描述；遥测默认关/启用记录/脱敏落盘/导出/清理；脱敏递归与不修改原对象；耗时埋点记录与关闭静默。
+
+### 文档
+
+- 双端 5.4.14 版本说明详见系列 PRD（docs/MC-AL_5.4.X系列版本PRD_v1.0_2026-10-12.md）。
+
+
 ## [5.4.13] - 2026-10-12
 
 > **测试体系与质量门禁版（与 MC 5.4.13 同号同步）：本地全量重跑硬前置 + 质量趋势。**
