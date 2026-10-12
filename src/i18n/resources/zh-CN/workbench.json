@@ -299,5 +299,15 @@
   "result.topology": "拓扑图",
   "result.deviceList": "设备清单",
   "openFile": "打开文件",
-  "openFolder": "打开文件夹"
+  "openFolder": "打开文件夹",
+  "progress": {
+    "renderStart": "开始渲染...",
+    "renderComplete": "渲染完成",
+    "renderFailed": "渲染失败",
+    "genBase": "[{{project}}] 生成基础表项与报告...",
+    "genMount": "[{{project}}] 生成上机表...",
+    "genTopology": "[{{project}}] 生成拓扑图...",
+    "genRoom": "[{{project}}] 生成机房布局图...",
+    "genRack": "[{{project}}] 生成柜上架图..."
+  }
 }

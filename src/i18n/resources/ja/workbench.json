@@ -299,5 +299,15 @@
   "result.topology": "トポロジ図",
   "result.deviceList": "デバイス一覧",
   "openFile": "ファイルを開く",
-  "openFolder": "フォルダを開く"
+  "openFolder": "フォルダを開く",
+  "progress": {
+    "renderStart": "レンダリング開始...",
+    "renderComplete": "レンダリング完了",
+    "renderFailed": "レンダリング失敗",
+    "genBase": "[{{project}}] 基本表とレポートを生成中...",
+    "genMount": "[{{project}}] 上架表を生成中...",
+    "genTopology": "[{{project}}] トポロジー図を生成中...",
+    "genRoom": "[{{project}}] ラックルームレイアウト図を生成中...",
+    "genRack": "[{{project}}] ラック搭載図を生成中..."
+  }
 }

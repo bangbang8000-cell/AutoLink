@@ -236,6 +236,10 @@ const electronAPI = {
     agentConnectStatus: () => ipcRenderer.invoke('ai:call', 'ai:agent-connect-status', {}),
     agentConnectConfig: (config: { enable?: boolean; agent_mode?: string; grant?: string }) =>
       ipcRenderer.invoke('ai:call', 'ai:agent-connect-config', config),
+    // 5.4.16-F5416-11/12: 内容资产增量同步
+    contentSync: (opts: { baseUrl: string }) => ipcRenderer.invoke('content:sync', opts),
+    contentStatus: () => ipcRenderer.invoke('content:status'),
+    contentRollback: () => ipcRenderer.invoke('content:rollback'),
     // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
     knowledge: {
       list: (params?: { category?: string; project?: string }) =>

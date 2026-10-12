@@ -56,5 +56,11 @@
   "storageNetwork": "ストレージ網",
   "bizNetwork": "業務網",
   "noTopology": "トポロジー未生成",
-  "noTopologyHint": "「設計」パネルでトポロジーデータを生成してから表示してください"
+  "noTopologyHint": "「設計」パネルでトポロジーデータを生成してから表示してください",
+  "filter": {
+    "all": "すべて",
+    "param": "パラメータネットワーク",
+    "storage": "ストレージネットワーク",
+    "biz": "業務ネットワーク"
+  }
 }

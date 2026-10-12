@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## [5.4.16] - 2026-10-12
+
+> **多语言系统修复版（与 MC 5.4.16 同号同步）+ 内容资产增量更新（L2 MVP）。**
+
+### 多语言（F5416-1/4/5/6/7）
+
+- **回落策略**：fallbackLng 按语言映射 —— 繁体中文回落简体（zh-TW→zh-CN），其他语言（en/ja/ko）回落英文（此前统一回落 zh-CN）。
+- **工作台 i18n 化（重点，对应用户反馈"AL 主要在工作台"）**：WorkbenchActionCard 渲染进度/完成/失败消息、TopologyTab 视图筛选标签（全部/参数/存储/业务）、ProjectOverviewTab 设备类型标签（GPU/存储/通算/交换机）改走 t()；新增 workbench.progress / topology.filter / common.deviceType 等 key，5 语言齐全。
+- **领域数据标签语言化**：设备类型等目录以稳定 id + 语言化 label 解析（common.deviceType）；RackTab/RackIsometricView 中基于"未翻译原始数据"的类型匹配保留并注释说明（避免翻译后逻辑损坏）。
+- **门禁**：i18n 5 语言完整性（已有，维持严格）；新增硬编码中文扫描门禁 `scan_hardcoded_cn.py`（基线 106 文件，新增未国际化中文即 CI 失败）。
+
+### 内容资产增量更新（F5416-11/12/15，L2 MVP）
+
+- **客户端内容同步器** `content-sync.service.ts`：平台内容清单 → 比对本地版本 → **仅拉取变更文件**（sha512 强校验 + 原子替换）→ 状态戳；失败不覆盖旧文件；`rollbackContent` 恢复到上一版本快照。
+- **IPC**：`content:sync` / `content:status` / `content:rollback`（preload + 渲染层类型齐备）。
+- **契约测试** 5 用例（增量跳过 / sha512 篡改 / 回退撤销 / manifest 失败等）。
+- 配合平台 `/api/v1/content/manifest` 端点（内容更新不 bump 应用版本、不重装安装包）。
+
+### 文档
+
+- 详见《MC-AL_5.4.16多语言评估与修复PRD_v1.0_2026-10-12.md》与《MC-AL_5.4.16开发&测试计划_v1.0_2026-10-12.md》。
+
+
 ## [5.4.15] - 2026-10-12
 
 > **系列收官与验收版（与 MC 5.4.15 同号同步）：全量回归 + 版本对齐 + 复盘。**

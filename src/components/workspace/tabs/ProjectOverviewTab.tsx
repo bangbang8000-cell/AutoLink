@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import {
   Server, Zap, HardDrive, FolderOpen, FileText,
   Play, Download, GitBranch, CheckCircle,
@@ -29,7 +30,9 @@ interface DeviceGroup {
   icon: React.ReactNode
 }
 
-function groupDevices(nodes: TopologyNode[]): DeviceGroup[] {
+// i18n：label 由组件内传入 t() 解析（deviceType.* 位于 common 命名空间），
+// 分支条件仍基于 key（节点 group/type 原始英文或未翻译数据），保持不变。
+function groupDevices(nodes: TopologyNode[], t: TFunction): DeviceGroup[] {
   const map = new Map<string, { count: number; totalPower: number }>()
   for (const node of nodes) {
     const key = node.group || node.type
@@ -42,10 +45,10 @@ function groupDevices(nodes: TopologyNode[]): DeviceGroup[] {
   for (const [key, val] of map) {
     let label = key
     let icon: React.ReactNode = <Server size={14} />
-    if (key.toLowerCase().includes('gpu')) { label = 'GPU服务器'; icon = <Server size={14} className="text-info-500" /> }
-    else if (key.toLowerCase().includes('storage') || key.toLowerCase().includes('存储')) { label = '存储服务器'; icon = <HardDrive size={14} className="text-success-500" /> }
-    else if (key.toLowerCase().includes('compute') || key.toLowerCase().includes('通算')) { label = '通算服务器'; icon = <Monitor size={14} className="text-purple-500" /> }
-    else if (key.toLowerCase().includes('switch') || key.toLowerCase().includes('交换机')) { label = '交换机'; icon = <GitBranch size={14} className="text-warning-500" /> }
+    if (key.toLowerCase().includes('gpu')) { label = t('deviceType.gpuServer'); icon = <Server size={14} className="text-info-500" /> }
+    else if (key.toLowerCase().includes('storage') || key.toLowerCase().includes('存储')) { label = t('deviceType.storageServer'); icon = <HardDrive size={14} className="text-success-500" /> }
+    else if (key.toLowerCase().includes('compute') || key.toLowerCase().includes('通算')) { label = t('deviceType.computeServer'); icon = <Monitor size={14} className="text-purple-500" /> }
+    else if (key.toLowerCase().includes('switch') || key.toLowerCase().includes('交换机')) { label = t('deviceType.switch'); icon = <GitBranch size={14} className="text-warning-500" /> }
     result.push({ type: key, count: val.count, totalPower: val.totalPower, label, icon })
   }
   // Sort: servers first, then switches
@@ -157,7 +160,7 @@ export function ProjectOverviewTab({ projectName }: Props) {
     )
   }
 
-  const deviceGroups = topology?.nodes ? groupDevices(topology.nodes) : []
+  const deviceGroups = topology?.nodes ? groupDevices(topology.nodes, t) : []
   const topologyMode = summary?.mode || (topology ? '已生成' : null)
 
   const fileIcon = (type: string) => {

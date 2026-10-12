@@ -1101,6 +1101,12 @@
     "catThermal": "散热"
   },
   "selectPlaceholder": "请选择",
+  "deviceType": {
+    "gpuServer": "GPU服务器",
+    "storageServer": "存储服务器",
+    "computeServer": "通算服务器",
+    "switch": "交换机"
+  },
   "commandPalette": {
     "placeholder": "输入命令或搜索…",
     "noResults": "未找到匹配的命令",

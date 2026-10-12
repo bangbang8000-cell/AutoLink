@@ -43,6 +43,7 @@ def steps() -> List[Step]:
         ("设备库校验", py + ["scripts/validate_device_library.py"], None),
         ("文档数字一致性", py + ["scripts/check_doc_numbers.py"], None),
         ("CLI 契约守卫", py + ["scripts/check_cli_contract.py"], None),
+        ("硬编码中文扫描", py + ["scripts/scan_hardcoded_cn.py"], None),
         ("Agent skills 引用一致性", py + ["scripts/check_skill_refs.py"], None),
         ("golden 基线比对", py + ["scripts/gen_golden.py", "--check"], None),
         ("后端 pytest", py + ["-m", "pytest", "tests/backend", "-q", "--ignore=tests/backend/test_sample_assets.py", "--timeout=180"], None),

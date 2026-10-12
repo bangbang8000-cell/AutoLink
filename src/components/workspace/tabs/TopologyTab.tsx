@@ -69,21 +69,17 @@ type FilterType = 'all' | 'param' | 'storage' | 'oob' | 'biz' | 'scale_up'
 
 interface FilterOption {
   value: FilterType
-  label: string
 }
 
+// 只保留稳定 value；显示 label 由组件内 getFilterLabel(value, t) 按当前语言解析（i18n）
 const FILTER_OPTIONS: FilterOption[] = [
-  { value: 'all', label: '全部' },
-  { value: 'param', label: '参数网络' },
-  { value: 'storage', label: '存储网络' },
-  { value: 'oob', label: 'OOB' },
-  { value: 'biz', label: '业务网络' },
-  { value: 'scale_up', label: 'Scale-Up' },
+  { value: 'all' },
+  { value: 'param' },
+  { value: 'storage' },
+  { value: 'oob' },
+  { value: 'biz' },
+  { value: 'scale_up' },
 ]
-
-const FILTER_LABELS: Record<FilterType, string> = Object.fromEntries(
-  FILTER_OPTIONS.map((o) => [o.value, o.label]),
-) as Record<FilterType, string>
 
 /** V2.4.2: 过滤匹配，优先使用 networkType 字段，回退到 description/cableType */
 function matchFilter(description: string, cableType: string, networkType: string, filter: FilterType): boolean {
@@ -229,7 +225,19 @@ export function aggregateEdgesToBundles(
 
 
 function TopologyFlowInner() {
-  const { t } = useTranslation()
+  // i18n：filter.* 位于 topology 命名空间；既有调用均带显式前缀，此处显式声明避免歧义
+  const { t } = useTranslation(['topology', 'common'])
+  // i18n：按稳定 value 渲染筛选标签（OOB/Scale-Up 为通用技术词，各语言保持原文）
+  const getFilterLabel = (value: FilterType): string => {
+    switch (value) {
+      case 'all': return t('filter.all')
+      case 'param': return t('filter.param')
+      case 'storage': return t('filter.storage')
+      case 'oob': return 'OOB'
+      case 'biz': return t('filter.biz')
+      case 'scale_up': return 'Scale-Up'
+    }
+  }
   const topology = useDesignStore((s) => s.topology)
   const designConfig = useDesignStore((s) => s.config)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
@@ -1259,7 +1267,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
                   ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                   : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-app-hover'
               }`}>
-              <Filter size={11} />{FILTER_LABELS[filter]}
+              <Filter size={11} />{getFilterLabel(filter)}
             </button>
             {showFilter && (
               <>
@@ -1270,7 +1278,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
                       className={`block w-full text-left px-3 py-1.5 text-2xs hover:bg-gray-50 dark:hover:bg-app-hover ${
                         filter === opt.value ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 dark:text-gray-400'
                       }`}>
-                      {opt.label}
+                      {getFilterLabel(opt.value)}
                     </button>
                   ))}
                 </div>

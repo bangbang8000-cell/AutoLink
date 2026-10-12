@@ -499,6 +499,10 @@ interface Window {
         data?: AgentConnectStatusInfo
         error?: string
       }>
+      // 5.4.16-F5416-11/12: 内容资产增量同步
+      contentSync: (opts: { baseUrl: string }) => Promise<unknown>
+      contentStatus: () => Promise<unknown>
+      contentRollback: () => Promise<unknown>
       // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
       knowledge: {
         list: (params?: { category?: string; project?: string }) => Promise<{

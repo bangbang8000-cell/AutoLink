@@ -72,6 +72,9 @@ jobs:
       # 防「文档声称 18 域 37 action 而实测 24 域 67 action」式静默漂移。
       - name: CLI contract guard
         run: python scripts/check_cli_contract.py
+      # 5.4.16-F5416-6：硬编码中文扫描门禁 —— 新增未国际化中文即失败（多语言回归护栏）
+      - name: Hardcoded CN scan
+        run: python scripts/scan_hardcoded_cn.py
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
       # 5.4.7-F547-3（R5 收口）：移除 continue-on-error —— V016/R5 修复后本地 30/30 全绿，
       # golden 比对恢复硬前置（拓扑结构变化即红）。

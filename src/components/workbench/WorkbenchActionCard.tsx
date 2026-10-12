@@ -25,7 +25,8 @@ interface RenderProgressData {
 const PYTHON_TYPES = ['connections', 'deviceList', 'cablingGuide', 'bom', 'pdfReport']
 
 export function WorkbenchActionCard() {
-  const { t } = useTranslation()
+  // i18n：进度消息走 workbench 命名空间（common 仍通过显式 common: 前缀访问）
+  const { t } = useTranslation(['workbench', 'common'])
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
   const topology = useDesignStore((s) => s.topology)
   // 2026-08-24（修复）：导出组网拓扑图时带上 topology.json 保存的布局，内容与拓扑视图一致
@@ -69,18 +70,18 @@ export function WorkbenchActionCard() {
     const unsub = window.electron.render.onProgress((data) => {
       const d = data as RenderProgressData
       if (d?.status === 'start') {
-        setProgress({ message: d.message || '开始渲染...' })
+        setProgress({ message: d.message || t('progress.renderStart') })
       } else if (d?.status === 'complete') {
-        setProgress({ status: 'complete', message: d.message || '渲染完成', progress: 100 })
+        setProgress({ status: 'complete', message: d.message || t('progress.renderComplete'), progress: 100 })
       } else if (d?.status === 'error') {
-        setProgress({ status: 'error', message: d.message || '渲染失败', error: d.message })
+        setProgress({ status: 'error', message: d.message || t('progress.renderFailed'), error: d.message })
       }
     })
     cleanupRef.current = unsub
     return () => {
       if (cleanupRef.current) cleanupRef.current()
     }
-  }, [setProgress])
+  }, [setProgress, t])
 
   // 打磨轮（v1.5 / AL-O1c）：一键渲染全部材料——Python 类型一次调用合并 → 版本批次目录；
   // 前端产物（上机表/拓扑图/布局图/柜图）写入同一批次；分步进度按实际产物动态计数。
@@ -97,7 +98,7 @@ export function WorkbenchActionCard() {
     }
 
     clearResults()
-    setProgress({ status: 'rendering', message: '开始渲染...', progress: 0 })
+    setProgress({ status: 'rendering', message: t('progress.renderStart'), progress: 0 })
 
     const pythonTypes = selectedOutputTypes.filter((t) => PYTHON_TYPES.includes(t))
     const frontendTypes = selectedOutputTypes.filter((t) => !PYTHON_TYPES.includes(t))
@@ -127,7 +128,7 @@ export function WorkbenchActionCard() {
       try {
         // 1. Python 基础材料（连接/设备/布线/BOM/PDF 一次调用，产出版本批次目录）
         if (pythonTypes.length > 0) {
-          setProgress({ message: `[${projectName}] 生成基础表项与报告...` })
+          setProgress({ message: t('progress.genBase', { project: projectName }) })
           try {
             const result = await window.electron.render.exportConnections(projectName, pythonTypes)
             const data = result as { batchName?: string; version?: number; results?: { type?: string; file?: string; status?: string }[] }
@@ -151,7 +152,7 @@ export function WorkbenchActionCard() {
 
         // 2. 上机表（前端 XLSX → 批次目录）
         if (frontendTypes.includes('rackTable') && cabinets.length > 0) {
-          setProgress({ message: `[${projectName}] 生成上机表...` })
+          setProgress({ message: t('progress.genMount', { project: projectName }) })
           try {
             const filePath = await exportToExcel(projectName, batchName)
             addResult({
@@ -169,7 +170,7 @@ export function WorkbenchActionCard() {
 
         // 3. 拓扑图（前端 ECharts → 批次目录）
         if (frontendTypes.includes('topology') && topology) {
-          setProgress({ message: `[${projectName}] 生成拓扑图...` })
+          setProgress({ message: t('progress.genTopology', { project: projectName }) })
           try {
             const base64 = await exportTopologyViewPng(topology.nodes, topology.edges, savedLayout)
             const fileName = '组网拓扑图.png'
@@ -183,7 +184,7 @@ export function WorkbenchActionCard() {
 
         // 4. 机房-机柜布局图（roomLayoutArt → PNG → 批次目录）
         if (frontendTypes.includes('roomLayout')) {
-          setProgress({ message: `[${projectName}] 生成机房布局图...` })
+          setProgress({ message: t('progress.genRoom', { project: projectName }) })
           try {
             const art = roomLayoutArt()
             if (!art) {
@@ -204,7 +205,7 @@ export function WorkbenchActionCard() {
         // 每柜独立（SVG/尺寸/文件名均取决于 cab），PNG 光栅化是耗时主体，并行显著加速；
         // 主进程 saveOutputFile 的 writeFileSync 仍串行，但光栅化（更重）已并行。
         if (frontendTypes.includes('rackImages') && cabinets.length > 0) {
-          setProgress({ message: `[${projectName}] 生成柜上架图...` })
+          setProgress({ message: t('progress.genRack', { project: projectName }) })
           try {
             let saved = 0
             const CONCURRENCY = 4
@@ -238,7 +239,7 @@ export function WorkbenchActionCard() {
       if (projectErrors.length > 0) failures.push({ project: projectName, error: projectErrors[0] })
     }
 
-    setProgress({ status: 'complete', message: '渲染完成', progress: 100 })
+    setProgress({ status: 'complete', message: t('progress.renderComplete'), progress: 100 })
 
     // 4.4 F4-2: 写入批量渲染失败汇总（进度可查）并提示汇总结果
     const batchResults: BatchItemResult[] = projects.map((p) => {

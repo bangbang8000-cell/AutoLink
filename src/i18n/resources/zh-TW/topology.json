@@ -56,5 +56,11 @@
   "storageNetwork": "儲存網",
   "bizNetwork": "業務網",
   "noTopology": "尚未產生拓撲",
-  "noTopologyHint": "在「設計」面板中產生拓撲資料後檢視"
+  "noTopologyHint": "在「設計」面板中產生拓撲資料後檢視",
+  "filter": {
+    "all": "全部",
+    "param": "參數網路",
+    "storage": "儲存網路",
+    "biz": "業務網路"
+  }
 }

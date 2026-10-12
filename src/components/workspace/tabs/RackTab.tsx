@@ -23,6 +23,9 @@ interface Props {
 }
 
 // AL-N4：导出给测试；type 为空/undefined 时兜底 'gpu'（旧数据缺 device.type 不再 TypeError）
+// i18n 说明：这里匹配的是 RackDevice.type —— 它是来自拓扑节点 group 的原始数据（未翻译），
+// 可为中文分组名（如 'GPU服务器组1'/'存储服务器组'）或 'GPU Server'/'Switch' 等原始值，
+// 并非已翻译的界面标签，故字符串匹配保持不变（不能改为按翻译后的标签判断）。
 export const getTypeColorClass = (type?: string) => {
   const t = (type ?? 'gpu').toLowerCase()
   if (t.includes('gpu')) return 'bg-info-500 dark:bg-info-600'
@@ -33,6 +36,8 @@ export const getTypeColorClass = (type?: string) => {
   return 'bg-gray-400 dark:bg-gray-500'
 }
 
+// i18n 说明：同 getTypeColorClass —— device.type 为未翻译的原始数据（node.group / 'GPU Server' / 'Switch'），
+// 保持原判断；返回的短标签用于图例/分组键，不做 t() 翻译（键值稳定由调用方依赖）。
 export const getTypeLabel = (type?: string) => {
   const t = (type ?? 'gpu').toLowerCase()
   if (t.includes('gpu')) return 'GPU'

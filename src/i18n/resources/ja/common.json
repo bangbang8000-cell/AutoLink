@@ -1101,6 +1101,12 @@
     "catThermal": "放熱"
   },
   "selectPlaceholder": "選択してください",
+  "deviceType": {
+    "gpuServer": "GPUサーバー",
+    "storageServer": "ストレージサーバー",
+    "computeServer": "汎用サーバー",
+    "switch": "スイッチ"
+  },
   "commandPalette": {
     "placeholder": "コマンドを入力または検索…",
     "noResults": "一致するコマンドがありません",

@@ -56,5 +56,11 @@
   "storageNetwork": "스토리지 네트워크",
   "bizNetwork": "비즈니스 네트워크",
   "noTopology": "토폴로지가 아직 생성되지 않음",
-  "noTopologyHint": "「설계」패널에서 토폴로지 데이터를 생성한 후 확인하세요"
+  "noTopologyHint": "「설계」패널에서 토폴로지 데이터를 생성한 후 확인하세요",
+  "filter": {
+    "all": "전체",
+    "param": "파라미터 네트워크",
+    "storage": "스토리지 네트워크",
+    "biz": "비즈니스 네트워크"
+  }
 }

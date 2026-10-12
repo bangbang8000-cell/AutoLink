@@ -299,5 +299,15 @@
   "result.topology": "토폴로지도",
   "result.deviceList": "장치 목록",
   "openFile": "파일 열기",
-  "openFolder": "폴더 열기"
+  "openFolder": "폴더 열기",
+  "progress": {
+    "renderStart": "렌더링 시작...",
+    "renderComplete": "렌더링 완료",
+    "renderFailed": "렌더링 실패",
+    "genBase": "[{{project}}] 기본 테이블 및 보고서 생성 중...",
+    "genMount": "[{{project}}] 상가표 생성 중...",
+    "genTopology": "[{{project}}] 토폴로지도 생성 중...",
+    "genRoom": "[{{project}}] 서버실 레이아웃 생성 중...",
+    "genRack": "[{{project}}] 랙 상가 이미지 생성 중..."
+  }
 }

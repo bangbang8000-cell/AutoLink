@@ -299,5 +299,15 @@
   "result.topology": "Topology",
   "result.deviceList": "Device List",
   "openFile": "Open file",
-  "openFolder": "Open folder"
+  "openFolder": "Open folder",
+  "progress": {
+    "renderStart": "Start rendering...",
+    "renderComplete": "Render complete",
+    "renderFailed": "Render failed",
+    "genBase": "[{{project}}] Generating base tables and report...",
+    "genMount": "[{{project}}] Generating rack mount table...",
+    "genTopology": "[{{project}}] Generating topology diagram...",
+    "genRoom": "[{{project}}] Generating room layout diagram...",
+    "genRack": "[{{project}}] Generating rack elevation images..."
+  }
 }

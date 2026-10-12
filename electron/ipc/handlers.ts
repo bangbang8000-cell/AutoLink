@@ -111,6 +111,12 @@ import { registerCloudIpcHandlers } from './cloud.handlers.js'
 import { registerSearchIpcHandlers } from './search.handlers.js'
 // 47-b/47-c（F7-2/F7-3）：诊断中心 + 健康检查 IPC 分包
 import { registerDiagnosticsIpcHandlers } from './diagnostics.handlers.js'
+// 5.4.16-F5416-11/12：内容资产增量同步（L2 MVP）
+import {
+  syncContent,
+  rollbackContent,
+  loadLocalState,
+} from '../services/content-sync.service.js'
 
 // V3.4.1-L7: app:getStackVersions 进程级缓存（Python 探测 execSync 阻塞主进程，只跑一次）
 let cachedStackVersions: Record<string, string> | null = null
@@ -2893,4 +2899,52 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       fs.rmSync(entryPath, { recursive: true, force: true })
     }
   }))
+
+  // ===== 5.4.16-F5416-11/12：内容资产增量同步（L2 MVP）=====
+  const CONTENT_DIRS = ['template']
+  function resolveContentDir(): string {
+    // dev：仓库根目录下的内容目录；prod：resourcesPath 下的 extraResources
+    const base = process.env.NODE_ENV === 'development' ? process.cwd() : process.resourcesPath
+    return path.join(base, CONTENT_DIRS[0])
+  }
+  const contentStateFile = (): string => path.join(app.getPath('userData'), 'content-state.json')
+
+  ipcMain.handle(
+    'content:sync',
+    wrapHandler(async (_event, opts: { baseUrl: string }) => {
+      const baseUrl = opts?.baseUrl?.replace(/\/$/, '')
+      if (!baseUrl) throw new Error('缺少平台地址 baseUrl')
+      return await syncContent({
+        manifestUrl: `${baseUrl}/content/manifest`,
+        baseUrl,
+        contentDir: resolveContentDir(),
+        stateFile: contentStateFile(),
+      })
+    }),
+  )
+  ipcMain.handle(
+    'content:status',
+    wrapHandler(async () => {
+      const state = loadLocalState(contentStateFile())
+      const contentDir = resolveContentDir()
+      let fileCount = 0
+      try {
+        const walk = (d: string): void => {
+          for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+            const p = path.join(d, f.name)
+            if (f.isDirectory()) walk(p)
+            else fileCount += 1
+          }
+        }
+        walk(contentDir)
+      } catch {
+        /* 目录不存在 */
+      }
+      return { state, contentDir, fileCount }
+    }),
+  )
+  ipcMain.handle(
+    'content:rollback',
+    wrapHandler(async () => rollbackContent({ stateFile: contentStateFile() })),
+  )
 }

@@ -56,5 +56,11 @@
   "storageNetwork": "Storage",
   "bizNetwork": "Business",
   "noTopology": "No topology generated yet",
-  "noTopologyHint": "Generate topology data in the Design panel to view"
+  "noTopologyHint": "Generate topology data in the Design panel to view",
+  "filter": {
+    "all": "All",
+    "param": "Parameter Network",
+    "storage": "Storage Network",
+    "biz": "Business Network"
+  }
 }

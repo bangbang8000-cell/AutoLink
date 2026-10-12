@@ -1101,6 +1101,12 @@
     "catThermal": "Thermal"
   },
   "selectPlaceholder": "Please select",
+  "deviceType": {
+    "gpuServer": "GPU Server",
+    "storageServer": "Storage Server",
+    "computeServer": "Compute Server",
+    "switch": "Switch"
+  },
   "commandPalette": {
     "placeholder": "Type a command or search…",
     "noResults": "No matching commands",

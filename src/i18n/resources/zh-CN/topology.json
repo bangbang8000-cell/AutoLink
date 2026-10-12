@@ -56,5 +56,11 @@
   "storageNetwork": "存储网",
   "bizNetwork": "业务网",
   "noTopology": "尚未生成拓扑",
-  "noTopologyHint": "在「设计」面板中生成拓扑数据后查看"
+  "noTopologyHint": "在「设计」面板中生成拓扑数据后查看",
+  "filter": {
+    "all": "全部",
+    "param": "参数网络",
+    "storage": "存储网络",
+    "biz": "业务网络"
+  }
 }

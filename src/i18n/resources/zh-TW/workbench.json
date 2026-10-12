@@ -299,5 +299,15 @@
   "result.topology": "拓撲圖",
   "result.deviceList": "設備清單",
   "openFile": "開啟檔案",
-  "openFolder": "開啟資料夾"
+  "openFolder": "開啟資料夾",
+  "progress": {
+    "renderStart": "開始算繪...",
+    "renderComplete": "算繪完成",
+    "renderFailed": "算繪失敗",
+    "genBase": "[{{project}}] 生成基礎表項與報告...",
+    "genMount": "[{{project}}] 生成上機表...",
+    "genTopology": "[{{project}}] 生成拓撲圖...",
+    "genRoom": "[{{project}}] 生成機房佈局圖...",
+    "genRack": "[{{project}}] 生成櫃上架圖..."
+  }
 }

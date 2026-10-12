@@ -1101,6 +1101,12 @@
     "catThermal": "방열"
   },
   "selectPlaceholder": "선택하세요",
+  "deviceType": {
+    "gpuServer": "GPU 서버",
+    "storageServer": "스토리지 서버",
+    "computeServer": "범용 서버",
+    "switch": "스위치"
+  },
   "commandPalette": {
     "placeholder": "명령을 입력하거나 검색…",
     "noResults": "일치하는 명령이 없습니다",

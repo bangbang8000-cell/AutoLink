@@ -87,6 +87,9 @@ function buildCabinetFrame(totalU: number, rotationDeg: number) {
   return { front, top, right, p: { b0, b1, t0, t1 }, height: h }
 }
 
+// i18n 说明：这里匹配的是设备 RackDevice.type —— 拓扑节点 group 的原始数据（未翻译），
+// 可为中文分组名（如 '存储服务器组'）或 'GPU Server'/'Switch'，并非已翻译界面标签，
+// 故保持字符串匹配（不按翻译后的标签判断）。
 const getTypeColor = (type: string): { fill: string; stroke: string } => {
   const t = type.toLowerCase()
   if (t.includes('gpu')) return { fill: '#3b82f6', stroke: '#1e40af' }

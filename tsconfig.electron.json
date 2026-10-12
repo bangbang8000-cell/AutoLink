@@ -20,6 +20,7 @@
     "electron"
   ],
   "exclude": [
-    "electron/splash-preload.ts"
+    "electron/splash-preload.ts",
+    "**/*.test.ts"
   ]
 }

@@ -32,7 +32,11 @@ i18n.use(initReactI18next).init({
     'zh-TW': zhTW,
   },
   lng: getPersistedLanguage(),
-  fallbackLng: 'zh-CN',
+  // 5.4.16-F5416-1：回落策略 —— 繁体中文优先回落简体；其他语言（en/ja/ko）回落英文
+  fallbackLng: {
+    'zh-TW': ['zh-CN'],
+    default: ['en'],
+  },
   // 显式声明命名空间,并将默认命名空间设为 'common'
   // 这样 useTranslation() 不带参数时,t('about.title') 会正确解析到 common.about.title
   ns: ['common', 'design', 'project', 'rack', 'topology', 'workbench', 'device', 'chat', 'cloud', 'nav', 'aidc'],
