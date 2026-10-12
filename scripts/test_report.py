@@ -376,12 +376,71 @@ th{{color:var(--muted);font-weight:500}}td.ok{{color:var(--ok)}}td.bad{{color:va
 </div></body></html>'''
 
 
-def write_report(report):
+def write_report(report, record_history=True):
     os.makedirs(REPORTS, exist_ok=True)
     _save_json(REPORT_JSON, report)
     with open(REPORT_HTML, 'w', encoding='utf-8') as f:
         f.write(render_html(report))
+    if record_history:
+        append_history(report)
     return REPORT_JSON, REPORT_HTML
+
+
+# ============================================================
+# 5.4.13-F54-13-4：质量趋势/历史（仪表盘增强 —— 可看趋势）
+# ============================================================
+
+HISTORY_FILE = os.path.join(REPORTS, 'quality_history.json')
+MAX_HISTORY = 30
+
+
+def summarize_for_history(report):
+    """把一次报告压成趋势条目（纯函数）：
+    保留 summary + 覆盖率通过与否 + 后端/前端行覆盖率 pct。"""
+    s = report.get('summary') or {}
+    cov = report.get('coverage') or {}
+    back = (cov.get('backend') or {}).get('lines') or {}
+    front = (cov.get('frontend') or {}).get('lines') or {}
+    return {
+        'generatedAt': report.get('generatedAt', time.strftime('%Y-%m-%dT%H:%M:%S%z')),
+        'mode': report.get('mode', ''),
+        'totalTests': s.get('totalTests', 0),
+        'passed': s.get('passed', 0),
+        'failed': s.get('failed', 0),
+        'passRate': s.get('passRate', 0),
+        'coverageGatePassed': bool((report.get('coverageGate') or {}).get('passed')),
+        'coverageBackendLines': back.get('pct'),
+        'coverageFrontendLines': front.get('pct'),
+        'durationMs': report.get('durationMs', 0),
+    }
+
+
+def load_history(path=None):
+    """读取历史（不存在 → []）。纯函数可注入 path（测试用）。"""
+    return _load_json(path or HISTORY_FILE, [])
+
+
+def append_history(report, path=None):
+    """追加本次摘要并裁剪到最近 MAX_HISTORY 条；返回裁剪后的历史。"""
+    hist = load_history(path)
+    hist.append(summarize_for_history(report))
+    hist = hist[-MAX_HISTORY:]
+    _save_json(path or HISTORY_FILE, hist)
+    return hist
+
+
+def format_trend(history):
+    """把历史渲染为文本趋势表（纯函数，供 --trend 输出）。"""
+    lines = []
+    lines.append(f"{'运行时间':<22} {'通过/总数':<12} {'通过率':>7} {'覆盖率门禁':>10}")
+    for h in history:
+        ts = h.get('generatedAt', '')
+        total = h.get('totalTests', 0)
+        passed = h.get('passed', 0)
+        rate = h.get('passRate', 0)
+        gate = 'PASS' if h.get('coverageGatePassed') else 'FAIL'
+        lines.append(f"{ts:<22} {passed}/{total:<9} {rate:>6.1f}% {gate:>10}")
+    return '\n'.join(lines)
 
 
 def mirror_report():
@@ -437,12 +496,22 @@ def main():
                         help='仅聚合已有产物（reports/*.xml|*.json）+ 跑快门禁（CI 用）')
     parser.add_argument('--smoke', action='store_true', help='内置样例数据生成冒烟报告（Q-3 测试）')
     parser.add_argument('--update-baseline', action='store_true', help='门禁通过后把当前覆盖率写回基线（只升）')
+    parser.add_argument('--trend', type=int, nargs='?', const=10, metavar='N',
+                        help='打印最近 N 次质量趋势（默认 10，纯聚合不触发门禁）')
     args = parser.parse_args()
     t_start = time.monotonic()
 
+    if args.trend:
+        hist = load_history()[-args.trend:]
+        if not hist:
+            print('暂无质量历史（reports/quality_history.json 不存在）')
+            return 0
+        print(format_trend(hist))
+        return 0
+
     if args.smoke:
         report = _sample_report()
-        js, html = write_report(report)
+        js, html = write_report(report, record_history=False)
         print(f'smoke 报告已生成: {js}\n  {html}')
         return 0
 

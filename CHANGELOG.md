@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## [5.4.13] - 2026-10-12
+
+> **测试体系与质量门禁版（与 MC 5.4.13 同号同步）：本地全量重跑硬前置 + 质量趋势。**
+
+### 新增
+
+- **本地全量检查脚本（F54-13-2）**：`scripts/run_full_checks_local.py` —— CI 硬前置门禁一键本地化（15 步：typecheck/lint/前端单测+覆盖率/build/模板/设备库/文档数字/CLI 契约/skills 引用/golden/后端 pytest/示例资产 pytest/性能/版本一致性）。CI 中受 GitHub 环境限制而 `continue-on-error` 的步骤（模板/golden/性能）在本地为**硬门禁**——发布前必须全绿。
+  - `--dry-run` 打印执行计划；`--step <子串>` 只跑单步；任一失败退出码 1。
+- **质量趋势/历史（F54-13-4）**：`test_report.py` 新增 `quality_history.json` 历史（保留最近 30 次运行摘要：通过/总数/通过率/覆盖率门禁/前后端行覆盖率）+ `--trend N` 趋势表输出；每次 `write_report` 自动记录（smoke 不污染历史）。
+
+### 测试
+
+- `tests/backend/test_run_full_checks_local_5413.py`（4 用例）：核心门禁齐全、env-limited 步骤本地硬门禁、计划名唯一、命令为字符串列表。
+- `tests/backend/test_quality_history_5413.py`（6 用例）：摘要字段、追加/裁剪到 30、缺失文件容错、趋势表渲染（PASS/FAIL 可见）、时长/模式保留。
+
+### 文档
+
+- 双端 5.4.13 版本说明详见系列 PRD（docs/MC-AL_5.4.X系列版本PRD_v1.0_2026-10-12.md）。
+
+
 ## [5.4.12] - 2026-10-12
 
 > **内容与互操作版（与 MC 5.4.12 同号同步）——P3.5 设备配置自检引擎启动。**
