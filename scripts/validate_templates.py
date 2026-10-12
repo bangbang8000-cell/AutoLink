@@ -23,6 +23,18 @@ from template_gate import check_template_config
 # 模板门禁也测不出（同一拓扑「design 判通过 / validate run 判 ERROR」结论相反）。
 from engine import _run_validation
 
+# V5.4.6（调研 R3 深化）：结构性 ERROR 规则白名单——模板门禁消费 V 规则集时，
+# 显式维护「拓扑结构类」规则（单源常量，替代 5.4.3 硬编码 ('V021','V023')）。
+# 口径：这些规则直接决定拓扑是否成立（容量/守恒/结构），任一 ERROR 即模板门禁变红。
+# 暂不纳入的规则及理由：
+#   - V016（服务器网卡 vs Leaf 下行容量）：与设计器三层 X400 分光容量口径存在既有
+#     分歧（万卡-H200-QM9700/X400-三层 实测 V016 误报，网卡总数 > 物理口总容量），
+#     登记 5.4.7（F547-2）核查解决后再决定是否纳入——纳入会使三层模板门禁翻红；
+#   - V002/V019 等功率/散热商务口径类：存在大量基线既有告警，纳入会大面积翻红，
+#     且属商务口径非结构错误，仍由 `validate run` 完整透出；
+#   - V013 信创比例等 info/warning 级：非结构性，不阻断。
+STRUCTURAL_ERROR_RULES = ('V020', 'V021', 'V022', 'V023')
+
 base = os.path.join(os.path.dirname(__file__), '..', 'template')
 
 # 自动发现模板目录（含 network_config.ini），排除 device_library/.gitkeep 等
@@ -137,18 +149,18 @@ for t in templates:
         vj = d_json.validate_topology()
         if not vj['valid']:
             problems.append(f'JSON 拓扑错误: {vj["errors"]}')
-        # V5.4.3-W1.3（修复单 R3）：消费 V 规则集，**V021/V023** 结构性 ERROR 使模板
-        # 门禁变红。范围收敛说明：
-        #   - V021（逐层端口守恒）/ V023（Leaf↔Spine 容量）是 R1~R3 对应的结构性规则；
-        #   - V016 与设计器三层 X400 分光容量口径存在既有分歧（万卡-H200-X400-三层
-        #     在 5.4.2 即 V016 误报，登记遗留），本版不纳入；
+        # V5.4.3-W1.3 / V5.4.6（调研 R3 深化）：消费 V 规则集，结构性 ERROR
+        # （STRUCTURAL_ERROR_RULES 白名单）使模板门禁变红。范围收敛说明：
+        #   - 结构类规则（容量/守恒/结构）：V020/V021/V022/V023，任一 ERROR 即红；
+        #   - V016 与设计器三层分光容量口径分歧登记 5.4.7（F547-2），暂不纳入；
         #   - 功率/散热等商务口径类规则（V002 按散热阈值 15000W 等）存在大量基线
-        #     既有告警，纳入会大面积翻红且超出 R3 范围，仍由 validate run 完整透出。
+        #     既有告警，纳入会大面积翻红且属商务口径非结构错误，仍由 validate run
+        #     完整透出，模板门禁不纳入。
         try:
             rv = _run_validation(d_json)
             struct_errors = [i for i in rv.get('validationIssues', [])
                              if i.get('severity') == 'error'
-                             and i.get('rule_id') in ('V021', 'V023')]
+                             and i.get('rule_id') in STRUCTURAL_ERROR_RULES]
             for i in struct_errors[:10]:
                 problems.append(f'结构规则 {i.get("rule_id")}: {i.get("message")}')
             if len(struct_errors) > 10:
