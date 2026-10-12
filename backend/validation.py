@@ -380,6 +380,16 @@ def _rule_server_nic_capacity(ctx: ValidationContext) -> List[ValidationIssue]:
         leaf_count = int(ctx.config.get('param_leaf_count', 0) or 0)
         dl = int(ctx.config.get('param_dl', 0) or 0)
         required = num_servers * ports_per_server
+        # V5.4.7-547-b（F547-2）：三层场景 Leaf 下行口与设计器同源。
+        # 根因核查：FatTreeTopology 创建 Leaf 时不消费 param_downlink_limit，
+        # 三层 Leaf 下行口缺省 = switch_ports//2（topology.py:124-141 + models.py:171），
+        # V016 若仍用模板 param_dl（如三层模板配 25）会低估 2~2.5 倍而误报
+        # （万卡-H200-X400/QM9700-三层、H100-512 实测）。取 max(param_dl, switch_ports//2)
+        # 与设计器实际口径一致；二层（core_count=0）行为不变（零回归）。
+        core_count = int(ctx.config.get('param_core_count') or 0)
+        switch_ports = int(ctx.config.get('param_switch_ports') or 0)
+        if core_count != 0 and switch_ports > 0:
+            dl = max(dl, switch_ports // 2)
         # V3.0.2-T2-11: 1 分 2 扇出时按逻辑口计算容量（物理口 × 扇出数）
         capacity = leaf_count * dl * int(ctx.config.get('param_breakout_count', 1) or 1)
         if capacity > 0 and required > capacity:

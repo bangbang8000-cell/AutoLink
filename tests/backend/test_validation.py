@@ -531,6 +531,51 @@ class TestV016ServerNicCapacity:
         assert len(v016) == 1
         assert "存储网" in v016[0].message
 
+    # ---- V5.4.7（F547-2）：三层场景 Leaf 下行口径与设计器同源 ----
+    def test_three_tier_uses_switch_ports_half_not_param_dl(self, engine):
+        """三层场景：Leaf 下行口取 switch_ports//2（与设计器 FatTree 同源），
+        低 param_dl（如模板配 25）不再误报（万卡-H200-X400-三层 实测复现）。
+        本用例镜像 X400 模板口径：1250 台 × 8 = 10000 网卡、256 Leaf、
+        switch_ports=128 → 下行 64 → 容量 16384 ≥ 10000 通过。
+        """
+        ctx = ValidationContext(config={
+            "num_servers": 1250, "param_ports_per_server": 8,
+            "param_leaf_count": 256, "param_dl": 25,      # 模板配置（三层下被修正）
+            "param_core_count": 8, "param_switch_ports": 128,
+            "total_servers": 1250, "storage_ports_per_server": 1,
+            "storage_leaf_count": 73, "storage_dl": 32,
+        })
+        issues = engine.validate(ctx)
+        assert len([i for i in issues if i.rule_id == "V016"]) == 0
+
+    def test_two_tier_uses_param_dl_unchanged(self, engine):
+        """二层场景（core_count=0）：行为不变（零回归），仍用 param_dl。"""
+        ctx = ValidationContext(config={
+            "num_servers": 100, "param_ports_per_server": 8,
+            "param_leaf_count": 8, "param_dl": 32,  # 容量 256 < 需求 800 → 仍报错
+            "param_core_count": 0, "param_switch_ports": 64,
+            "total_servers": 100, "storage_ports_per_server": 1,
+            "storage_leaf_count": 4, "storage_dl": 40,
+        })
+        issues = engine.validate(ctx)
+        v016 = [i for i in issues if i.rule_id == "V016"]
+        assert len(v016) == 1
+        assert "参数网" in v016[0].message
+
+    def test_three_tier_still_errors_when_truly_over_capacity(self, engine):
+        """三层场景即便用 switch_ports//2 口径仍超容量 → 必须报错（不掩盖真不守恒）。"""
+        ctx = ValidationContext(config={
+            "num_servers": 500, "param_ports_per_server": 8,  # 需求 4000
+            "param_leaf_count": 8, "param_dl": 25,             # 下行 64 → 容量 512 < 4000
+            "param_core_count": 4, "param_switch_ports": 128,
+            "total_servers": 500, "storage_ports_per_server": 1,
+            "storage_leaf_count": 20, "storage_dl": 40,        # 存储容量充足（800 ≥ 500）
+        })
+        issues = engine.validate(ctx)
+        v016 = [i for i in issues if i.rule_id == "V016"]
+        assert len(v016) == 1
+        assert "参数网" in v016[0].message
+
 
 class TestV017OpticalModuleMatch:
     """V017: 光模块封装/距离匹配 (V2.9.3-T5)"""

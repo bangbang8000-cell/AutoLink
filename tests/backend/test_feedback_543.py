@@ -309,9 +309,10 @@ class TestR3StructuralRulesWhitelist546:
     """模板门禁消费 V 规则集的白名单（validate_templates.py STRUCTURAL_ERROR_RULES）。
 
     守卫内容：
-      - 白名单为单源常量，含结构类规则 V020/V021/V022/V023（任一 ERROR 即门禁红）；
-      - V016 因与设计器三层分光容量口径存在既有分歧（万卡-H200-QM9700/X400-三层
-        实测误报），登记 5.4.7（F547-2）核查，**当前不得纳入**（否则三层模板门禁翻红）。
+      - 白名单为单源常量，含结构类规则 V016/V020/V021/V022/V023（任一 ERROR 即门禁红）；
+      - V016 曾因「与设计器三层分光容量口径分歧」暂不纳入（5.4.6 登记），
+        5.4.7（F547-2）已修复三层 Leaf 下行口径（max(param_dl, switch_ports//2)），
+        三层模板误报消除，故纳入白名单。
     """
 
     def _load_script(self):
@@ -330,16 +331,8 @@ class TestR3StructuralRulesWhitelist546:
 
     def test_whitelist_contains_structural_rules(self):
         rules = self._load_script()
-        for rule in ('V020', 'V021', 'V022', 'V023'):
+        for rule in ('V016', 'V020', 'V021', 'V022', 'V023'):
             assert rule in rules, f'白名单缺少结构规则 {rule}'
-
-    def test_whitelist_excludes_v016_pending_547(self):
-        """V016 与三层分光口径分歧未解，纳入会使模板门禁误红——必须排除。"""
-        rules = self._load_script()
-        assert 'V016' not in rules, (
-            'V016 不得纳入模板门禁白名单：与设计器三层 X400 分光容量口径存在分歧'
-            '（万卡-H200-QM9700/X400-三层误报），登记 5.4.7 F547-2 核查'
-        )
 
     def test_whitelist_no_business_rules(self):
         """功率/散热商务口径类（V002/V019）不得纳入模板门禁（会大面积翻红）。"""
