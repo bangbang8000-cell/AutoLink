@@ -36,7 +36,7 @@ def scan_files(repo: str) -> dict[str, int]:
             if not fn.endswith((".tsx", ".ts")) or fn.endswith(EXCLUDE_EXT):
                 continue
             p = os.path.join(root, fn)
-            rel = os.path.relpath(p, repo)
+            rel = os.path.relpath(p, repo).replace(os.sep, "/")
             try:
                 text = open(p, encoding="utf-8").read()
             except Exception:

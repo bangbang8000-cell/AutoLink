@@ -21,7 +21,7 @@ class TestScanHardcodedCn:
         _mk(str(tmp_path), "src/components/Foo.tsx",
             "export function Foo() {\n  return <span>开始渲染</span>\n}\n")
         hits = sc.scan_files(str(tmp_path))
-        assert os.path.join("src", "components", "Foo.tsx") in hits
+        assert "src/components/Foo.tsx" in hits
 
     def test_ignores_t_calls_and_comments(self, tmp_path):
         _mk(str(tmp_path), "src/components/Bar.tsx",
@@ -55,4 +55,4 @@ class TestScanHardcodedCn:
         monkeypatch.setattr(sc, "BASELINE", os.path.join(str(tmp_path), "tests", "hardcoded_cn_baseline.json"))
         assert sc.main(["--update-baseline"]) == 0
         data = json.load(open(sc.BASELINE, encoding="utf-8"))
-        assert os.path.join("src", "components", "Cn.tsx") in data["files"]
+        assert "src/components/Cn.tsx" in data["files"]
