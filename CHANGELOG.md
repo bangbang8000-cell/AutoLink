@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## [5.4.12] - 2026-10-12
+
+> **内容与互操作版（与 MC 5.4.12 同号同步）——P3.5 设备配置自检引擎启动。**
+
+### 新增：P3.5 自检引擎（F54-12-4）
+
+- **检查项模型（`backend/selfcheck/core.py`）**：`CheckItem` / `CheckResult` / `CheckRegistry` —— 检查项含 id/名称/类别/严重级/执行函数；注册表幂等注册、按类别过滤、异常隔离（单检查项崩溃不拖垮整批）。
+- **TextFSM 最小可用（`backend/selfcheck/textfsm_mini.py`）**：官方 TextFSM 的务实子集（`Value` / `Start` / `^ 正则（含 ${VAR} 引用）-> Record`），把设备运行配置解析为结构化记录；模板语法向后兼容官方 textfsm 包。
+- **内置检查项（`backend/selfcheck/checks.py`）**：主机名存在性（error）、接口 MTU 一致性（warn）、双工模式最佳实践（warn）、ACL permit-any 未记日志（error）。
+- **执行器（`backend/selfcheck/runner.py`）**：`run_self_checks(config_text, categories=)` 一键运行全部或指定类别检查。
+- **契约测试（`tests/backend/test_selfcheck_p35.py`，15 用例）**：MiniTextFSM 解析/异常、检查项模型、内置检查端到端（好配置全过 / 坏配置全flag）。
+
+### 说明
+
+- 与 validation_engine（拓扑校验事实源）的合并设计按 PRD 推进；本版先落地最小可用，供后续 CLI / 工作台校验视图消费。
+- 锐捷 RoCE 内容铺开（F54-12-1）依赖命令核对基准资料，资料到位后跟进。
+
+### 文档
+
+- 双端 5.4.12 版本说明详见系列 PRD（docs/MC-AL_5.4.X系列版本PRD_v1.0_2026-10-12.md）。
+
+
 ## [5.4.11] - 2026-10-12
 
 > **体验深化版（UI 阶段 C，与 MC 5.4.11 同号同步）**——工作台主线收尾（B-3 三态 / B-4 3D token）+ a11y + 反馈统一。
