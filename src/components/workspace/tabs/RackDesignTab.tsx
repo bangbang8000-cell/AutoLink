@@ -219,7 +219,7 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
           <ArrowLeft size={11} /> {t('rack:backToRoomDesign', '返回机房设计')}
         </button>
         <button type="button" onClick={() => {
-          setFinalized(false)
+          setFinalized(false, projectName)
           setWorkbenchSubview('roomdesign' as WorkbenchSubview)
         }}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">

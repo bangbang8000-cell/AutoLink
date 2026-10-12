@@ -198,7 +198,7 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
         )}
         {/* 定稿 / 撤销定稿 */}
         {matrix && !matrix.finalized && (
-          <button type="button" onClick={() => setFinalized(true)}
+          <button type="button" onClick={() => setFinalized(true, projectName)}
             className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
             <Lock size={11} /> {t('rack:finalizeLayout', '定稿布局')}
           </button>
@@ -209,7 +209,7 @@ export function RoomDesignTab({ projectName }: { projectName: string }) {
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-primary-300 dark:border-primary-600 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
               <ArrowRight size={11} /> {t('rack:gotoRackDesign', '前往机柜设计')}
             </button>
-            <button type="button" onClick={() => setFinalized(false)}
+            <button type="button" onClick={() => setFinalized(false, projectName)}
               className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
               <Unlock size={11} /> {t('rack:undoFinalize', '撤销定稿')}
             </button>

@@ -29,6 +29,8 @@ export function WorkbenchReadinessCard() {
   const workbenchStale = useWorkbenchStore((s) => (selectedProjectName ? s.stale[selectedProjectName] : undefined))
   const renderReady = renderGateReady({ designValid: valid, hasTopology: (summary?.totalServers ?? 0) > 0, stale: workbenchStale })
   const renderBlocked = (workbenchStale?.includes('design') || workbenchStale?.includes('main')) === true && (valid === true || (summary?.totalServers ?? 0) > 0)
+  // 5.4.6（调研 P0-3）：AIDC 规划定稿状态首页可见，统一与 StepBar 的三步口径
+  const aidcDone = useWorkbenchStore((s) => (selectedProjectName ? s.aidcDone[selectedProjectName] === true : false))
 
   const handleValidate = useCallback(async () => {
     if (!selectedProjectName) return
@@ -64,6 +66,21 @@ export function WorkbenchReadinessCard() {
         </button>
       </div>
       <div className="p-3 space-y-2">
+        {/* 5.4.6（调研 P0-3）：AIDC 规划定稿状态（首页可见，对齐 StepBar 三步口径） */}
+        <div className="flex items-center gap-2 text-xs">
+          {aidcDone ? (
+            <CheckCircle size={12} className="text-success-500 shrink-0" />
+          ) : (
+            <AlertTriangle size={12} className="text-gray-400 shrink-0" />
+          )}
+          <span className="text-gray-500 dark:text-gray-400">
+            {t('workbench:aidcPlan', 'AIDC 规划')}:
+          </span>
+          <span className={aidcDone ? 'text-success-600 dark:text-success-400 font-medium' : 'text-gray-400'}>
+            {aidcDone ? t('workbench:aidcDone', '已标记完成') : t('workbench:aidcPending', '未完成')}
+          </span>
+        </div>
+
         {/* Topology design status */}
         <div className="flex items-center gap-2 text-xs">
           {valid === true ? (

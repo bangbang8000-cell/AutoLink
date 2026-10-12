@@ -8,9 +8,11 @@
  *
  * F2（5.4.4 可用性修复）：落位参数优先读项目 rack_config（project_config.json）——
  * 旧实现不传 opts ⇒ powerLimit 硬编码 12000，与后端 rack_allocation（按
- * power_limit_per_rack，如 8192 模板=30000）前后端不一致；现按
+ * power_limit_per_rack，如 DP3Tier-1024 模板=30000）前后端不一致；现按
  * rack_config.power_limit_per_rack / rack_type / gpu_per_cabinet / top_reserved_u
  * 接线，缺省仍为 12000/42/1/2（向后兼容）。
+ * 5.4.6（调研 P0-4）：实测 8192 卡-X400-RoCE 模板 power_limit_per_rack=12000
+ *（30000 属 DP3Tier-1024），注释与模板一致化；落位统一读 rack_config。
  */
 import { useRackStore } from '@/stores/rack.store'
 import { useRoomStore } from '@/stores/room.store'

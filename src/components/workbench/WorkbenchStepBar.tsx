@@ -103,7 +103,7 @@ export function WorkbenchStepBar({ projectName }: { projectName?: string }) {
         {activeSubview === 'roomdesign' && matrix && !matrix.finalized && (
           <button
             type="button"
-            onClick={() => setFinalized(true)}
+            onClick={() => setFinalized(true, projectName)}
             className="flex items-center gap-1 px-2 py-0.5 rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20"
           >
             <Lock size={10} /> {t('rack:finalizeLayout', '定稿布局')}

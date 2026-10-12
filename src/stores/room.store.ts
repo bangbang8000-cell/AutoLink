@@ -135,7 +135,7 @@ interface RoomState {
   createMatrix: (projectName: string, rows: string[], cols: number[], name?: string) => Promise<boolean>
   saveMatrix: (projectName: string) => Promise<boolean>
   /** M4: 机房布局定稿/撤销定稿（定稿后才进入柜内规划） */
-  setFinalized: (finalized: boolean) => void
+  setFinalized: (finalized: boolean, projectName?: string) => void
   setMarkTool: (tool: RoomMarkTool) => void
   markCell: (position: string) => void
   selectPosition: (position: string | null) => void
@@ -345,11 +345,16 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     }
   },
 
-  setFinalized: (finalized) => {
+  setFinalized: (finalized, projectName?) => {
     const { matrix } = get()
     if (!matrix) return
     // M2（AL-UR1）：定稿/撤销定稿为流程状态，不压撤销栈
     set({ matrix: { ...matrix, finalized } })
+    // 5.4.6（调研 P0-1）：定稿/撤销定稿自动持久化（调用方传项目名），
+    // 避免切换项目/重启后 finalized 丢失；无项目名时不落盘（保持向后兼容）
+    if (projectName) {
+      void get().saveMatrix(projectName)
+    }
   },
 
   // ===== M2（AL-UR1/UR2）：矩阵编辑撤销/重做命令栈 =====
