@@ -7,13 +7,13 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import * as fs from 'fs'
+import * as os from 'os'
 import * as path from 'path'
 import {
   syncContent,
   rollbackContent,
   loadLocalState,
   sha512Of,
-  sha512OfFile,
   type ContentManifest,
   type HttpGet,
 } from './content-sync.service'
@@ -52,7 +52,7 @@ describe('content-sync', () => {
   let tmp: string
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'mc-csync-'))
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-csync-'))
   })
 
   it('首次同步拉取全部文件并落状态', async () => {
