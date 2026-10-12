@@ -5,8 +5,9 @@
  * 替代后端"每设备一柜"。ac/pillar/power/empty/combined 格不建柜；
  * scaleup/security/custom 等不可标记柜类型的设备直接进待上架池。
  */
-import { toCabinetType } from '@/stores/rack.store'
-import type { CabinetType, RackCabinet, RackDevice, RackTopologyNode, UnplacedDevice } from '@/stores/rack.store'
+// 5.4.9-F549-4：toCabinetType 改从叶子模块引用（worker 复用，避免 xlsx/zustand 进 worker）
+import { toCabinetType, type CabinetType } from '@/utils/rackCabinetTypes'
+import type { RackCabinet, RackDevice, RackTopologyNode, UnplacedDevice } from '@/stores/rack.store'
 import type { RoomCellData, RoomMatrixData } from '@/stores/room.store'
 
 export interface RackMatrixLayoutOptions {

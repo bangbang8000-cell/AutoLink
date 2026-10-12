@@ -200,17 +200,30 @@ export function WorkbenchActionCard() {
         }
 
         // 5. 每柜上架图（rackElevationSvg → PNG → racks/ 子目录）
+        // 5.4.9-F549-1（性能优化）：串行逐柜导出 → 分块并发（每批 4 柜）+ 每柜进度。
+        // 每柜独立（SVG/尺寸/文件名均取决于 cab），PNG 光栅化是耗时主体，并行显著加速；
+        // 主进程 saveOutputFile 的 writeFileSync 仍串行，但光栅化（更重）已并行。
         if (frontendTypes.includes('rackImages') && cabinets.length > 0) {
           setProgress({ message: `[${projectName}] 生成柜上架图...` })
           try {
             let saved = 0
-            for (const cab of cabinets) {
-              const svg = rackElevationSvg(cab)
-              const size = rackElevationSize(cab)
-              const base64 = await svgToPngBase64(svg, size.width, size.height)
-              const safeName = cab.name.replace(/[^\w一-龥-]/g, '_') || `R${cab.id}`
-              await window.electron.render.saveOutputFile(projectName, batchRel(batchName, `racks/${safeName}.png`), base64)
-              saved++
+            const CONCURRENCY = 4
+            for (let i = 0; i < cabinets.length; i += CONCURRENCY) {
+              const chunk = cabinets.slice(i, i + CONCURRENCY)
+              await Promise.all(chunk.map(async (cab, j) => {
+                const svg = rackElevationSvg(cab)
+                const size = rackElevationSize(cab)
+                const base64 = await svgToPngBase64(svg, size.width, size.height)
+                // safeName 兜底唯一：优先名称消毒，空则 R{id}；并发写同路径竞态由唯一名规避
+                const safeName = cab.name.replace(/[^\w一-龥-]/g, '_') || `R${cab.id}`
+                await window.electron.render.saveOutputFile(projectName, batchRel(batchName, `racks/${safeName}.png`), base64)
+                saved++
+                // 每柜进度：细化到柜粒度（5.4.9-F549-1）
+                setProgress({
+                  progress: Math.round(((completedSteps + (i + j + 1) / Math.max(cabinets.length, 1)) / Math.max(totalSteps, 1)) * 100),
+                  message: `[${projectName}] 生成柜上架图 (${Math.min(i + j + 1, cabinets.length)}/${cabinets.length})`,
+                })
+              }))
             }
             addResult({ type: 'rackImages', file: batchRel(batchName, 'racks/'), status: saved > 0 ? 'success' : 'error', error: saved > 0 ? undefined : '无柜可导出', timestamp: nowIso() })
           } catch (err) {

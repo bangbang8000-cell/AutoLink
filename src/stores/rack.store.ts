@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import * as XLSX from 'xlsx'
 import { useToastStore } from './toast.store'
+// 5.4.9-F549-4：机柜类型/推断抽到叶子模块（worker 复用，避免 xlsx/zustand 进 worker）。
+// 对外重导出保持既有 import 兼容；文件内引用走本地别名。
+import { toCabinetType as _toCabinetType, type CabinetType as _CabinetType } from '@/utils/rackCabinetTypes'
+export { toCabinetType, type CabinetType } from '@/utils/rackCabinetTypes'
+const toCabinetType = _toCabinetType
+type CabinetType = _CabinetType
 
 export interface RackDevice {
   id: string
@@ -12,8 +18,6 @@ export interface RackDevice {
   endU: number
   power_watts: number
 }
-
-export type CabinetType = 'gpu' | 'storage' | 'network' | 'compute' | 'security' | 'custom' | 'scaleup' | 'power'
 
 // V2.9.1-T4: 拓扑节点机柜字段（与后端 NetworkObject 分配结果对齐）
 export interface RackTopologyNode {
@@ -40,17 +44,6 @@ export const CABINET_TYPE_LABELS: Record<CabinetType, string> = {
   scaleup: 'Scale-Up柜',
   // v1.4: 电源柜
   power: '电源柜',
-}
-
-// V2.9.2: 从拓扑节点推断机柜类型（服务器按 group 分类，交换机归为网络柜）
-export function toCabinetType(node: { type?: string; group?: string }): CabinetType {
-  // V2.9.3-T4: Scale-Up GPU 节点 → Scale-Up 柜
-  if (node.type === 'scaleup_gpu') return 'scaleup'
-  if (node.type !== 'server') return 'network'
-  const g = node.group || ''
-  if (g.includes('存储')) return 'storage'
-  if (g.includes('通算')) return 'compute'
-  return 'gpu'
 }
 
 // M5: 机柜顶部预留 U 数（业界通用：顶部预留空间，网络设备从顶部向下、服务器从底部向上）

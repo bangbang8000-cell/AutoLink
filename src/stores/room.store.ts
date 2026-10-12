@@ -10,11 +10,9 @@
 import { create } from 'zustand'
 import { useToastStore } from './toast.store'
 import { useRackStore, type RackCabinet, type RackTopologyNode } from './rack.store'
-import {
-  layoutRacksFromMatrix,
-  type RackMatrixLayoutOptions,
-  type RackMatrixLayoutStats,
-} from '@/utils/rackMatrixLayout'
+import type { RackMatrixLayoutOptions, RackMatrixLayoutStats } from '@/utils/rackMatrixLayout'
+// 5.4.9-F549-4：大规模矩阵落位走 Web Worker（避免同步阻塞主线程）
+import { runMatrixRackLayout } from '@/utils/matrixRackLayoutRunner'
 
 /** 落位校验结果：errors 阻塞落位；warnings 非阻塞提示（散热等） */
 export interface MountCheck {
@@ -626,15 +624,23 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       useToastStore.getState().addToast('warning', '拓扑为空，未生成机柜', 4000)
       return { ok: true, errors: [], stats: { gpu: 0, network: 0, storage: 0, compute: 0, mounted: 0, overflow: 0 } }
     }
-    // F4（5.4.4 可用性修复）：大规模落位进度提示——千柜级同步计算前给出可感知反馈
+    // F4（5.4.4 可用性修复）/ 5.4.9-F549-4：大规模落位进度提示。
+    // 小规模同步执行；大规模走 Worker（进度 toast 更新 + 不阻塞主线程）。
     if (nodes.length > 500) {
       useToastStore.getState().addToast(
         'info',
-        `正在按矩阵落位 ${nodes.length} 台设备（大规模约需数秒）…`,
+        `正在按矩阵落位 ${nodes.length} 台设备（大规模后台计算，UI 不卡顿）…`,
         6000,
       )
     }
-    const { cabinets, unplacedDevices, cells, stats } = layoutRacksFromMatrix(matrix, nodes, opts)
+    const { result, cancel } = await runMatrixRackLayout(matrix, nodes, opts, (percent) => {
+      // 节流：仅 25% 步进更新 toast（避免 60ms/次刷屏）
+      if (percent % 25 === 0 || percent === 100) {
+        useToastStore.getState().addToast('info', `矩阵落位中… ${percent}%`, 3000)
+      }
+    })
+    void cancel
+    const { cabinets, unplacedDevices, cells, stats } = result
     useRackStore.getState().setRacks(cabinets, unplacedDevices, cabinets.length ? cabinets[0].id : null)
     // M2（AL-UR1）：按矩阵落位为跨 store 批量操作——room/rack 各压一次快照（撤销后矩阵↔柜内一致）
     set((s) => ({ ...pushRoomHistory(s), matrix: { ...matrix, cells }, selectedPosition: null }))
