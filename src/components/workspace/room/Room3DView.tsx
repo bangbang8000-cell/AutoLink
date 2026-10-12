@@ -29,6 +29,7 @@ import {
   ROOM_CABINET_DEPTH,
   ROOM_U_HEIGHT,
 } from '@/utils/room3d'
+import { ROOM_3D_TOKENS } from '@/utils/room3dTokens'
 
 /** 机柜功率使用率（%），与 datacenter.computeLayout 口径一致 */
 function cabinetUsagePercent(cabinet: RackCabinet): number {
@@ -71,7 +72,7 @@ const DEVICE_TYPE_LABEL: Record<string, string> = {
 
 /** 机柜类型 → 3D 柜身色（类型着色；保留功率热力条叠加） */
 function cabinetColor(cabinet: RackCabinet): string {
-  return RACK_TYPE_COLORS[cabinet.type]?.bg ?? '#f1f5f9'
+  return RACK_TYPE_COLORS[cabinet.type]?.bg ?? ROOM_3D_TOKENS.cabinetFallback
 }
 
 /** 5.2.4-524-c：柜身 InstancedMesh（全部机柜一次 draw call，大场景流畅） */
@@ -129,7 +130,7 @@ function DeviceBlocks({
           y,
           z,
           sy: hU * ROOM_U_HEIGHT,
-          color: dev.type === 'server' ? '#0ea5e9' : '#f59e0b',
+          color: dev.type === 'server' ? ROOM_3D_TOKENS.serverBlock : ROOM_3D_TOKENS.switchBlock,
         })
       }
     }
@@ -168,12 +169,12 @@ function PlaceholderMeshes({
             {isAc ? (
               <mesh castShadow>
                 <cylinderGeometry args={[ROOM_CABINET_WIDTH * 0.42, ROOM_CABINET_WIDTH * 0.42, h, 16]} />
-                <meshStandardMaterial color="#94a3b8" metalness={0.4} roughness={0.4} />
+                <meshStandardMaterial color={ROOM_3D_TOKENS.acBody} metalness={0.4} roughness={0.4} />
               </mesh>
             ) : (
               <mesh castShadow>
                 <boxGeometry args={[ROOM_CABINET_WIDTH * 0.3, h, ROOM_CABINET_DEPTH * 0.3]} />
-                <meshStandardMaterial color="#64748b" metalness={0.2} roughness={0.7} />
+                <meshStandardMaterial color={ROOM_3D_TOKENS.pillarBody} metalness={0.2} roughness={0.7} />
               </mesh>
             )}
             {/* 占位标签 */}
@@ -223,7 +224,7 @@ function CabinetOverlay({
       {/* 朝向板：正面中部竖向深色条，标识前面板方向 */}
       <mesh position={[0, 0, ROOM_CABINET_DEPTH / 2 + 0.02]}>
         <boxGeometry args={[ROOM_CABINET_WIDTH * 0.9, height * 0.92, 0.02]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.3} roughness={0.4} />
+        <meshStandardMaterial color={ROOM_3D_TOKENS.frontPanel} metalness={0.3} roughness={0.4} />
       </mesh>
       {/* 功率热力条：柜身顶部细条（绿→黄→红，复用 2D 口径） */}
       <mesh position={[0, height / 2 + 0.03, 0]}>
@@ -234,7 +235,7 @@ function CabinetOverlay({
       {selected && (
         <mesh scale={[1.06, 1.06, 1.06]}>
           <boxGeometry args={[ROOM_CABINET_WIDTH, height, ROOM_CABINET_DEPTH]} />
-          <meshBasicMaterial color="#ec4899" wireframe transparent opacity={0.9} />
+          <meshBasicMaterial color={ROOM_3D_TOKENS.selectionWireframe} wireframe transparent opacity={0.9} />
         </mesh>
       )}
       {/* 5.2.4-524-b：名称标签（Html overlay，始终朝向相机） */}
@@ -337,10 +338,10 @@ function RoomScene() {
         position={[0, -0.05, 0]}
         cellSize={ROOM_CABINET_WIDTH}
         cellThickness={0.5}
-        cellColor="#d1d5db"
+        cellColor={ROOM_3D_TOKENS.gridCell}
         sectionSize={ROOM_CABINET_WIDTH * 5}
         sectionThickness={1}
-        sectionColor="#9ca3af"
+        sectionColor={ROOM_3D_TOKENS.gridSection}
         fadeDistance={400}
         fadeStrength={1}
         infiniteGrid={false}

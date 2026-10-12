@@ -923,7 +923,8 @@
     "cannotPreview": "无法预览此文件",
     "copy": "复制",
     "copied": "已复制",
-    "loadFailed": "文件加载失败: {{error}}"
+    "loadFailed": "文件加载失败: {{error}}",
+    "retry": "重试"
   },
   "toast": {
     "projectCreated": "项目创建成功",

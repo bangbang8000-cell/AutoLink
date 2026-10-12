@@ -922,8 +922,9 @@
     "emptyTable": "空のテーブル",
     "cannotPreview": "このファイルはプレビューできません",
     "copy": "コピー",
-    "copied": "コピー済み",
-    "loadFailed": "ファイルの読み込みに失敗しました: {{error}}"
+    "copied": "コピーしました",
+    "loadFailed": "ファイルの読み込みに失敗しました: {{error}}",
+    "retry": "再試行"
   },
   "toast": {
     "projectCreated": "プロジェクトが正常に作成されました",

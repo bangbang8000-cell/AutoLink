@@ -226,9 +226,18 @@ export function FileViewerTab({ templateName, filePath, isTemplate }: Props) {
   }
 
   if (error) {
+    // 5.4.11 B-3（三态规范）：错误态统一 EmptyState variant="error" + 重试路径
     return (
-      <div className="h-full flex flex-col items-center justify-center p-4">
-        <p className="text-sm text-gray-500">{error}</p>
+      <div className="h-full">
+        <EmptyState
+          variant="error"
+          title={t('fileViewer.loadFailed', '文件加载失败')}
+          description={error}
+          action={{
+            label: t('fileViewer.retry', '重试'),
+            onClick: () => void loadFile(),
+          }}
+        />
       </div>
     )
   }

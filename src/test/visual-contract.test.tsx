@@ -176,4 +176,21 @@ describe('V-5 空/载/错态视觉基线 (F1-5)', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.getByText('重试')).toHaveClass('bg-primary')
   })
+
+  // 5.4.11-B-3（三态规范）：EmptyState 三态统一
+  it('EmptyState variant=loading：转圈 + aria-busy 声明', () => {
+    render(<EmptyState variant="loading" title="加载中" description="正在处理…" />)
+    expect(screen.getByText('加载中')).toBeInTheDocument()
+    const region = screen.getByRole('status')
+    expect(region).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('EmptyState variant=error：警示图标 + 重试路径可点击', () => {
+    const retry = vi.fn()
+    render(<EmptyState variant="error" title="加载失败" description="错误详情" action={{ label: '重试', onClick: retry }} />)
+    expect(screen.getByText('加载失败')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('重试'))
+    expect(retry).toHaveBeenCalledTimes(1)
+  })
 })

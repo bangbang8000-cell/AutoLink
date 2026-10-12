@@ -50,7 +50,12 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-1.5 pointer-events-none">
+    <div
+      // 5.4.11-F54-11-2：Toast 容器声明 live 区域，屏幕阅读器可感知非打断性提示
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-1.5 pointer-events-none"
+    >
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
           <ToastItem toast={t} />

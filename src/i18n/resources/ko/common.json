@@ -923,7 +923,8 @@
     "cannotPreview": "이 파일을 미리 볼 수 없습니다",
     "copy": "복사",
     "copied": "복사됨",
-    "loadFailed": "파일 로딩 실패: {{error}}"
+    "loadFailed": "파일 로딩 실패: {{error}}",
+    "retry": "다시 시도"
   },
   "toast": {
     "projectCreated": "프로젝트가 성공적으로 생성되었습니다",

@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## [5.4.11] - 2026-10-12
+
+> **体验深化版（UI 阶段 C，与 MC 5.4.11 同号同步）**——工作台主线收尾（B-3 三态 / B-4 3D token）+ a11y + 反馈统一。
+
+### 改进：三态规范接入（B-3，F54-11-2）
+
+- **`EmptyState` 三态统一**：新增 `variant`（`empty` / `loading` / `error`）——空态（图标+引导文案+操作）、加载态（转圈 + `role="status"` / `aria-busy`）、错误态（警示图标 + 重试路径，默认「重试」按钮）。
+- **文件查看错误态接入**：FileViewerTab 加载失败由纯文本改为 `EmptyState variant="error"` + 一键重试（`fileViewer.loadFailed` / `fileViewer.retry` i18n 5 语言补齐）。
+
+### 改进：3D 场景配色 token 化（B-4）
+
+- **`room3dTokens.ts` 单一事实源**：Room3DView 中散落的 9 个十六进制颜色收敛为语义化常量（柜身回退/服务器块/交换机块/空调/立柱/正面板/选中线框/网格格线/网格分区块），改配色只动单文件。
+- **契约测试 `room3d-tokens.test.ts`**：锁定取值 + hex 合法性 + 服务器/交换机色可辨识（视觉基线防漂移）。
+
+### 改进：a11y 与反馈统一（F54-11-2 / F54-11-5）
+
+- **Toast 容器声明 live 区域**：`role="status"` + `aria-live="polite"`（屏幕阅读器可感知非打断性提示，与 MC 一致）。
+
+### 文档
+
+- 双端 5.4.11 版本说明详见系列 PRD（docs/MC-AL_5.4.X系列版本PRD_v1.0_2026-10-12.md）。
+
+
 ## [5.4.5] - 2026-09-27
 
 > **CLI 契约收敛版（批次 B/C）+ 外部 Agent 授权档位**——旁挂 agent 免确认通道打通，CLI 命令形态/文档/审计三线对齐。

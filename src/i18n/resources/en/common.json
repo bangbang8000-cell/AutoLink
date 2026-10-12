@@ -923,7 +923,8 @@
     "cannotPreview": "Cannot preview this file",
     "copy": "Copy",
     "copied": "Copied",
-    "loadFailed": "Failed to load file: {{error}}"
+    "loadFailed": "Failed to load file: {{error}}",
+    "retry": "Retry"
   },
   "toast": {
     "projectCreated": "Project created successfully",
