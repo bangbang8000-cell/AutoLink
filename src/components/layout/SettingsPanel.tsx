@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Sun, Moon, Monitor, Globe, Palette,
+  Sun, Moon, Monitor, Contrast, Globe, Palette,
   Cpu, Wifi, Download, Search, Settings as SettingsIcon,
   Upload, RotateCcw, Check,
   Sparkles, Star, Eye, EyeOff, RefreshCw, Wifi as WifiIcon, ScrollText, Cloud,
@@ -149,10 +149,12 @@ function AppearanceSettings() {
   return (
     <SettingsSection title={t('common:explorer.settings.appearance.title')}>
       <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">{t('common:explorer.settings.appearance.themeMode')}</label>
-      <div className="grid grid-cols-3 gap-1.5 mb-3">
+      {/* 5.4.8-B5（F548-5）：设置面板补齐 high-contrast 选项（此前仅 header 下拉可切换） */}
+      <div className="grid grid-cols-4 gap-1.5 mb-3">
         {([{ mode: 'light' as ThemeMode, icon: <Sun size={13} />, label: t('common:explorer.settings.appearance.light') },
            { mode: 'dark' as ThemeMode, icon: <Moon size={13} />, label: t('common:explorer.settings.appearance.dark') },
            { mode: 'system' as ThemeMode, icon: <Monitor size={13} />, label: t('common:explorer.settings.appearance.system') },
+           { mode: 'high-contrast' as ThemeMode, icon: <Contrast size={13} />, label: t('common:explorer.settings.appearance.highContrast', '高对比') },
         ]).map((item) => (
           <button
             key={item.mode}

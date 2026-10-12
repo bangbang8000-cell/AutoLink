@@ -5,7 +5,7 @@
  * - 无项目 → 不显示 AIDC 行（或显示未完成）
  */
 import '@/i18n'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { WorkbenchReadinessCard } from '@/components/workbench/WorkbenchReadinessCard'
 import { useProjectStore } from '@/stores/project.store'

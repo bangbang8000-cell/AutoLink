@@ -682,6 +682,7 @@
         "light": "Light",
         "dark": "Dark",
         "system": "System",
+        "highContrast": "High Contrast",
         "fontSize": "Font Size",
         "compactMode": "Compact Mode",
         "animations": "Animations"

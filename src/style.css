@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 5.4.8-B6（F548-6）：动效节奏契约执行——Tailwind transition-colors 默认 150ms，
+ * 与契约 120ms（--motion-fast）不一致。base 层统一覆盖为 120ms，使数十处
+ * transition-colors 组件随契约动效；显式 duration-fast/normal/slow 仍优先。 */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    transition-duration: var(--motion-fast, 120ms);
+  }
+}
+
 /* ================================================================
  * Design Tokens — 4.0 契约单源（DTCG 化组织）
  * 事实源: docs/双端设计Token契约_v1.0_2026-08-29.md（唯一事实源）
@@ -245,8 +256,8 @@ body {
   to   { opacity: 1; transform: scale(1); }
 }
 .animate-dropdown-in {
-  animation: dropdown-in 150ms ease-out;
+  animation: dropdown-in var(--motion-fast, 120ms) var(--motion-ease, cubic-bezier(.2,.8,.2,1));
 }
 .animate-contextmenu-in {
-  animation: contextmenu-in 150ms ease-out;
+  animation: contextmenu-in var(--motion-fast, 120ms) var(--motion-ease, cubic-bezier(.2,.8,.2,1));
 }
