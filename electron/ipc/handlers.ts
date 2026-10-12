@@ -1405,8 +1405,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       case 'ai:agent-connect-status':
         return aiHubService.agentConnectStatus()
       case 'ai:agent-connect-config': {
-        const ac = p as { enable?: boolean; agent_mode?: string }
-        return aiHubService.agentConnectConfig({ enable: ac.enable, agent_mode: ac.agent_mode })
+        const ac = p as { enable?: boolean; agent_mode?: string; grant?: string }
+        return aiHubService.agentConnectConfig({ enable: ac.enable, agent_mode: ac.agent_mode, grant: ac.grant })
       }
       // 5.0.5-505-b: 知识库管理（list/get/add/update/delete/search）
       case 'ai:knowledge-list': {

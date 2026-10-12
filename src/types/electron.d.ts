@@ -792,6 +792,8 @@ interface AgentConnectStatusInfo {
   status: string
   tool_count: number
   audit_enabled: boolean
+  /** 5.4.10-5410-a: 授权档位（readonly/semi/full） */
+  grant?: string
 }
 
 /* Extend React CSSProperties for Electron window drag region */

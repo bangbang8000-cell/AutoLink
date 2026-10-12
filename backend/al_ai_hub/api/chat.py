@@ -286,44 +286,57 @@ async def mcp_reload():
 class AgentConnectConfigRequest(BaseModel):
     enable: Optional[bool] = None
     agent_mode: Optional[str] = None
+    # 5.4.10-5410-a（F54-10-a）：授权档位（readonly/semi/full），可独立更新
+    grant: Optional[str] = None
 
 
 @router.get("/agent-connect/status")
 async def agent_connect_status():
-    """Agent Connect 状态（开关/模式/工具数/审计）"""
-    from autolink_hub.config import get_agent_mode, get_enable_agent_connect
+    """Agent Connect 状态（开关/模式/工具数/审计/授权档位）"""
+    from autolink_hub.config import (
+        get_agent_mode, get_enable_agent_connect, get_agent_connect_grant,
+    )
     from autolink_hub.mcp_server.manager import get_agent_connect_manager
     mgr = get_agent_connect_manager()
     return {"status": "ok", "data": {
         "enabled": get_enable_agent_connect(),
         "agent_mode": get_agent_mode(),
+        "grant": get_agent_connect_grant(),
         **mgr.status_report(),
     }}
 
 
 @router.post("/agent-connect/config")
 async def agent_connect_config(req: AgentConnectConfigRequest):
-    """设置 Agent Connect 开关/模式（持久化到 secrets；运行中的 MCP Server 按模式重建工具集）"""
-    from autolink_hub.config import get_agent_mode, get_enable_agent_connect, set_agent_mode, set_enable_agent_connect
+    """设置 Agent Connect 开关/模式/授权档位（持久化到 secrets；运行中的 MCP Server 重建）"""
+    from autolink_hub.config import (
+        get_agent_mode, get_enable_agent_connect, set_agent_mode, set_enable_agent_connect,
+        get_agent_connect_grant, set_agent_connect_grant,
+    )
     from autolink_hub.mcp_server.manager import get_agent_connect_manager
     mgr = get_agent_connect_manager()
     if req.enable is not None:
         set_enable_agent_connect(req.enable)
     if req.agent_mode is not None:
         set_agent_mode(req.agent_mode)
+    if req.grant is not None:
+        set_agent_connect_grant(req.grant)
     mode = get_agent_mode()
+    grant = get_agent_connect_grant()
     if get_enable_agent_connect():
         if mgr.status == "disabled":
-            ok, msg = mgr.enable(agent_mode=mode)
+            ok, msg = mgr.enable(agent_mode=mode, grant=grant)
             if not ok:
                 return {"status": "error", "error": msg}
         else:
             mgr.set_agent_mode(mode)
+            mgr.set_grant(grant)
     else:
         mgr.disable()
     return {"status": "ok", "data": {
         "enabled": get_enable_agent_connect(),
         "agent_mode": mode,
+        "grant": grant,
         **mgr.status_report(),
     }}
 

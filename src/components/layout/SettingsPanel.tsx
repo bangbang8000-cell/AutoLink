@@ -780,7 +780,7 @@ function AISettings() {
     void refreshAgentConnect()
   }, [refreshAgentConnect])
 
-  const setAgentConnect = async (config: { enable?: boolean; agent_mode?: string }) => {
+  const setAgentConnect = async (config: { enable?: boolean; agent_mode?: string; grant?: string }) => {
     const aiHub = window.electron?.aihub
     if (!aiHub?.agentConnectConfig) return
     setAcBusy(true)
@@ -1179,6 +1179,23 @@ function AISettings() {
                 >
                   <option value="compiled">{t('common:explorer.settings.ai.agentConnectCompiled')}</option>
                   <option value="source">{t('common:explorer.settings.ai.agentConnectSource')}</option>
+                </select>
+              </div>
+              {/* 5.4.10-5410-a（F54-10-a）：授权档位配置（readonly/semi/full）+ 当前档回显 */}
+              <div className="flex items-center justify-between">
+                <span className="text-2xs text-gray-500 dark:text-gray-400">
+                  {t('common:explorer.settings.ai.agentConnectGrant')}
+                </span>
+                <select
+                  value={acStatus?.grant ?? 'semi'}
+                  onChange={(e) => setAgentConnect({ enable: true, agent_mode: acStatus?.agent_mode, grant: e.target.value })}
+                  disabled={acBusy}
+                  className={INPUT_CLASS + ' w-36'}
+                  title={t('common:explorer.settings.ai.agentConnectGrantHint')}
+                >
+                  <option value="readonly">{t('common:explorer.settings.ai.agentConnectGrantReadonly')}</option>
+                  <option value="semi">{t('common:explorer.settings.ai.agentConnectGrantSemi')}</option>
+                  <option value="full">{t('common:explorer.settings.ai.agentConnectGrantFull')}</option>
                 </select>
               </div>
               <div className="flex items-center justify-between">

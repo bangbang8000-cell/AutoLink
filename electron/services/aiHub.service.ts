@@ -593,11 +593,12 @@ export class AIHubService extends EventEmitter {
     }
   }
 
-  /** 5.1.1-511-e: Agent Connect 配置（开关/模式） */
+  /** 5.1.1-511-e / 5.4.10-5410-a: Agent Connect 配置（开关/模式/授权档位） */
   async agentConnectConfig(config: {
     enable?: boolean
     agent_mode?: string
-  }): Promise<{ status: string; data?: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean }; error?: string }> {
+    grant?: string
+  }): Promise<{ status: string; data?: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean; grant?: string }; error?: string }> {
     await this.ensureRunning()
     const response = await fetch(`${this.baseUrl}/api/chat/agent-connect/config`, {
       method: 'POST',
@@ -607,7 +608,7 @@ export class AIHubService extends EventEmitter {
     const body = (await response.json()) as {
       status: string
       error?: string
-      data?: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean }
+      data?: { enabled: boolean; agent_mode: string; status: string; tool_count: number; audit_enabled: boolean; grant?: string }
     }
     if (!response.ok || body.status === 'error') {
       throw new Error(body.error || `Agent Connect 配置失败: ${response.status}`)

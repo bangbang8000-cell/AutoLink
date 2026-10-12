@@ -55,6 +55,8 @@ def main() -> int:
 
     from autolink_hub.agent.tools import init_tools
     from autolink_hub.config import settings
+    # 5.4.10-5410-a（F54-10-a）：授权档位持久化读取（设置面板落盘 ai_secrets）
+    from autolink_hub.config import get_agent_connect_grant
     from autolink_hub.mcp_server.manager import get_agent_connect_manager
 
     # 5.2.2-522-s3：stdio 入口必须遵守应用内总开关（原实现直接 enable，
@@ -84,9 +86,10 @@ def main() -> int:
     if audit_path:
         mgr.set_audit_path(Path(audit_path))
 
-    # 5.4.5-AC-grant：授权档位来源优先级 —— 命令行 > 环境变量 > 默认 semi。
-    # 环境变量便于团队共享配置（避免命令行明文），也为 Electron 主进程注入留口。
-    grant = args.grant or os.environ.get("AUTOLINK_AGENT_GRANT") or None
+    # 5.4.5-AC-grant / 5.4.10-5410-a（F54-10-a）：授权档位来源优先级 ——
+    # 命令行 --grant > 环境变量 AUTOLINK_AGENT_GRANT > 设置面板持久化 > 默认 semi。
+    # 设置面板在 ai_secrets 落盘 agent_connect_grant，供旁挂 Agent 未显式指定时生效。
+    grant = args.grant or os.environ.get("AUTOLINK_AGENT_GRANT") or get_agent_connect_grant()
     grant = grant if grant in GRANTS else None
 
     ok, msg = mgr.enable(agent_mode=args.mode, grant=grant)

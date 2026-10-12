@@ -25,6 +25,7 @@ const makeNodes = (n: number): RackTopologyNode[] =>
     name: `GPU_${i + 1}`,
     type: 'server',
     group: 'GPU 服务器',
+    podid: 'pod-1',
   }))
 
 describe('matrixRackLayoutRunner', () => {

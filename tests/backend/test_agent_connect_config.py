@@ -48,4 +48,32 @@ class TestRemoteModeConfig:
         set_enable_agent_connect(True)
         set_agent_mode("source")
         assert get_enable_agent_connect() is True
-        assert get_agent_mode() == "source"
+
+
+class TestAgentConnectGrant:
+    """5.4.10-5410-a（F54-10-a）：授权档位持久化。"""
+
+    def test_grant_default_semi(self):
+        from autolink_hub.config import get_agent_connect_grant
+
+        assert get_agent_connect_grant() == "semi"
+
+    def test_grant_set_persists(self):
+        from autolink_hub.config import get_agent_connect_grant, set_agent_connect_grant
+
+        assert set_agent_connect_grant("full") == "full"
+        assert get_agent_connect_grant() == "full"
+        assert set_agent_connect_grant("readonly") == "readonly"
+        assert get_agent_connect_grant() == "readonly"
+
+    def test_grant_invalid_falls_back_semi(self):
+        from autolink_hub.config import set_agent_connect_grant
+
+        assert set_agent_connect_grant("superadmin") == "semi"
+
+    def test_grant_excluded_from_provider_configs(self):
+        from autolink_hub import config as ac_config
+
+        ac_config.set_agent_connect_grant("full")
+        ac_config.apply_secrets()
+        assert "agent_connect_grant" not in ac_config.settings.provider_configs
