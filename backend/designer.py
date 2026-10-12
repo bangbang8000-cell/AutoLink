@@ -1855,6 +1855,8 @@ class NetworkDesignerV2:
                 leaf = next((l for l in self.param_leaves
                              if l.name == f"参数Leaf_G{gid}_{pi}"), None)
                 if not leaf:
+                    # V5.4.7（F547-3，R5 收口）：Leaf 不存在属结构性错误，告警透出
+                    print(f"警告: 参数Leaf_G{gid}_{pi} 不存在（台数推导不足），服务器 {server.name} 未接入")
                     continue
                 try:
                     sp = f"{server.port_prefix or '参数网卡'}{pi}"
@@ -1865,6 +1867,8 @@ class NetworkDesignerV2:
                                    self.cable_types['param']['server_leaf'], "服务器到参数Leaf",
                                    network_type='param', breakout=leaf.breakout_link_info)
                 except ValueError:
+                    # V5.4.7（F547-3，R5 收口）：Leaf 下联口已满——告警透出（valid 不应为 True）
+                    print(f"警告: 参数Leaf_G{gid}_{pi} 下联端口已满，服务器 {server.name} 未接入")
                     continue
 
         # Leaf → Spine: 每Leaf连全部Spine, uplink_ports/spine_count 口/Spine

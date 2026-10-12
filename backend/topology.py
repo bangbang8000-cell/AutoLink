@@ -93,6 +93,32 @@ class FatTreeTopology:
         self.switch_groups = {}
         self.podid_map = {}
 
+        # V5.4.7（F547-3，R5 收口）：FatTreeTopology 补齐结构化丢弃记录。
+        # 根因：5.3.0 AL-G1 把静默丢弃改 `_record_drop` 时只在 AccessAggTopology
+        # 定义了该方法，FatTreeTopology 的 _connect_leaves_to_spines /
+        # _connect_spines_to_cores 溢出分支调用它 ⇒ AttributeError 崩溃
+        # （bench 2048 简化 INI 二次建链精确满配时必触发）。此处补齐等价实现。
+        self.dropped_links = []
+
+    def _record_drop(self, device, reason, port=None, count=1):
+        """记录被丢弃的连接（V5.4.7-F547-3，对齐 AccessAggTopology._record_drop）。"""
+        for item in self.dropped_links:
+            if item['device'] == device and item['port'] == port and item['reason'] == reason:
+                item['count'] += count
+                return
+        self.dropped_links.append({
+            'network_type': self.network_type,
+            'device': device,
+            'port': port,
+            'reason': reason,
+            'count': count,
+        })
+
+    @property
+    def dropped_link_count(self):
+        """被丢弃的连接总条数"""
+        return sum(item['count'] for item in self.dropped_links)
+
     def calculate_hierarchy(self, num_servers):
         """计算网络层次结构，返回 (is_3tier, total_leaves, total_spines, total_cores)
 
@@ -222,6 +248,10 @@ class FatTreeTopology:
 
                 leaf = leaf_map.get(leaf_name)
                 if not leaf:
+                    # V5.4.7（F547-3，R5 收口）：Leaf 台数不足属结构性错误，
+                    # 静默 continue 会丢服务器而 valid 仍为 True——改为结构化记录
+                    # （对齐 R1「零连接判据」精神：不静默）。
+                    self._record_drop(leaf_name, 'Leaf 不存在（台数推导不足）')
                     continue
 
                 if leaf.downlink_counter > leaf.downlink_limit:

@@ -165,6 +165,40 @@ biz_enabled = False
             # 性能基线: T6 优化目标 <2s, CI 环境留 10 倍余量防抖动
             assert elapsed < 20.0, f"2048台设计耗时 {elapsed:.2f}s 超出基线"
 
+    def test_large_scale_2048_no_crash_on_second_generate(self):
+        """R5 收口（F547-3）：2048 简化 INI 二次建链不得崩溃。
+
+        根因：bench_perf 在 __init__（已自动建链）后再显式 generate_connections()
+        二次建链——2048 三层在 W1.1 修正后精确满配（512 Leaf×32 下联 = 2048×8），
+        二次建链第一台 Leaf 即溢出；叠加 FatTreeTopology 缺 _record_drop
+        ⇒ AttributeError 崩溃。修复后二次建链要么幂等成功、要么以 ValueError
+        显式失败（不再 AttributeError 崩溃）。
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ini = self._create_ini(tmpdir, """[DEFAULT]
+num_servers = 2048
+param_switch_ports = 64
+param_ports_per_server = 8
+param_speed = 400G
+storage_ports_per_server = 1
+storage_switch_ports = 48
+storage_speed = 200G
+oob_enabled = False
+biz_enabled = False
+""")
+            designer = NetworkDesignerV2(ini)
+            # 二次建链：不得 AttributeError（可接受幂等成功或显式 ValueError）
+            try:
+                designer.generate_connections()
+            except ValueError:
+                pass  # 显式业务失败可接受（容量不足），但不得是 AttributeError
+            # FatTreeTopology 必须补齐 _record_drop（此前缺失致溢出分支 AttributeError）
+            from topology import FatTreeTopology
+            assert hasattr(FatTreeTopology, '_record_drop'), (
+                'FatTreeTopology 缺 _record_drop —— 溢出分支会 AttributeError 崩溃（R5）'
+            )
+            assert designer.validate_topology()["valid"] is True
+
     # ---------- 5.2.2-522-e: INI 模式 ZCube 再生成（ATOP「应用到拓扑」→ configToINI → INI） ----------
 
     def test_zcube_ini_regenerate(self):

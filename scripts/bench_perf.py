@@ -64,13 +64,15 @@ biz_enabled = False
         init_samples, conn_samples, total_samples = [], [], []
         for _ in range(rounds):
             t0 = time.perf_counter()
+            # V5.4.7（F547-3，R5 收口）：NetworkDesignerV2.__init__ 已自动完整建链
+            # （designer.py:74-77）。旧实现此处再显式 generate_connections() 会**二次建链**：
+            # 2048 简化 INI 三层场景在 W1.1 修正后为精确满配（512 Leaf × 32 下联 =
+            # 2048×8），二次建链第一台 Leaf 即溢出崩溃。故基准 = __init__ 单次建链全流程。
             designer = NetworkDesignerV2(ini)
             t1 = time.perf_counter()
-            designer.generate_connections()
-            t2 = time.perf_counter()
             init_samples.append(t1 - t0)
-            conn_samples.append(t2 - t1)
-            total_samples.append(t2 - t0)
+            conn_samples.append(0.0)
+            total_samples.append(t1 - t0)
 
         total_avg = statistics.mean(total_samples)
         ok = total_avg <= limit_s
