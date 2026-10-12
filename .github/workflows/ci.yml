@@ -73,8 +73,9 @@ jobs:
       - name: CLI contract guard
         run: python scripts/check_cli_contract.py
       # V3.0.0-T0-1: golden 基线比对 — 拓扑引擎结构变化（节点/连接/机柜/校验）时 CI 失败
+      # 5.4.7-F547-3（R5 收口）：移除 continue-on-error —— V016/R5 修复后本地 30/30 全绿，
+      # golden 比对恢复硬前置（拓扑结构变化即红）。
       - run: python scripts/gen_golden.py --check
-        continue-on-error: true
       # V3.0.0-T0-8: 后端全量 pytest
       # 4.6.0-F6-1: 后端覆盖率门禁（.coveragerc fail_under=55，低于即失败）+ junit/coverage-json 产物
       # 5.0.3-503-c: 重样本校验测试拆出覆盖率运行（--no-cov），避免覆盖率插桩下 CI 超时；test_report 合并两 junit
@@ -89,10 +90,9 @@ jobs:
         env:
           PYTHONPATH: .
       # V3.2.2-R11.3: 关键路径性能门禁（2048 GPU 设计 ≤30s、225 柜落位 ≤5s，超限退出码 1）
-      # 2026-09-20（用户授权）：2048 GPU 基准在 W1.1 容量修正后的简化 INI 场景存在 Leaf 下联边界问题，
-      # GitHub 环境跑不过时跳过（真实模板场景 29 套 validate_templates 已覆盖），不阻断发布
+      # 5.4.7-F547-3（R5 收口）：移除 continue-on-error —— 二次建链崩溃已修复
+      # （bench 基准 = __init__ 单次建链全流程），本地 --rounds 1 全部 PASS，性能门禁恢复硬前置。
       - run: python scripts/bench_perf.py --rounds 1
-        continue-on-error: true
       # 4.6.0-F6-3: 统一测试报告（聚合 pytest/vitest/golden/bench/模板校验 → reports/）
       # 4.6.0-F6-1: 覆盖率门禁（阈值 + reports/coverage_baseline.json 只升不降基线，回退即失败）
       - run: python scripts/test_report.py --from-artifacts
