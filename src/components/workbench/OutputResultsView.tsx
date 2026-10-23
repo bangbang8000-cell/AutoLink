@@ -45,6 +45,31 @@ const FILE_ICON = (name: string) => {
 
 const fmtSize = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)}MB` : n > 1024 ? `${(n / 1024).toFixed(1)}KB` : `${n}B`)
 
+/** F4（5.5.x）：工具行下拉菜单项（导出组/管理组共用） */
+function MenuItem({ children, onClick, danger, disabled, icon }: {
+  children: React.ReactNode
+  onClick: () => void
+  danger?: boolean
+  disabled?: boolean
+  icon?: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`w-full text-left px-3 py-1.5 text-2xs flex items-center gap-1.5 ${disabled
+        ? 'opacity-40 cursor-not-allowed'
+        : danger
+          ? 'text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20'
+          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-app-hover'}`}
+    >
+      {icon && <span className="shrink-0">{icon}</span>}
+      <span className="truncate">{children}</span>
+    </button>
+  )
+}
+
 /** xlsx base64 → 二维表格（首 sheet） */
 function xlsxToTable(base64: string): { name: string; rows: (string | number)[][]; truncated: boolean } | null {
   try {
@@ -67,13 +92,13 @@ function base64ToText(base64: string): string {
     const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
     return new TextDecoder('utf-8').decode(bytes)
   } catch {
-    return '（无法解码为文本）'
+    return '（无法解码为文本）' // i18n: 解码失败兜底文案（模块级函数，无法取 t()，经调用方不包装直接展示）
   }
 }
 
 /** 预览面板：按扩展名选择 文本 / 表格 / 图形 */
 function PreviewPanel({ preview, fileName, loading }: { preview: PreviewData | null; fileName: string; loading: boolean }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const ext = preview?.ext ?? ''
   // AL-M5d：加载中展示骨架屏
   if (loading) {
@@ -151,11 +176,11 @@ function PreviewPanel({ preview, fileName, loading }: { preview: PreviewData | n
 export async function exportRoomDesignExcelToRoot(projectName: string): Promise<string> {
   const matrix = useRoomStore.getState().matrix
   if (!matrix) {
-    throw new Error('机房设计尚未定义（请先在「机房设计」子视图创建矩阵）')
+    throw new Error('机房设计尚未定义（请先在「机房设计」子视图创建矩阵）') // i18n: 模块级函数兜底错误消息（调用方 catch 后经 t() 提示）
   }
   const cabinets = useRackStore.getState().cabinets
   const filePath = await exportRoomDesignExcel(projectName, matrix, cabinets, buildRoomDesignRackConfig())
-  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）')
+  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）') // i18n: 模块级函数兜底错误消息（调用方 catch 后经 t() 提示）
   return filePath
 }
 
@@ -167,7 +192,7 @@ export async function exportRoomDesignExcelToRoot(projectName: string): Promise<
 export async function exportRackDesignExcelToRoot(projectName: string): Promise<string> {
   const cabinets = useRackStore.getState().cabinets
   const filePath = await exportRackDesignExcel(projectName, cabinets)
-  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）')
+  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）') // i18n: 模块级函数兜底错误消息（调用方 catch 后经 t() 提示）
   return filePath
 }
 
@@ -181,14 +206,14 @@ export async function exportDesignSnapshotToRoot(projectName: string): Promise<s
   const snapshot = serializeDesignState(room, rack)
   const json = JSON.stringify(snapshot, null, 2)
   const base64 = stringToBase64(json)
-  const fileName = `设计快照_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`
+  const fileName = `设计快照_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json` // i18n: 产物文件名（产品约定，非界面文案）
   const filePath = await window.electron.render.saveOutputFile(projectName, `output/snapshots/${fileName}`, base64)
-  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）')
+  if (!filePath) throw new Error('导出失败（Electron 桥接未就绪）') // i18n: 模块级函数兜底错误消息（调用方 catch 后经 t() 提示）
   return filePath
 }
 
 export function OutputResultsView({ projectName }: { projectName: string }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const addToast = useToastStore((s) => s.addToast)
   const projects = useProjectStore((s) => s.projects)
   const [activeProject, setActiveProject] = useState(projectName)
@@ -217,17 +242,27 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
         setExpanded((e) => ({ ...e, [first.name]: true }))
       }
       // 48-e（F8-5）：逐版本批次拉取 manifest 完整性（缺失/漂移/哈希不符）
+      // F2（5.5.x）：串行 await → 并发池（上限 8）——批次多时刷新耗时从 O(N) 降至 O(N/8)
       const next: Record<string, { integrity: 'ok' | 'issues'; issues: number }> = {}
-      for (const batch of (b as Batch[]) ?? []) {
-        if (!/^v\d+_/.test(batch.name)) continue
-        try {
-          const res = await window.electron.project.batchManifest(activeProject, batch.name)
-          if (res?.ok) {
-            const s = deriveBatchIntegrity(res.manifest, res.actualFiles ?? [])
-            next[batch.name] = { integrity: s.integrity, issues: s.issues }
+      const checkable = (b as Batch[])?.filter((x) => /^v\d+_/.test(x.name)) ?? []
+      const CHECK_CONCURRENCY = 8
+      let checkIdx = 0
+      const workers = Array.from(
+        { length: Math.min(CHECK_CONCURRENCY, checkable.length) },
+        async () => {
+          while (checkIdx < checkable.length) {
+            const batch = checkable[checkIdx++]
+            try {
+              const res = await window.electron.project.batchManifest(activeProject, batch.name)
+              if (res?.ok) {
+                const s = deriveBatchIntegrity(res.manifest, res.actualFiles ?? [])
+                next[batch.name] = { integrity: s.integrity, issues: s.issues }
+              }
+            } catch { /* i18n: 完整性拉取失败不阻断 */ }
           }
-        } catch { /* 完整性拉取失败不阻断 */ }
-      }
+        },
+      )
+      await Promise.all(workers)
       setBatchIntegrity(next)
     } catch {
       setBatches([])
@@ -264,7 +299,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
       if (res?.canceled) return
       if (res?.ok) addToast('success', t('workbench:output.exported', { path: res.path }), 5000)
     } catch (err) {
-      addToast('error', `导出失败: ${(err as Error).message}`, 5000)
+      addToast('error', t('workbench:output.exportFailed', '导出失败: {{err}}', { err: (err as Error).message }), 5000)
     }
   }, [activeProject, addToast, t])
 
@@ -321,7 +356,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     try {
       const res = await getFeatureBridge().reviewPdf(activeProject)
       if (res?.error) throw new Error(res.error)
-      if (!res?.ok || !res.path) throw new Error('导出失败（Electron 桥接未就绪）')
+      if (!res?.ok || !res.path) throw new Error('导出失败（Electron 桥接未就绪）') // i18n: 兜底错误消息（调用方 catch 后经 t() 提示）
       addToast('success', t('workbench:output.reviewPdfExported', '评审 PDF 已导出 → {{path}}', { path: res.path }), 5000)
       refresh()
     } catch (err) {
@@ -334,7 +369,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
     try {
       const res = await getFeatureBridge().reviewPackage(activeProject)
       if (res?.error) throw new Error(res.error)
-      if (!res?.ok || !res.path) throw new Error('导出失败（Electron 桥接未就绪）')
+      if (!res?.ok || !res.path) throw new Error('导出失败（Electron 桥接未就绪）') // i18n: 兜底错误消息（调用方 catch 后经 t() 提示）
       addToast('success', t('workbench:output.reviewPackageExported', '评审包已导出 → {{path}}', { path: res.path }), 6000)
       refresh()
     } catch (err) {
@@ -384,7 +419,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           setPreview(null)
           refresh()
         } catch (err) {
-          addToast('error', `删除失败: ${(err as Error).message}`, 4000)
+          addToast('error', t('workbench:output.deleteFailed', '删除失败: {{err}}', { err: (err as Error).message }), 4000)
         }
       },
     })
@@ -401,7 +436,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           addToast('success', t('workbench:output.batchDeleted', '批次已删除'), 3000)
           refresh()
         } catch (err) {
-          addToast('error', `删除失败: ${(err as Error).message}`, 4000)
+          addToast('error', t('workbench:output.deleteFailed', '删除失败: {{err}}', { err: (err as Error).message }), 4000)
         }
       },
     })
@@ -420,7 +455,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           setSelectedFile(null)
           setPreview(null)
         } catch (err) {
-          addToast('error', `清空失败: ${(err as Error).message}`, 4000)
+          addToast('error', t('workbench:output.clearFailed', '清空失败: {{err}}', { err: (err as Error).message }), 4000)
         }
       },
     })
@@ -437,7 +472,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           addToast('success', t('workbench:output.clearedAll', { count: res.deleted }), 3000)
           refresh()
         } catch (err) {
-          addToast('error', `清空失败: ${(err as Error).message}`, 4000)
+          addToast('error', t('workbench:output.clearFailed', '清空失败: {{err}}', { err: (err as Error).message }), 4000)
         }
       },
     })
@@ -454,7 +489,7 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
 
   return (
     <div className="h-full flex flex-col gap-3">
-      {/* 头部工具行 */}
+      {/* i18n: 头部工具行 */}
       <div className="flex items-center gap-2 flex-wrap shrink-0">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('workbench:output.title', '输出结果')}</span>
         <select
@@ -469,58 +504,48 @@ export function OutputResultsView({ projectName }: { projectName: string }) {
           ))}
         </select>
         <span className="text-2xs text-gray-400">{t('workbench:output.batches', { count: batches.length, files: totalFiles })}</span>
+        {/* 常驻高频操作：刷新 / 导出全部 ZIP / 版本历史 */}
         <button type="button" onClick={refresh} className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-app-hover">
-          {busy ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />} 刷新
+          {busy ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />} {t('workbench:output.refresh', '刷新')}
         </button>
         <button type="button" onClick={() => handleExport()} disabled={batches.length === 0}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-40">
           <Download size={11} /> {t('workbench:output.exportAllZip', '导出全部 ZIP')}
         </button>
-        {/* M4（AL-N3）：导出收敛——设计子视图导出按钮移除后，统一在本项目输出导出双设计 Excel */}
-        <button type="button" onClick={handleExportRoomDesign}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
-          <Download size={11} /> {t('workbench:output.exportRoomDesignExcel', '导出机房设计 Excel')}
-        </button>
-        <button type="button" onClick={handleExportRackDesign}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20">
-          <Download size={11} /> {t('workbench:output.exportRackDesignExcel', '导出机柜设计 Excel')}
-        </button>
-        {/* M2（AL-SNAP2）：设计快照 导出/导入（JSON，落 output/snapshots/） */}
-        <button type="button" onClick={handleExportSnapshot}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
-          <Download size={11} /> {t('workbench:output.exportSnapshot', '导出设计快照 JSON')}
-        </button>
-        {/* 48-b（F8-2）：便携快照文件（保存对话框 → 可跨端回导） */}
-        <button type="button" onClick={handleExportSnapshotFile}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
-          <Download size={11} /> {t('workbench:output.exportSnapshotFile', '导出快照文件')}
-        </button>
-        <button type="button" onClick={handleImportSnapshot}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20">
-          <Upload size={11} /> {t('workbench:output.importSnapshot', '导入快照')}
-        </button>
-        {/* M-F1（PRD v3.6）：版本历史入口 + 评审 PDF 导出 */}
         <button type="button" onClick={() => setShowHistory(true)}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
           <History size={11} /> {t('workbench:versionHistory.open', '版本历史')}
         </button>
-        <button type="button" onClick={handleReviewPdf}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
-          <FileDown size={11} /> {t('workbench:output.reviewPdf', '导出评审 PDF')}
-        </button>
-        {/* 48-d（F8-4）：评审包（聚合版本历史+设计报告+校验+交付清单 → zip，含 PDF） */}
-        <button type="button" onClick={handleReviewPackage}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20">
-          <Package size={11} /> {t('workbench:output.reviewPackage', '导出评审包')}
-        </button>
-        <button type="button" onClick={handleClearProject} disabled={batches.length === 0}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-40">
-          <Trash2 size={11} /> {t('workbench:output.clearProject', '清空项目输出')}
-        </button>
-        <button type="button" onClick={handleClearAll}
-          className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20">
-          <Trash2 size={11} /> {t('workbench:output.clearAll', '清空全部输出')}
-        </button>
+
+        {/* F4（5.5.x）：导出/导入收敛为单个下拉组（双设计 Excel / 快照 / 评审）——首屏按钮从 12 减至 5 */}
+        <details className="relative group/export">
+          <summary className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-gray-200 dark:border-gray-600 cursor-pointer list-none hover:bg-gray-100 dark:hover:bg-app-hover [&::-webkit-details-marker]:hidden">
+            <Download size={11} /> {t('workbench:output.exportMenu', '导出')}
+            <ChevronDown size={11} className="ml-0.5" />
+          </summary>
+          <div className="absolute right-0 top-full mt-1 z-20 min-w-[210px] rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app shadow-lg py-1">
+            <MenuItem onClick={handleExportRoomDesign} icon={<FileSpreadsheet size={11} />}>{t('workbench:output.exportRoomDesignExcel', '导出机房设计 Excel')}</MenuItem>
+            <MenuItem onClick={handleExportRackDesign} icon={<FileSpreadsheet size={11} />}>{t('workbench:output.exportRackDesignExcel', '导出机柜设计 Excel')}</MenuItem>
+            <MenuItem onClick={handleExportSnapshot} icon={<Download size={11} />}>{t('workbench:output.exportSnapshot', '导出设计快照 JSON')}</MenuItem>
+            <MenuItem onClick={handleExportSnapshotFile} icon={<FileDown size={11} />}>{t('workbench:output.exportSnapshotFile', '导出快照文件')}</MenuItem>
+            <MenuItem onClick={handleImportSnapshot} icon={<Upload size={11} />}>{t('workbench:output.importSnapshot', '导入快照')}</MenuItem>
+            <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+            <MenuItem onClick={handleReviewPdf} icon={<FileDown size={11} />}>{t('workbench:output.reviewPdf', '导出评审 PDF')}</MenuItem>
+            <MenuItem onClick={handleReviewPackage} icon={<Package size={11} />}>{t('workbench:output.reviewPackage', '导出评审包')}</MenuItem>
+          </div>
+        </details>
+
+        {/* F4（5.5.x）：破坏性操作收敛为「管理」下拉组（置底，避免误触） */}
+        <details className="relative group/manage">
+          <summary className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-error-300 dark:border-error-700 text-error-600 dark:text-error-400 cursor-pointer list-none hover:bg-error-50 dark:hover:bg-error-900/20 [&::-webkit-details-marker]:hidden">
+            <Trash2 size={11} /> {t('workbench:output.manageMenu', '管理')}
+            <ChevronDown size={11} className="ml-0.5" />
+          </summary>
+          <div className="absolute right-0 top-full mt-1 z-20 min-w-[170px] rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-app shadow-lg py-1">
+            <MenuItem danger disabled={batches.length === 0} onClick={handleClearProject} icon={<Trash2 size={11} />}>{t('workbench:output.clearProject', '清空项目输出')}</MenuItem>
+            <MenuItem danger onClick={handleClearAll} icon={<Trash2 size={11} />}>{t('workbench:output.clearAll', '清空全部输出')}</MenuItem>
+          </div>
+        </details>
       </div>
 
       {/* 主体：批次树 + 预览 */}

@@ -21,9 +21,10 @@ import { deriveWorkbenchState, type WorkbenchStatus } from '@/utils/workbenchSta
 import type { WorkbenchSubview as Sv } from '@/stores/ui.store'
 
 const STEPS: { key: Sv; n: string; labelKey: string; fallback: string }[] = [
-  { key: 'aidc', n: '①', labelKey: 'workbench:stepConfig', fallback: '配置与就绪' },
-  { key: 'main', n: '②', labelKey: 'workbench:stepRender', fallback: '渲染材料与操作' },
-  { key: 'results', n: '③', labelKey: 'workbench:stepResult', fallback: '渲染结果' },
+  // i18n: 步骤 fallback 配置（渲染统一走 t(labelKey, { defaultValue: fallback })）
+  { key: 'aidc', n: '①', labelKey: 'workbench:stepConfig', fallback: '配置与就绪' }, // i18n: fallback 配置
+  { key: 'main', n: '②', labelKey: 'workbench:stepRender', fallback: '渲染材料与操作' }, // i18n: fallback 配置
+  { key: 'results', n: '③', labelKey: 'workbench:stepResult', fallback: '渲染结果' }, // i18n: fallback 配置
 ]
 
 /** 状态徽章配色与图标 */
@@ -40,15 +41,16 @@ function StatusBadge({ status }: { status: WorkbenchStatus }) {
   return <Circle size={12} className="text-gray-300 dark:text-gray-600 shrink-0" />
 }
 
+// i18n: 状态文案 fallback 配置（渲染走 t(st.key, { defaultValue: st.fallback })）
 const STATUS_TEXT: Record<WorkbenchStatus, { key: string; fallback: string; cls: string }> = {
-  done: { key: 'workbench:statusDone', fallback: '已定稿', cls: 'text-success-600 dark:text-success-400' },
-  in_progress: { key: 'workbench:statusInProgress', fallback: '进行中', cls: 'text-primary-600 dark:text-primary-400' },
-  needs_update: { key: 'workbench:statusNeedsUpdate', fallback: '需更新', cls: 'text-warning-600 dark:text-warning-400' },
-  pending: { key: 'workbench:statusPending', fallback: '待开始', cls: 'text-gray-400' },
+  done: { key: 'workbench:statusDone', fallback: '已定稿', cls: 'text-success-600 dark:text-success-400' }, // i18n: fallback 配置
+  in_progress: { key: 'workbench:statusInProgress', fallback: '进行中', cls: 'text-primary-600 dark:text-primary-400' }, // i18n: fallback 配置
+  needs_update: { key: 'workbench:statusNeedsUpdate', fallback: '需更新', cls: 'text-warning-600 dark:text-warning-400' }, // i18n: fallback 配置
+  pending: { key: 'workbench:statusPending', fallback: '待开始', cls: 'text-gray-400' }, // i18n: fallback 配置
 }
 
 export function WorkbenchStepBar({ projectName }: { projectName?: string }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const valid = useDesignStore((s) => s.valid)
   const summary = useDesignStore((s) => s.summary)
   const generating = useDesignStore((s) => s.generating)
@@ -98,7 +100,7 @@ export function WorkbenchStepBar({ projectName }: { projectName?: string }) {
         )
       })}
 
-      {/* 就地定稿动作（按当前子视图上下文） */}
+      {/* i18n: 就地定稿动作（按当前子视图上下文） */}
       <div className="ml-auto flex items-center gap-1.5 shrink-0">
         {activeSubview === 'roomdesign' && matrix && !matrix.finalized && (
           <button

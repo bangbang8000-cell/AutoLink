@@ -66,7 +66,7 @@ class AutoLinkApp {
       "default-src 'self'",
       ...scriptSrc,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data:",
+      "img-src 'self' data: blob:",
       "font-src 'self' data:",
       "worker-src 'self'",
       "object-src 'none'",

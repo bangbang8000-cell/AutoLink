@@ -44,7 +44,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHANGELOG = os.path.join(ROOT, 'CHANGELOG.md')
 
 # 搜索范围：代码与脚本本体（**不含**文档，否则文档自证）
-SEARCH_DIRS = ['backend', 'scripts', 'src', 'tests', 'electron']
+SEARCH_DIRS = ['backend', 'scripts', 'src', 'tests', 'electron', 'e2e']
 SEARCH_FILES = ['package.json', 'vite.config.ts', 'AGENT.md', 'CLAUDE.md']
 
 # 可搜索的文件类型（含 .css —— 如 prefers-reduced-motion 只存在于样式表）

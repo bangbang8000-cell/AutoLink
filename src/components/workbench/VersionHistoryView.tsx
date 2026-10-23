@@ -34,7 +34,7 @@ function formatValue(v: unknown): string {
 }
 
 export function VersionHistoryView({ projectName, open, onClose }: Props) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const addToast = useToastStore((s) => s.addToast)
   const [versions, setVersions] = useState<PlanVersionEntry[]>([])
   const [current, setCurrent] = useState<Record<string, unknown> | null>(null)
@@ -102,7 +102,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
     setBusy(true)
     try {
       const res = await getFeatureBridge().versionHistory.rollback(projectName, rollbackTarget.version)
-      if (!res?.ok) throw new Error(res?.error ?? '回滚失败')
+      if (!res?.ok) throw new Error(res?.error ?? '回滚失败') // i18n: 兜底错误消息（用户可见时经 catch 分支 t() 包装）
       addToast('success', t('workbench:versionHistory.rollbackSuccess', { version: rollbackTarget.version, defaultValue: '已回滚到 v{{version}}（回滚前版本已存档）' }), 5000)
       setRollbackTarget(null)
       await load()
@@ -184,7 +184,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
       title={t('workbench:versionHistory.title', '版本历史')}
     >
       <div className="space-y-4">
-        {/* 当前版本 + 刷新 */}
+        {/* i18n: 当前版本 + 刷新 */}
         <div className="flex items-center gap-2">
           <History size={14} className="text-primary-500 shrink-0" />
           <span className="text-xs text-gray-600 dark:text-gray-300">
@@ -198,7 +198,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
           >
             {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />} {t('workbench:output.refresh', '刷新')}
           </button>
-          {/* 48-b（F8-2）：版本历史 导出/回导 文件 */}
+          {/* i18n: 48-b（F8-2）：版本历史 导出/回导 文件 */}
           <button
             type="button"
             onClick={handleExportHistory}
@@ -217,7 +217,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
           </button>
         </div>
 
-        {/* 空历史提示 */}
+        {/* i18n: 空历史提示 */}
         {!loading && versions.length === 0 && (
           <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
             <History size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
@@ -225,7 +225,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
           </div>
         )}
 
-        {/* 版本列表 */}
+        {/* i18n: 版本列表 */}
         {versions.length > 0 && (
           <div className="border rounded overflow-hidden">
             <div className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border-b bg-gray-50 dark:bg-app/50">
@@ -263,7 +263,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
           </div>
         )}
 
-        {/* 版本对比 */}
+        {/* i18n: 版本对比 */}
         {versions.length >= 1 && (
           <div className="border rounded overflow-hidden">
             <div className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border-b bg-gray-50 dark:bg-app/50 flex items-center gap-2">
@@ -319,7 +319,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
                 </div>
               )}
 
-              {/* 差异高亮渲染 */}
+              {/* i18n: 差异高亮渲染 */}
               {!diff && selectedA !== null && selectedB === null && (
                 <p className="text-2xs text-gray-400">{t('workbench:versionHistory.pickB', '再选择一个版本 B 进行对比')}</p>
               )}
@@ -361,7 +361,7 @@ export function VersionHistoryView({ projectName, open, onClose }: Props) {
           ? t('workbench:versionHistory.rollbackConfirm', {
               version: rollbackTarget.version,
               next: currentVersion + 1,
-              defaultValue: '回滚到 v{{version}}？回滚前当前版本（v{{next}}）将先存档，可复核/再次回滚。',
+              defaultValue: '回滚到 v{{version}}？回滚前当前版本（v{{next}}）将先存档，可复核/再次回滚。', // i18n: ConfirmDialog defaultValue（渲染走 t()）
             })
           : ''}
         danger

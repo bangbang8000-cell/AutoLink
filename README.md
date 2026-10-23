@@ -6,7 +6,7 @@
 
 *面向 AI 数据中心 / 智算中心 / GPU 集群的网络架构设计、拓扑生成、设备选型、机柜规划与交付报告一体化平台*
 
-[![Version](https://img.shields.io/badge/version-5.4.1-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
+[![Version](https://img.shields.io/badge/version-5.5.0-blue)](https://github.com/bangbang8000-cell/AutoLink/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)

@@ -57,8 +57,9 @@ const SUBVIEW_KEYS: Record<string, string> = {
 
 /** 新子视图标签的中文兜底（AL-N1 后 i18n 已并入 workbench:subview.roomdesign/rackdesign；此处仅作 key 缺失时回退，防编程 ID） */
 const SUBVIEW_LABEL_FALLBACK: Record<string, string> = {
-  roomdesign: '机房设计',
-  rackdesign: '机柜设计',
+  // i18n: 子视图标签中文兜底（i18n key 缺失时回退，防编程 ID 直接外显）
+  roomdesign: '机房设计', // i18n: fallback 配置
+  rackdesign: '机柜设计', // i18n: fallback 配置
 }
 
 /** 5.2.1-521-f：项目生命周期标签（后端 project:list 按关键文件推断的 status） */
@@ -75,7 +76,7 @@ const KEEP_ALIVE_LIMIT = 5
 
 /** 打磨轮（v1.3）：归档/导出子视图（导出 MC 交付包 + 渲染结果） */
 function ExportView({ projectName }: { projectName: string }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const addToast = useToastStore((s) => s.addToast)
   const [busy, setBusy] = useState(false)
   const [deliveryBusy, setDeliveryBusy] = useState(false)
@@ -90,7 +91,7 @@ function ExportView({ projectName }: { projectName: string }) {
         'error',
         t('workbench:exportView.exportFailed', {
           err: (e as Error).message,
-          defaultValue: '导出失败: {{err}}',
+          defaultValue: '导出失败: {{err}}', // i18n: t() defaultValue
         }),
       )
     } finally {
@@ -109,7 +110,7 @@ function ExportView({ projectName }: { projectName: string }) {
           'warning',
           t(
             'workbench:exportView.noPlan',
-            '当前项目未生成 AIDC 规划，请先在「AIDC 规划」视图生成规划',
+            '当前项目未生成 AIDC 规划，请先在「AIDC 规划」视图生成规划', // i18n: t() defaultValue
           ),
           5000,
         )
@@ -143,7 +144,7 @@ function ExportView({ projectName }: { projectName: string }) {
           {t('workbench:exportView.title', { name: projectName })}
         </span>
       </div>
-      {/* ① 导出 MC 交付包（读项目 plan.json，含 plan.json/README/拓扑图，供 MagicCommander 导入） */}
+      {/* i18n: ① 导出 MC 交付包（读项目 plan.json，含 plan.json/README/拓扑图，供 MagicCommander 导入） */}
       <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.toMc')}</p>
         <p className="text-2xs text-gray-400">{t('workbench:exportView.toMcHint')}</p>
@@ -159,7 +160,7 @@ function ExportView({ projectName }: { projectName: string }) {
             : t('workbench:exportView.exportDelivery')}
         </button>
       </div>
-      {/* ② 导出渲染结果（output 批次） */}
+      {/* i18n: ② 导出渲染结果（output 批次） */}
       <div className="border rounded p-3 space-y-2">
         <p className="text-2xs text-gray-500">{t('workbench:exportView.renderResults')}</p>
         <div className="flex gap-2">
@@ -179,7 +180,7 @@ function ExportView({ projectName }: { projectName: string }) {
 }
 
 export function WorkbenchTab() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const projects = useProjectStore((s) => s.projects)
   const templates = useProjectStore((s) => s.templates)
   const selectedProjectName = useProjectStore((s) => s.selectedProjectName)
@@ -238,7 +239,7 @@ export function WorkbenchTab() {
         if (mode === 'all') next = ['main']
         else if (mode === 'this') next = prev.filter((x) => x !== sv)
         else if (mode === 'others') next = prev.filter((x) => x === sv)
-        else next = idx === -1 ? prev : prev.slice(0, idx + 1) // 关闭右侧 → 保留到 sv（含 sv）
+        else next = idx === -1 ? prev : prev.slice(0, idx + 1) // i18n: 关闭右侧 → 保留到 sv（含 sv）
         if (sv === subview && next.length > 0 && !next.includes(subview)) {
           openSubview(next[next.length - 1] ?? 'main')
         } else if (sv === subview && next.length === 0) {
@@ -335,7 +336,7 @@ export function WorkbenchTab() {
             </div>
           )}
 
-          {/* 4.4 F4-4：从模板新建（模板入口） */}
+          {/* i18n: 4.4 F4-4：从模板新建（模板入口） */}
           {templates.length > 0 && (
             <div className="mb-4">
               <p className="flex items-center gap-1 text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">
@@ -396,7 +397,7 @@ export function WorkbenchTab() {
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
           {t('workbench:title')}
         </span>
-        {/* M8（AL-U2）：项目切换器——多项目显示下拉（当前项高亮，切换走 selectProject）；单项目降级为纯文本 */}
+        {/* i18n: M8（AL-U2）：项目切换器——多项目显示下拉（当前项高亮，切换走 selectProject）；单项目降级为纯文本 */}
         {projects.length > 1 ? (
           <Dropdown
             items={projects.map((p) => ({ value: p.name, label: p.name }))}
@@ -413,7 +414,7 @@ export function WorkbenchTab() {
         )}
       </div>
 
-      {/* 打磨轮（v1.6 / AL-T1b）：工作台二级页签栏（访问过的子视图保留，快速切换/关闭） */}
+      {/* i18n: 打磨轮（v1.6 / AL-T1b）：工作台二级页签栏（访问过的子视图保留，快速切换/关闭） */}
       <div className="flex items-center gap-0.5 px-3 py-1 border-b border-gray-200 dark:border-edge-subtle bg-gray-50/60 dark:bg-app/40 overflow-x-auto shrink-0">
         {openedSubviews.map((sv) => {
           const active = sv === subview
@@ -446,7 +447,7 @@ export function WorkbenchTab() {
             </div>
           )
         })}
-        {/* 5.2.5-525-a：子视图添加入口（孤儿视图 docs/knowledge 等在此可打开） */}
+        {/* i18n: 5.2.5-525-a：子视图添加入口（孤儿视图 docs/knowledge 等在此可打开） */}
         <div className="relative shrink-0">
           <button
             type="button"
@@ -476,7 +477,7 @@ export function WorkbenchTab() {
         </div>
       </div>
 
-      {/* AL-M4h：二级页签右键菜单 */}
+      {/* i18n: AL-M4h：二级页签右键菜单 */}
       {subviewCtx && (
         <div
           className="fixed z-[9999] bg-white dark:bg-app-surface border border-gray-200 dark:border-edge-subtle rounded-lg shadow-lg py-1 min-w-[140px]"
@@ -490,7 +491,7 @@ export function WorkbenchTab() {
             }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
-            {t('welcome.closeTab')}
+            {t('common:welcome.closeTab')}
           </button>
           <button
             onClick={() => {
@@ -499,7 +500,7 @@ export function WorkbenchTab() {
             }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
-            {t('welcome.closeOthers')}
+            {t('common:welcome.closeOthers')}
           </button>
           <button
             onClick={() => {
@@ -508,7 +509,7 @@ export function WorkbenchTab() {
             }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
-            {t('welcome.closeRight')}
+            {t('common:welcome.closeRight')}
           </button>
           <div className="my-1 border-t border-gray-200 dark:border-edge-subtle" />
           <button
@@ -518,13 +519,13 @@ export function WorkbenchTab() {
             }}
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-app-hover text-gray-700 dark:text-gray-300"
           >
-            {t('welcome.closeAll')}
+            {t('common:welcome.closeAll')}
           </button>
         </div>
       )}
 
-      {/* 内容区（AL-M4c keep-alive：激活页签 + 最近 N 挂载,超限非激活卸载释放内存）
-          M1 修复：激活子视图补 h-full，恢复 TopologyTab 高度链（否则画布高度坍缩为 0、fit 失效） */}
+      {/* i18n: 内容区（AL-M4c keep-alive：激活页签 + 最近 N 挂载,超限非激活卸载释放内存）
+          i18n: M1 修复：激活子视图补 h-full，恢复 TopologyTab 高度链（否则画布高度坍缩为 0、fit 失效） */}
       <div className="flex-1 overflow-auto p-4">
         {openedSubviews.map((sv) => {
           const mounted = mountedSubviews.has(sv)
@@ -563,15 +564,15 @@ export function WorkbenchTab() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {t('workbench:status')}:
                 </span>
-                {/* 5.2.1-521-f：项目生命周期（后端按关键文件推断的 status；缺省回退 Ready） */}
+                {/* i18n: 5.2.1-521-f：项目生命周期（后端按关键文件推断的 status；缺省回退 Ready） */}
                 <span className="inline-block px-2 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium">
                   {t(`common:explorer.workbench.lifecycle.${selectedProject?.status || 'ready'}`, { defaultValue: 'Ready' })}
                 </span>
               </div>
             </div>
-            {/* 5.2.1-521-d：上游变更 → 待调整横幅（重跑依赖链/同步规划/确认偏离） */}
+            {/* i18n: 5.2.1-521-d：上游变更 → 待调整横幅（重跑依赖链/同步规划/确认偏离） */}
             <WorkbenchStaleBanner />
-            {/* 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
+            {/* i18n: 打磨轮（v1.6 收尾）：5 卡→三步 步骤分组 */}
             <StepLabel n="①" text={t('workbench:stepConfig', '配置与就绪')} />
             <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3 grid grid-cols-2 gap-3 mb-4">
               <WorkbenchScopeCard />
@@ -586,7 +587,7 @@ export function WorkbenchTab() {
             <div className="rounded-lg bg-gray-50/70 dark:bg-app/40 border border-gray-100 dark:border-edge-subtle border-t-2 border-t-primary-200 dark:border-t-primary-700 p-3">
               <WorkbenchResultCard />
             </div>
-            {/* 4.4 F4-3：一键管线（规划→设计→渲染→导出 + 模板批处理） */}
+            {/* i18n: 4.4 F4-3：一键管线（规划→设计→渲染→导出 + 模板批处理） */}
             <div className="mt-4">
               <PipelinePanel />
             </div>
@@ -612,7 +613,7 @@ export function WorkbenchTab() {
                 {t('workbench:aidcCreate.hint')}
               </span>
             </div>
-            {/* AL-M5a：AIDC 新建并入 CreateProjectWizardModal */}
+            {/* i18n: AL-M5a：AIDC 新建并入 CreateProjectWizardModal */}
             {showAidcWizard && (
               <CreateProjectWizardModal
                 defaultAidc

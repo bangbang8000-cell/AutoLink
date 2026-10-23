@@ -1,6 +1,43 @@
 # CHANGELOG
 
 
+## [5.5.0] - 2026-10-23
+
+> **工作台迭代版（F1–F9，按《02-AL客户端工作台迭代PRD-5.5.x》落地）：i18n 存量清零与命名空间修复 + 渲染/校验体验加固 + 工具行重构。**
+
+### F1/F8/F9 — 工作台 i18n 存量清零与命名空间修复（P0/P2/P2）
+
+- 工作台 8 文件硬编码中文清零：`WorkbenchActionCard` / `OutputResultsView` / `DocsWorkbench` / `KnowledgePanel` / `VersionHistoryView` / `WorkbenchStepBar` / `WorkbenchTab` 文案全部走 `useTranslation`；`scan_hardcoded_cn.py` 基线 106 → 99 文件（门禁只防新增）。
+- **命名空间修复（存量 bug）**：上述组件由默认 common 命名空间改为绑定 `['workbench', 'common']`，修复 `doc.*` / `knowledge.*` / `output.*` / `progress.*` / `versionHistory.*` 解析为编程 ID 的问题；新增 5 语言 key 36 组（`doc.thType` / `doc.fileCount` / `knowledge.tagExample` 等），i18n 5 语言完整性门禁维持通过。
+- F8：`DocsWorkbench` 表格六列表头（`doc.thType` 等）与文件数计数 i18n 化。
+
+### F2 — 批次完整性校验并行化（P0）
+
+- `OutputResultsView` 刷新时逐批次串行 await 改为并发池（`CHECK_CONCURRENCY`=8）；8K 批次刷新 ≤10s 目标由迭代启动前实测确认（本地无 8K 真实项目数据，见测试计划"未决基线"）。
+
+### F3 — 渲染失败重试 + 单文件级续传（P0）
+
+- 主进程新增 `render:saveRenderProgress` / `render:loadRenderProgress`（进度落盘 `<project>/output/.render-progress.json`，fingerprint/done/failed/updatedAt，经 sanitize 限界校验），preload 与 `electron.d.ts` 类型齐备。
+- 前端 `renderFingerprint` 指纹（拓扑节点/边、机柜名/型号、机房矩阵、设计有效性）决定续传：指纹匹配跳过已完成文件（doneSet），失败项（failedSet）自动重试；`retryHint` 提示条展示上次失败计数；单测 `src/test/render-progress.test.ts` 7 用例。
+
+### F4 — 输出工具行重构（P0）
+
+- 12+ 平铺按钮收敛为常驻高频 5 个 + 「导出」下拉组（`output.exportMenu`）/「管理」下拉组（`output.manageMenu`，danger 置底）；新增 `MenuItem` 组件承载菜单项。
+
+### F5 — 知识库搜索竞态（P1）
+
+- `KnowledgePanel` 引入请求序号 `searchSeq` / `viewSeq`，刷新/搜索/查看以序号校验丢弃过期响应。
+
+### F7 — 工作台 e2e 主链路（P1）
+
+- 新增 `e2e/workbench.spec.ts`：建项目→拓扑→工作台步骤条→一键渲染→结果/完整性徽标→F4 导出/管理下拉→F3 二次渲染续传。
+
+### 工程
+
+- 版本 5.5.0（`sync_version.py` 单源同步四文件）；`AGENT.md` / `README.md` 文档版本同步（F6）；硬编码中文基线收敛 106 → 99。
+- 测试计划 15 用例分层执行；8K 性能基线待迭代启动后实测（本地无真实 8K 数据）。
+
+
 ## [5.4.16] - 2026-10-12
 
 > **多语言系统修复版（与 MC 5.4.16 同号同步）+ 内容资产增量更新（L2 MVP）。**

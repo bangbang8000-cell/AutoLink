@@ -46,6 +46,9 @@ design/
 # 敏感本地信息（含服务器凭据，禁止提交）
 *.local.md
 
+# CLI 契约审计日志（本地运行产物）
+audit/
+
 # Archived docs (本地保留，不推送)
 docs/_archive/
 

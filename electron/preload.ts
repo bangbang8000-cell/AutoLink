@@ -272,6 +272,11 @@ const electronAPI = {
     // 打磨轮（v1.5 / AL-O1f）：清空全部项目输出
     clearAllOutput: () =>
       ipcRenderer.invoke('render:clearAllOutput'),
+    // F3（5.5.x）：渲染进度落盘/读取（单文件级续传）
+    saveRenderProgress: (projectName: string, progress: { fingerprint: string; done: string[]; failed: string[] }) =>
+      ipcRenderer.invoke('render:saveRenderProgress', projectName, progress),
+    loadRenderProgress: (projectName: string) =>
+      ipcRenderer.invoke('render:loadRenderProgress', projectName),
     onProgress: (callback: (data: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
       ipcRenderer.on('render:progress', handler)

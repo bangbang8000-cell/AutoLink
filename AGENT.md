@@ -34,7 +34,7 @@ Scale-Up 卡间互联（NVLink / UALink / UB）+ Scale-Out 网间互联（Fat-Tr
 
 **版本单源**（4 文件，任一漂移 CI 即红）：
 ```
-version.json = package.json = package-lock.json = VERSION   # 当前 5.4.4
+version.json = package.json = package-lock.json = VERSION   # 当前 5.5.0
 ```
 校验：`npm run check-version`（等价 `python scripts/check_version.py`）。
 
@@ -206,9 +206,9 @@ MC 侧对应是 `--workspace <dir>`（**不是** `--user-data`）。
 
 ```bash
 # 1) 版本 bump（单源）
-python scripts/sync_version.py --set 5.4.5
+python scripts/sync_version.py --set 5.5.0
 git add version.json package.json package-lock.json VERSION   # 显式列路径
-git commit -m "chore: bump 5.4.5"
+git commit -m "chore: bump 5.5.0"
 
 # 2) 先推 main
 git push origin main
@@ -216,8 +216,8 @@ git push origin main
 # 3) 打带注释多行 tag（先与远端对账！）
 git fetch origin --tags
 git ls-remote --tags origin | tail -5        # 确认目标版本未被占用
-git tag -a v5.4.5 -m "AIDC AutoLink v5.4.5" <commit>
-git push origin v5.4.5                        # build.yml 仅 push tag v* 建 Release
+git tag -a v5.5.0 -m "AIDC AutoLink v5.5.0" <commit>
+git push origin v5.5.0                        # build.yml 仅 push tag v* 建 Release
 
 # 4) 同步群晖镜像
 git push syno main --tags

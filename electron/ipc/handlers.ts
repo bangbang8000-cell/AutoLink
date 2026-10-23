@@ -1825,6 +1825,29 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       fs.mkdirSync(path.dirname(filePath), { recursive: true })
     }
     fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'))
+    // F2（5.5.x）修复：前端产物（上机表/拓扑图等）写盘后同步更新批次 manifest，
+    // 使完整性校验（manifest vs actualFiles）不再把前端产物判为漂移。
+    // 仅顶层批次目录文件入清单（与 project:batchManifest 的 actualFiles 非递归口径一致）。
+    try {
+      const seg = relPath.replace(/^output\//, '').split('/')
+      const batchName = seg[0]
+      const fileName = seg.slice(1).join('/')
+      if (batchName && fileName && !fileName.includes('/')) {
+        const batchDir = path.join(getWorkspacePath(), projectName, 'output', batchName)
+        const manifestPath = path.join(batchDir, 'manifest.json')
+        if (fs.existsSync(manifestPath)) {
+          const crypto = await import('crypto')
+          const buf = fs.readFileSync(filePath)
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+          const files = Array.isArray(manifest?.files)
+            ? manifest.files.filter((x: { name?: unknown }) => x?.name !== fileName)
+            : []
+          files.push({ name: fileName, size: buf.length, sha256: crypto.createHash('sha256').update(buf).digest('hex') })
+          manifest.files = files
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8')
+        }
+      }
+    } catch { /* i18n: manifest 同步失败不阻断产物写入 */ }
     return filePath
   }))
 
@@ -1856,6 +1879,39 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       }
     }
     return { deleted }
+  }))
+
+  // F3（5.5.x）：渲染进度落盘（单文件级续传）——写入 <project>/output/.render-progress.json
+  // done/failed 为产物相对路径列表（如 output/v1_ts/上机表.xlsx）；指纹变化时前端强制全量，忽略本文件
+  ipcMain.handle('render:saveRenderProgress', wrapHandler(async (_event, projectName: string, progress: { fingerprint: string; done: string[]; failed: string[] }) => {
+    sanitizeName(projectName)
+    const filePath = sanitizeProjectPath(projectName, 'output', '.render-progress.json')
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, JSON.stringify({
+      fingerprint: String(progress?.fingerprint ?? ''),
+      done: Array.isArray(progress?.done) ? progress.done.filter((x): x is string => typeof x === 'string') : [],
+      failed: Array.isArray(progress?.failed) ? progress.failed.filter((x): x is string => typeof x === 'string') : [],
+      updatedAt: new Date().toISOString(),
+    }), 'utf-8')
+    return { ok: true }
+  }))
+
+  // F3（5.5.x）：读取渲染进度（续传判定依据；文件不存在/损坏 → null）
+  ipcMain.handle('render:loadRenderProgress', wrapHandler(async (_event, projectName: string) => {
+    sanitizeName(projectName)
+    const filePath = sanitizeProjectPath(projectName, 'output', '.render-progress.json')
+    if (!fs.existsSync(filePath)) return null
+    try {
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      return {
+        fingerprint: typeof raw?.fingerprint === 'string' ? raw.fingerprint : '',
+        done: Array.isArray(raw?.done) ? raw.done.filter((x: unknown): x is string => typeof x === 'string') : [],
+        failed: Array.isArray(raw?.failed) ? raw.failed.filter((x: unknown): x is string => typeof x === 'string') : [],
+        updatedAt: typeof raw?.updatedAt === 'string' ? raw.updatedAt : '',
+      }
+    } catch {
+      return null
+    }
   }))
 
   // ===== Export =====

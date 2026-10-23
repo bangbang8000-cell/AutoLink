@@ -549,6 +549,9 @@ interface Window {
       readOutputFile: (projectName: string, relPath: string) => Promise<{ base64: string; ext: string; size: number }>
       // 打磨轮（v1.5 / AL-O1f）：清空全部项目输出
       clearAllOutput: () => Promise<{ deleted: number }>
+      // F3（5.5.x）：渲染进度落盘/读取（单文件级续传）
+      saveRenderProgress: (projectName: string, progress: { fingerprint: string; done: string[]; failed: string[] }) => Promise<{ ok: boolean }>
+      loadRenderProgress: (projectName: string) => Promise<{ fingerprint: string; done: string[]; failed: string[]; updatedAt: string } | null>
       onProgress: (callback: (data: unknown) => void) => () => void
     }
     app: {

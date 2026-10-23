@@ -51,7 +51,7 @@ const GENERATE_KINDS: GenerateKind[] = [
 const fmtSize = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)}MB` : n > 1024 ? `${(n / 1024).toFixed(1)}KB` : `${n}B`)
 
 export function DocsWorkbench({ projectName }: { projectName: string }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const addToast = useToastStore((s) => s.addToast)
   const openTab = useWorkspaceStore((s) => s.openTab)
   const [artifacts, setArtifacts] = useState<DocArtifact[]>([])
@@ -89,7 +89,7 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
         path?: string
         error?: string
       }
-      if (!res?.ok) throw new Error(res?.error ?? '生成失败')
+      if (!res?.ok) throw new Error(res?.error ?? '生成失败') // i18n: 兜底错误消息（用户可见时经 catch 分支 t() 包装）
       addToast('success', t('doc.generated', '已生成 → {{path}}', { path: res.path ?? '' }), 5000)
       refresh()
     } catch (err) {
@@ -132,12 +132,12 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
     try {
       const wsp = await window.electron.app.getPath('workspace')
       window.electron.shell.showItemInFolder(`${wsp}\\${projectName}\\${a.relPath.replace(/\//g, '\\')}`)
-    } catch { /* 忽略定位失败 */ }
+    } catch { /* i18n: 忽略定位失败 */ }
   }, [projectName])
 
   return (
     <div className="space-y-4">
-      {/* 顶部 */}
+      {/* i18n: 顶部 */}
       <div className="flex items-center gap-2 flex-wrap">
         <FileText size={16} className="text-primary-500" />
         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -155,14 +155,14 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
         </button>
         <button
           type="button"
-          onClick={() => openTab({ type: 'guide', title: t('guide.title'), closable: true })}
+          onClick={() => openTab({ type: 'guide', title: t('common:guide.title'), closable: true })}
           className="flex items-center gap-1 px-2 py-1 text-2xs rounded border border-sky-300 dark:border-sky-700 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20"
         >
           <BookOpen size={11} /> {t('doc.userGuide', '用户指南')}
         </button>
       </div>
 
-      {/* 一键生成区 */}
+      {/* i18n: 一键生成区 */}
       <div>
         <p className="text-2xs font-medium text-gray-500 dark:text-gray-400 mb-2">
           {t('doc.generateSection', '一键生成 / 导出')}
@@ -198,7 +198,7 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
               </div>
             )
           })}
-          {/* MC 交付包（前端生成，独立卡片） */}
+          {/* i18n: MC 交付包（前端生成，独立卡片） */}
           <div className="rounded-lg border border-success-300 dark:border-success-700 p-3 bg-white dark:bg-app-elevated flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-200">
               <ArrowUpRight size={14} className="text-success-600 dark:text-success-400" />
@@ -220,7 +220,7 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
         </div>
       </div>
 
-      {/* 产物清单 */}
+      {/* i18n: 产物清单 */}
       <div className="rounded-lg border border-gray-200 dark:border-edge-subtle bg-white dark:bg-app-elevated overflow-hidden">
         <div className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border-b bg-gray-50 dark:bg-app/50 flex items-center gap-1.5">
           <FolderOpen size={12} className="text-gray-400" />
@@ -235,12 +235,12 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-edge-subtle">
-                  <th className="py-2 px-3 font-medium">类型</th>
-                  <th className="py-2 px-3 font-medium">文件名</th>
-                  <th className="py-2 px-3 font-medium">时间</th>
-                  <th className="py-2 px-3 font-medium">大小</th>
-                  <th className="py-2 px-3 font-medium">状态</th>
-                  <th className="py-2 px-3 font-medium text-right">操作</th>
+                  <th className="py-2 px-3 font-medium">{t('doc.thType', '类型')}</th>
+                  <th className="py-2 px-3 font-medium">{t('doc.thName', '文件名')}</th>
+                  <th className="py-2 px-3 font-medium">{t('doc.thTime', '时间')}</th>
+                  <th className="py-2 px-3 font-medium">{t('doc.thSize', '大小')}</th>
+                  <th className="py-2 px-3 font-medium">{t('doc.thStatus', '状态')}</th>
+                  <th className="py-2 px-3 font-medium text-right">{t('doc.thAction', '操作')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,7 +252,7 @@ export function DocsWorkbench({ projectName }: { projectName: string }) {
                       {a.time.slice(0, 19).replace('T', ' ')}
                     </td>
                     <td className="py-1.5 px-3 text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">
-                      {a.type === 'archive' ? `${a.size} 文件` : fmtSize(a.size)}
+                      {a.type === 'archive' ? t('doc.fileCount', '{{count}} 文件', { count: a.size }) : fmtSize(a.size)}
                     </td>
                     <td className="py-1.5 px-3">
                       <span className="inline-block px-1.5 py-0.5 text-2xs rounded bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300">

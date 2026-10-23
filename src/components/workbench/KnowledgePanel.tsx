@@ -7,7 +7,7 @@
  *  - 新增 / 编辑 / 删除条目
  *  - 详情查看（markdown 渲染）
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -43,7 +43,7 @@ interface EditorState {
 const EMPTY_EDITOR: EditorState = { name: '', title: '', category: '', project: '', tags: '', content: '' }
 
 export function KnowledgePanel({ projectName }: { projectName: string }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['workbench', 'common'])
   const addToast = useToastStore((s) => s.addToast)
   const [entries, setEntries] = useState<KnowledgeEntry[]>([])
   const [categories, setCategories] = useState<string[]>([])
@@ -57,23 +57,31 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeEntry | null>(null)
 
+  // F5：请求序号防竞态 —— 快速输入/切换分类时旧响应不得覆盖新响应
+  const searchSeq = useRef(0)
+  const viewSeq = useRef(0)
+
   const refresh = useCallback(async (keepQuery = true) => {
+    const seq = ++searchSeq.current
     setBusy(true)
     try {
       const q = keepQuery ? query.trim() : ''
       if (q) {
         const res = await window.electron.aihub.knowledge.search({ query: q, category: category || undefined })
+        if (seq !== searchSeq.current) return
         setEntries((res as unknown as { entries?: KnowledgeEntry[] }).entries ?? [])
       } else {
         const res = await window.electron.aihub.knowledge.list({ category: category || undefined })
+        if (seq !== searchSeq.current) return
         setEntries((res as { entries?: KnowledgeEntry[] }).entries ?? [])
         const cats = (res as { categories?: string[] }).categories ?? []
         setCategories(cats)
       }
     } catch {
+      if (seq !== searchSeq.current) return
       setEntries([])
     } finally {
-      setBusy(false)
+      if (seq === searchSeq.current) setBusy(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category])
@@ -83,20 +91,24 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
 
   const handleSearch = useCallback((q: string) => {
     setQuery(q)
+    const seq = ++searchSeq.current
     setBusy(true)
     const run = async () => {
       try {
         if (q.trim()) {
           const res = await window.electron.aihub.knowledge.search({ query: q.trim(), category: category || undefined, topK: 50 })
+          if (seq !== searchSeq.current) return
           setEntries((res as unknown as { entries?: KnowledgeEntry[] }).entries ?? [])
         } else {
           const res = await window.electron.aihub.knowledge.list({ category: category || undefined })
+          if (seq !== searchSeq.current) return
           setEntries((res as { entries?: KnowledgeEntry[] }).entries ?? [])
         }
       } catch {
+        if (seq !== searchSeq.current) return
         setEntries([])
       } finally {
-        setBusy(false)
+        if (seq === searchSeq.current) setBusy(false)
       }
     }
     void run()
@@ -113,7 +125,7 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
     setEditor({
       name: e.name,
       title: e.title || '',
-      category: e.category === '通用' ? '' : e.category,
+      category: e.category === '通用' ? '' : e.category, // i18n: 后端分类约定值（'通用'=未指定项目），非界面文案
       project: e.project || '',
       tags: (e.tags ?? []).join(','),
       content: e.content ?? '',
@@ -122,14 +134,17 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
   }, [])
 
   const openView = useCallback(async (e: KnowledgeEntry) => {
+    const seq = ++viewSeq.current
     setBusy(true)
     try {
       const res = await window.electron.aihub.knowledge.get(e.name)
+      if (seq !== viewSeq.current) return
       setViewing((res as { entry?: KnowledgeEntry })?.entry ?? null)
     } catch (err) {
+      if (seq !== viewSeq.current) return
       addToast('error', (err as Error).message, 4000)
     } finally {
-      setBusy(false)
+      if (seq === viewSeq.current) setBusy(false)
     }
   }, [addToast])
 
@@ -317,7 +332,7 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
               onClick={() => setEditorOpen(false)}
               className="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-app-hover"
             >
-              {t('cancel')}
+              {t('common:cancel')}
             </button>
             <button
               onClick={save}
@@ -353,7 +368,7 @@ export function KnowledgePanel({ projectName }: { projectName: string }) {
               <input value={editor.project} onChange={(e) => setEditor({ ...editor, project: e.target.value })} className="w-full text-xs rounded border bg-white dark:bg-app px-2 py-1.5" placeholder={t('knowledge.projectPlaceholder', '留空为通用知识')} />
             </Field>
             <Field label={t('knowledge.fieldTags', '标签（逗号分隔）')}>
-              <input value={editor.tags} onChange={(e) => setEditor({ ...editor, tags: e.target.value })} className="w-full text-xs rounded border bg-white dark:bg-app px-2 py-1.5" placeholder="roce, 收敛比" />
+              <input value={editor.tags} onChange={(e) => setEditor({ ...editor, tags: e.target.value })} className="w-full text-xs rounded border bg-white dark:bg-app px-2 py-1.5" placeholder={t('knowledge.tagExample', 'roce, 收敛比')} />
             </Field>
           </div>
           <Field label={t('knowledge.fieldContent', '内容（markdown）')}>

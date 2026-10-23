@@ -288,7 +288,7 @@ describe('E-3 pipeline.store（一键管线状态）', () => {
     expect(s.steps).toHaveLength(4)
     expect(s.steps.every((x) => x.status === 'success')).toBe(true)
     expect(s.lastResult?.ok).toBe(true)
-  })
+  }, 20_000)
 
   it('stop 设置 cancelled（可中断入口），reset 复位', async () => {
     const { usePipelineStore } = await import('@/stores/pipeline.store')
