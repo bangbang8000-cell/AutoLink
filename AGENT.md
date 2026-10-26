@@ -108,7 +108,7 @@ python scripts/gen_golden.py --check
 | 门禁脚本 | 作用 | 何时必跑 |
 |---|---|---|
 | `scripts/check_version.py` | 版本 4 文件单源一致 | 任何版本相关改动 |
-| `scripts/validate_templates.py` | **23 套模板端到端（JSON + INI 双路径）**，是 INI 路径**唯一**端到端门禁 | **改 `designer.py` / `topology.py` / `engine.py` 必跑**（⚠️ 本地"门禁四连"不包含它 ⇒ 本地全绿而 CI 红） |
+| `scripts/validate_templates.py` | **30 套模板端到端（JSON + INI 双路径）**，是 INI 路径**唯一**端到端门禁 | **改 `designer.py` / `topology.py` / `engine.py` 必跑**（⚠️ 本地"门禁四连"不包含它 ⇒ 本地全绿而 CI 红） |
 | `scripts/validate_device_library.py` | 设备库索引 ↔ 目录对账（死文件/缺字段/重复 id/分类漂移） | 增删设备档案 |
 | `scripts/gen_golden.py --check` | golden 基线比对（`tests/backend/golden/` 28 JSON） | 改动会影响设计输出时 |
 | `scripts/check_doc_numbers.py` | 以**代码为唯一真值源**反查文档中的设备数/模板数/规则数 | 改文档数字 |
@@ -118,7 +118,10 @@ python scripts/gen_golden.py --check
 | CI 内联 | 渲染层安全基线（0 直连网络 / 0 Node 访问，一切走 preload IPC）+ 冲突标记扫描 | 改 `src/` |
 
 **CI 顺序（fail-fast）**：typecheck → lint → test:report → build:renderer → build:electron → Security baseline
-→ validate_templates → validate_device_library → doc numbers → conflict markers → changelog claims → gen_golden --check → pytest。
+→ validate_templates → validate_device_library → doc numbers → conflict markers → changelog claims
+→ **agent skills refs** → **CLI contract guard** → **hardcoded CN scan** → gen_golden --check
+→ pytest（`tests/backend`，覆盖率门禁 55%）→ pytest（`test_sample_assets.py`）→ MCP SDK importable → bench_perf → test_report。
+另有两个独立 job：`check-version`（`check_version.py`）与 `e2e`（Playwright + xvfb）。
 
 ---
 

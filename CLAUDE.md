@@ -8,6 +8,8 @@
 你在 **AIDC AutoLink Client** 仓库中工作 —— AI 智算中心网络规划与可视化工具。
 技术栈：Electron + React 18 + TypeScript + Vite（`src/`、`electron/`）+ Python 3.12 引擎（`backend/`）。
 
+**当前版本 `5.5.0`**（`VERSION` / `package.json` 单源；5.5.0 = 工作台迭代 F1–F9）。
+
 本仓是 **MC-AL 联合工作区**的双端之一，与 `../MagicCommander-Client` 构成同构对。
 工作区级长期约定在 `../.workbuddy/memory/MEMORY.md`，**动跨端改动物必先读**。
 
@@ -32,8 +34,10 @@ npm run check-version          # 版本单源
 5. **大文档多处修改要串行**（同一文件并发 `Edit` 会互相覆盖且报 success）——
    优先整篇 `Write`；改完 `grep` 回看锚点。
 6. **改 `designer.py` / `topology.py` / `engine.py` 必跑 `python scripts/validate_templates.py`**
-   （23 套模板 JSON + INI 双路径端到端，是 INI 路径唯一端到端门禁；本地"门禁四连"**不含**它）。
-7. **领域不变量**（详见 `AGENT.md` §6.1）：机柜默认 1 柜 1 台；`gpu_per_cabinet` 是**台数**不是卡数；
+   （**30 套**模板 JSON + INI 双路径端到端，是 INI 路径唯一端到端门禁；本地"门禁四连"**不含**它）。
+7. **改 `backend/cli.py` 必跑 `python scripts/check_cli_contract.py`**（AL C1–C4 契约）。
+8. **新增/改动中文文案后跑 `python scripts/scan_hardcoded_cn.py`**（i18n 硬编码中文扫描门禁）。
+9. **领域不变量**（详见 `AGENT.md` §6.1）：机柜默认 1 柜 1 台；`gpu_per_cabinet` 是**台数**不是卡数；
    连接去重键方向敏感 `(a_device, z_device, a_port)`；分光按网络角色生效；光模块速率 `T`=×1000 且四份解析须同步；
    `NetworkDesignerV2(path)` 构造即执行设计。
 
@@ -62,5 +66,12 @@ python scripts/validate_device_library.py     # 若动设备库
 python scripts/check_doc_numbers.py           # 若动文档数字
 python scripts/gen_golden.py --check          # 若动输出
 ```
-CI 顺序：typecheck → lint → test:report → build → Security baseline → validate_templates →
-validate_device_library → doc numbers → conflict markers → changelog claims → gen_golden --check → pytest。
+**CI 三个 job**（`.github/workflows/ci.yml`）：
+
+- `check`（fail-fast 串行）：typecheck → lint → test:report → build:renderer → build:electron →
+  Security baseline → validate_templates → validate_device_library → doc numbers → conflict markers →
+  changelog claims → **agent skills refs** → **CLI contract guard** → **hardcoded CN scan** →
+  gen_golden --check → pytest(`tests/backend`，含覆盖率门禁) → pytest(`test_sample_assets.py`) →
+  MCP SDK importable → bench_perf → test_report
+- `check-version`（独立 job）：`python scripts/check_version.py`
+- `e2e`：`npm run build:electron` + Playwright（`xvfb-run`）

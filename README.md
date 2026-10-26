@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 [![Languages](https://img.shields.io/badge/languages-5-orange)](#)
 [![Templates](https://img.shields.io/badge/templates-30-teal)](#)
-[![Devices](https://img.shields.io/badge/devices-129-purple)](#)
+[![Devices](https://img.shields.io/badge/devices-131-purple)](#)
 [![AI Tools](https://img.shields.io/badge/Agent--Tools-72-brightgreen)](#)
 [![CI](https://img.shields.io/badge/tests-3044%20passed-brightgreen)](#)
 
@@ -125,6 +125,13 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 - **5.1 系列**（v5.1.0–v5.1.9）：**Agent Connect**（把 AutoLink 封装为标准 MCP Server，编译态受限 / 源码态无限制双场景）、确定性语义层、异步长任务（task_submit/query/wait/cancel）、操作审计（audit_query 脱敏）、远程模式试点、Agent 反馈自优化、自检与排错
 - **5.2 系列**（v5.2.0–v5.2.5）：工作台精细打磨与回归发布（5.2 首版）；**5.2.2 修复版**——双端契约面同构（`test_dual_end_parity_522`）、Agent Connect 权限门禁真实化（gate_mode/block_audit/启动断言）、导出产物指纹复用 + `--no-archive` + 缺省全类型、`schema_version` + 英文规范子树（`data` / `legacy_data` 过渡双子树）、CLI 退出码契约（0/1/2/3）、文档数字自动校验门禁；**5.2.3 修复版**——连接去重键方向不敏感缺陷（E005/E011，误删双向连接）、CI 红灯清零（mcp 依赖上限 / 挂死用例超时护栏 / 旧契约断言对齐）、机柜台数文案与手册更正（每柜 GPU **服务器台数**、功率默认 12000W、一柜多台需两处同设）；**5.2.4 修复版**——收敛比建议改用配置意图值（恢复 V5.0.11 下联钳制下不可达的收敛比建议）、单柜功率上限默认值全链路统一为 12000W（代码向用户手册既有真值对齐）；**5.2.5 修复版（R0 止血）**——**光模块选型系统性误配**：两个独立根因（`_parse_speed('1.6T')` 被解析为 **1**、降级分支忽略速率）导致 1.6T 模块被 1G 网线链路选中、25G 链路被装 100G/400G 模块，污染模块总数与成本；修复后**跨速率误配清零**，`reportData` 新增 `module_selection` 三分类守恒台账（**纯增量、不 bump `schema_version`**），`cost` 增加 `可用于报价=false` 口径标注，布线表/BOM 同步显式化未匹配链路，并更正 5.2.2 的四项过度宣称
 - **5.3 系列**（v5.3.0–v5.3.3）：**端口守恒与口径校准**——5.3.0 逐层端口守恒契约（根治业务网连接静默丢弃、补齐 V021）、5.3.1 数值口径校准（分组粒度按类别取整、接入上联口默认 8→6）、5.3.2 INI 初始化缺口补全、5.3.3 双路径对称 AST 探针（`_init_biz_caliber_switches` 调用点覆盖 / 不对称散落赋值 / 无默认值三查）
+- **5.5.0（工作台迭代版 · 2026-10-23）**——**F1–F9 按《AL客户端工作台迭代PRD-5.5.x》落地**：工作台 i18n 存量清零与命名空间修复（P0）+ 渲染/校验体验加固 + 工具行重构
+- **5.4.16（多语言修复版 · 2026-10-12）**——与 MC 5.4.16 同号同步：多语言体系修复（fallback 回落 / i18n 严格门禁 / 硬编码中文扫描门禁）+ 内容资产增量更新（L2 MVP）
+- **5.4.5（CLI 契约收敛版 · 2026-09-27）**——批次 B/C + 外部 Agent 授权档位 `--grant`（`readonly`/`semi`/`full`，`full` 须配 `--audit`），CLI 命令形态 / 文档 / 审计三线对齐
+- **5.4.4（工作台可用性修复版 · 2026-09-22）**——用户实测 6 条反馈 F1~F6 一次收口，8K+ 卡集群全流程可走通
+- **5.4.3（用户反馈修复单 · 2026-09-22）**——R1~R5 + 更新下载可靠性强化 + `al-hwlist/1.0` 硬件清单输出
+- **5.4.2（Q3400 二层口径核查 · 2026-09-21）**——《用户反馈》AL-Q1~Q4 落地 + 上游 5.4.1 合并
+- **5.4.6–5.4.15（2026-09-27 ~ 10-12）**——内部迭代编号，未单独对外发版；明细见 `CHANGELOG.md`
 - **5.4.1（双端 UI 阶段 A + 修复版）**——**对齐基线**：更新机制对齐 MC（单点状态源 + 自动重启弹窗）、一级命名统一（资源管理器/AI对话）、菜单分组方案 A（项目→工具）、组件行为契约（Toast 右下等）、快捷键对齐；移除「最近项目」入口；修复 undo 落盘路径（IPC 校验失败）
 - **5.4.0（6 场景内容建设版）**——**万卡与二层最大场景内容资产**：二层容量判据 `k²/(2p)`（9 套模板翻转判二层）、breakout 链式/角色化（QM9700 参数网禁用存储分光）、存储口数三处同源（GPU 1 / 存储 4 / 通算 1）、万卡互联段按规模扩段（/19）、新增 **6 套大规模场景模板**（万卡 H200×3 + 二层最大 ×2 + B300）、golden 28→34、设备库 129 款（+X400/Q3400/B300）
 
@@ -134,11 +141,11 @@ GPU 卡间互联（Scale-Up）与服务器间网络（Scale-Out）双栈一体�
 
 ### 方式一：下载安装包（推荐）
 
-前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包：
+前往 [Releases](https://github.com/bangbang8000-cell/AutoLink/releases) 下载对应平台安装包（最新对外发布版 **5.4.16**；5.5.0 工作台迭代版在途，发包后本节同步更新）：
 
-- **Windows**：`AutoLink-Setup-5.4.1-win.exe`（NSIS 安装包）
-- **macOS**：`AutoLink-5.4.1-mac-x64.dmg` / `AutoLink-5.4.1-mac-arm64.dmg`
-- **Linux**：`AutoLink-5.4.1-linux.AppImage` / `.deb`
+- **Windows**：`AutoLink-Setup-5.4.16-win.exe`（NSIS 安装包）
+- **macOS**：`AutoLink-5.4.16-mac-x64.dmg` / `AutoLink-5.4.16-mac-arm64.dmg`
+- **Linux**：`AutoLink-5.4.16-linux.AppImage` / `.deb`
 
 安装后首次启动自动创建示例项目，内置 **30 套场景模板**（含 14 套示例：7 套 H100/昇腾 + 1 套 5090 推理本地定制 + 6 套万卡/二层最大场景）与 **131 款设备库**（95 硬件 + 36 光模块）。
 
@@ -263,7 +270,7 @@ AutoLink/
 │   ├── validation.py       #   23 条校验规则引擎（V001–V023；5.3.0 补齐 V021，5.4.2 新增 V023）
 │   ├── optical_selector.py #   光模块智能选型（含 1 分 2 分裂线缆）
 │   ├── exporter.py         #   Excel/PDF 导出
-│   ├── device_library.py   #   设备库加载器（129 款 = 93 硬件 + 36 光模块）
+│   ├── device_library.py   #   设备库加载器（131 款 = 95 硬件 + 36 光模块）
 │   ├── optimization.py     #   批量优化（收敛比/成本/散热建议 + 应用）
 │   ├── fixit.py            #   智能修复（校验错误 → 修复 patch → 复核闭环）
 │   ├── atop/               #   ATOP 自动拓扑优化（特征解析 + ZCube 推荐）
