@@ -19,6 +19,8 @@ project_root = os.path.dirname(SPECPATH)
 backend_dir = os.path.join(project_root, 'backend')
 template_dir = os.path.join(project_root, 'template')
 hub_dir = os.path.join(backend_dir, 'autolink_hub')
+# B1-01：柜型分类单一真源（room_taxonomy.py 按 __file__ 同目录探测）
+taxonomy_json = os.path.join(project_root, 'src', 'shared', 'roomTaxonomy.json')
 
 a = Analysis(
     [os.path.join(backend_dir, 'engine.py')],
@@ -28,6 +30,8 @@ a = Analysis(
     # 打包后 __file__=backend-dist/_internal/device_library.py → backend-dist/template/
     datas=[
         (template_dir, 'template'),
+        # 打包后 __file__=backend-dist/_internal/room_taxonomy.py → _internal/roomTaxonomy.json
+        (taxonomy_json, '.'),
         # V3.1.1-T5-8: AI Hub 提示词与技能 md（运行时按 __file__ 相对定位）
         (os.path.join(hub_dir, 'prompts'), 'autolink_hub/prompts'),
         (os.path.join(hub_dir, 'skills', 'skills'), 'autolink_hub/skills/skills'),

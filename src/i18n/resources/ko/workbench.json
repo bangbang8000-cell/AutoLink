@@ -345,5 +345,19 @@
   "doc.thSize": "크기",
   "doc.thStatus": "상태",
   "doc.thAction": "작업",
-  "knowledge.tagExample": "예: 네트워크, 랙, 장치（Enter로 구분）"
+  "knowledge.tagExample": "예: 네트워크, 랙, 장치（Enter로 구분）",
+  "subviewAction": {
+    "markDone": "완료 표시",
+    "done": "완료됨",
+    "undo": "취소",
+    "reconfirm": "완료 재확인",
+    "noop": "이 단계에는 작업이 없습니다",
+    "invalidatedTip": "상위가 변경되었습니다. 다시 확인하세요",
+    "reasonDesign": "먼저 네트워크 설계를 생성하세요",
+    "reasonRoomMatrix": "먼저 룸 매트릭스를 생성하세요",
+    "reasonRackMatrix": "먼저 룸 매트릭스를 확정하세요",
+    "reasonRackCabinets": "먼저 랙을 생성하세요",
+    "reasonMainOutputs": "먼저 출력 유형을 선택하세요",
+    "reasonRender": "먼저 렌더링을 완료하세요"
+  }
 }

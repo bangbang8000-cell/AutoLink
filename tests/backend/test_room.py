@@ -244,9 +244,10 @@ class TestRoomActions:
 
     def test_room_create_action(self):
         from engine import handle_room_create
+        from room import ROOM_SCHEMA_VERSION
         result = handle_room_create({'rows': ROWS_225, 'cols': COLS_225, 'name': 'AIDC-1'})
         assert 'error' not in result
-        assert result['schemaVersion'] == 1
+        assert result['schemaVersion'] == ROOM_SCHEMA_VERSION
         assert len(result['cells']) == 225
         assert result['name'] == 'AIDC-1'
 

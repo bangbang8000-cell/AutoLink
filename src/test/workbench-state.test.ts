@@ -95,35 +95,46 @@ describe('downstreamOf 级联失效传递闭包', () => {
   })
 })
 
-describe('deriveWorkbenchState 状态推导', () => {
-  it('aidc：手动标记完成 → 已完成，否则待操作', () => {
-    expect(deriveWorkbenchState('aidc', { ...baseDeps, aidcDone: true })).toEqual('done')
+describe('deriveWorkbenchState 状态推导（5.5.2 / A12：stepDone 为唯一完成判据）', () => {
+  const done = { done: true, doneAt: '2026-10-28T00:00:00.000Z' }
+
+  it('数据就绪但未标记完成 → 待操作（不再由数据推导 done）', () => {
     expect(deriveWorkbenchState('aidc', baseDeps)).toEqual('pending')
+    expect(deriveWorkbenchState('design', { ...baseDeps, designValid: true })).toEqual('pending')
+    expect(deriveWorkbenchState('roomdesign', { ...baseDeps, roomMatrixFinalized: true })).toEqual('pending')
+    expect(deriveWorkbenchState('rackdesign', { ...baseDeps, roomMatrixFinalized: true, rackHasCabinets: true })).toEqual('pending')
+    expect(deriveWorkbenchState('main', { ...baseDeps, designValid: true, hasSelectedOutputTypes: true })).toEqual('pending')
+    expect(deriveWorkbenchState('results', { ...baseDeps, hasOutputBatches: true })).toEqual('pending')
   })
 
-  it('design：designValid 通过 → 已完成，否则待操作', () => {
-    expect(deriveWorkbenchState('design', { ...baseDeps, designValid: true })).toEqual('done')
-    expect(deriveWorkbenchState('design', baseDeps)).toEqual('pending')
+  it('stepDone 标记完成 → 已完成（10 个子视图同一判据）', () => {
+    expect(deriveWorkbenchState('aidc', { ...baseDeps, stepDone: { aidc: done } })).toEqual('done')
+    expect(deriveWorkbenchState('design', { ...baseDeps, stepDone: { design: done } })).toEqual('done')
+    expect(deriveWorkbenchState('roomdesign', { ...baseDeps, stepDone: { roomdesign: done } })).toEqual('done')
+    expect(deriveWorkbenchState('rackdesign', { ...baseDeps, stepDone: { rackdesign: done } })).toEqual('done')
+    expect(deriveWorkbenchState('main', { ...baseDeps, stepDone: { main: done } })).toEqual('done')
+    expect(deriveWorkbenchState('visualization', { ...baseDeps, stepDone: { visualization: done } })).toEqual('done')
+    expect(deriveWorkbenchState('results', { ...baseDeps, stepDone: { results: done } })).toEqual('done')
+    expect(deriveWorkbenchState('export', { ...baseDeps, stepDone: { export: done } })).toEqual('done')
   })
 
-  it('roomdesign/rackdesign/main/results 沿用既有完成条件', () => {
-    expect(deriveWorkbenchState('roomdesign', { ...baseDeps, roomMatrixFinalized: true })).toEqual('done')
-    expect(deriveWorkbenchState('rackdesign', { ...baseDeps, roomMatrixFinalized: true, rackHasCabinets: true })).toEqual('done')
-    expect(deriveWorkbenchState('main', { ...baseDeps, designValid: true, hasSelectedOutputTypes: true })).toEqual('done')
-    expect(deriveWorkbenchState('results', { ...baseDeps, hasOutputBatches: true })).toEqual('done')
+  it('被标记为待调整（stale）→ 待调整，即使已完成', () => {
+    expect(deriveWorkbenchState('design', { ...baseDeps, stepDone: { design: done }, stale: ['design'] })).toEqual('needs_update')
+    expect(deriveWorkbenchState('roomdesign', { ...baseDeps, stepDone: { roomdesign: done }, stale: ['roomdesign'] })).toEqual('needs_update')
   })
 
-  it('被标记为待调整（stale）的子视图即使数据就绪也显示待调整', () => {
-    expect(deriveWorkbenchState('design', { ...baseDeps, designValid: true, stale: ['design'] })).toEqual('needs_update')
-    expect(deriveWorkbenchState('roomdesign', { ...baseDeps, roomMatrixFinalized: true, stale: ['roomdesign'] })).toEqual('needs_update')
+  it('已完成但上游失效（invalidatedBy）→ 待调整（待重新确认）', () => {
+    expect(
+      deriveWorkbenchState('main', { ...baseDeps, stepDone: { main: { ...done, invalidatedBy: 'design' } } }),
+    ).toEqual('needs_update')
   })
 
   it('读取中（reading）优先于 stale → 进行中', () => {
-    expect(deriveWorkbenchState('design', { ...baseDeps, designValid: true, stale: ['design'], reading: true })).toEqual('in_progress')
+    expect(deriveWorkbenchState('design', { ...baseDeps, stepDone: { design: done }, stale: ['design'], reading: true })).toEqual('in_progress')
   })
 
   it('当前 active 子视图（非 stale）→ 进行中', () => {
-    expect(deriveWorkbenchState('design', { ...baseDeps, designValid: true, activeSubview: 'design' })).toEqual('in_progress')
+    expect(deriveWorkbenchState('design', { ...baseDeps, stepDone: { design: done }, activeSubview: 'design' })).toEqual('in_progress')
   })
 
   it('未在依赖图内的孤儿视图恒待操作', () => {

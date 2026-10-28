@@ -91,6 +91,7 @@
   "clearRacks": "ラック内設計をクリア",
   "archiveAndClear": "アーカイブしてクリア",
   "view2d": "2D 平面",
+  "room3dReadonly": "読み取り専用プレビュー · 編集は 2D に切り替え",
   "view3d": "3D 表示",
   "finalizeLayout": "レイアウト確定",
   "gotoRackDesign": "ラック設計へ",

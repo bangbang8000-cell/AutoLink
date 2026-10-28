@@ -158,8 +158,9 @@ describe('rackMatrixOptsFromProjectConfig (AL-R3 项目 gpu_per_cabinet 生效)'
     const raw = JSON.stringify({
       rack_config: { gpu_per_cabinet: 2, top_reserved_u: 4, rack_type: 42, power_limit_per_rack: 9000 },
     })
+    // B5-01 / FR-A26：未写档位但存量 gpu_per_cabinet>1 → 视为「人工指定」
     expect(rackMatrixOptsFromProjectConfig(raw)).toEqual({
-      gpuPerCabinet: 2, topReservedU: 4, rackType: 42, powerLimit: 9000,
+      gpuPerCabinet: 2, gpuShareMode: 'manual', topReservedU: 4, rackType: 42, powerLimit: 9000,
     })
   })
 
@@ -167,5 +168,14 @@ describe('rackMatrixOptsFromProjectConfig (AL-R3 项目 gpu_per_cabinet 生效)'
     expect(rackMatrixOptsFromProjectConfig(null)).toEqual({})
     expect(rackMatrixOptsFromProjectConfig('not-json')).toEqual({})
     expect(rackMatrixOptsFromProjectConfig(JSON.stringify({}))).toEqual({})
+  })
+
+  it('B5-01 / FR-A26：显式 gpu_share_mode 优先生效（固定 1 台/柜压过存量共柜值）', () => {
+    const raw = JSON.stringify({ rack_config: { gpu_share_mode: 'fixed1', gpu_per_cabinet: 4 } })
+    expect(rackMatrixOptsFromProjectConfig(raw).gpuShareMode).toBe('fixed1')
+    const byPower = JSON.stringify({ rack_config: { gpu_share_mode: 'byPower' } })
+    expect(rackMatrixOptsFromProjectConfig(byPower).gpuShareMode).toBe('byPower')
+    const bad = JSON.stringify({ rack_config: { gpu_share_mode: 'unknown' } })
+    expect(rackMatrixOptsFromProjectConfig(bad).gpuShareMode).toBe('fixed1')
   })
 })

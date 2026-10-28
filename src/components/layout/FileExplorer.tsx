@@ -206,7 +206,7 @@ function WorkbenchExplorer() {
   const roomMatrix = useRoomStore((s) => s.matrix)
   const outputBatches = useExplorerStore((s) => s.outputBatches)
   const workbenchStale = useWorkbenchStore((s) => (selectedProjectName ? s.stale[selectedProjectName] : undefined))
-  const aidcDone = useWorkbenchStore((s) => (selectedProjectName ? s.aidcDone[selectedProjectName] === true : false))
+  const workbenchStepDone = useWorkbenchStore((s) => (selectedProjectName ? s.stepDone[selectedProjectName] : undefined))
   const toggleOutputType = useRenderStore((s) => s.toggleOutputType)
   const openTab = useWorkspaceStore((s) => s.openTab)
   const subview = useUIStore((s) => s.workbenchSubview)
@@ -246,7 +246,7 @@ function WorkbenchExplorer() {
       hasSelectedOutputTypes: selectedOutputTypes.length > 0,
       activeSubview: subview,
       stale: workbenchStale,
-      aidcDone,
+      stepDone: workbenchStepDone,
     }
     const reading = (id: WorkbenchSubview): boolean =>
       (id === 'design' && generating) || (id === 'main' && renderStatus === 'rendering')
@@ -255,7 +255,7 @@ function WorkbenchExplorer() {
       map[s.id] = deriveWorkbenchState(s.id, { ...deps, reading: reading(s.id) })
     }
     return map
-  }, [valid, roomMatrixFinalized, rackHasCabinets, hasOutputBatches, selectedOutputTypes.length, subview, generating, renderStatus, workbenchStale, aidcDone])
+  }, [valid, roomMatrixFinalized, rackHasCabinets, hasOutputBatches, selectedOutputTypes.length, subview, generating, renderStatus, workbenchStale, workbenchStepDone])
 
   if (!selectedProjectName) {
     return (

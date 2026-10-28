@@ -22,6 +22,13 @@ import { Select } from '@/components/ui/Select'
 import { useToastStore } from '@/stores/toast.store'
 import { useProjectContext } from '@/stores/ProjectContext'
 import { useTranslation } from 'react-i18next'
+// A19：平面统一 mm 逻辑坐标（柜 600×1200，通道 1.2/1.35/1.6 m），缩放交给 viewBox
+import {
+  GEOMETRY_AISLE_WIDTHS,
+  GEOMETRY_CABINETS_PER_ROW_RANGE,
+  planMetrics,
+  resolveGeometry,
+} from '@/utils/roomGeometry'
 
 // 机房矩阵机柜类型配色（RACK_TYPE_COLORS 扩展 combined/empty；525-d 并入 scaleup/security/custom 8 型）
 const ROOM_TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -38,12 +45,6 @@ const ROOM_TYPE_COLORS: Record<string, { bg: string; text: string; border: strin
   power: RACK_TYPE_COLORS.power,
   empty: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' },    // 浅灰：未标记
 }
-
-const CELL_W = 64
-const CELL_H = 48
-const CELL_GAP = 3
-const LABEL_W = 34
-const LABEL_H = 24
 
 const MARK_TOOLS: RoomMarkTool[] = [
   'select', 'ac', 'pillar', 'gpu', 'network', 'storage', 'compute', 'combined', 'power', 'clear',
@@ -608,8 +609,13 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
 
   // V3.1.4-T8-2: 智能落位向导开关
   const [showOptimize, setShowOptimize] = useState(false)
-  // 5.2.4-524-a（D8）：冷暖风道——矩阵按排奇偶自动生成冷/热通道（冷热冷热交替，色带标注，宽度可配）
-  const [aisleWidth, setAisleWidth] = useState(16)
+  // A19/A20：几何参数单一事实源——平面前端与 3D 同读 matrix.geometry（通道宽三档）
+  const updateGeometry = useRoomStore((s) => s.updateGeometry)
+  const geo = useMemo(() => resolveGeometry(matrix), [matrix])
+  const metrics = useMemo(
+    () => planMetrics(geo, matrix.cols.length, matrix.rows.length),
+    [geo, matrix.cols.length, matrix.rows.length],
+  )
 
   // M4（AL-ED1/ED2/ED3）：右键菜单 / 编辑弹窗 / 框选状态
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; position: string | null } | null>(null)
@@ -680,17 +686,17 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     setCtxMenu({ x: e.clientX, y: e.clientY, position })
   }, [])
 
-  // 由 SVG 逻辑坐标反查格子位置（右键在网格容器上统一处理，兼容 jsdom 无 SVG contextmenu 事件）
+  // 由 SVG 逻辑坐标（mm）反查格子位置（右键在网格容器上统一处理，兼容 jsdom 无 SVG contextmenu 事件）
   const cellAtPoint = useCallback((x: number, y: number): string | null => {
     for (const cell of matrix.cells) {
       const ri = matrix.rows.indexOf(cell.row)
       const ci = matrix.cols.indexOf(cell.col)
-      const cx = LABEL_W + ci * (CELL_W + CELL_GAP)
-      const cy = LABEL_H + ri * (CELL_H + CELL_GAP) + ri * aisleWidth
-      if (x >= cx && x <= cx + CELL_W && y >= cy && y <= cy + CELL_H) return `${cell.row}${cell.col}`
+      const cx = metrics.colLeft(ci)
+      const cy = metrics.rowTop(ri)
+      if (x >= cx && x <= cx + metrics.cellW && y >= cy && y <= cy + metrics.cellH) return `${cell.row}${cell.col}`
     }
     return null
-  }, [matrix, aisleWidth])
+  }, [matrix, metrics])
 
   // ---- M3（AL-CP1）+ M-F2（F2-1）：机柜复制/粘贴（机房右键入口；跨项目兼容校验） ----
   const handleCopyCabinet = useCallback((cabinetId: number) => {
@@ -772,11 +778,22 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
   }, [ctxMenu, cellMap, selectSameType, clipboard, handleCopyCabinet, handlePasteToCabinet, handlePasteToEmptyCell, pasteToNew])
 
   // ---- M4（AL-ED3）：拖拽框选（仅 select 工具） ----
+  // A19：屏幕坐标 → mm 逻辑坐标（viewBox 缩放由 CTM 逆矩阵换算；jsdom 无 CTM 时按矩形比例回退）
   const svgPoint = useCallback((e: React.MouseEvent) => {
-    const rect = svgRef.current?.getBoundingClientRect()
-    if (!rect) return { x: 0, y: 0 }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top }
-  }, [])
+    const svg = svgRef.current
+    if (!svg) return { x: 0, y: 0 }
+    const ctm = typeof svg.getScreenCTM === 'function' ? svg.getScreenCTM() : null
+    if (ctm && typeof DOMPoint !== 'undefined') {
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse())
+      return { x: p.x, y: p.y }
+    }
+    const rect = svg.getBoundingClientRect()
+    if (!rect || !rect.width || !rect.height) return { x: 0, y: 0 }
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * metrics.widthMm,
+      y: ((e.clientY - rect.top) / rect.height) * metrics.heightMm,
+    }
+  }, [metrics.widthMm, metrics.heightMm])
 
   // 网格容器右键 → 坐标反查格子（HTML 容器上监听，兼容 jsdom 无 SVG contextmenu 事件）
   const handleGridContextMenu = useCallback((e: React.MouseEvent) => {
@@ -802,14 +819,14 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     const x1 = Math.max(marquee.x0, marquee.x1)
     const y1 = Math.max(marquee.y0, marquee.y1)
     // 极小矩形视为点击，不做框选
-    if (x1 - x0 > 4 && y1 - y0 > 4) {
+    if (x1 - x0 > metrics.marqueeMin && y1 - y0 > metrics.marqueeMin) {
       const positions = matrix.cells
         .filter((cell) => {
           const ri = matrix.rows.indexOf(cell.row)
           const ci = matrix.cols.indexOf(cell.col)
-          const cx = LABEL_W + ci * (CELL_W + CELL_GAP)
-          const cy = LABEL_H + ri * (CELL_H + CELL_GAP) + ri * aisleWidth
-          return !(cx + CELL_W < x0 || cx > x1 || cy + CELL_H < y0 || cy > y1)
+          const cx = metrics.colLeft(ci)
+          const cy = metrics.rowTop(ri)
+          return !(cx + metrics.cellW < x0 || cx > x1 || cy + metrics.cellH < y0 || cy > y1)
         })
         .map((c) => `${c.row}${c.col}`)
       if (positions.length > 0) setMultiSelect(positions)
@@ -824,14 +841,8 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
     [multiSelected, cellMap],
   )
 
-  // 5.2.4-524-a（D8）：冷暖风道布局——排间通道（冷热交替色带）
-  const rowY = (ri: number) => LABEL_H + ri * (CELL_H + CELL_GAP) + ri * aisleWidth
+  // 5.2.4-524-a（D8）：冷暖风道布局——排间通道（冷热交替色带）；A19 通道宽读 geometry
   const aisleTypeForRow = (ri: number): 'cold' | 'hot' => (ri % 2 === 0 ? 'cold' : 'hot')
-
-  const canvas = {
-    width: LABEL_W + matrix.cols.length * (CELL_W + CELL_GAP) + CELL_GAP,
-    height: LABEL_H + matrix.rows.length * (CELL_H + CELL_GAP) + (matrix.rows.length) * aisleWidth + CELL_GAP,
-  }
 
   const placeholderCount = matrix.cells.filter((c) => c.placeholder).length
   const markedCount = matrix.cells.filter((c) => c.type !== 'empty').length
@@ -868,18 +879,19 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           )
         })}
         <div className="flex-1" />
-        {/* 5.2.4-524-a（D8）：冷暖风道宽度可配 */}
+        {/* 5.2.4-524-a（D8）/ A19：冷暖风道宽度——三档写回 geometry（平面与 3D 同源） */}
         <label className="flex items-center gap-1 text-xs text-gray-500">
           通道宽
-          <input
-            type="number"
-            min={6}
-            max={48}
-            value={aisleWidth}
-            onChange={(e) => setAisleWidth(Math.max(6, Math.min(48, Number(e.target.value) || 16)))}
-            className="w-12 px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+          <select
+            value={geo.aisleWidth}
+            onChange={(e) => updateGeometry({ aisleWidth: Number(e.target.value) }, currentProject ?? undefined)}
+            className="px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
             aria-label="通道宽"
-          />
+          >
+            {GEOMETRY_AISLE_WIDTHS.map((w) => (
+              <option key={w} value={w}>{w} m</option>
+            ))}
+          </select>
         </label>
         {selectedHasCabinet && (
           <button
@@ -1001,10 +1013,9 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
         )}
         <svg
           ref={svgRef}
-          width={canvas.width}
-          height={canvas.height}
+          viewBox={`0 0 ${metrics.widthMm} ${metrics.heightMm}`}
           className="block select-none"
-          style={{ minWidth: '100%' }}
+          style={{ width: '100%', height: 'auto' }}
           onMouseDown={handleMarqueeDown}
           onMouseMove={handleMarqueeMove}
           onMouseUp={handleMarqueeUp}
@@ -1014,10 +1025,10 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           {matrix.cols.map((c, ci) => (
             <text
               key={`col-${c}`}
-              x={LABEL_W + ci * (CELL_W + CELL_GAP) + CELL_W / 2}
-              y={LABEL_H - 7}
+              x={metrics.colLabelX(ci)}
+              y={metrics.colLabelY}
               textAnchor="middle"
-              fontSize={11}
+              fontSize={metrics.fontColRow}
               fontWeight="bold"
               fill="#6b7280"
             >
@@ -1028,10 +1039,10 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           {matrix.rows.map((r, ri) => (
             <text
               key={`row-${r}`}
-              x={LABEL_W - 6}
-              y={rowY(ri) + CELL_H / 2 + 4}
+              x={metrics.rowLabelX}
+              y={metrics.rowLabelY(ri)}
               textAnchor="end"
-              fontSize={11}
+              fontSize={metrics.fontColRow}
               fontWeight="bold"
               fill="#6b7280"
             >
@@ -1041,22 +1052,22 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
           {/* 5.2.4-524-a（D8）：冷暖风道——排间通道色带（排奇偶冷热交替） */}
           {matrix.rows.map((r, ri) => {
             const isCold = aisleTypeForRow(ri) === 'cold'
-            const y = rowY(ri) + CELL_H + CELL_GAP / 2
+            const y = metrics.aisleY(ri)
             return (
               <g key={`aisle-${r}`}>
                 <rect
-                  x={LABEL_W}
+                  x={metrics.labelW}
                   y={y}
-                  width={matrix.cols.length * (CELL_W + CELL_GAP)}
-                  height={aisleWidth}
+                  width={metrics.aisleW}
+                  height={metrics.aisle}
                   fill={isCold ? 'rgba(59,130,246,0.10)' : 'rgba(239,68,68,0.10)'}
                   stroke={isCold ? 'rgba(59,130,246,0.35)' : 'rgba(239,68,68,0.35)'}
-                  strokeWidth={0.5}
+                  strokeWidth={metrics.strokeW / 2}
                 />
                 <text
-                  x={LABEL_W + 6}
-                  y={y + aisleWidth / 2 + 3}
-                  fontSize={9}
+                  x={metrics.aisleTextX}
+                  y={y + metrics.aisleTextDy}
+                  fontSize={metrics.fontAisle}
                   fill={isCold ? '#2563eb' : '#dc2626'}
                 >
                   {isCold ? t('datacenter:coldAisle', '冷通道') : t('datacenter:hotAisle', '热通道')}
@@ -1092,7 +1103,7 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
                 <g
                   key={pos}
                   data-pos={pos}
-                  transform={`translate(${LABEL_W + ci * (CELL_W + CELL_GAP)}, ${rowY(ri)})`}
+                  transform={`translate(${metrics.colLeft(ci)}, ${metrics.rowTop(ri)})`}
                   className="cursor-pointer"
                   onClick={(e) => {
                     // M4（AL-ED2）：Ctrl/Shift/Cmd 点击 → 切换多选；否则走原标记/选择逻辑
@@ -1109,59 +1120,77 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
                   onDrop={(e) => dropCabinet(e, pos)}
                 >
                   <rect
-                    width={CELL_W}
-                    height={CELL_H}
-                    rx={3}
+                    width={metrics.cellW}
+                    height={metrics.cellH}
+                    rx={metrics.radius}
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={isSelected || isMulti ? 2 : 1}
+                    strokeWidth={isSelected || isMulti ? metrics.strokeWSelected : metrics.strokeW}
                   />
                   {/* AL-M5c：拖拽落点预览高亮（绿=有效可放置 / 红=无效） */}
                   {dragCabinetId != null && dropPos === pos && (
                     <rect
-                      width={CELL_W}
-                      height={CELL_H}
-                      rx={3}
+                      width={metrics.cellW}
+                      height={metrics.cellH}
+                      rx={metrics.radius}
                       fill={isDropValid(pos) ? 'rgba(34,197,94,0.30)' : 'rgba(239,68,68,0.30)'}
                       stroke={isDropValid(pos) ? '#16a34a' : '#dc2626'}
-                      strokeWidth={2}
-                      strokeDasharray="4 2"
+                      strokeWidth={metrics.strokeWSelected}
+                      strokeDasharray={`${metrics.strokeWSelected * 2} ${metrics.strokeW}`}
                       pointerEvents="none"
                     />
                   )}
                   {/* 占位斜纹 */}
                   {isPlaceholder && (
                     <>
-                      <line x1={0} y1={CELL_H} x2={CELL_W} y2={0} stroke="#9ca3af" strokeWidth={1} opacity={0.4} />
-                      <line x1={CELL_W / 2} y1={CELL_H} x2={CELL_W} y2={CELL_H / 2} stroke="#9ca3af" strokeWidth={1} opacity={0.4} />
+                      <line x1={0} y1={metrics.cellH} x2={metrics.cellW} y2={0} stroke="#9ca3af" strokeWidth={metrics.strokeW} opacity={0.4} />
+                      <line x1={metrics.cellW / 2} y1={metrics.cellH} x2={metrics.cellW} y2={metrics.cellH / 2} stroke="#9ca3af" strokeWidth={metrics.strokeW} opacity={0.4} />
                     </>
                   )}
                   {/* 位置名 */}
-                  <text x={4} y={10} fontSize={8} fill="#6b7280">
+                  <text x={metrics.posTextX} y={metrics.posTextY} fontSize={metrics.fontCellPos} fill="#6b7280">
                     {pos}
                   </text>
                   {/* 主内容（占位/类型/机柜） */}
                   <text
-                    x={CELL_W / 2}
-                    y={CELL_H / 2 + 4}
+                    x={metrics.cellW / 2}
+                    y={metrics.cellH / 2 + metrics.textDyMain}
                     textAnchor="middle"
-                    fontSize={10}
+                    fontSize={metrics.fontCellMain}
                     fontWeight="bold"
                     fill={isPlaceholder ? '#4b5563' : typeColor.text}
                   >
                     {mainLabel}
                   </text>
+                  {/* B1-07 / FR-A03：自动改判角标（空白格按需改型；人工改型格无此标记） */}
+                  {cell.typeAuto && !isPlaceholder && (
+                    <g pointerEvents="none">
+                      <rect
+                        x={metrics.badge.x}
+                        y={metrics.badge.y}
+                        width={metrics.badge.w}
+                        height={metrics.badge.h}
+                        rx={metrics.radius * 2 / 3}
+                        fill="rgba(37,99,235,0.12)"
+                        stroke="#93c5fd"
+                        strokeWidth={metrics.strokeW / 2}
+                      />
+                      <text x={metrics.badge.cx} y={metrics.badge.cy} textAnchor="middle" fontSize={metrics.fontBadge} fill="#2563eb">
+                        {t('rack:room.typeAuto', '自动')}
+                      </text>
+                    </g>
+                  )}
                   {/* V3.2.1-T10-3: 落位功率热力条（以 20kW 为基准归一，绿→黄→红） */}
                   {cell.cabinetId != null && (() => {
                     const pw = cabinetPowerMap.get(cell.cabinetId) || 0
                     const pct = Math.min(100, Math.round((pw / 20000) * 100))
                     return (
                       <rect
-                        x={2}
-                        y={CELL_H - 5}
-                        width={CELL_W - 4}
-                        height={3}
-                        rx={1.5}
+                        x={metrics.bar.x}
+                        y={metrics.bar.y}
+                        width={metrics.bar.w}
+                        height={metrics.bar.h}
+                        rx={metrics.bar.h / 2}
                         fill={getPowerColor(pct).stroke}
                         opacity={0.9}
                       />
@@ -1180,8 +1209,8 @@ function RoomMatrixView({ matrix }: { matrix: RoomMatrixData }) {
               height={Math.abs(marquee.y1 - marquee.y0)}
               fill="rgba(37,99,235,0.12)"
               stroke="#2563eb"
-              strokeWidth={1}
-              strokeDasharray="4 2"
+              strokeWidth={metrics.strokeW}
+              strokeDasharray={`${metrics.strokeWSelected * 2} ${metrics.strokeW}`}
               pointerEvents="none"
             />
           )}
@@ -1239,9 +1268,13 @@ export function DataCenterLayout() {
   const matrix = useRoomStore((s) => s.matrix)
   const loadMatrix = useRoomStore((s) => s.loadMatrix)
   const createMatrix = useRoomStore((s) => s.createMatrix)
+  // A22：旧项目列数超上限的阻断态（清空超出列或改排后才能进入机房设计）
+  const limitBlock = useRoomStore((s) => s.limitBlock)
+  const dropOverflowCols = useRoomStore((s) => s.dropOverflowCols)
+  const clearLimitBlock = useRoomStore((s) => s.clearLimitBlock)
   const { currentProject } = useProjectContext()
 
-  // 创建面板本地状态
+  // 创建面板本地状态（A22：列 6–24）
   const [rowsInput, setRowsInput] = useState(15)
   const [colsInput, setColsInput] = useState(15)
   const [nameInput, setNameInput] = useState('机房')
@@ -1256,11 +1289,13 @@ export function DataCenterLayout() {
   }, [currentProject, loadMatrix])
 
   // 机柜变化时重新计算（平面图模式）
+  // B5-04 / FR-A27：换行数与柜宽/柜高/排距改由机房几何参数派生，不再固定 8 柜一排
+  const planGeometry = useMemo(() => (matrix ? resolveGeometry(matrix) : null), [matrix])
   useEffect(() => {
     if (cabinets.length > 0) {
-      computeLayout(cabinets)
+      computeLayout(cabinets, planGeometry)
     }
-  }, [cabinets, computeLayout])
+  }, [cabinets, planGeometry, computeLayout])
 
   const canvasSize = useMemo(() => {
     if (placements.length === 0) return { width: 800, height: 400 }
@@ -1281,6 +1316,55 @@ export function DataCenterLayout() {
   // 机房矩阵优先
   if (matrix) {
     return <RoomMatrixView matrix={matrix} />
+  }
+
+  // A22：旧项目列数超上限 → 阻断进入机房设计，列出「当前 N 列 / 超出 M 列 / 受影响柜位 / 两种解法」
+  if (limitBlock) {
+    return (
+      <div className="w-full h-full flex items-start justify-center p-6 overflow-auto">
+        <div className="max-w-2xl w-full rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-app p-5 space-y-3">
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-semibold text-sm">
+            <AlertTriangle size={18} />
+            机房列数超出上限，无法进入机房设计
+          </div>
+          <div className="text-sm text-gray-700 dark:text-gray-200 space-y-1">
+            <div>当前列数：{limitBlock.currentCols} 列</div>
+            <div>超出 {limitBlock.limit} 列的列数：{limitBlock.overflowCols} 列</div>
+            <div>受影响柜位：{limitBlock.affected.length} 个（含已落柜、占位或人工标记类型）</div>
+          </div>
+          <div className="max-h-52 overflow-auto rounded border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+            {limitBlock.affected.map((c) => (
+              <div key={c.position} className="px-2.5 py-1 text-xs flex items-center justify-between gap-2">
+                <span className="font-mono text-gray-700 dark:text-gray-200">{c.position}</span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  {c.placeholder ? `占位 ${c.placeholder}` : c.type}
+                  {c.cabinetId != null ? ` · 已落柜 #${c.cabinetId}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+            解法一：直接清空超出列（{limitBlock.overflowCols} 列）内的柜位与标记，并裁剪到 {limitBlock.limit} 列；
+            解法二：稍后处理，先手工改排/另建 ≤{limitBlock.limit} 列的矩阵。
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={() => currentProject && dropOverflowCols(currentProject)}
+              disabled={!currentProject}
+              className="px-3 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40"
+            >
+              清空超出列并迁移
+            </button>
+            <button
+              onClick={clearLimitBlock}
+              className="px-3 py-1.5 rounded text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              稍后处理
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -1305,12 +1389,22 @@ export function DataCenterLayout() {
           {t('rack:room.cols')}
           <input
             type="number"
-            min={1}
-            max={100}
+            min={GEOMETRY_CABINETS_PER_ROW_RANGE[0]}
+            max={GEOMETRY_CABINETS_PER_ROW_RANGE[1]}
             value={colsInput}
-            onChange={(e) => setColsInput(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
+            onChange={(e) =>
+              setColsInput(
+                Math.max(
+                  GEOMETRY_CABINETS_PER_ROW_RANGE[0],
+                  Math.min(GEOMETRY_CABINETS_PER_ROW_RANGE[1], Number(e.target.value) || GEOMETRY_CABINETS_PER_ROW_RANGE[0]),
+                ),
+              )
+            }
             className="w-14 px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
           />
+          <span className="text-gray-400">
+            {GEOMETRY_CABINETS_PER_ROW_RANGE[0]}–{GEOMETRY_CABINETS_PER_ROW_RANGE[1]}
+          </span>
         </label>
         <label className="text-xs text-gray-500 flex items-center gap-1">
           {t('rack:room.name')}

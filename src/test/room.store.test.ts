@@ -702,6 +702,38 @@ describe('RoomStore', () => {
       expect(useRoomStore.getState().matrix!.cells.every((c) => c.cabinetId == null)).toBe(true)
     })
 
+    it('B1-04：柜位不足（60 柜位 / 128 GPU）→ 一次性拒绝，store 与矩阵逐字段不变、不落盘', async () => {
+      const rows = ['A', 'B', 'C', 'D', 'E']
+      const cols = Array.from({ length: 12 }, (_, i) => i + 1)
+      const m: RoomMatrixData = {
+        schemaVersion: 1,
+        name: '机房 A',
+        rows,
+        cols,
+        cells: rows.flatMap((row) =>
+          cols.map((col) => ({ row, col, type: 'gpu', placeholder: null, cabinetId: null }))),
+      }
+      useRoomStore.setState({ matrix: m })
+      const before = m.cells.map((c) => ({ ...c }))
+      const gpus = Array.from({ length: 128 }, (_, i) => ({
+        id: `gpu-${i}`, type: 'server', group: 'GPU服务器组1', podid: 'pod-1', uHeight: 8, powerWatts: 1000,
+      }))
+      const saveFile = window.electron.project.saveFile as unknown as ReturnType<typeof vi.fn>
+      saveFile.mockClear()
+
+      const res = await useRoomStore.getState().applyMatrixRackLayout('P', gpus)
+      expect(res.ok).toBe(false)
+      expect(res.feasibility).toBeDefined()
+      expect(res.feasibility!.shortage.byType.gpu).toEqual({ required: 128, available: 60, missing: 68 })
+      expect(res.feasibility!.gpuPerCabinetSuggest).toBe(3)
+      expect(useRackStore.getState().cabinets).toHaveLength(0)
+      expect(useRackStore.getState().unplacedDevices).toHaveLength(0)
+      expect(useRoomStore.getState().matrix!.cells).toEqual(before)
+      const saved = saveFile.mock.calls.map((c) => c[1] as string)
+      expect(saved).not.toContain('rack_layout.json')
+      expect(saved).not.toContain('room_layout.json')
+    })
+
     it('store 无矩阵但文件有 → loadMatrix 兜底后仍落位', async () => {
       window.electron.project.getFile = vi.fn().mockImplementation(
         async (_proj: string, file: string) => (file === 'room_layout.json' ? JSON.stringify(gpuMatrix()) : null),

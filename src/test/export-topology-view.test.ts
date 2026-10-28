@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateTopologyExportSize } from '@/utils/exportTopologyView'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { evaluateTopologyExportSize, DEFAULT_TOPOLOGY_VIEW_OPTIONS } from '@/utils/exportTopologyView'
 import { buildTopologyView } from '@/components/workspace/tabs/topology/TopologyViewCanvas'
+import { aggregateEdgesToBundles } from '@/components/workspace/tabs/topology/edgeBundles'
 import type { TopologyNode, TopologyEdge, TopologyLayout } from '@/stores/design.store'
 
 /* ---------- 内联构造迷你拓扑（不依赖本地 workspace 文件，CI 可复现） ---------- */
@@ -160,5 +163,77 @@ describe('buildTopologyView 分光标注（FR-A9，单级为主）', () => {
     const label = (rfEdges[0].data as { label?: string }).label ?? ''
     expect(label).toContain('⇉ 两级')
     expect((rfEdges[0].data as { breakoutGroup?: string }).breakoutGroup).toContain(':stages')
+  })
+})
+
+/* ---------- 5.5.2 / A13-A15：导出与屏幕同源（B2-09 专项门禁） ---------- */
+
+describe('buildTopologyView 导出同源（A13/A14）', () => {
+  it('DEFAULT_TOPOLOGY_VIEW_OPTIONS：无画布上下文默认无标签、逐条不聚束', () => {
+    expect(DEFAULT_TOPOLOGY_VIEW_OPTIONS).toEqual({ labelVisible: false, bundleActive: false })
+  })
+
+  it('T-B2-11 入参即屏幕结果：传入筛选后的节点/边子集，导出数量与子集一致', () => {
+    const { nodes, edges } = buildMiniTopology()
+    // 模拟屏幕「只看参数网」：仅保留服务器 → 参数 Leaf 的接入边及其端点
+    const displayEdges = edges.filter((e) => e.source.startsWith('S_'))
+    const keep = new Set(displayEdges.flatMap((e) => [e.source, e.target]))
+    const displayNodes = nodes.filter((n) => keep.has(n.id))
+    const { rfNodes, rfEdges } = buildTopologyView(displayNodes, displayEdges, null)
+    expect(rfNodes.filter((n) => !n.id.startsWith('pod-group-'))).toHaveLength(displayNodes.length)
+    expect(rfEdges).toHaveLength(displayEdges.length)
+  })
+
+  it('T-B2-10 标签开关：缺省/关闭无 label，开启后逐条回填 label', () => {
+    const { nodes, edges } = buildMiniTopology()
+    const off = buildTopologyView(nodes, edges, null)
+    expect(off.rfEdges.every((e) => e.label === undefined)).toBe(true)
+
+    const on = buildTopologyView(nodes, edges, null, { labelVisible: true })
+    expect(on.rfEdges.every((e) => typeof e.label === 'string' && e.label.length > 0)).toBe(true)
+  })
+
+  it('聚束开关：bundleActive 束数 === 屏幕同算法结果，标签为 ×N', () => {
+    const { nodes } = buildMiniTopology()
+    const edges: TopologyEdge[] = [
+      { source: '存储Leaf_1', target: '存储Spine_1', speed: '400G', cableType: '光缆', description: '存储网络', networkType: 'storage' },
+      { source: '存储Leaf_1', target: '存储Spine_1', speed: '200G', cableType: '光缆', description: '存储网络', networkType: 'storage' },
+      { source: '存储Leaf_2', target: '存储Spine_1', speed: '400G', cableType: '光缆', description: '存储网络', networkType: 'storage' },
+    ]
+    const plain = buildTopologyView(nodes, edges, null)
+    expect(plain.rfEdges).toHaveLength(3)
+
+    const bundled = buildTopologyView(nodes, edges, null, { bundleActive: true, labelVisible: true })
+    const expected = aggregateEdgesToBundles(plain.rfEdges)
+    expect(bundled.rfEdges).toHaveLength(expected.length)
+    const bundle = bundled.rfEdges.find((e) => e.id.startsWith('bundle-'))
+    expect(bundle).toBeDefined()
+    expect((bundle!.data as { bundleCount?: number }).bundleCount).toBe(2)
+    expect(String(bundle!.label)).toContain('×2')
+  })
+})
+
+describe('A14 交付包与按钮导出同源（代码级断言）', () => {
+  const src = readFileSync(resolve(process.cwd(), 'src/utils/aidcDelivery.ts'), 'utf8')
+
+  it('交付包使用同一个 exportTopologyViewPng，不另写渲染实现', () => {
+    expect(src).toContain('exportTopologyViewPng')
+    expect(src).not.toContain('html-to-image')
+    expect(src).not.toContain('toPng(')
+  })
+
+  it('交付包显式使用默认视图参数（无画布上下文）', () => {
+    expect(src).toContain('DEFAULT_TOPOLOGY_VIEW_OPTIONS')
+  })
+})
+
+describe('A15 快照画布全量渲染（T-B2-14）', () => {
+  const canvasSrc = readFileSync(
+    resolve(process.cwd(), 'src/components/workspace/tabs/topology/TopologyViewCanvas.tsx'),
+    'utf8',
+  )
+
+  it('快照画布显式关闭视口剔除，避免导出丢视口外节点', () => {
+    expect(canvasSrc).toContain('onlyRenderVisibleElements={false}')
   })
 })

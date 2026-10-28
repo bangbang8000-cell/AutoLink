@@ -22,6 +22,12 @@ import re
 
 LINE_TYPES = ('hardware', 'optic_module', 'cable', 'license', 'software', 'service')
 
+# 一级品类（文档 A16）：固定顺序，清单按此分节；无行则整节跳过
+CATEGORY_ORDER = ('服务器', '交换机', '光模块', '线缆', '机柜', '空调', '辅材')
+
+# 机房配套平面（机柜/空调行所在分项）
+NET_ROOM = ('room', '机房配套')
+
 # 网络平面（net_key → 展示名）；顺序即清单分项顺序
 NET_ORDER = (
     ('node', '计算与存储节点'),
@@ -35,6 +41,26 @@ _NET_BY_TYPE = {
     'biz': 'biz', 'oob': 'oob',
 }
 _NET_NAME = dict(NET_ORDER)
+_NET_NAME[NET_ROOM[0]] = NET_ROOM[1]
+
+_LINE_TYPE_CATEGORY = {
+    'optic_module': '光模块',
+    'cable': '线缆',
+    'license': '辅材', 'software': '辅材', 'service': '辅材',
+}
+
+
+def category_of(line):
+    """行所属一级品类：优先显式 category 字段，缺省按行类型/名称派生（旧行兼容）"""
+    cat = str(line.get('category') or '')
+    if cat:
+        return cat
+    lt = str(line.get('line_type') or '')
+    if lt in _LINE_TYPE_CATEGORY:
+        return _LINE_TYPE_CATEGORY[lt]
+    if lt == 'hardware':
+        return '交换机' if '交换机' in str(line.get('name') or '') else '服务器'
+    return '辅材'
 
 # 连接 network_type → 服务器侧聚合行的 net_key
 _CONN_NET = {
@@ -120,18 +146,70 @@ def check_no_price(lines):
     return hits
 
 
-# ---------------------------------------------------------------- 构建清单行
+# ---------------------------------------------------------------- 机房矩阵真值
+# 柜型展示名（与 rack_allocation.CABINET_TYPE_* 取值一致）
+ROOM_CABINET_LABELS = {
+    'gpu': 'GPU 柜', 'network': '网络柜', 'storage': '存储柜', 'compute': '通算柜',
+    'combined': '组合柜', 'scaleup': 'Scale-Up 柜', 'security': '安全柜',
+    'custom': '自定义柜', 'power': '电源柜', 'empty': '未标柜型',
+}
+_ROOM_CAB_ORDER = ('gpu', 'network', 'storage', 'compute', 'combined',
+                   'scaleup', 'security', 'custom', 'power', 'empty')
+
+
+def room_counts(matrix):
+    """机房矩阵真值（A17）：机柜数 = 已落柜 + 可建柜格（按柜型计数）；空调数 = ac 占位格数。
+
+    matrix 可为 room_layout.json 的 dict、RoomMatrix 实例或 None。
+    矩阵缺失/无任何单元 → 返回 None（调用方据此产出「未建模」而不是 0）。
+    """
+    if matrix is None:
+        return None
+    if hasattr(matrix, 'cells'):
+        raw = [(c.placeholder, c.cabinet_id, c.type) for c in matrix.cells.values()]
+    elif isinstance(matrix, dict):
+        cells = matrix.get('cells') or []
+        raw = [(c.get('placeholder'), c.get('cabinetId'), c.get('type') or 'empty')
+               for c in cells if isinstance(c, dict)]
+    else:
+        return None
+    if not raw:
+        return None
+    ac = 0
+    buckets = {}
+    for placeholder, cabinet_id, ctype in raw:
+        if placeholder == 'ac':
+            ac += 1
+            continue
+        if placeholder is not None:
+            continue  # 柱子等其他占位：既非机柜也非空调
+        if cabinet_id is None and (ctype or 'empty') == 'empty':
+            continue  # 空白格：未规划，不计
+        key = ctype or 'empty'
+        buckets[key] = buckets.get(key, 0) + 1
+    by_type = [(k, buckets[k]) for k in _ROOM_CAB_ORDER if k in buckets]
+    by_type += [(k, v) for k, v in buckets.items() if k not in _ROOM_CAB_ORDER]
+    return {
+        'cells': len(raw),
+        'cabinets': sum(v for _, v in by_type),
+        'ac': ac,
+        'by_type': by_type,
+    }
+
+
 def _fmt_speed(s):
     return str(s or '')
 
 
-def build_lines(designer, ratio_map=None):
+# ---------------------------------------------------------------- 构建清单行
+def build_lines(designer, ratio_map=None, matrix=None):
     """从 designer 产出标准清单行（不含任何价格字段）。
 
     数据源（与 bom/deviceList 同一次解析，无重复计算）：
       - 整机：servers / all_switches 按 (类别, 设备库档案) 聚合
       - 光模块：逐连接 resolve_module_selection（三态解析，未匹配显式成行）
       - 线缆：按 (平面, cable_type, 分光系数) 聚合 —— 分光链路每根承载 count 条连接
+      - 机柜/空调：机房矩阵真值（matrix 为 room_layout.json 的 dict 或 RoomMatrix）
     """
     from device_library import get_device_library
     try:
@@ -142,9 +220,9 @@ def build_lines(designer, ratio_map=None):
     lines = []
 
     def _add(net_key, line_type, device_id, name, model, qty, unit, ratio, basis,
-             speed='', note='', tier=''):
+             speed='', note='', tier='', category='', not_modeled=False):
         sq = spare_qty(qty, ratio)
-        lines.append({
+        line = {
             'network_profile': _NET_NAME.get(net_key, net_key),
             'net_key': net_key,
             'tier': tier or _tier_of(name),
@@ -161,7 +239,12 @@ def build_lines(designer, ratio_map=None):
             'speed_gbps': speed,
             'note': clean_basis(note),
             'unmatched': str(device_id).endswith('_unknown'),
-        })
+        }
+        if not_modeled:
+            # A17 边界：矩阵未建模 → 数量列显示「未建模」（不写 0，避免误读为「不需要」）
+            line['not_modeled'] = True
+        line['category'] = category or category_of(line)
+        lines.append(line)
 
     # ---- 1. 服务器（计算与存储节点）
     server_groups = {}
@@ -184,7 +267,7 @@ def build_lines(designer, ratio_map=None):
         did = f"node_{('srv_gpu' if info['is_gpu'] else 'srv')}_{pid or 'unknown'}"
         _add('node', 'hardware', did, group, info['model'], info['count'], '台',
              spare_ratio('hardware', is_server=True, is_gpu=info['is_gpu'], ratio_map=ratio_map),
-             '按设计服务器清单聚合', speed='', note=info['desc'])
+             '按设计服务器清单聚合', speed='', note=info['desc'], category='服务器')
 
     # ---- 2. 交换机（按平面 + 层级 + 档案聚合）
     sw_pools = (
@@ -212,7 +295,7 @@ def build_lines(designer, ratio_map=None):
             _add(net_key, 'hardware', did, f"{_NET_NAME[net_key]}交换机 · {tier}层",
                  info['model'], info['count'], '台',
                  spare_ratio('hardware', ratio_map=ratio_map),
-                 '按设计交换机清单聚合', note=info['desc'], tier=tier)
+                 '按设计交换机清单聚合', note=info['desc'], tier=tier, category='交换机')
 
     # ---- 3. 光模块 + 线缆（逐连接解析，方向敏感去重 —— 与 bom/cablingGuide 同源）
     all_switches = (designer.param_leaves + designer.param_spines + designer.param_cores +
@@ -269,11 +352,12 @@ def build_lines(designer, ratio_map=None):
         _add(net_key, 'optic_module', f"{net_key}_mod_{module_id}", module_id, module_id,
              info['count'], '个', spare_ratio('optic_module', ratio_map=ratio_map),
              '逐链路选型聚合（每条链路两端各计 1 个，与连接表同源）',
-             speed=info['speed'], note=info['desc'])
+             speed=info['speed'], note=info['desc'], category='光模块')
     if unmatched_count:
         _add('param', 'optic_module', 'param_mod_unknown', '未匹配（需人工确认）', '',
              unmatched_count, '个', 0.0,
-             '设备库无同速率档位，显式成行不计备件', note='补齐档位后需重新生成')
+             '设备库无同速率档位，显式成行不计备件', note='补齐档位后需重新生成',
+             category='光模块')
 
     for (net_key, cable_type, lpc), info in cab_agg.items():
         cables = int(-(-info['conns'] // lpc))  # ceil
@@ -281,16 +365,50 @@ def build_lines(designer, ratio_map=None):
                  if lpc > 1 else f'{info["conns"]} 条连接每条 1 根')
         slug = re.sub(r'[^0-9A-Za-z]+', '_', cable_type).strip('_')[:40] or 'cable'
         _add(net_key, 'cable', f'{net_key}_cab_{slug}', cable_type, cable_type,
-             cables, '根', spare_ratio('cable', ratio_map=ratio_map), basis, speed=info['speed'])
+             cables, '根', spare_ratio('cable', ratio_map=ratio_map), basis,
+             speed=info['speed'], category='线缆')
+
+    # ---- 4. 机柜 / 空调（机房矩阵真值，A17）
+    counts = room_counts(matrix)
+    if counts is None:
+        _add(NET_ROOM[0], 'hardware', 'room_not_modeled', '机柜 / 空调（未建模）', '',
+             0, '未建模', 0.0, '机房矩阵未建模，机柜数与空调数无法统计',
+             note='请在机房设计页完成矩阵建模后重新导出', category='机柜',
+             not_modeled=True)
+    else:
+        for ctype, cnt in counts['by_type']:
+            _add(NET_ROOM[0], 'hardware', f'room_cab_{ctype}',
+                 f"机柜 · {ROOM_CABINET_LABELS.get(ctype, ctype)}", '',
+                 cnt, '台', 0.0,
+                 f"机房矩阵真值：该柜型可建柜格 {cnt} 个（含已落柜）",
+                 note='机柜为结构件，不计备件', category='机柜')
+        if counts['ac']:
+            _add(NET_ROOM[0], 'hardware', 'room_ac', '空调（机房矩阵占位）', '',
+                 counts['ac'], '台', 0.0,
+                 f"机房矩阵 placeholder='ac' 格数 {counts['ac']} 个",
+                 note='空调为整机设备，不计备件', category='空调')
 
     return lines
 
 
 def summarize(lines):
-    """按分项 / 单位 / 行类型汇总（量纲隔离：台/个/根不相加）"""
+    """按品类 / 分项 / 单位 / 行类型汇总（量纲隔离：台/个/根不相加）
+
+    「未建模」占位行（not_modeled）不计入数量汇总，只计行数。
+    """
     by_net, by_unit, by_type = [], {}, {}
     order = []
+    cat_rows = {}
     for ln in lines:
+        cat = category_of(ln)
+        node = cat_rows.setdefault(cat, {'name': cat, 'row_count': 0, 'qty': 0,
+                                         'spare': 0, 'total': 0})
+        node['row_count'] += 1
+        if ln.get('not_modeled'):
+            continue
+        node['qty'] += ln['qty']
+        node['spare'] += ln['spare_qty']
+        node['total'] += ln['total_qty']
         u = ln['unit']
         by_unit[u] = by_unit.get(u, {'n': 0, 'qty': 0, 'spare': 0, 'total': 0})
         by_unit[u]['n'] += 1
@@ -306,30 +424,38 @@ def summarize(lines):
         if k not in order:
             order.append(k)
             by_net.append({'name': k, 'row_count': 0, 'qty': 0, 'spare': 0, 'total': 0})
-        node = by_net[order.index(k)]
-        node['row_count'] += 1
-        node['qty'] += ln['qty']
-        node['spare'] += ln['spare_qty']
-        node['total'] += ln['total_qty']
+        net_node = by_net[order.index(k)]
+        net_node['row_count'] += 1
+        net_node['qty'] += ln['qty']
+        net_node['spare'] += ln['spare_qty']
+        net_node['total'] += ln['total_qty']
+    by_category = [cat_rows[c] for c in CATEGORY_ORDER if c in cat_rows]
+    by_category += [v for k, v in cat_rows.items() if k not in CATEGORY_ORDER]
+    counted = [x for x in lines if not x.get('not_modeled')]
     return {
         'row_count': len(lines),
+        'by_category': by_category,
         'by_network': by_net,
         'by_unit': by_unit,
         'by_line_type': by_type,
-        'qty': sum(x['qty'] for x in lines),
-        'spare': sum(x['spare_qty'] for x in lines),
-        'total': sum(x['total_qty'] for x in lines),
+        'qty': sum(x['qty'] for x in counted),
+        'spare': sum(x['spare_qty'] for x in counted),
+        'total': sum(x['total_qty'] for x in counted),
         'device_id_count': len({x['device_id'] for x in lines}),
     }
 
 
 def warnings_of(lines, extra=None):
-    """口径告警：未命中 ID 的设备 + 数量为 0 的行"""
+    """口径告警：未命中 ID 的设备 + 数量为 0 的行 + 未建模品类"""
     out = list(extra or [])
     un = sorted({x['device_id'] for x in lines if x['unmatched']})
     if un:
         out.append('以下设备未命中稳定 ID，已按内容摘要生成兜底主键：%s' % ', '.join(un))
-    zero = sorted({x['name'] for x in lines if x['qty'] == 0})
+    zero = sorted({x['name'] for x in lines if x['qty'] == 0 and not x.get('not_modeled')})
     if zero:
         out.append('以下设备数量为 0，请核对：%s' % ', '.join(zero))
+    unmodeled = sorted({category_of(x) for x in lines if x.get('not_modeled')})
+    if unmodeled:
+        out.append('机房矩阵未建模，以下品类数量未统计：%s（请在机房设计页建模后重新导出）'
+                   % ', '.join(unmodeled))
     return out

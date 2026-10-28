@@ -345,5 +345,19 @@
   "doc.thSize": "サイズ",
   "doc.thStatus": "ステータス",
   "doc.thAction": "操作",
-  "knowledge.tagExample": "例: ネットワーク、ラック、デバイス（Enter で区切り）"
+  "knowledge.tagExample": "例: ネットワーク、ラック、デバイス（Enter で区切り）",
+  "subviewAction": {
+    "markDone": "完了にする",
+    "done": "完了済み",
+    "undo": "取り消し",
+    "reconfirm": "完了を再確認",
+    "noop": "このステップに操作はありません",
+    "invalidatedTip": "上流が変更されました。再確認してください",
+    "reasonDesign": "先にネットワーク設計を生成してください",
+    "reasonRoomMatrix": "先に部屋マトリクスを作成してください",
+    "reasonRackMatrix": "先に部屋マトリクスを確定してください",
+    "reasonRackCabinets": "先にラックを作成してください",
+    "reasonMainOutputs": "先に出力タイプを選択してください",
+    "reasonRender": "先にレンダリングを完了してください"
+  }
 }

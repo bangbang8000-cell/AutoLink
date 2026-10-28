@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useToastStore } from './toast.store'
+import type { DeviceDomain } from '@/utils/rackCabinetTypes'
 
 /* ---------- types ---------- */
 
@@ -73,6 +74,8 @@ export interface TopologyNode {
   type: string
   group: string
   podid: string
+  /** B1-02 / FR-A04: 后端产出的设备域（gpu/compute/storage/network），柜型判定优先读取 */
+  domain?: DeviceDomain
   cabinetId?: number
   cabinetName?: string
   startU?: number

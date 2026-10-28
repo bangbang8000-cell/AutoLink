@@ -1,6 +1,127 @@
 # CHANGELOG
 
 
+## [5.5.11] - 2026-10-28
+
+> **打磨里程碑（G10 / A29）：3D 只读态显式标注；FR-A28（3D 拖拽）按 O3 结论本轮关闭。**
+
+### 3D 只读标注（FR-A29）
+
+- `Room3DView.tsx` 右上角常驻角标「只读预览 · 编辑请切 2D」（`data-testid="room3d-readonly-badge"`，文案走 `room3dReadonly` 并带中文兜底），2D 平面视图无此标注。
+- FR-A28 关闭：本轮不做 3D 拖拽，避免「可拖但无响应」的误导；关闭结论记入测试计划 T-B5-09。
+
+### 发版收口
+
+- 7 项发布门禁（`check_version` / `check_doc_numbers` / `gen_golden.py` / `check_changelog_claims.py` / `validate_templates.py` / `check_skill_refs.py` / `check_cli_contract.py`）全绿；6 项专项门禁（跨端常量一致性、落位三态、三处同源、导出同源、schema 往返、U 位边界）随全量用例执行。
+- 前端全量 vitest 与后端全量 pytest 全绿；golden 30 套 `--check` 无差异。
+
+
+## [5.5.10] - 2026-10-28
+
+> **建议闭环里程碑（G9 / A27 ⚠）：布局图不再硬编码 8 柜一排；「采用建议」写回几何参数。**
+
+### 布局图读几何参数（FR-A27）
+
+- `datacenter.store.ts` 新增 `layoutParamsFromGeometry`：`computeLayout` 支持第二参 `geometry`，每排列数取 `RoomGeometry.cabinetsPerRow`，柜宽/柜深/排距由 `cabinetWidth` / `cabinetDepth` / `aisleWidth` 按 1px≈1cm 派生；无 geometry（v1 旧项目）沿用原参数，行为不变。
+- `DataCenterLayout.tsx` 落位前经 `resolveGeometry(matrix)` 传入：`cabinetsPerRow=24` → 一行 24 柜、`=6` → 一行 6 柜；全仓无 `cabinetsPerRow = 8` 硬编码残留（默认值定义处除外）。
+- 用例：`datacenter.store.test.ts` 新增 4 条（24 柜/排、6 柜/排、尺寸派生、无 geometry 兜底）。
+
+### 采用建议写回（FR-A27 承 A08）
+
+- `WorkbenchCapacityCard.tsx`「采用建议」在 `createMatrix` 成功后调 `updateGeometry({ rowCount, cabinetsPerRow })`，建议值同步写入几何参数；矩阵非空仍需二次确认，任何情况下不自动覆盖。
+
+
+## [5.5.9] - 2026-10-28
+
+> **GPU 共柜里程碑（G8 / A26 ⚠）：三档开关前后端同口径。**
+
+### 三档开关
+
+- 新增共享单源 `src/shared/gpuShare.ts` 与后端镜像 `backend/gpu_share.py`：`fixed1`（固定 1 台/柜，默认）/ `byPower`（按功率）/ `manual`（人工指定），`resolveGpuPerCabinet` 同输入同输出。
+- 按功率档：每柜台数 = min(⌊单柜功率上限 ÷ 单机功率⌋, ⌊可用 U ÷ 机高⌋)，下限 1；功率缺失/≤0 回退 12000 W 并按 1 台/柜计，同时告警（前端 `console.warn`、后端 `logger.warning`）。
+- 人工档越界（0/负数/超 U 位容量）拒绝；仍受功率与 U 位物理上限收敛（`physicalGpuCap` / `_physical_cap`），避免预检柜数少于实际可落位数。
+- 落位接线统一：`rackMatrixLayout.ts`、`rack_allocation.py`、`rack_feasibility.py` 均调用同一函数；`planToDesign.ts` 从 `project_config.json` 读 `gpu_share_mode`（未写且 `gpu_per_cabinet>1` → 视为人工指定，存量项目行为不变）。
+- 向导 `WizardStepRack.tsx` 增档位开关、按功率实时估算与人工值超限提示；切换档位只提示「GPU 柜数由 X 变 Y…」并停留 8s，**不自动落位**。
+
+
+## [5.5.8] - 2026-10-28
+
+> **上架口径里程碑（G7 / A23–A25 ⚠）：预留按柜型拆分、N13 修复、柜内一键紧凑重排。**
+
+- 预留按柜型拆分：`RACK_RESERVE_BY_TYPE` / `resolveRackReserve`（`src/shared/roomTaxonomy.ts`）—— GPU/通算/存储底留 4U、顶留 0，网络柜顶留 2U、底留 0。GPU 柜首台 `startU=5` 且顶部可用到 42；网络柜首台 `endU=40`、底部从 1 起。
+- N13 修复：`rack_allocation.py` 的 `_can_fit` 与 `_place` 改用同一「按柜型可用 U」口径，网络柜满配不再出现 `startU ≤ 0`；全落位用例断言 `1 ≤ startU ≤ endU ≤ 42`（`tests/backend/test_b4_rack_reserve.py`）。
+- 柜内一键紧凑重排：`compactCabinetDevices` + `rack.store.ts` 的 `compactCabinet`，保序、保柜型预留、不跨柜，有位移才入撤销栈；入口在 `RackTab.tsx` 工具栏。
+
+
+## [5.5.7] - 2026-10-28
+
+> **尺寸渲染里程碑（G6 续 / A19、A20、A22 ⚠）：平面改 mm 逻辑坐标、3D 同源、列上限收紧到 24。**
+
+- 平面统一 mm 逻辑坐标：`roomGeometry.ts` 的 `planMetrics` 输出 mm，`DataCenterLayout.tsx` 删像素常量，柜宽/柜深/通道/行距全部读几何参数并由 `viewBox` 缩放；实测柜宽:柜深 = 1:2（±2%）。
+- 3D 与平面共用单一事实源：`Room3DView` 高度按 `cabinetHeight`（42U ↔ 2.0 m、47U ↔ 2.2 m）、排距按 `aisleWidth`、排数按 `rowCount`。
+- 列上限 100 → 24：`GEOMETRY_CABINETS_PER_ROW_RANGE` 硬校验；旧项目 `cols>24` 阻断并列出受影响柜位，全 `empty` 超列可一次性裁剪，≤24 列数据零改动。
+
+
+## [5.5.6] - 2026-10-28
+
+> **尺寸数据层里程碑（G6 / A18、A21 ⚠）：`room_layout.json` schema v2 与 v1 迁移备份。**
+
+- `backend/room.py` 的 `ROOM_SCHEMA_VERSION` 升至 2，新增 `geometry`：`cabinetWidth=0.6`、`cabinetDepth=1.2`、`cabinetHeight∈{2.0,2.2}`、`aisleWidth∈{1.2,1.35,1.6}`、`rowCount`、`cabinetsPerRow∈[6,24]`。
+- 前端 `src/utils/roomGeometry.ts` 为单一读取/校验入口（`defaultGeometry` / `resolveGeometry`），行列数以矩阵实际维度为准。
+- v1 项目读取按默认值补齐并写回，首次打开提示一次；写盘前落 `.bak`（内容 === 原 v1），往返字段无损（`room-geometry.test.ts` + 后端 schema 往返用例）。
+- 几何校验：行 1–26、每排 6–24，越界拒绝并提示（填 25 → 「单排上限 24 柜」）。
+
+
+## [5.5.5] - 2026-10-28
+
+> **物料清单里程碑（G5 / A16、A17）：一级按 7 品类分节，补机柜与空调。**
+
+- `backend/hwlist.py` 的 `CATEGORY_ORDER` 固定为 服务器/交换机/光模块/线缆/机柜/空调/辅材；`hwlist_sheets.py` 一级按品类分节、二级保留 `network_profile` 子分组，每节小计 + 表末总计闭合。
+- 机柜按矩阵柜型真值计数、空调按 `ac` 占位格计数，与 `DataCenterStats` 同源；矩阵为空时显示「未建模」而非 0。
+- 表头契约联动 `export_check.py` 的 `_HEADER_CONTRACTS` 与 `test_validation_export.py` 的 `_CABLING_HEADERS`。
+
+
+## [5.5.4] - 2026-10-28
+
+> **导出同源里程碑（G4 / A13–A15）：导出 = 屏幕所见。**
+
+- 导出入参改传当前视图结果（`displayNodes` / `filteredEdges`），不再传原始全量：筛「只看存储网」后导出设备数 === 屏幕可见数，束数一致，关标签后导出无标签。
+- 交付包拓扑 PNG 走 `aidcDelivery.ts`，复用按钮导出同一函数与入参构造，禁止第二份实现。
+- 导出前临时关闭视口剔除（`onlyRenderVisibleElements=false`，`try/finally` 恢复）：视口外节点进入导出图，异常也能复原。
+
+
+## [5.5.3] - 2026-10-28
+
+> **完成动作里程碑（G3 / A10–A12 ⚠）：右上角动作位 + 统一完成状态机。**
+
+- 新增声明式动作注册表 `SubviewActions.tsx`（`useSubviewActions` / `SubviewActionBar`）：10 个子视图声明 `{ label, icon, enabled, reason, onRun }`，宿主内容区右上角统一渲染；`docs` / `knowledge` 显式「本步无操作」。
+- 禁用态附悬停原因（如「请先创建机房矩阵」），完成后显示「已完成 · 撤销」；`roomdesign` 的「定稿布局」更名「标记完成」。
+- 完成状态机收敛为单一 store「每步一标记 + 失效级联」（`{ done, doneAt, invalidatedBy }`），由 `deriveSubviewStatus` 单点派生；上游（设备清单/矩阵/schema）变更自动置「待重新确认」。
+- `WorkbenchStepBar.tsx` 降级为纯状态展示，删除 `aidc` 死代码分支（P2b）。
+
+
+## [5.5.2] - 2026-10-28
+
+> **柜数真值里程碑（G2 / A07–A09）：一个估算函数，三处同源。**
+
+- 新增纯函数 `estimateCabinetDemand`（`src/utils/cabinetDemand.ts`）与 `packCabinetsByType`：按柜型分项装箱，返回柜数/面积/功率/制冷与建议排布（每排 6–24 柜、`rows = ceil(总柜数 ÷ 每排)`）；不读 store、不落盘。
+- 规划阶段容量建议卡 `WorkbenchCapacityCard.tsx`：只读计算值 + 人工按工勘调整（标注偏离量）+ 采用建议（仅矩阵空或二次确认）。
+- 机房设计差额状态条 `useCabinetCapacity.ts`：常驻「柜位 X / 需求 Y」，不足红色并具名缺口（60/168 → 「缺 108 柜」），点击展开预检明细；需求数与建议卡同一次调用。
+- 三处同源用例 `workbench-capacity-card.test.tsx` 纳入 CI。
+
+
+## [5.5.1] - 2026-10-28
+
+> **落位核心里程碑（G1 / A01–A06 ⚠）：预检 → 均摊 → 改判，三段式接通「填得进去」。**
+
+- 全局可行性预检：`checkRackFeasibility`（`src/utils/rackFeasibility.ts`）与后端 `check_rack_feasibility` 同口径 —— 168 柜位/128 台可通过；60 柜位/128 台拒绝且 `shortage.cabinets>0`，结果不缓存；落位入口先预检，拒绝时不写 store。
+- 均衡均摊替代柜内贪心（`rackMatrixLayout.ts` / `rack_allocation.py`）：同柜型各柜设备数极差 ≤1，总落位数与贪心版一致，`gpuPerCabinet=1` 时行为不变。
+- 空白格按需改判 + `typeAuto`：优先级 GPU → 网络 → 存储 → 通算，只跳过 `power` / `ac` / `pillar`；人工改过类型的格永不改写，改判幂等，全空白矩阵 `unplaced = 0`。
+- 柜型判定改结构化 `domain`（`rackCabinetTypes.ts`）：中文 group 串仅作兜底并计一次告警。
+- 常量单点同源：`src/shared/roomTaxonomy.ts` 与 `backend/room_taxonomy.py` 读同一份 JSON（可落位 / 自由域 / 占位三组），跨端双向差集为空。
+- 后端建柜受柜位约束：超「已落柜位 + 可改判格数」抛 `RackCapacityError`，不再静默多建柜。
+
+
 ## [5.5.0] - 2026-10-23
 
 > **工作台迭代版（F1–F9，按《02-AL客户端工作台迭代PRD-5.5.x》落地）：i18n 存量清零与命名空间修复 + 渲染/校验体验加固 + 工具行重构。**

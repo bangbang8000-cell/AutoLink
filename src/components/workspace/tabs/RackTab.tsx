@@ -96,6 +96,7 @@ export function RackTab({ cabinetId }: Props) {
   const updateCabinetSafe = useRackStore((s) => s.updateCabinetSafe)
   const updateDevicesBulk = useRackStore((s) => s.updateDevicesBulk)
   const shiftDevicesU = useRackStore((s) => s.shiftDevicesU)
+  const compactCabinet = useRackStore((s) => s.compactCabinet)
   const setRackConfig = useRackStore((s) => s.setRackConfig)
   const syncCabinetToCell = useRoomStore((s) => s.syncCabinetToCell)
   // M3（AL-CP1/CP2）：机柜/设备 复制粘贴（应用内剪贴板）
@@ -564,6 +565,28 @@ export function RackTab({ cabinetId }: Props) {
             title={t('rack:applyToSameType', '应用到所有同类柜（U 位布局/功率上限）')}
           >
             {t('rack:applyToSameType', '应用到同类柜')}
+          </button>
+          {/* B4-06（FR-A25）：柜内一键紧凑重排（保序/保预留/不跨柜，可撤销） */}
+          <button
+            type="button"
+            onClick={() => {
+              const r = compactCabinet(cabinet.id)
+              if (!r.ok) {
+                addToast('error', r.reason === 'no_space' ? '柜内设备总高超出可用 U 位，无法紧凑重排' : '机柜不存在', 4000)
+                return
+              }
+              if (r.moved === 0) {
+                addToast('info', '柜内已紧凑，无需重排', 3000)
+                return
+              }
+              markDirty()
+              addToast('success', `已紧凑重排 ${r.moved} 台设备 U 位（可撤销）`, 4000)
+            }}
+            disabled={cabinet.devices.length === 0}
+            className="px-1.5 py-1 text-2xs rounded border border-teal-300 dark:border-teal-600 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            title={t('rack:compactCabinetHint', '柜内设备按当前顺序紧贴底部，保留柜型预留（可撤销）')}
+          >
+            {t('rack:compactCabinet', '紧凑重排')}
           </button>
         </div>
 

@@ -10,7 +10,9 @@ import { WorkbenchActionCard } from '@/components/workbench/WorkbenchActionCard'
 import { WorkbenchResultCard } from '@/components/workbench/WorkbenchResultCard'
 import { PipelinePanel } from '@/components/workbench/PipelinePanel'
 import { WorkbenchStaleBanner } from '@/components/workbench/WorkbenchStaleBanner'
+import { SubviewActionBar } from '@/components/workbench/SubviewActions'
 import { AidcPlannerPanel } from '@/components/aidc/AidcPlannerPanel'
+import { WorkbenchCapacityCard } from '@/components/workbench/WorkbenchCapacityCard'
 import { DesignTab } from '@/components/workspace/tabs/DesignTab'
 import { TopologyTab } from '@/components/workspace/tabs/TopologyTab'
 import { RoomDesignTab } from '@/components/workspace/tabs/RoomDesignTab'
@@ -524,6 +526,9 @@ export function WorkbenchTab() {
         </div>
       )}
 
+      {/* 5.5.2 / A10：子视图统一动作条（固定高度，跨视图同一 y、右对齐） */}
+      <SubviewActionBar projectName={selectedProjectName} />
+
       {/* i18n: 内容区（AL-M4c keep-alive：激活页签 + 最近 N 挂载,超限非激活卸载释放内存）
           i18n: M1 修复：激活子视图补 h-full，恢复 TopologyTab 高度链（否则画布高度坍缩为 0、fit 失效） */}
       <div className="flex-1 overflow-auto p-4">
@@ -623,6 +628,8 @@ export function WorkbenchTab() {
                 }}
               />
             )}
+            {/* B1-10（FR-A08）：规划阶段机房容量建议卡（只读计算值 + 人工工勘调整） */}
+            <WorkbenchCapacityCard projectName={project} />
             <AidcPlannerPanel boundProjectName={project} />
           </div>
         )

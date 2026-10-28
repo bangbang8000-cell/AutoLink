@@ -15,6 +15,7 @@ import { useRoomStore, type RoomMatrixData } from '@/stores/room.store'
 import { useRackStore, type RackCabinet } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useProjectStore } from '@/stores/project.store'
+import { planMetrics, resolveGeometry } from '@/utils/roomGeometry'
 
 /** 矩阵：A1/A2 gpu柜、A3 network柜、B1 gpu柜、B2/B3 空格 */
 const makeMatrix = (): RoomMatrixData => ({
@@ -81,22 +82,49 @@ const renderRoom = async () => {
   return utils
 }
 
-/** 各格中心（SVG 逻辑坐标，jsdom 中 svg rect=0 故 clientX 直接映射）：x=34+ci*67、y=24+ri*51 */
-const CELL_CENTER: Record<string, [number, number]> = {
-  A1: [66, 48], A2: [133, 48], A3: [200, 48],
-  B1: [66, 99], B2: [133, 99], B3: [200, 99],
+/** 各格中心（A19：平面统一 mm 逻辑坐标，与 svg viewBox 同一坐标系） */
+const CELL_CENTER: Record<string, [number, number]> = (() => {
+  const m = makeMatrix()
+  const metrics = planMetrics(resolveGeometry(m), m.cols.length, m.rows.length)
+  const out: Record<string, [number, number]> = {}
+  m.cells.forEach((c) => {
+    const ri = m.rows.indexOf(c.row)
+    const ci = m.cols.indexOf(c.col)
+    out[`${c.row}${c.col}`] = [
+      metrics.colLeft(ci) + metrics.cellW / 2,
+      metrics.rowTop(ri) + metrics.cellH / 2,
+    ]
+  })
+  return out
+})()
+
+/** jsdom 无布局：让 svg 尺寸与 viewBox 1:1，clientX/Y 即 mm 逻辑坐标 */
+const stubSvgRect = (container: HTMLElement) => {
+  const svg = container.querySelector('svg.select-none') as SVGSVGElement
+  const m = makeMatrix()
+  const metrics = planMetrics(resolveGeometry(m), m.cols.length, m.rows.length)
+  svg.getBoundingClientRect = () =>
+    ({
+      left: 0, top: 0, x: 0, y: 0,
+      width: metrics.widthMm, height: metrics.heightMm,
+      right: metrics.widthMm, bottom: metrics.heightMm,
+      toJSON: () => ({}),
+    }) as DOMRect
+  return metrics
 }
 
 /** 在网格容器（HTML div）上对指定格右键（jsdom 的 SVG contextmenu 事件不触发 React 监听） */
 const rightClickPos = (container: HTMLElement, pos: string) => {
   const grid = container.querySelector('.overflow-auto.p-3')!
-  const [x, y] = CELL_CENTER[pos] ?? [66, 48]
+  stubSvgRect(container)
+  const [x, y] = CELL_CENTER[pos] ?? CELL_CENTER.A1
   fireEvent.contextMenu(grid, { clientX: x, clientY: y })
 }
 
-/** 在网格容器空白处右键（svg 逻辑坐标落在格子外 → 机房信息） */
+/** 在网格容器空白处右键（mm 坐标落在格子外 → 机房信息） */
 const rightClickBlank = (container: HTMLElement) => {
   const grid = container.querySelector('.overflow-auto.p-3')!
+  stubSvgRect(container)
   fireEvent.contextMenu(grid, { clientX: 5, clientY: 5 })
 }
 
@@ -232,8 +260,10 @@ describe('RoomEditing（M4/AL-ED3 框选批量操作）', () => {
   it('ED-3 拖拽框选 → 选中矩形内格子', async () => {
     const { container } = await renderRoom()
     const svg = container.querySelector('svg.select-none')!
-    fireEvent.mouseDown(svg, { clientX: 35, clientY: 25, button: 0 })
-    fireEvent.mouseMove(svg, { clientX: 100, clientY: 70 })
+    stubSvgRect(container)
+    // A19 mm 逻辑坐标：A1 格 x∈[318.75, 918.75]、y∈[600, 1800]
+    fireEvent.mouseDown(svg, { clientX: 5, clientY: 5, button: 0 })
+    fireEvent.mouseMove(svg, { clientX: 620, clientY: 1210 })
     fireEvent.mouseUp(svg)
     expect(useRoomStore.getState().multiSelected).toEqual(['A1'])
   })
@@ -241,8 +271,9 @@ describe('RoomEditing（M4/AL-ED3 框选批量操作）', () => {
   it('ED-3 框选批量改格子类型 → 全部生效', async () => {
     const { container } = await renderRoom()
     const svg = container.querySelector('svg.select-none')!
-    fireEvent.mouseDown(svg, { clientX: 35, clientY: 25, button: 0 })
-    fireEvent.mouseMove(svg, { clientX: 200, clientY: 200 })
+    const metrics = stubSvgRect(container)
+    fireEvent.mouseDown(svg, { clientX: 5, clientY: 5, button: 0 })
+    fireEvent.mouseMove(svg, { clientX: metrics.widthMm - 5, clientY: metrics.heightMm - 5 })
     fireEvent.mouseUp(svg)
     fireEvent.click(screen.getByText('批量改格子'))
     const dialog = await screen.findByRole('dialog')

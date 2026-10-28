@@ -161,10 +161,11 @@ SAMPLES = [
         'scenario': 'H100-512台-RoCE',
         'tags': ['H100', '512台', 'RoCE', '示例项目', '超大规模'],
         'project_id': '49a-512-roce-0001',
-        'rows': list('ABCDEFGHIJKLMNOPQRST'),
-        'cols': list(range(1, 33)),
-        'zones': {'gpu': ('A1', 'P32'), 'network': ('Q1', 'R8'),
-                  'storage': ('Q9', 'T16'), 'compute': ('Q17', 'T24')},
+        # B4-03 / FR-A22：单排上限 24 柜、行数上限 26 → 512 GPU 柜位需 22 排 × 24 列
+        'rows': list('ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+        'cols': list(range(1, 25)),
+        'zones': {'gpu': ('A1', 'V24'), 'network': ('W1', 'X8'),
+                  'storage': ('W9', 'X24'), 'compute': ('Y1', 'Z16')},
     },
     {
         'id': '国产-昇腾-256',

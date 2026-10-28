@@ -21,14 +21,14 @@ def _dev(did, dtype='GPU Server', height=8, power=1000):
 
 
 def test_place_gpu_into_gpu_cabinet():
-    """GPU 设备放进 gpu 柜（1柜1台）"""
+    """GPU 设备放进 gpu 柜（1柜1台；B4-04 起 GPU 柜底留 4U → U5 起）"""
     res = optimize_rack_placements([_gpu_cab()], [_dev('gpu-1'), _dev('gpu-2')])
     # 1柜1台上限 → 只放 1 台，另 1 台无位置
     assert res['success'] is True
     assert len(res['placements']) == 1
     assert res['placements'][0]['deviceId'] == 'gpu-1'
-    assert res['placements'][0]['startU'] == 1
-    assert res['placements'][0]['endU'] == 8
+    assert res['placements'][0]['startU'] == 5
+    assert res['placements'][0]['endU'] == 12
     assert res['unplaced'] == ['gpu-2']
 
 
@@ -42,13 +42,17 @@ def test_place_gpu_respect_existing_occupancy():
 
 
 def test_place_switch_packs_by_u():
-    """交换机（1U）打包进网络柜，超容量换柜（top_reserved_u=0 保持 10U 满容量语义）"""
+    """交换机（1U）打包进网络柜，超容量换柜
+
+    B4-04 / FR-A23：预留按柜型查表，network 柜恒为顶留 2U，
+    调用方传入的 top_reserved_u=0 只对表外柜型生效 → 10U 柜可用 8U。
+    """
     net_cab = {'id': 1, 'type': 'network', 'totalU': 10, 'power_limit': 6000, 'devices': []}
     sw = [_dev(f'sw-{i}', dtype='Switch', height=1, power=100) for i in range(12)]
     res = optimize_rack_placements([net_cab], sw, top_reserved_u=0)
-    # 10U 容量 → 10 台进柜，2 台无位置
-    assert len(res['placements']) == 10
-    assert len(res['unplaced']) == 2
+    # 10U 柜 − 顶留 2U = 可用 8U → 8 台进柜，4 台无位置
+    assert len(res['placements']) == 8
+    assert len(res['unplaced']) == 4
 
 
 def test_power_limit_blocks():

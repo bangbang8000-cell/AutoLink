@@ -3,12 +3,15 @@
  *
  * 功能：
  *   - 基于 RackStore 的机柜列表，自动计算机房平面布局
- *   - 每排 N 个机柜（默认 8），冷热通道交替
+ *   - 每排列数 / 柜宽 / 柜高 / 排距由机房几何参数（RoomGeometry）派生（B5-04 / FR-A27），
+ *     DEFAULT_PARAMS 仅作无 geometry（v1 旧项目）时的兜底
+ *   - 冷热通道交替
  *   - 功率热力图：绿 <60% / 黄 <80% / 红 ≥80%
  *   - 机房统计：机柜数 / 总功率 / 散热需求 / PUE
  */
 import { create } from 'zustand'
 import { useRackStore, type RackCabinet } from './rack.store'
+import { MM_PER_M, type RoomGeometryData } from '@/utils/roomGeometry'
 
 /** 机柜在机房中的位置 */
 export interface CabinetPlacement {
@@ -67,6 +70,29 @@ const DEFAULT_PARAMS: LayoutParams = {
   topPadding: 40,
 }
 
+/** 平面画布换算：1px ≈ 1cm，故 1 m = 100 px（与 roomGeometry 的 mm 逻辑坐标同源） */
+const PX_PER_M = MM_PER_M / 10
+
+/**
+ * B5-04（FR-A27）：由机房几何参数派生布局参数，替代 `cabinetsPerRow=8` 等硬编码。
+ *   - 换行数取 `geometry.cabinetsPerRow`（6–24）
+ *   - 柜宽取 `cabinetWidth`（0.6 m → 60 px）、柜高取 `cabinetDepth`（1.2 m → 120 px）
+ *   - 排间距取通道宽 `aisleWidth`（1.2/1.35/1.6 m → 120/135/160 px）
+ * 留白沿用现有参数（与 geometry 无关）。
+ */
+export function layoutParamsFromGeometry(
+  geo: RoomGeometryData,
+  base: LayoutParams = DEFAULT_PARAMS,
+): LayoutParams {
+  return {
+    ...base,
+    cabinetsPerRow: Math.max(1, Math.round(geo.cabinetsPerRow)),
+    cabinetWidth: geo.cabinetWidth * PX_PER_M,
+    cabinetHeight: geo.cabinetDepth * PX_PER_M,
+    rowGap: geo.aisleWidth * PX_PER_M,
+  }
+}
+
 /** 功率热力颜色 */
 export function getPowerColor(percent: number): { fill: string; stroke: string; text: string } {
   if (percent >= 80) {
@@ -85,7 +111,7 @@ interface DataCenterState {
   params: LayoutParams
   selectedCabinetId: number | null
 
-  computeLayout: (cabinets: RackCabinet[]) => void
+  computeLayout: (cabinets: RackCabinet[], geometry?: RoomGeometryData | null) => void
   setParams: (params: Partial<LayoutParams>) => void
   selectCabinet: (id: number | null) => void
 }
@@ -97,8 +123,9 @@ export const useDataCenterStore = create<DataCenterState>()((set, get) => ({
   params: { ...DEFAULT_PARAMS },
   selectedCabinetId: null,
 
-  computeLayout: (cabinets) => {
-    const { params } = get()
+  computeLayout: (cabinets, geometry) => {
+    // B5-04：有几何参数时由 geometry 派生（换行数/柜宽/柜高/排距），否则沿用当前参数
+    const params = geometry ? layoutParamsFromGeometry(geometry, get().params) : get().params
     const placements: CabinetPlacement[] = []
     const rows: CabinetRowInfo[] = []
 
@@ -179,7 +206,7 @@ export const useDataCenterStore = create<DataCenterState>()((set, get) => ({
       exceededCabinets,
     }
 
-    set({ placements, rows, stats })
+    set({ placements, rows, stats, params })
   },
 
   setParams: (newParams) => {

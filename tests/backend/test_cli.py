@@ -190,7 +190,8 @@ class TestOutputFormats:
                              monkeypatch, capsys, audit)
         assert rc == 0
         assert 'name: 机房' in out
-        assert 'schemaVersion: 1' in out
+        # B4-01 / FR-A21：机房 schema 升级到 v2（含 geometry）
+        assert 'schemaVersion: 2' in out
 
     def test_ndjson_format(self, monkeypatch, capsys, tmp_path):
         audit = tmp_path / 'audit.jsonl'

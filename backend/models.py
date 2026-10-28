@@ -110,7 +110,7 @@ class NetworkObject:
     def __init__(self, name, obj_type, group=None, max_ports=64, podid=None,
                  device_profile=None, power_watts=0, u_height=1, layer_hint=None,
                  rail_id=None, rail_role="none", domain_id=None, protocol="",
-                 network_type="",
+                 network_type="", device_domain="",
                  # V3.0.0-T0-4: 端口容量显式化（None = 沿用"半口下联"兼容行为）
                  downlink_limit=None, uplink_limit=None, ports_per_nic=1):
         self.name = name
@@ -124,6 +124,10 @@ class NetworkObject:
         self.domain_id = domain_id       # Scale-Up 域 ID
         self.protocol = protocol         # NVLink / UALink / UB
         self.network_type = network_type # 'scale_up'
+
+        # B1-02 / FR-A04: 设备域（gpu / compute / storage / network），柜型判定只读本字段，
+        # 前端不再依赖中文 group 串。空串表示未标注（前端兜底并计告警）。
+        self.domain = device_domain or ''
 
         # 设备档案信息 (V2.1新增)
         self.device_profile = device_profile  # LibraryDevice or None

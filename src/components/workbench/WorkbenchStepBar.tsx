@@ -10,7 +10,7 @@
  * 不在组件内重复实现判定逻辑。
  */
 import { useTranslation } from 'react-i18next'
-import { CheckCircle, AlertTriangle, Loader2, Circle, Lock } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Loader2, Circle } from 'lucide-react'
 import { useDesignStore } from '@/stores/design.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore } from '@/stores/rack.store'
@@ -56,12 +56,10 @@ export function WorkbenchStepBar({ projectName }: { projectName?: string }) {
   const generating = useDesignStore((s) => s.generating)
   const matrix = useRoomStore((s) => s.matrix)
   const cabinets = useRackStore((s) => s.cabinets)
-  const aidcDoneMap = useWorkbenchStore((s) => (projectName ? s.aidcDone[projectName] : undefined))
+  const stepDoneMap = useWorkbenchStore((s) => (projectName ? s.stepDone[projectName] : undefined))
   const staleMap = useWorkbenchStore((s) => (projectName ? s.stale[projectName] : undefined))
   const activeSubview = useUIStore((s) => s.workbenchSubview)
   const setWorkbenchSubview = useUIStore((s) => s.setWorkbenchSubview)
-  const setFinalized = useRoomStore((s) => s.setFinalized)
-  const markAidcDone = useWorkbenchStore((s) => s.markAidcDone)
 
   // ③ 结果步的产出判定：本会话渲染结果非空（与 ReadinessCard 的批次口径互补，同步可读）
   const hasRenderResults = useRenderStore((s) => s.results.length > 0)
@@ -75,7 +73,7 @@ export function WorkbenchStepBar({ projectName }: { projectName?: string }) {
     activeSubview: activeSubview as Sv | null,
     reading: subview === 'design' ? generating : false,
     stale: staleMap,
-    aidcDone: aidcDoneMap === true,
+    stepDone: stepDoneMap,
   })
 
   return (
@@ -100,26 +98,8 @@ export function WorkbenchStepBar({ projectName }: { projectName?: string }) {
         )
       })}
 
-      {/* i18n: 就地定稿动作（按当前子视图上下文） */}
+      {/* i18n: 纯状态展示；完成动作由工作台右上角统一动作条（SubviewActionBar）提供 */}
       <div className="ml-auto flex items-center gap-1.5 shrink-0">
-        {activeSubview === 'roomdesign' && matrix && !matrix.finalized && (
-          <button
-            type="button"
-            onClick={() => setFinalized(true, projectName)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20"
-          >
-            <Lock size={10} /> {t('rack:finalizeLayout', '定稿布局')}
-          </button>
-        )}
-        {activeSubview === 'aidc' && projectName && aidcDoneMap !== true && (
-          <button
-            type="button"
-            onClick={() => markAidcDone(projectName)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded border border-success-300 dark:border-success-600 text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20"
-          >
-            <CheckCircle size={10} /> {t('workbench:markDone', '标记完成')}
-          </button>
-        )}
         {summary && (
           <span className="text-gray-400">
             {t('workbench:totalServers', { defaultValue: `共 ${summary.totalServers} 台设备` })}

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useRackStore, toCabinetType, validateCabinetPatch, findFirstAvailableU, checkDeviceMove } from '../stores/rack.store'
 import type { RackCabinet, RackDevice, CabinetType, UnplacedDevice } from '../stores/rack.store'
+import { getCabinetTypeGroupFallbackCount, resetCabinetTypeGroupFallbackCount } from '../utils/rackCabinetTypes'
 
 // Mock electron API
 const mockElectron = {
@@ -135,6 +136,37 @@ describe('RackStore', () => {
       expect(toCabinetType({ type: 'server', group: '通算服务器组' })).toBe('compute')
       expect(toCabinetType({ type: 'param_leaf', group: '参数Leaf组' })).toBe('network')
       expect(toCabinetType({ type: 'oob_access', group: 'OOB接入组' })).toBe('network')
+    })
+
+    // B1-02 / FR-A04：结构化 domain 优先，中文 group 仅兜底
+    it('domain 优先于中文 group', () => {
+      expect(toCabinetType({ type: 'server', group: '存储服务器组', domain: 'gpu' })).toBe('gpu')
+      expect(toCabinetType({ type: 'server', group: 'GPU服务器组1', domain: 'storage' })).toBe('storage')
+      expect(toCabinetType({ type: 'server', group: 'GPU服务器组1', domain: 'compute' })).toBe('compute')
+    })
+
+    it('group 改为英文/空串后柜型分布不变（domain 生效）', () => {
+      const nodes = [
+        { type: 'server', group: 'GPU-Servers-1', domain: 'gpu' },
+        { type: 'server', group: '', domain: 'storage' },
+        { type: 'server', group: 'zh-empty', domain: 'compute' },
+        { type: 'param_leaf', group: '', domain: 'network' },
+      ]
+      expect(nodes.map((n) => toCabinetType(n))).toEqual(['gpu', 'storage', 'compute', 'network'])
+    })
+
+    it('缺 domain 才走中文兜底并累计告警计数', () => {
+      resetCabinetTypeGroupFallbackCount()
+      // 交换机不经兜底
+      toCabinetType({ type: 'param_leaf', group: '参数Leaf组' })
+      expect(getCabinetTypeGroupFallbackCount()).toBe(0)
+      // 带 domain 的服务器不经兜底
+      toCabinetType({ type: 'server', group: '', domain: 'gpu' })
+      expect(getCabinetTypeGroupFallbackCount()).toBe(0)
+      // 缺 domain 的服务器兜底一次
+      expect(toCabinetType({ type: 'server', group: '存储服务器组' })).toBe('storage')
+      expect(getCabinetTypeGroupFallbackCount()).toBe(1)
+      resetCabinetTypeGroupFallbackCount()
     })
   })
 

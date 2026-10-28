@@ -1,7 +1,7 @@
 """49-d（示例资产与收官）：4 个示例模板门禁（F9-2 示例库自动化验收）
 
 复用 scripts/validate_samples.py 的校验函数，以 pytest 形式兜住：
-  - 示例发现：isSample=true 模板为 13 个（64/128 × IB/RoCE + 6 场景万卡/二层最大）
+  - 示例发现：isSample=true 模板为 9 个（64/128/256/512 + 昇腾-256 + 二层最大-2048 + 5090）
   - 全量校验：project_config / 设计可消费 / 机柜合规 / INI-JSON 等价 / plan 自包含回导 /
     room_layout / 导出往返一致（validate_sample 全绿）
   - 协议差异：IB 收敛比 < RoCE、参数网设备型号不同、param_protocol 正确
@@ -28,15 +28,15 @@ from validate_samples import (  # noqa: E402
 
 BASE = os.path.join(os.path.dirname(__file__), '..', '..', 'template')
 
-# 示例发现断言：14 个（7 基础 + 6 场景万卡/二层最大 + 1 本地定制 5090）
+# 示例发现断言：9 个（7 基础 + 1 二层最大-2048 + 1 本地定制 5090）
 # V5.4.3 更正：5090推理-500台 为本地定制模板（5090 模板产品线），template.json 自带
 # isSample=true（本地定制提交 2b897e6 引入，5.4.2 CI 即因缺它而红），本断言对齐现实
 # 发现集；其不进 VALIDATED_SAMPLE_IDS（全量校验开销大，同万卡/二层最大口径）
+# B4-03 / FR-A22：单排上限 24 柜 → 万卡-*（48 列 / 49 行）与二层最大-8192（40 行）
+# 无法满足机房矩阵约束，已置 isSample=false（不可用于机房设计），退出示例发现集
 DISCOVERED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
                          'H100-256台-RoCE', 'H100-512台-RoCE', '国产-昇腾-256',
-                         '万卡-B300-Q3400-二层-IB', '万卡-H200-Q3400-二层-IB',
-                         '万卡-H200-QM9700-三层-IB', '万卡-H200-X400-三层-RoCE',
-                         '二层最大-2048卡-QM9700-IB', '二层最大-8192卡-X400-RoCE',
+                         '二层最大-2048卡-QM9700-IB',
                          '5090推理-500台'}
 # 全量校验范围：7 个基础示例（万卡/二层最大由 validate_samples 门禁覆盖，本地全量校验开销大，GitHub 跑不过可跳过）
 VALIDATED_SAMPLE_IDS = {'H100-64台-IB', 'H100-64台-RoCE', 'H100-128台-IB', 'H100-128台-RoCE',
@@ -49,7 +49,7 @@ def _read_json(path):
 
 
 def test_discover_exactly_four_samples():
-    """示例发现：isSample=true 模板为 13 个（7 基础 + 6 场景），ID 与规格一致"""
+    """示例发现：isSample=true 模板为 9 个（B4-03 / FR-A22 起万卡-* 与二层最大-8192 退出），ID 与规格一致"""
     samples = discover_samples()
     ids = {name for name, _ in samples}
     assert ids == DISCOVERED_SAMPLE_IDS

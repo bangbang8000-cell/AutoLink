@@ -5,8 +5,9 @@ AutoLink v2.9.0 T7 — rack_allocation.py 机柜分配算法测试
   - GPU 高功率独占: DGX H100/H200 单柜 1 台
   - GPU 功率装箱: Atlas 6.5KW 16KW 柜 2 台、MLU590 3.8KW 12KW 柜 3 台
   - 通算/存储装箱: 2U 0.8KW 12KW 柜 15 台
-  - 网络设备聚柜: 1U 0.2KW 交换机 U 位约束 42 台/柜
+  - 网络设备聚柜: 1U 0.2KW 交换机 U 位约束 40 台/柜（顶留 2U）
   - gpu_dedicated 开关、U 位无冲突、功率边界、分阶段 seed
+  - B4-04 / FR-A23: 预留按柜型拆分（服务器底留 4U、网络顶留 2U）
 """
 import pytest
 from rack_allocation import (
@@ -41,9 +42,14 @@ def assert_power_ok(cabinets):
 
 
 def assert_u_ok(cabinets, rack_type):
-    """断言每柜 U 位不超机柜容量"""
+    """断言每柜 U 位不超机柜容量，且每台设备落在 1 ≤ startU ≤ endU ≤ rack_type（B4-05 / FR-A24）"""
     for cab in cabinets:
         assert cab.used_u <= rack_type, f"柜{cab.name} U位超限 {cab.used_u}U > {rack_type}U"
+        for d in cab.devices:
+            assert 1 <= d.start_u <= d.end_u <= rack_type, (
+                f"柜{cab.name} 设备{d.name} U 位越界: {d.start_u}–{d.end_u}（1–{rack_type}）")
+            assert d.end_u - d.start_u + 1 == d.u_height, (
+                f"柜{cab.name} 设备{d.name} U 位跨度 {d.start_u}–{d.end_u} 与高度 {d.u_height} 不符")
 
 
 class TestInfer:
@@ -164,29 +170,36 @@ class TestComputeStorage:
     """通算/存储装箱测试"""
 
     def test_compute_15_per_cabinet_12kw(self):
-        """128×通算 (0.8KW/2U) + 12KW 柜 → 9 柜, 前 8 柜 15 台"""
+        """128×通算 (0.8KW/2U) + 12KW 柜 → 9 柜, 均摊后 15/15 + 14×7"""
         devices = make_servers('通算服务器', 128, 800, 2, DEVICE_TYPE_COMPUTE)
         allocator = RackAllocator(rack_type=42, power_limit=12000)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 9
-        full_cabs = allocator.cabinets[:8]
-        for cab in full_cabs:
-            assert cab.device_count == 15
+        # B1-06 / FR-A02：同柜型各柜设备数极差 ≤1（128 = 9×14 + 2）
+        assert [c.device_count for c in allocator.cabinets] == [15, 15] + [14] * 7
+        for cab in allocator.cabinets[:2]:
             assert cab.total_power == 12000  # 功率恰好占满
             assert cab.used_u == 30
-        assert allocator.cabinets[-1].device_count == 8
+        assert allocator.cabinets[-1].used_u == 28
         assert_u_no_conflict(allocator.cabinets)
         assert_power_ok(allocator.cabinets)
 
-    def test_compute_20_per_cabinet_16kw(self):
-        """40×通算 (0.8KW/2U) + 16KW 柜 → 2 柜, 20 台/柜"""
+    def test_compute_u_cap_16kw(self):
+        """40×通算 (0.8KW/2U) + 16KW 柜 → U 位先到顶: 38U/柜 → 19 台/柜，均摊 3 柜 14/13/13
+
+        B4-04 / FR-A23：通算柜底留 4U，可用 U = 42 − 4 = 38（功率上限 16KW 可容 20 台，
+        实际被 U 位卡住），故 40 台需 3 柜。
+        """
         devices = make_servers('通算服务器', 40, 800, 2, DEVICE_TYPE_COMPUTE)
         allocator = RackAllocator(rack_type=42, power_limit=16000)
         allocator.allocate(devices)
-        assert len(allocator.cabinets) == 2
-        for cab in allocator.cabinets:
-            assert cab.device_count == 20
-            assert cab.total_power == 16000
+        assert len(allocator.cabinets) == 3
+        # 40 = 3×13 + 1 → 均摊 14/13/13
+        assert [c.device_count for c in allocator.cabinets] == [14, 13, 13]
+        assert [c.used_u for c in allocator.cabinets] == [28, 26, 26]
+        assert [c.total_power for c in allocator.cabinets] == [11200, 10400, 10400]
+        assert_u_no_conflict(allocator.cabinets)
+        assert_power_ok(allocator.cabinets)
 
     def test_storage_mixed_u_height(self):
         """存储柜容纳不同 U 高设备: 4U 0.9KW + 2U 0.6KW 混合装箱"""
@@ -205,7 +218,7 @@ class TestNetwork:
     """网络设备聚柜测试"""
 
     def test_switch_u_constraint(self):
-        """64×1U 交换机 (0.2KW) + 12KW 柜 → 2 柜 (42+22, U 位约束)"""
+        """64×1U 交换机 (0.2KW) + 12KW 柜 → 2 柜 (32+32, 均摊后 U 位仍不超可用 40U)"""
         devices = [DeviceSlot(name=f"参数Leaf_{i}", obj_type='param_leaf',
                               group='参数Leaf组', power_watts=200, u_height=1,
                               device_type=DEVICE_TYPE_NETWORK, network='param')
@@ -213,8 +226,8 @@ class TestNetwork:
         allocator = RackAllocator(rack_type=42, power_limit=12000)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 2
-        assert allocator.cabinets[0].device_count == 42
-        assert allocator.cabinets[1].device_count == 22
+        # B1-06 / FR-A02：64 = 2×32，极差 0
+        assert [c.device_count for c in allocator.cabinets] == [32, 32]
         assert_u_no_conflict(allocator.cabinets)
         assert_u_ok(allocator.cabinets, 42)
 
@@ -265,24 +278,30 @@ class TestEdgeCases:
         assert allocator.cabinets[0].device_count == 2
         assert allocator.cabinets[0].total_power == 12000
 
-    def test_u_exactly_at_limit(self):
-        """21×2U 设备 + 42U 柜 (0.5KW, 无顶部预留) → 1 柜满 U 位"""
+    def test_compute_capacity_excludes_bottom_reserve(self):
+        """21×2U 通算 + 42U 柜 → 底留 4U 后可用 38U，42U 需求需 2 柜（均摊 11/10）
+
+        B4-04 / FR-A23：`top_reserved_u=0` 对通算柜不生效（按柜型查表 bottom=4/top=0），
+        故单柜最多 19 台，21 台必然溢到第二柜。
+        """
         devices = make_servers('通算服务器', 21, 500, 2, DEVICE_TYPE_COMPUTE)
         allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=0)
         allocator.allocate(devices)
-        assert len(allocator.cabinets) == 1
-        assert allocator.cabinets[0].used_u == 42
+        assert len(allocator.cabinets) == 2
+        assert [c.device_count for c in allocator.cabinets] == [11, 10]
+        assert [c.used_u for c in allocator.cabinets] == [22, 20]
+        assert all(d.start_u >= 5 for cab in allocator.cabinets for d in cab.devices)
 
     def test_single_device(self):
-        """单设备分配"""
+        """单设备分配：GPU 柜底留 4U → 首台占 U5–U12"""
         devices = make_servers('GPU服务器', 1, 10200, 8, DEVICE_TYPE_GPU)
         allocator = RackAllocator(rack_type=42, power_limit=12000)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 1
         d = devices[0]
         assert d.cabinet_id == 1
-        assert d.start_u == 1
-        assert d.end_u == 8
+        assert d.start_u == 5
+        assert d.end_u == 12
         assert d.cabinet_name == '机柜1'
 
     def test_empty_devices(self):
@@ -376,22 +395,22 @@ class TestMixedAndSeed:
 
 
 class TestDirectionalMounting:
-    """M5 方向化上架：服务器从底部向上、网络从顶部向下、顶部预留 2U（默认可配）"""
+    """M5 方向化上架：服务器从底部向上、网络从顶部向下；预留按柜型查表（B4-04 / FR-A23）"""
 
     def test_gpu_bottom_up_with_top_reserved(self):
-        """GPU 从底部 U1 向上连续上架，顶部预留 2U 为空（42U 柜 → 最高占用 ≤ 40）"""
+        """GPU 从底部 U5 起向上连续上架，顶部可用到满 U42（GPU 柜顶留 0）"""
         devices = make_servers('GPU服务器', 4, 10200, 8, DEVICE_TYPE_GPU)
         allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=2)
         allocator.allocate(devices)
         cabs = [c for c in allocator.cabinets if c.devices]
         for cab in cabs:
-            assert cab.devices[0].start_u == 1
-            assert cab.devices[0].end_u == 8
+            assert cab.devices[0].start_u == 5
+            assert cab.devices[0].end_u == 12
             assert cab.used_u_top == 0
-        assert all(d.end_u <= 40 for c in cabs for d in c.devices)
+        assert all(d.end_u <= 42 for c in cabs for d in c.devices)
 
     def test_network_top_down(self):
-        """网络设备从顶部向下：最高位 = usable_u = totalU - top_reserved_u，然后向下"""
+        """网络设备从顶部向下：最高位 = totalU − 网络柜顶留 2U = 40，然后向下"""
         switches = [DeviceSlot(name=f"参数Leaf_{i}", obj_type='param_leaf', group='参数Leaf组',
                                power_watts=200, u_height=2, device_type=DEVICE_TYPE_NETWORK, network='param')
                     for i in range(1, 4)]
@@ -405,7 +424,7 @@ class TestDirectionalMounting:
         assert cab.used_u_bottom == 0
 
     def test_servers_bottom_network_top_separate(self):
-        """服务器柜全底部、网络柜全顶部，各自无冲突，预留 2U 保持"""
+        """服务器柜全底部（底留 4U、顶部可用到 42）、网络柜全顶部（顶留 2U、底部从 1 起）"""
         servers = make_servers('通算服务器', 10, 500, 2, DEVICE_TYPE_COMPUTE)
         switches = [DeviceSlot(name=f"参数Leaf_{i}", obj_type='param_leaf', group='参数Leaf组',
                                power_watts=200, u_height=1, device_type=DEVICE_TYPE_NETWORK, network='param')
@@ -416,23 +435,30 @@ class TestDirectionalMounting:
         assert_u_ok(allocator.cabinets, 42)
         compute_cab = [c for c in allocator.cabinets if c.type == 'compute'][0]
         net_cab = [c for c in allocator.cabinets if c.type == 'network'][0]
-        assert all(d.end_u <= 40 for d in compute_cab.devices + net_cab.devices)
+        # 通算：底留 4U，顶部不预留
+        assert all(d.start_u >= 5 and d.end_u <= 42 for d in compute_cab.devices)
+        # 网络：顶留 2U，底部不预留
+        assert all(d.start_u >= 1 and d.end_u <= 40 for d in net_cab.devices)
         assert compute_cab.used_u_top == 0
         assert net_cab.used_u_bottom == 0
 
     def test_top_reserved_config(self):
-        """top_reserved_u 可配：0/2/4 影响网络设备最高位"""
-        for reserved, expected_top in [(0, 42), (2, 40), (4, 38)]:
+        """预留按柜型查表：网络柜恒为顶留 2U（`top_reserved_u` 只对表外柜型回退生效）"""
+        for reserved in (0, 2, 4):
             sw = [DeviceSlot(name="参数Leaf_1", obj_type='param_leaf', group='参数Leaf组',
                              power_watts=200, u_height=1, device_type=DEVICE_TYPE_NETWORK, network='param')]
             a = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=reserved)
             a.allocate(sw)
-            assert sw[0].end_u == expected_top, f'top_reserved_u={reserved} 应占用 U{expected_top}'
+            assert sw[0].end_u == 40, f'top_reserved_u={reserved} 网络柜仍应止于 U40'
+            assert sw[0].start_u == 40
 
     def test_full_bottom_requires_second_cabinet(self):
-        """默认预留 2U：21×2U=42U 超过可用 40U → 需 2 柜，首柜恰好 40U"""
+        """通算柜底留 4U 后可用 38U：21×2U=42U → 需 2 柜（均摊 11/10）"""
         devices = make_servers('通算服务器', 21, 500, 2, DEVICE_TYPE_COMPUTE)
         allocator = RackAllocator(rack_type=42, power_limit=12000, top_reserved_u=2)
         allocator.allocate(devices)
         assert len(allocator.cabinets) == 2
-        assert allocator.cabinets[0].used_u == 40
+        # B1-06 / FR-A02：21 = 2×10 + 1 → 11/10
+        assert [c.device_count for c in allocator.cabinets] == [11, 10]
+        assert [c.used_u for c in allocator.cabinets] == [22, 20]
+        assert_u_no_conflict(allocator.cabinets)

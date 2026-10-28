@@ -17,7 +17,7 @@ import { SectionCard } from '@/components/ui/SectionCard'
 import { Tabs } from '@/components/ui/Tabs'
 import {
   Network, Zap, Server, GitBranch, ChevronDown, ChevronRight, Tag,
-  FolderOpen, History, Wrench, CheckCircle, RotateCcw,
+  FolderOpen, History, Wrench,
 } from 'lucide-react'
 import { useDesignStore, type DesignConfig } from '@/stores/design.store'
 import { useWorkbenchStore } from '@/stores/workbench.store'
@@ -247,15 +247,6 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
   const [error, setError] = useState('')
   const [exportMsg, setExportMsg] = useState('')
 
-  // 5.2.1-521-b：AIDC 规划手动完成标记（D5，按项目）
-  const aidcDone = useWorkbenchStore((s) => (boundProjectName ? s.aidcDone[boundProjectName] === true : false))
-  const toggleAidcDone = () => {
-    if (!boundProjectName) return
-    const wb = useWorkbenchStore.getState()
-    if (wb.aidcDone[boundProjectName]) wb.unmarkAidcDone(boundProjectName)
-    else wb.markAidcDone(boundProjectName)
-  }
-
   const buildParams = () => ({
     // 契约 v1.2：项目身份
     project_id: projectId,
@@ -301,7 +292,7 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         // 5.2.1-521-c：plan 重新生成 → 撤销"标记完成" + 下游级联置"待调整"
         if (boundProjectName) {
           const wb = useWorkbenchStore.getState()
-          wb.unmarkAidcDone(boundProjectName)
+          wb.unmarkStepDone(boundProjectName, 'aidc')
           wb.invalidateDownstream(boundProjectName, ['aidc'])
         }
       }
@@ -627,13 +618,6 @@ export function AidcPlannerPanel({ boundProjectName }: { boundProjectName?: stri
         className="ml-2">
         <Wrench size={12} className="inline mr-1" /> {t('applyToDesign')}
       </Button>
-      {boundProjectName && plan && (
-        <Button variant="ghost" onClick={toggleAidcDone} disabled={loading}
-          className="ml-2">
-          {aidcDone ? <RotateCcw size={12} className="inline mr-1" /> : <CheckCircle size={12} className="inline mr-1" />}
-          {aidcDone ? t('unmarkDone') : t('markDone')}
-        </Button>
-      )}
 
       {exportMsg && <p className="text-xs text-gray-500 mt-2">{exportMsg}</p>}
 

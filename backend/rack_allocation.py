@@ -1,4 +1,4 @@
-"""
+﻿"""
 AutoLink V2.9.0-T1 - 机柜分配算法（多约束装箱）
 
 核心目标: 让机柜规划贴近现实物理约束
@@ -19,7 +19,18 @@ AutoLink V2.9.0-T1 - 机柜分配算法（多约束装箱）
     cabinets = allocator.cabinets # 机柜分配结果
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
+
+from rack_feasibility import (
+    DEMAND_CABINET_TYPES,
+    RackCapacityError,
+    check_rack_feasibility_by_capacity,
+    slot_to_node,
+)
+# B5-01 / B5-02（FR-A26）：GPU 共柜三档（与前端 shared/gpuShare.ts 同口径）
+from gpu_share import resolve_gpu_per_cabinet
+# B4-04 / FR-A23：预留按柜型查表（与前端 RACK_RESERVE_BY_TYPE 同源）
+from room_taxonomy import rack_reserve_for
 
 # --- 设备类型 ---
 DEVICE_TYPE_GPU = 'gpu'          # GPU 服务器
@@ -135,22 +146,41 @@ class RackAllocator:
                  naming_prefix: str = '机柜', gpu_dedicated: bool = False,
                  top_reserved_u: int = 2, server_mount_from: str = 'bottom',
                  network_mount_from: str = 'top',
-                 gpu_per_cabinet: int = 1):
+                 gpu_per_cabinet: int = 1,
+                 gpu_share_mode: Optional[str] = None,
+                 capacity_by_type: Optional[Dict[str, int]] = None,
+                 slot_count: Optional[int] = None):
         self.rack_type = max(1, int(rack_type or 42))
         self.power_limit = max(1, int(power_limit or 12000))
         self.naming_prefix = naming_prefix or '机柜'
         self.gpu_dedicated = bool(gpu_dedicated)
         # 5.2.4-524-d: GPU 每柜台数上限（默认 1 柜 1 台，与前端矩阵硬约束对齐；显式 >1 才多台共柜）
         self.gpu_per_cabinet = max(1, int(gpu_per_cabinet or 1))
+        # B5-01 / FR-A26：GPU 共柜档位（None = 旧口径，直接按 gpu_per_cabinet）
+        self.gpu_share_mode = gpu_share_mode
+        # 实际每柜上限：allocate() 内按档位解析（byPower 需设备功率/机高）
+        self._gpu_cap = self.gpu_per_cabinet
+        # B5-02：档位降级告警（功率上限/单机功率缺失时）
+        self.gpu_share_warnings: List[str] = []
         # M5: 顶部预留 U 数（默认 2U）+ 上架方向（服务器从底部向上、网络从顶部向下）
         self.top_reserved_u = max(0, int(top_reserved_u or 0))
         self.server_mount_from = server_mount_from or 'bottom'
         self.network_mount_from = network_mount_from or 'top'
+        # B4-04 / FR-A23：可用 U 按柜型查表（服务器类底留 4U、网络柜顶留 2U）；
+        # 未知柜型回退 self.top_reserved_u。_usable_u 仅作兼容保留（全局口径）。
         self._usable_u = max(1, self.rack_type - self.top_reserved_u)
+        # B1-08 / FR-A01: 柜位上限（各柜型可建柜数）。None = 不设限（designer 无矩阵场景保持原行为）
+        self.capacity_by_type: Optional[Dict[str, int]] = (
+            None if capacity_by_type is None
+            else {t: max(0, int(capacity_by_type.get(t) or 0)) for t in DEMAND_CABINET_TYPES}
+        )
+        self.slot_count = None if slot_count is None else max(0, int(slot_count))
+        # 本次 allocate 内已占用的柜位数（含 seed 预置），_new_cabinet 超限即抛
+        self._capacity_used: Dict[str, int] = {}
         self.cabinets: List[CabinetAllocation] = []
         # v2.9.1-T6: 按机柜类型分桶索引（保持创建顺序），U 位满的柜惰性移除
         self._buckets: dict = {t: [] for t in _CABINET_TYPES}
-        # V3.4.1-H-P1: 网段 → 网络柜二级索引（_assign_network 只扫同网段柜，
+        # V3.4.1-H-P1: 网段 → 网络柜二级索引（_allocate_network 只在同网段柜内均摊，
         # 消除 O(交换机数×网络柜数×柜内设备) 的线性扫描；2048 规模下约 330 万次操作降为 O(S)）
         self._network_index: dict = {}
 
@@ -161,8 +191,20 @@ class RackAllocator:
         """分配全部设备到机柜，就地回填 cabinet 信息，返回设备列表。
 
         分配顺序: GPU 独占 → GPU 装箱 → 通算 → 存储 → 网络(按网段聚柜)。
-        同类型设备按输入顺序装箱，保证结果可复现。
+        B1-06 / FR-A02：通算/存储/网络按整批 round-robin 均摊（同柜型各柜设备数极差 ≤1），
+        设备按输入顺序落位，保证结果可复现。
+
+        B1-05 / B1-08：配置了 ``capacity_by_type`` 时先跑与前端同一个预检
+        （``rack_feasibility.check_rack_feasibility``），不足则一次性抛
+        ``RackCapacityError``——不产生任何部分落位结果。
         """
+        self._capacity_used = {}
+        for existing in self.cabinets:
+            self._capacity_used[existing.type] = self._capacity_used.get(existing.type, 0) + 1
+        if self.capacity_by_type is not None:
+            result = self.preflight(devices)
+            if not result['ok']:
+                raise RackCapacityError(result)
         if not self.cabinets:
             self.cabinets = []
         # 分类（保持组内输入顺序）
@@ -171,17 +213,70 @@ class RackAllocator:
         storage_devs = [d for d in devices if d.device_type == DEVICE_TYPE_STORAGE]
         network_devs = [d for d in devices if d.device_type == DEVICE_TYPE_NETWORK]
 
+        # B5-01 / B5-02（FR-A26）：按档位解析本次落位的每柜 GPU 上限
+        self._gpu_cap, gpu_warnings = resolve_gpu_per_cabinet(
+            self.gpu_share_mode,
+            self.gpu_per_cabinet,
+            [int(d.power_watts or 0) for d in gpu_devs],
+            [int(d.u_height or 1) for d in gpu_devs],
+            self.power_limit,
+            self._usable_u_for(CABINET_TYPE_GPU),
+        )
+        self.gpu_share_warnings = gpu_warnings
         for d in gpu_devs:
             self._assign_gpu(d)
-        for d in compute_devs:
-            self._assign(d, CABINET_TYPE_COMPUTE)
-        for d in storage_devs:
-            self._assign(d, CABINET_TYPE_STORAGE)
+        self._allocate_batch(compute_devs, CABINET_TYPE_COMPUTE)
+        self._allocate_batch(storage_devs, CABINET_TYPE_STORAGE)
         self._build_network_index()
-        for d in network_devs:
-            self._assign_network(d)
+        self._allocate_network(network_devs)
 
         return devices
+
+    def preflight(self, devices: List[DeviceSlot]) -> Dict:
+        """柜位可行性预检（与前端 checkRackFeasibility 同输入同输出）。
+
+        剩余容量 = capacity_by_type - 已存在柜数（seed 预置的柜也占柜位），
+        因此分阶段分配（先服务器、后交换机）时不会重复计算。
+        """
+        configured = self.capacity_by_type or {t: 0 for t in DEMAND_CABINET_TYPES}
+        remaining = {
+            t: max(0, configured.get(t, 0) - self._capacity_used.get(t, 0))
+            for t in DEMAND_CABINET_TYPES
+        }
+        return check_rack_feasibility_by_capacity(
+            [slot_to_node(d) for d in devices],
+            remaining,
+            self.slot_count or 0,
+            self._packing_opts(),
+        )
+
+    def _packing_opts(self) -> Dict:
+        """预检参数：与前端 cabinetDemand 同口径。
+
+        分配器按 ``_can_fit``（功率 + 可用 U 按柜型查表）装箱、不考虑理线间隔，
+        故这里传 ``interSwitchGapU=0``；``topReservedU`` 只作未知柜型回退值，
+        gpu/compute/storage/network 的预留由共享 JSON 的 ``rackReserveByType`` 决定。
+        """
+        return {
+            'rackType': self.rack_type,
+            'topReservedU': self.top_reserved_u,
+            'powerLimit': self.power_limit,
+            'gpuPerCabinet': self.gpu_per_cabinet,
+            'gpuShareMode': self.gpu_share_mode,
+            'interSwitchGapU': 0,
+        }
+
+    # ------------------------------------------------------------------
+    # B4-04 / FR-A23：按柜型的预留与可用 U
+    # ------------------------------------------------------------------
+    def _reserve_for(self, cabinet_type: str) -> Dict[str, int]:
+        """柜型预留：表中有的以表为准，未知柜型回退全局 top_reserved_u（底部不预留）。"""
+        return rack_reserve_for(cabinet_type, self.top_reserved_u)
+
+    def _usable_u_for(self, cabinet_type: str) -> int:
+        """柜型可用 U = 总 U − 底部预留 − 顶部预留（至少 1）。"""
+        reserve = self._reserve_for(cabinet_type)
+        return max(1, self.rack_type - reserve['bottomReservedU'] - reserve['topReservedU'])
 
     def seed(self, cabinets: List[CabinetAllocation]) -> None:
         """预置已有机柜，用于分阶段分配（保持机柜编号连续）"""
@@ -189,7 +284,7 @@ class RackAllocator:
         self._buckets = {t: [] for t in _CABINET_TYPES}
         self._network_index = {}
         for c in self.cabinets:
-            if c.used_u < self.rack_type:
+            if c.used_u < self._usable_u_for(c.type):
                 self._buckets[c.type].append(c)
 
     # ------------------------------------------------------------------
@@ -229,24 +324,98 @@ class RackAllocator:
         self._place(cab, device)
 
     def _find_gpu_fit_cabinet(self, device: DeviceSlot) -> Optional[CabinetAllocation]:
-        """在 GPU 桶中找可放下且未达每柜 GPU 上限的柜（524-d：默认 1 柜 1 台）"""
+        """在 GPU 桶中找可放下且未达每柜 GPU 上限的柜（上限按档位解析，默认 1 柜 1 台）"""
         for c in self._buckets.get(CABINET_TYPE_GPU, []):
             gpu_in_cab = sum(1 for d in c.devices if d.device_type == DEVICE_TYPE_GPU)
-            if gpu_in_cab >= self.gpu_per_cabinet:
+            if gpu_in_cab >= self._gpu_cap:
                 continue
             if self._can_fit(c, device):
                 return c
         return None
 
     # ------------------------------------------------------------------
-    # 通用装箱
+    # 通用装箱（B1-06 / FR-A02：同柜型内跨柜均摊，替代柜内贪心）
     # ------------------------------------------------------------------
-    def _assign(self, device: DeviceSlot, cabinet_type: str) -> None:
-        """通算/存储装箱：功率 + U 位约束"""
-        cab = self._find_fit_cabinet(cabinet_type, device)
-        if cab is None:
-            cab = self._new_cabinet(cabinet_type)
-        self._place(cab, device)
+    def _allocate_batch(self, devices: List[DeviceSlot], cabinet_type: str,
+                        network: str = '',
+                        existing: Optional[List[CabinetAllocation]] = None) -> None:
+        """整批均摊：先按 first-fit 试算新柜数并预建，再 round-robin 轮转落位。
+
+        均摊是分配顺序变更：同柜型各柜设备数极差 ≤1，总落位数与贪心版一致。
+        ``network`` 非空时把新建网络柜登记进网段索引（保持同网段聚柜）。
+        """
+        if not devices:
+            return
+        targets = list(self._buckets.get(cabinet_type, []) if existing is None
+                       else existing)
+        created = [self._new_cabinet(cabinet_type)
+                   for _ in range(self._count_new_cabinets(targets, devices, cabinet_type))]
+        if network:
+            for cab in created:
+                self._network_index.setdefault(network, []).append(cab)
+        targets.extend(created)
+
+        cursor = 0
+        for device in devices:
+            size = len(targets)
+            for attempt in range(size):
+                idx = (cursor + attempt) % size
+                cab = targets[idx]
+                if self._fits_state(cab.used_u, cab.total_power, device, cabinet_type):
+                    self._place(cab, device)
+                    cursor = (idx + 1) % size
+                    break
+            else:
+                # 均摊后仍装不下（U 位碎片/超柜高）→ 按需补柜，仍受柜位上限约束
+                cab = self._new_cabinet(cabinet_type)
+                targets.append(cab)
+                if network:
+                    self._network_index.setdefault(network, []).append(cab)
+                self._place(cab, device)
+                cursor = len(targets) - 1
+        self._prune_empty_tail(created)
+
+    def _allocate_network(self, devices: List[DeviceSlot]) -> None:
+        """网络设备：严格按网段聚柜（不同网段不混柜），网段内跨柜均摊。"""
+        groups: Dict[str, List[DeviceSlot]] = {}
+        for d in devices:
+            groups.setdefault(d.network, []).append(d)
+        for net, group in groups.items():
+            if net:
+                existing = list(self._network_index.get(net, []))
+            else:
+                existing = list(self._buckets.get(CABINET_TYPE_NETWORK, []))
+            self._allocate_batch(group, CABINET_TYPE_NETWORK, network=net,
+                                 existing=existing)
+
+    def _count_new_cabinets(self, existing: List[CabinetAllocation],
+                            devices: List[DeviceSlot], cabinet_type: str) -> int:
+        """first-fit 试算：给定已同型柜，装下这批设备所需的新柜数（不产生副作用）。"""
+        states = [(c.used_u, c.total_power) for c in existing]
+        new_cabinets = 0
+        for device in devices:
+            for i, (used_u, total_power) in enumerate(states):
+                if self._fits_state(used_u, total_power, device, cabinet_type):
+                    states[i] = (used_u + device.u_height, total_power + device.power_watts)
+                    break
+            else:
+                states.append((device.u_height, device.power_watts))
+                new_cabinets += 1
+        return new_cabinets
+
+    def _prune_empty_tail(self, created: List[CabinetAllocation]) -> None:
+        """裁掉本批预建却未用到的空柜（只裁尾部，保证柜号连续）。"""
+        while created and not created[-1].devices:
+            cab = created.pop()
+            if self.cabinets and self.cabinets[-1] is cab:
+                self.cabinets.pop()
+            bucket = self._buckets.get(cab.type)
+            if bucket and cab in bucket:
+                bucket.remove(cab)
+            for cabs in self._network_index.values():
+                if cab in cabs:
+                    cabs.remove(cab)
+            self._capacity_used[cab.type] = max(0, self._capacity_used.get(cab.type, 0) - 1)
 
     def _build_network_index(self) -> None:
         """从活跃网络柜重建 网段 → 柜 二级索引（覆盖 seed 预置的柜）"""
@@ -257,27 +426,16 @@ class RackAllocator:
                 if net:
                     self._network_index.setdefault(net, []).append(c)
 
-    def _assign_network(self, device: DeviceSlot) -> None:
-        """网络设备装箱：严格按网段聚柜（不同网段不混柜，运维隔离常见做法）"""
-        if device.network:
-            # V3.4.1-H-P1: 只扫同网段柜（语义与全量扫描完全一致：同网段优先、满则跳过、不混入其他网段）
-            for c in self._network_index.get(device.network, []):
-                if self._can_fit(c, device):
-                    self._place(c, device)
-                    return
-            cab = self._new_cabinet(CABINET_TYPE_NETWORK)
-            self._place(cab, device)
-            self._network_index.setdefault(device.network, []).append(cab)
-            return
-        cab = self._find_fit_cabinet(CABINET_TYPE_NETWORK, device)
-        if cab is None:
-            cab = self._new_cabinet(CABINET_TYPE_NETWORK)
-        self._place(cab, device)
-
     # ------------------------------------------------------------------
     # 内部工具
     # ------------------------------------------------------------------
     def _new_cabinet(self, cabinet_type: str) -> CabinetAllocation:
+        # B1-08 / FR-A01: 兜底守卫——预检已放过时理论上不会触发；一旦触发说明
+        # 装箱算法比预检更悲观，必须结构化报错而不是静默多建柜。
+        limit = self._type_limit(cabinet_type)
+        used = self._capacity_used.get(cabinet_type, 0)
+        if limit is not None and used >= limit:
+            raise RackCapacityError(self._capacity_shortage_result(cabinet_type))
         cab = CabinetAllocation(
             id=len(self.cabinets) + 1,
             name=f"{self.naming_prefix}{len(self.cabinets) + 1}",
@@ -286,44 +444,87 @@ class RackAllocator:
         )
         self.cabinets.append(cab)
         self._buckets[cab.type].append(cab)
+        self._capacity_used[cabinet_type] = used + 1
         return cab
 
+    def _type_limit(self, cabinet_type: str) -> Optional[int]:
+        """该柜型可建柜上限；未配置柜位约束或非需求柜型（scaleup/security/custom/power）返回 None。"""
+        if self.capacity_by_type is None:
+            return None
+        return self.capacity_by_type.get(cabinet_type)
+
+    def _capacity_shortage_result(self, cabinet_type: str) -> Dict:
+        """建柜超限时的结构化拒绝结果（与 check_rack_feasibility 同结构）。"""
+        capacity = self.capacity_by_type or {}
+        by_type: Dict[str, Dict[str, int]] = {}
+        for t in DEMAND_CABINET_TYPES:
+            used = self._capacity_used.get(t, 0) + (1 if t == cabinet_type else 0)
+            limit = capacity.get(t, 0)
+            by_type[t] = {'required': used, 'available': limit, 'missing': max(0, used - limit)}
+        return {
+            'ok': False,
+            'reason': 'cabinet_capacity_exceeded',
+            'cabinetType': cabinet_type,
+            'required': {t: self._capacity_used.get(t, 0) + (1 if t == cabinet_type else 0)
+                         for t in DEMAND_CABINET_TYPES},
+            'requiredCabinets': sum(v['required'] for v in by_type.values()),
+            'capacity': {
+                'byType': {t: capacity.get(t, 0) for t in DEMAND_CABINET_TYPES},
+                'total': sum(capacity.get(t, 0) for t in DEMAND_CABINET_TYPES),
+                'slots': self.slot_count or 0,
+            },
+            'shortage': {
+                'cabinets': by_type[cabinet_type]['missing'] or 1,
+                'u': 0,
+                'power': 0,
+                'byType': by_type,
+            },
+            'suggestions': [
+                f'{cabinet_type} 柜位不足：已建 {self._capacity_used.get(cabinet_type, 0)} 柜 / '
+                f'上限 {capacity.get(cabinet_type, 0)} 柜，请扩容柜位或提高单柜密度'
+            ],
+            'gpuPerCabinetSuggest': None,
+            'unplaceable': [],
+            'totalRequiredU': 0,
+            'totalRequiredPowerW': 0,
+        }
+
     def _can_fit(self, cab: CabinetAllocation, device: DeviceSlot) -> bool:
-        """判断设备能否放入柜（功率 + U 位双约束）"""
-        if cab.total_power + device.power_watts > cab.power_limit:
+        """判断设备能否放入柜（功率 + 按柜型可用 U 双约束）"""
+        return self._fits_state(cab.used_u, cab.total_power, device, cab.type)
+
+    def _fits_state(self, used_u: int, total_power: int, device: DeviceSlot,
+                    cabinet_type: str) -> bool:
+        """纯状态可放判定（供 round-robin 试算复用，避免构造临时柜对象）。
+
+        B4-04 / FR-A24：可用 U 与 ``_place`` 完全同口径——按柜型扣除底部/顶部预留，
+        设备必须落在 ``[bottom+1, rack_type-top]`` 区间内（修复 N13：越界落到顶部预留区）。
+        """
+        usable_u = self._usable_u_for(cabinet_type)
+        if used_u + device.u_height > usable_u:
             return False
-        if cab.used_u + device.u_height > self.rack_type:
+        if total_power + device.power_watts > self.power_limit:
             return False
         return True
 
-    def _find_fit_cabinet(self, cabinet_type: str, device: DeviceSlot):
-        """找第一个可放入的同类型柜（功率 + U 位双约束）
-
-        v2.9.1-T6: 只扫描该类型的活跃桶（U 位已满柜已移除），替代全量线性扫描。
-        语义与原实现完全一致（first-fit，保持创建顺序）。
-        """
-        for c in self._buckets.get(cabinet_type, []):
-            if not self._can_fit(c, device):
-                continue
-            return c
-        return None
-
     def _place(self, cab: CabinetAllocation, device: DeviceSlot) -> None:
-        """将设备放入柜并回填 U 位（M5 方向化：网络设备从顶部向下，其余从底部向上，顶部预留 top_reserved_u）"""
+        """将设备放入柜并回填 U 位（B4-04：网络设备从顶部预留上方向下，其余从底部预留上方向上）。"""
         device.cabinet_id = cab.id
         device.cabinet_name = cab.name
+        reserve = self._reserve_for(cab.type)
         from_top = device.device_type == DEVICE_TYPE_NETWORK
         if from_top:
-            device.start_u = self._usable_u - cab.used_u_top - device.u_height + 1
+            top_u = self.rack_type - reserve['topReservedU']
+            device.start_u = top_u - cab.used_u_top - device.u_height + 1
             cab.used_u_top += device.u_height
         else:
-            device.start_u = cab.used_u_bottom + 1
+            device.start_u = reserve['bottomReservedU'] + cab.used_u_bottom + 1
             cab.used_u_bottom += device.u_height
         device.end_u = device.start_u + device.u_height - 1
         cab.total_power += device.power_watts
         cab.devices.append(device)
-        # U 位已满 → 从活跃桶移除（任何设备都无法再放入）
-        if cab.used_u >= self._usable_u:
+        # 可用 U 已满 → 从活跃桶移除（任何设备都无法再放入）
+        if cab.used_u >= self._usable_u_for(cab.type):
             bucket = self._buckets.get(cab.type)
             if bucket and cab in bucket:
                 bucket.remove(cab)

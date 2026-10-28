@@ -1,8 +1,7 @@
 /**
- * 5.2.1-521-b/c：AIDC 规划「标记完成」+ 级联失效接线
- * - 绑定项目且生成规划后出现「标记完成」，点击 → workbench.store aidcDone 置位
- * - 未绑定项目不显示标记按钮（无法按项目标记）
- * - 重新生成规划 → aidcDone 撤销 + 下游（design 等）置"待调整"（级联失效）
+ * 5.2.1-521-b/c + 5.5.2 / A10/A12：AIDC 规划完成标记 + 级联失效接线
+ * - 完成动作已收敛到工作台右上角统一动作条（SubviewActionBar），面板内不再提供按钮
+ * - 重新生成规划 → 撤销 aidc 完成标记 + 下游（design 等）置"待调整"（级联失效）
  */
 import '@/i18n'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -41,40 +40,37 @@ function mockAidcPlan(resolved: unknown) {
   return plan
 }
 
-describe('5.2.1-521-b AIDC 标记完成 + 级联失效', () => {
+describe('5.2.1-521-b AIDC 完成标记 + 级联失效（5.5.2 A10 收敛后）', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    useWorkbenchStore.setState({ aidcDone: {}, stale: {}, configFingerprint: {}, planHash: {} })
+    useWorkbenchStore.setState({ stepDone: {}, stale: {}, configFingerprint: {}, planHash: {} })
   })
 
-  it('绑定项目且生成规划后出现「标记完成」，点击 → aidcDone 置位并切换为「撤销完成」', async () => {
+  it('面板内不提供「标记完成/撤销完成」（统一由右上角动作条承担）', async () => {
     mockAidcPlan(samplePlan)
     render(<AidcPlannerPanel boundProjectName="projA" />)
     fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
-    const markBtn = await screen.findByRole('button', { name: '标记完成' })
-    fireEvent.click(markBtn)
-    expect(useWorkbenchStore.getState().aidcDone['projA']).toBe(true)
-    expect(screen.getByRole('button', { name: '撤销完成' })).toBeInTheDocument()
+    await screen.findByText(/aidc_64/)
+    expect(screen.queryByRole('button', { name: '标记完成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '撤销完成' })).not.toBeInTheDocument()
   })
 
-  it('未绑定项目不显示标记按钮', async () => {
+  it('重新生成规划 → aidc 完成标记撤销 + 下游（design 等）置待调整', async () => {
+    mockAidcPlan(samplePlan)
+    useWorkbenchStore.getState().markStepDone('projA', 'aidc')
+    render(<AidcPlannerPanel boundProjectName="projA" />)
+    fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
+    await screen.findByText(/aidc_64/)
+    expect(useWorkbenchStore.getState().getStepDone('projA', 'aidc')).toBeUndefined()
+    expect(useWorkbenchStore.getState().getStale('projA')).toContain('design')
+  })
+
+  it('未绑定项目生成规划正常出图，不写完成状态', async () => {
     mockAidcPlan(samplePlan)
     render(<AidcPlannerPanel />)
     fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
     await screen.findByText(/aidc_64/)
-    expect(screen.queryByRole('button', { name: '标记完成' })).not.toBeInTheDocument()
-  })
-
-  it('重新生成规划 → aidcDone 撤销 + 下游（design 等）置待调整', async () => {
-    mockAidcPlan(samplePlan)
-    render(<AidcPlannerPanel boundProjectName="projA" />)
-    fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
-    fireEvent.click(await screen.findByRole('button', { name: '标记完成' }))
-    expect(useWorkbenchStore.getState().aidcDone['projA']).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: '生成规划' }))
-    await screen.findByText(/aidc_64/)
-    expect(useWorkbenchStore.getState().aidcDone['projA']).toBeUndefined()
-    expect(useWorkbenchStore.getState().getStale('projA')).toContain('design')
+    expect(useWorkbenchStore.getState().stepDone).toEqual({})
   })
 })

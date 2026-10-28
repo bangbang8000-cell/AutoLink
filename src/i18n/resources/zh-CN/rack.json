@@ -91,6 +91,7 @@
   "clearRacks": "清空柜内设计",
   "archiveAndClear": "归档并清空",
   "view2d": "2D 平面",
+  "room3dReadonly": "只读预览 · 编辑请切 2D",
   "view3d": "3D 视图",
   "finalizeLayout": "定稿布局",
   "gotoRackDesign": "前往机柜设计",

@@ -30,7 +30,7 @@ export function WorkbenchReadinessCard() {
   const renderReady = renderGateReady({ designValid: valid, hasTopology: (summary?.totalServers ?? 0) > 0, stale: workbenchStale })
   const renderBlocked = (workbenchStale?.includes('design') || workbenchStale?.includes('main')) === true && (valid === true || (summary?.totalServers ?? 0) > 0)
   // 5.4.6（调研 P0-3）：AIDC 规划定稿状态首页可见，统一与 StepBar 的三步口径
-  const aidcDone = useWorkbenchStore((s) => (selectedProjectName ? s.aidcDone[selectedProjectName] === true : false))
+  const aidcDone = useWorkbenchStore((s) => (selectedProjectName ? s.stepDone[selectedProjectName]?.aidc?.done === true : false))
 
   const handleValidate = useCallback(async () => {
     if (!selectedProjectName) return

@@ -50,6 +50,7 @@ import {
 } from './topology/PodGroupNode'
 import { useTopologyLayout } from '@/hooks/useTopologyLayout'
 import { normalizePodId } from './topology/topologyLayout'
+import { aggregateEdgesToBundles } from './topology/edgeBundles'
 import { ATOPRecommendModal } from './topology/ATOPRecommendModal'
 
 /* ---------- node / edge types ---------- */
@@ -183,46 +184,6 @@ function useIsDark(): boolean {
 }
 
 /* ---------- inner component (has access to react-flow context) ---------- */
-
-/**
- * F5（5.4.4 可用性修复，D2 拍板「聚合束流」）：大规模拓扑边聚合——
- * 按 (source,target) 对把多条物理链路聚为一束：1 条束边 = N 条物理边，
- * 束宽随 N 缩放、label 标注 ×N。信息保真度高于步长抽样（抽样丢边，聚束不丢对）。
- */
-export function aggregateEdgesToBundles(
-  edges: Edge[],
-  opts: { minBundle?: number } = {},
-): Edge[] {
-  const minBundle = opts.minBundle ?? 2
-  const byPair = new Map<string, Edge[]>()
-  for (const e of edges) {
-    const key = `${e.source}→${e.target}`
-    const arr = byPair.get(key)
-    if (arr) arr.push(e)
-    else byPair.set(key, [e])
-  }
-  const out: Edge[] = []
-  for (const arr of byPair.values()) {
-    if (arr.length < minBundle) {
-      out.push(...arr)
-      continue
-    }
-    const first = arr[0]
-    const width = Math.min(2 + Math.log2(arr.length) * 1.5, 8)
-    out.push({
-      ...first,
-      id: `bundle-${first.source}-${first.target}-${arr.length}`,
-      style: { ...first.style, strokeWidth: width, opacity: 0.75 },
-      data: {
-        ...(first.data ?? {}),
-        label: `${(first.data as { label?: string } | undefined)?.label ?? ''} ×${arr.length}`,
-        bundleCount: arr.length,
-      },
-    })
-  }
-  return out
-}
-
 
 function TopologyFlowInner() {
   // i18n：filter.* 位于 topology 命名空间；既有调用均带显式前缀，此处显式声明避免歧义
@@ -594,6 +555,13 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     return { filteredNodes: nodes, filteredEdges: edges, simplified }
   }, [topology, filter, effectiveCollapsed])
 
+  // 5.5.2 / A13：导出与屏幕一致——折叠 POD 内的设备在视图里已隐藏，导出同样剔除
+  //（边上一步已按折叠剔除，故此处只需同步节点）
+  const exportNodes = useMemo(() => {
+    if (effectiveCollapsed.size === 0) return filteredNodes
+    return filteredNodes.filter((n) => !(n.podid && effectiveCollapsed.has(normalizePodId(n.podid))))
+  }, [filteredNodes, effectiveCollapsed])
+
   /* ---------- v2.7.3-T6: 通过 Web Worker 计算布局(大规模拓扑不阻塞主线程) ---------- */
   const { layout: layoutResult, computing: layoutComputing, progress: layoutProgress } = useTopologyLayout(filteredNodes, filteredEdges)
 
@@ -646,6 +614,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
         nodeType: node.type,
         group: node.group,
         podid: node.podid,
+        domain: node.domain,
         cabinetName: node.cabinetName,
         cabinetId: node.cabinetId,
         startU: node.startU,
@@ -1103,7 +1072,12 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     setExportingPng(true)
     addToast('info', t('common:toast.generatingTopologyPng'))
     try {
-      const base64 = await exportTopologyViewPng(topology.nodes, topology.edges, savedLayout)
+      // 5.5.2 / A13：按「当前可见视图」导出（网络筛选 + 折叠 + 标签 + 束流），
+      // 与屏幕渲染同源，避免导出全量图与所见不一致
+      const base64 = await exportTopologyViewPng(exportNodes, filteredEdges, savedLayout, {
+        labelVisible: showEdgeLabels && !labelHidden,
+        bundleActive,
+      })
       const filename = makeTimestampedFilename('组网拓扑图', 'png')
       if (window.electron?.export?.saveFile) {
         await window.electron.export.saveFile(selectedProjectName, filename, base64)
@@ -1117,7 +1091,7 @@ const [collapsedPods, setCollapsedPods] = useState<Set<string>>(() => {
     } finally {
       setExportingPng(false)
     }
-  }, [topology, savedLayout, selectedProjectName, exportingPng, addToast, t])
+  }, [topology, exportNodes, filteredEdges, savedLayout, showEdgeLabels, labelHidden, bundleActive, selectedProjectName, exportingPng, addToast, t])
 
   const nodeConnectionCount = useMemo(() => {
     if (!selectedNode || !topology) return 0

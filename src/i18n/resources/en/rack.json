@@ -91,6 +91,7 @@
   "clearRacks": "Clear Rack Design",
   "archiveAndClear": "Archive and Clear",
   "view2d": "2D View",
+  "room3dReadonly": "Read-only preview · switch to 2D to edit",
   "view3d": "3D View",
   "finalizeLayout": "Finalize Layout",
   "gotoRackDesign": "Go to Rack Design",

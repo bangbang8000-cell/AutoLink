@@ -1,0 +1,27 @@
+{
+  "_comment": "B1-01 / FR-A05：机房柜型分类唯一真源。前端 src/shared/roomTaxonomy.ts 与后端 backend/room_taxonomy.py 共同读取本文件，禁止两侧各写一份。",
+  "cabinetTypes": ["gpu", "network", "storage", "compute", "combined", "power", "scaleup", "security", "custom"],
+  "placeableCabinetTypes": ["gpu", "network", "storage", "compute"],
+  "freeDomainTypes": ["combined", "empty", "scaleup", "security", "custom"],
+  "placeholderTypes": ["ac", "pillar"],
+  "deviceDomains": ["gpu", "compute", "storage", "network"],
+  "rackPackingDefaults": {
+    "_comment": "B1-05 / FR-A01：柜内装箱默认参数唯一真源。前端 cabinetDemand.ts 与后端 rack_feasibility.py 同读，保证「同输入同输出」。",
+    "rackTypeU": 42,
+    "topReservedU": 2,
+    "powerLimitW": 12000,
+    "gpuPerCabinet": 1,
+    "interSwitchGapU": 1,
+    "marginRatio": 0.1,
+    "areaPerCabinetSqm": 3,
+    "minCabinetsPerRow": 6,
+    "maxCabinetsPerRow": 24
+  },
+  "rackReserveByType": {
+    "_comment": "B4-04 / FR-A23：预留按柜型拆分唯一真源。bottomReservedU 从底部起留空，topReservedU 从顶部起留空；服务器类（gpu/compute/storage）底留 4U 顶留 0，网络柜底留 0 顶留 2U。未列出的柜型回退 rackPackingDefaults.topReservedU 且底部不预留。",
+    "gpu": { "bottomReservedU": 4, "topReservedU": 0 },
+    "compute": { "bottomReservedU": 4, "topReservedU": 0 },
+    "storage": { "bottomReservedU": 4, "topReservedU": 0 },
+    "network": { "bottomReservedU": 0, "topReservedU": 2 }
+  }
+}

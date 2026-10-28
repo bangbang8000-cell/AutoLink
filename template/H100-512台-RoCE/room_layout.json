@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "H100-512台-RoCE机房",
   "rows": [
     "A",
@@ -21,7 +21,13 @@
     "Q",
     "R",
     "S",
-    "T"
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z"
   ],
   "cols": [
     1,
@@ -47,16 +53,16 @@
     21,
     22,
     23,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29,
-    30,
-    31,
-    32
+    24
   ],
+  "geometry": {
+    "cabinetWidth": 0.6,
+    "cabinetDepth": 1.2,
+    "cabinetHeight": 2.0,
+    "aisleWidth": 1.2,
+    "rowCount": 26,
+    "cabinetsPerRow": 24
+  },
   "cells": [
     {
       "row": "A",
@@ -227,62 +233,6 @@
       "cabinetId": null
     },
     {
-      "row": "A",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "A",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "B",
       "col": 1,
       "type": "gpu",
@@ -446,62 +396,6 @@
     {
       "row": "B",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "B",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -675,62 +569,6 @@
       "cabinetId": null
     },
     {
-      "row": "C",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "C",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "D",
       "col": 1,
       "type": "gpu",
@@ -894,62 +732,6 @@
     {
       "row": "D",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "D",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -1123,62 +905,6 @@
       "cabinetId": null
     },
     {
-      "row": "E",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "E",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "F",
       "col": 1,
       "type": "gpu",
@@ -1342,62 +1068,6 @@
     {
       "row": "F",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "F",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -1571,62 +1241,6 @@
       "cabinetId": null
     },
     {
-      "row": "G",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "G",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "H",
       "col": 1,
       "type": "gpu",
@@ -1790,62 +1404,6 @@
     {
       "row": "H",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "H",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -2019,62 +1577,6 @@
       "cabinetId": null
     },
     {
-      "row": "I",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "I",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "J",
       "col": 1,
       "type": "gpu",
@@ -2238,62 +1740,6 @@
     {
       "row": "J",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "J",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -2467,62 +1913,6 @@
       "cabinetId": null
     },
     {
-      "row": "K",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "K",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "L",
       "col": 1,
       "type": "gpu",
@@ -2686,62 +2076,6 @@
     {
       "row": "L",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "L",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -2915,62 +2249,6 @@
       "cabinetId": null
     },
     {
-      "row": "M",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "M",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "N",
       "col": 1,
       "type": "gpu",
@@ -3134,62 +2412,6 @@
     {
       "row": "N",
       "col": 24,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "N",
-      "col": 32,
       "type": "gpu",
       "placeholder": null,
       "cabinetId": null
@@ -3363,62 +2585,6 @@
       "cabinetId": null
     },
     {
-      "row": "O",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "O",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "P",
       "col": 1,
       "type": "gpu",
@@ -3587,953 +2753,1681 @@
       "cabinetId": null
     },
     {
-      "row": "P",
-      "col": 25,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 26,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 27,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 28,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 29,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 30,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 31,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "P",
-      "col": 32,
-      "type": "gpu",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
       "row": "Q",
       "col": 1,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 2,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 3,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 4,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 5,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 6,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 7,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 8,
-      "type": "network",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 9,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 10,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 11,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 12,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 13,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 14,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 15,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 16,
-      "type": "storage",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 17,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 18,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 19,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 20,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 21,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 22,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 23,
-      "type": "compute",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "Q",
       "col": 24,
-      "type": "compute",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 25,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 26,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 27,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 28,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 29,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 30,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 31,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "Q",
-      "col": 32,
-      "type": "empty",
+      "type": "gpu",
       "placeholder": null,
       "cabinetId": null
     },
     {
       "row": "R",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 9,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 10,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 11,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 12,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 13,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 14,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 15,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 16,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 17,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 18,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 19,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 20,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 21,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 22,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 23,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "R",
+      "col": 24,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 9,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 10,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 11,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 12,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 13,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 14,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 15,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 16,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 17,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 18,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 19,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 20,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 21,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 22,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 23,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "S",
+      "col": 24,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 9,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 10,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 11,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 12,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 13,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 14,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 15,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 16,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 17,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 18,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 19,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 20,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 21,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 22,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 23,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "T",
+      "col": 24,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 9,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 10,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 11,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 12,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 13,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 14,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 15,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 16,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 17,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 18,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 19,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 20,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 21,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 22,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 23,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "U",
+      "col": 24,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 1,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 2,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 3,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 4,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 5,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 6,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 7,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 8,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 9,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 10,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 11,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 12,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 13,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 14,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 15,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 16,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 17,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 18,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 19,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 20,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 21,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 22,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 23,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "V",
+      "col": 24,
+      "type": "gpu",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "W",
       "col": 1,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 2,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 3,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 4,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 5,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 6,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 7,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 8,
       "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 9,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 10,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 11,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 12,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 13,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 14,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 15,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 16,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 17,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 18,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 19,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 20,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 21,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 22,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 23,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
+      "row": "W",
       "col": 24,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "R",
-      "col": 25,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 26,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 27,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 28,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 29,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 30,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 31,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "R",
-      "col": 32,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
+      "row": "X",
       "col": 1,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 2,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 3,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 4,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 5,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 6,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 7,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 8,
-      "type": "empty",
+      "type": "network",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 9,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 10,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 11,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 12,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 13,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 14,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 15,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 16,
       "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 17,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 18,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 19,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 20,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 21,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 22,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 23,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
+      "row": "X",
       "col": 24,
-      "type": "compute",
+      "type": "storage",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "S",
-      "col": 25,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 26,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 27,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 28,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 29,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 30,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 31,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "S",
-      "col": 32,
-      "type": "empty",
-      "placeholder": null,
-      "cabinetId": null
-    },
-    {
-      "row": "T",
+      "row": "Y",
       "col": 1,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 2,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 3,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 4,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 5,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 6,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 7,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 8,
-      "type": "empty",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 9,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 10,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 11,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 12,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 13,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 14,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 15,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 16,
-      "type": "storage",
+      "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 17,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 18,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 19,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 20,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 21,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 22,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 23,
-      "type": "compute",
+      "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
+      "row": "Y",
       "col": 24,
+      "type": "empty",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 1,
       "type": "compute",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 25,
+      "row": "Z",
+      "col": 2,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 3,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 4,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 5,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 6,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 7,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 8,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 9,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 10,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 11,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 12,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 13,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 14,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 15,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 16,
+      "type": "compute",
+      "placeholder": null,
+      "cabinetId": null
+    },
+    {
+      "row": "Z",
+      "col": 17,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 26,
+      "row": "Z",
+      "col": 18,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 27,
+      "row": "Z",
+      "col": 19,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 28,
+      "row": "Z",
+      "col": 20,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 29,
+      "row": "Z",
+      "col": 21,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 30,
+      "row": "Z",
+      "col": 22,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 31,
+      "row": "Z",
+      "col": 23,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null
     },
     {
-      "row": "T",
-      "col": 32,
+      "row": "Z",
+      "col": 24,
       "type": "empty",
       "placeholder": null,
       "cabinetId": null

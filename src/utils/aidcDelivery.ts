@@ -73,8 +73,14 @@ export async function exportDeliveryZip(projectName: string): Promise<DeliveryEx
     pngBase64 = await renderDeliveryTopologyPng(projectTopology, plan, {
       // 设计渲染（exportTopologyView 依赖 DOM，惰性加载）；失败时由 renderDeliveryTopologyPng 回退 plan
       renderDesign: async (pt) => {
-        const { exportTopologyViewPng } = await import('./exportTopologyView')
-        return exportTopologyViewPng(pt.topology?.nodes ?? [], pt.topology?.edges ?? [], pt.layout ?? null)
+        const { exportTopologyViewPng, DEFAULT_TOPOLOGY_VIEW_OPTIONS } = await import('./exportTopologyView')
+        // 5.5.2 / A14：交付包与工作台按钮导出共用同一函数；无画布上下文用默认渲染参数
+        return exportTopologyViewPng(
+          pt.topology?.nodes ?? [],
+          pt.topology?.edges ?? [],
+          pt.layout ?? null,
+          DEFAULT_TOPOLOGY_VIEW_OPTIONS,
+        )
       },
       renderPlan: (p) => exportPlanTopologyPng(p),
     })

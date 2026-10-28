@@ -345,5 +345,19 @@
   "doc.thSize": "大小",
   "doc.thStatus": "状态",
   "doc.thAction": "操作",
-  "knowledge.tagExample": "如：网络、机柜、设备（回车分隔）"
+  "knowledge.tagExample": "如：网络、机柜、设备（回车分隔）",
+  "subviewAction": {
+    "markDone": "标记完成",
+    "done": "已完成",
+    "undo": "撤销",
+    "reconfirm": "重新确认完成",
+    "noop": "本步无操作",
+    "invalidatedTip": "上游已变更，请重新确认",
+    "reasonDesign": "请先生成组网设计",
+    "reasonRoomMatrix": "请先创建机房矩阵",
+    "reasonRackMatrix": "请先定稿机房矩阵",
+    "reasonRackCabinets": "请先创建机柜",
+    "reasonMainOutputs": "请先勾选输出类型",
+    "reasonRender": "请先完成渲染"
+  }
 }

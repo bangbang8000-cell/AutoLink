@@ -20,7 +20,19 @@ import {
 import { topologyNodeTypes, EDGE_COLORS } from './TopologyNodes'
 import { PodGroupNode } from './PodGroupNode'
 import { computeTopologyLayout, getPodColor } from './topologyLayout'
+import { aggregateEdgesToBundles } from './edgeBundles'
 import type { TopologyNode, TopologyEdge, TopologyLayout } from '@/stores/design.store'
+
+/**
+ * 5.5.2 / A13-A14：导出快照的视图参数（与屏幕视图同源）。
+ *  - labelVisible：屏幕是否显示边标签（showEdgeLabels && !labelHidden）
+ *  - bundleActive：屏幕是否开启聚合束流
+ * 缺省（无画布上下文，如交付包/plan 渲染）保持既有渲染：无标签、逐条。
+ */
+export interface TopologyViewOptions {
+  labelVisible?: boolean
+  bundleActive?: boolean
+}
 
 export const topologyViewNodeTypes = { ...topologyNodeTypes, podGroup: PodGroupNode }
 
@@ -68,6 +80,7 @@ export function buildTopologyView(
   nodes: TopologyNode[],
   edges: TopologyEdge[],
   savedLayout?: TopologyLayout | null,
+  options?: TopologyViewOptions,
 ): TopologyViewElements {
   const layout = computeTopologyLayout(nodes, [])
   const savedPos = savedLayout?.nodePositions ?? {}
@@ -171,7 +184,13 @@ export function buildTopologyView(
     }
   })
 
-  return { rfNodes: [...podNodes, ...deviceNodes], rfEdges, layout }
+  // A13：开束流时与屏幕同算法聚合（束数一致）；标签在聚束后再回填（束标签为 ×N）
+  const viewEdges = options?.bundleActive ? aggregateEdgesToBundles(rfEdges) : rfEdges
+  const finalEdges: Edge[] = options?.labelVisible
+    ? viewEdges.map((e) => ({ ...e, label: (e.data as { label?: string } | undefined)?.label }))
+    : viewEdges
+
+  return { rfNodes: [...podNodes, ...deviceNodes], rfEdges: finalEdges, layout }
 }
 
 /**
@@ -182,6 +201,7 @@ export const TopologyViewCanvas = memo(function TopologyViewCanvas({
   nodes,
   edges,
   savedLayout,
+  options,
   width,
   height,
   onReady,
@@ -189,13 +209,17 @@ export const TopologyViewCanvas = memo(function TopologyViewCanvas({
   nodes: TopologyNode[]
   edges: TopologyEdge[]
   savedLayout?: TopologyLayout | null
+  options?: TopologyViewOptions
   width: number
   height: number
   onReady?: () => void
 }) {
   const reactFlow = useReactFlow()
+  // 拆成原始值参与依赖比较，避免调用方每次传新对象导致元素重建
+  const labelVisible = options?.labelVisible === true
+  const bundleActive = options?.bundleActive === true
   const [elements, setElements] = useState<TopologyViewElements>(() =>
-    buildTopologyView(nodes, edges, savedLayout),
+    buildTopologyView(nodes, edges, savedLayout, { labelVisible, bundleActive }),
   )
   const onReadyRef = useRef(onReady)
   onReadyRef.current = onReady
@@ -204,8 +228,8 @@ export const TopologyViewCanvas = memo(function TopologyViewCanvas({
 
   // 数据变化 → 重建元素
   useEffect(() => {
-    setElements(buildTopologyView(nodes, edges, savedLayout))
-  }, [nodes, edges, savedLayout])
+    setElements(buildTopologyView(nodes, edges, savedLayout, { labelVisible, bundleActive }))
+  }, [nodes, edges, savedLayout, labelVisible, bundleActive])
 
   // 等待节点测量完成后手动 fit（setViewport），然后 onReady（导出器在此截图）
   useEffect(() => {
@@ -248,6 +272,8 @@ export const TopologyViewCanvas = memo(function TopologyViewCanvas({
         zoomOnScroll={false}
         zoomOnPinch={false}
         zoomOnDoubleClick={false}
+        // 5.5.2 / A15：快照画布必须全量渲染——视口剔除会丢视口外节点，导出出现缺块
+        onlyRenderVisibleElements={false}
         proOptions={{ hideAttribution: true }}
         className="bg-white"
       >

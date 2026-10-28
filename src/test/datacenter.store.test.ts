@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useDataCenterStore, getPowerColor } from '../stores/datacenter.store'
 import { useRackStore, type RackCabinet } from '../stores/rack.store'
+import { defaultGeometry } from '../utils/roomGeometry'
 
 function makeCabinet(overrides: Partial<RackCabinet> = {}): RackCabinet {
   return {
@@ -146,6 +147,52 @@ describe('DataCenterStore', () => {
       const s = useDataCenterStore.getState()
       expect(s.placements[0].facing).toBe('south')
       expect(s.placements[8].facing).toBe('north')
+    })
+  })
+
+  describe('B5-04 / FR-A27 布局图读几何参数（不再硬编码 8 柜一排）', () => {
+    const cabs = (n: number): RackCabinet[] =>
+      Array.from({ length: n }, (_, i) => makeCabinet({ id: i + 1, name: `C${i + 1}` }))
+
+    it('cabinetsPerRow=24 → 一行 24 柜', () => {
+      useDataCenterStore.getState().computeLayout(cabs(30), {
+        ...defaultGeometry(2, 24),
+      })
+      const s = useDataCenterStore.getState()
+      expect(s.params.cabinetsPerRow).toBe(24)
+      expect(s.placements).toHaveLength(30)
+      expect(s.rows).toHaveLength(2)
+      expect(s.placements[23].row).toBe(0)
+      expect(s.placements[24].row).toBe(1)
+      expect(s.placements[24].x).toBe(s.placements[0].x)
+    })
+
+    it('cabinetsPerRow=6 → 一行 6 柜', () => {
+      useDataCenterStore.getState().computeLayout(cabs(14), defaultGeometry(3, 6))
+      const s = useDataCenterStore.getState()
+      expect(s.params.cabinetsPerRow).toBe(6)
+      expect(s.rows).toHaveLength(3)
+      expect(s.placements[6].row).toBe(1)
+      expect(s.placements[6].x).toBe(s.placements[0].x)
+    })
+
+    it('柜宽/柜高/排距由 geometry 推导（600×1200 mm、通道 1.35 m）', () => {
+      useDataCenterStore.getState().computeLayout(cabs(2), {
+        ...defaultGeometry(1, 6),
+        aisleWidth: 1.35,
+      })
+      const s = useDataCenterStore.getState()
+      expect(s.params.cabinetWidth).toBe(60)
+      expect(s.params.cabinetHeight).toBe(120)
+      expect(s.params.rowGap).toBe(135)
+      expect(s.placements[1].x - s.placements[0].x).toBe(60)
+    })
+
+    it('无 geometry 时保持显式参数（v1 旧项目兼容）', () => {
+      useDataCenterStore.getState().computeLayout(cabs(10))
+      const s = useDataCenterStore.getState()
+      expect(s.params.cabinetsPerRow).toBe(8)
+      expect(s.rows).toHaveLength(2)
     })
   })
 

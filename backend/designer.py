@@ -14,6 +14,8 @@ from rail_topology import RailOptimizedTopology
 from project_config import migrate_config
 # V3.0.0-T0-3: 网络域抽象（组网形态 × GPU 集群正交模型的横向表达）
 from network_plugin import NetworkDomain
+# B5-01 / FR-A26：GPU 共柜档位推断（与前端 shared/gpuShare.ts 同规则）
+from gpu_share import infer_gpu_share_mode
 
 
 class NetworkDesignerV2:
@@ -414,6 +416,10 @@ class NetworkDesignerV2:
         self.power_preset = rack.get('power_preset', '')  # 可选预设标识
         # 5.2.4-524-d: 每柜 GPU 上限（默认 1 柜 1 台；>1 才多台共柜，与前端矩阵 gpu_per_cabinet 对齐）
         self.gpu_per_cabinet = int(rack.get('gpu_per_cabinet', 1) or 1)
+        # B5-01 / FR-A26：GPU 共柜档位（fixed1/byPower/manual；缺省按 gpu_per_cabinet 推断）
+        self.gpu_share_mode = infer_gpu_share_mode(
+            rack.get('gpu_share_mode'), self.gpu_per_cabinet
+        )
 
         # --- 从设备档案中提取端口命名前缀 (V2.1新增) ---
         self._server_port_prefix = None
@@ -647,6 +653,7 @@ class NetworkDesignerV2:
         # 5.2.4-524-d: INI 旧格式默认每柜 GPU 上限 1（与前端矩阵硬约束对齐）
         self.gpu_per_cabinet = int(self.config.get('rack', 'gpu_per_cabinet', fallback=1)
                                    if self.config.has_section('rack') else 1)
+        self.gpu_share_mode = infer_gpu_share_mode(None, self.gpu_per_cabinet)
 
         # 端口前缀 (旧格式使用默认值)
         self._server_port_prefix = None
@@ -942,14 +949,16 @@ class NetworkDesignerV2:
         param_switch_profile = self._device_profiles.get('param_switch')
         storage_switch_profile = self._device_profiles.get('storage_switch')
 
-        def _make_server(name, group, podid, profile=None, default_power=500, default_u=2):
+        def _make_server(name, group, podid, profile=None, default_power=500, default_u=2,
+                         domain=''):
             power = profile.power_watts if profile else default_power
             u = profile.u_height if profile else default_u
             prefix = profile.name_prefix if profile else ""
             s = NetworkObject(name=name, obj_type='server',
                               group=group, podid=podid,
                               device_profile=profile,
-                              power_watts=power, u_height=u)
+                              power_watts=power, u_height=u,
+                              device_domain=domain)
             if profile and profile.interface_models:
                 # 从接口模型获取端口前缀 (V2.9.3-T7: 含存储/OOB/业务网卡)
                 for im in profile.interface_models:
@@ -991,7 +1000,8 @@ class NetworkDesignerV2:
                     server_idx += 1
                     group_name = f"GPU服务器组{pdef['pool_id']}"
                     podid = f"pod-gpu-{pdef['pool_id']}"
-                    s = _make_server(f"GPU服务器_{pdef['pool_id']}_{server_idx}", group_name, podid, pool_profile)
+                    s = _make_server(f"GPU服务器_{pdef['pool_id']}_{server_idx}", group_name, podid, pool_profile,
+                                     domain='gpu')
                     s.pool_id = pdef['pool_id']
                     s.cluster_id = pdef['cluster_id']
                     s.server_index = server_idx  # V3.0.0-T0-5: wiring 依赖全局序号，避免解析池名
@@ -1004,7 +1014,8 @@ class NetworkDesignerV2:
                 group_name = f"GPU服务器组{group_id}"
                 # V3.0.1-T1-5: 双平面 3-tier 服务器归入逻辑超级 Pod（plane-ab-pod{N}）
                 podid = f"plane-ab-pod{group_id}" if self._dp3tier_pod_groups else f"pod-gpu-{group_id}"
-                s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile)
+                s = _make_server(f"GPU服务器_{server_idx}", group_name, podid, gpu_profile,
+                                 domain='gpu')
                 s.server_index = server_idx
                 s.server_category = 'gpu'
                 self.servers.append(s)
@@ -1019,7 +1030,7 @@ class NetworkDesignerV2:
         for _n in range(self.num_all_flash_storage):
             _st_idx += 1
             s = _make_server(f"存储服务器_{_st_idx}", "存储服务器组", "pod-storage",
-                             _all_flash_profile, default_power=300, default_u=2)
+                             _all_flash_profile, default_power=300, default_u=2, domain='storage')
             s.server_category = 'storage'
             self.servers.append(s)
             self.server_groups[s.name] = s.group
@@ -1027,7 +1038,7 @@ class NetworkDesignerV2:
         for _n in range(self.num_hybrid_flash_storage):
             _st_idx += 1
             s = _make_server(f"存储服务器_{_st_idx}", "存储服务器组", "pod-storage",
-                             _hybrid_profile, default_power=300, default_u=2)
+                             _hybrid_profile, default_power=300, default_u=2, domain='storage')
             s.server_category = 'storage'
             self.servers.append(s)
             self.server_groups[s.name] = s.group
@@ -1035,7 +1046,8 @@ class NetworkDesignerV2:
 
         # 额外通算服务器
         for i in range(1, self.additional_compute + 1):
-            s = _make_server(f"通算服务器_{i}", "通算服务器组", "pod-general", compute_profile, default_power=400, default_u=2)
+            s = _make_server(f"通算服务器_{i}", "通算服务器组", "pod-general", compute_profile, default_power=400, default_u=2,
+                             domain='compute')
             s.server_category = 'compute'
             self.servers.append(s)
             self.server_groups[s.name] = s.group
@@ -1298,6 +1310,7 @@ class NetworkDesignerV2:
                 podid=i // domain_size if domain_size > 0 else 0,
                 domain_id=i // domain_size if domain_size > 0 else 0,
                 protocol=protocol_str, network_type='scale_up',
+                device_domain='gpu',
             )
             self.scale_up_gpus.append(gpu)
 
@@ -1363,6 +1376,8 @@ class NetworkDesignerV2:
             gpu_dedicated=getattr(self, 'gpu_dedicated', False),
             # 5.2.4-524-d: 每柜 GPU 上限（默认 1 柜 1 台，与前端矩阵硬约束对齐）
             gpu_per_cabinet=int(getattr(self, 'gpu_per_cabinet', 1) or 1),
+            # B5-01 / FR-A26：GPU 共柜档位
+            gpu_share_mode=getattr(self, 'gpu_share_mode', None),
         )
         allocator.allocate([d for _, d in slots])
         for obj, d in slots:

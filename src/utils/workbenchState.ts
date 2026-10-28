@@ -6,6 +6,7 @@
  * - fingerprintConfig：设计配置变更指纹（canonical 序列化 + 确定性哈希）
  */
 import type { WorkbenchSubview } from '@/stores/ui.store'
+import type { StepDoneRecord } from '@/stores/workbench.store'
 
 export type WorkbenchStatus = 'pending' | 'in_progress' | 'needs_update' | 'done'
 
@@ -56,38 +57,18 @@ export interface WorkbenchStateDeps {
   reading?: boolean
   /** 级联失效集合：被上游变更置为"待调整"的子视图 */
   stale?: WorkbenchSubview[]
-  /** AIDC 规划是否已手动标记完成（D5） */
-  aidcDone?: boolean
+  /** 完成状态单一真值源（workbench.store.stepDone[project]） */
+  stepDone?: Partial<Record<WorkbenchSubview, StepDoneRecord>>
 }
 
-/** 状态推导：reading > stale > active > done > pending */
+/** 状态推导：reading > needs_update（stale / 上游已变更）> active > done > pending */
 export function deriveWorkbenchState(subview: WorkbenchSubview, deps: WorkbenchStateDeps): WorkbenchStatus {
   if (deps.reading) return 'in_progress'
-  if (deps.stale?.includes(subview)) return 'needs_update'
+  const record = deps.stepDone?.[subview]
+  const invalidated = deps.stale?.includes(subview) || (record?.done === true && record.invalidatedBy !== undefined)
+  if (invalidated) return 'needs_update'
   if (subview === deps.activeSubview) return 'in_progress'
-  return isDone(subview, deps) ? 'done' : 'pending'
-}
-
-function isDone(subview: WorkbenchSubview, deps: WorkbenchStateDeps): boolean {
-  switch (subview) {
-    case 'aidc':
-      return deps.aidcDone === true
-    case 'design':
-      return deps.designValid === true
-    case 'roomdesign':
-      return deps.roomMatrixFinalized
-    case 'rackdesign':
-      return deps.roomMatrixFinalized && deps.rackHasCabinets
-    case 'main':
-      return deps.designValid === true && deps.hasSelectedOutputTypes
-    case 'visualization':
-      return deps.designValid === true
-    case 'results':
-    case 'export':
-      return deps.hasOutputBatches
-    default:
-      return false
-  }
+  return record?.done === true ? 'done' : 'pending'
 }
 
 /** 配置变更指纹：canonical（键排序）序列化 + FNV-1a 确定性哈希 */

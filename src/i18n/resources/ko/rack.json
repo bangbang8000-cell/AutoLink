@@ -91,6 +91,7 @@
   "clearRacks": "랙 내 설계 지우기",
   "archiveAndClear": "보관 후 지우기",
   "view2d": "2D 평면",
+  "room3dReadonly": "읽기 전용 미리보기 · 편집하려면 2D로 전환",
   "view3d": "3D 보기",
   "finalizeLayout": "레이아웃 확정",
   "gotoRackDesign": "랙 설계로 이동",

@@ -874,6 +874,8 @@ def handle_design(params):
         return {
             "id": sw.name,
             "type": sw.obj_type,
+            # B1-02 / FR-A04: 交换机统一归网络域（柜型判定只读该结构化字段）
+            "domain": "network",
             "group": designer.switch_groups.get(sw.name, sw.group or ""),
             "podid": designer.podid_map.get(sw.name, sw.podid or ""),
             "layerHint": sw.layer_hint,
@@ -893,6 +895,8 @@ def handle_design(params):
     for server in designer.servers:
         nodes.append({
             "id": server.name, "type": "server", "group": server.group, "podid": server.podid,
+            # B1-02 / FR-A04: 设备域由创建分支写入（gpu / compute / storage）
+            "domain": getattr(server, 'domain', '') or '',
             "cabinetId": server.cabinet_id, "cabinetName": server.cabinet_name,
             "startU": server.start_u, "endU": server.end_u,
             "powerWatts": server.power_watts, "uHeight": server.u_height,
@@ -932,6 +936,8 @@ def handle_design(params):
         nodes.append({
             "id": gpu.name, "type": gpu.obj_type, "group": gpu.group,
             "podid": gpu.podid,
+            # B1-02 / FR-A04: Scale-Up GPU 节点归 GPU 域（柜型仍按 type=scaleup_gpu 判 scaleup）
+            "domain": "gpu",
             "domainId": gpu.domain_id,
             "protocol": gpu.protocol,
             "networkType": gpu.network_type,
@@ -1735,6 +1741,24 @@ def _config_hash(config_file):
         return 'unknown'
 
 
+def _load_room_matrix(params):
+    """A17：读取项目机房矩阵（机柜/空调真值）；未传 project 或文件缺失/损坏 → None（显示「未建模」）"""
+    project = params.get('project') or params.get('projectName')
+    if not project:
+        return None
+    try:
+        from manage import workspace_dir
+        from room import LAYOUT_FILENAME
+        path = os.path.join(workspace_dir(), str(project), LAYOUT_FILENAME)
+        if not os.path.exists(path):
+            return None
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
 def _latest_version_meta(output_dir):
     """返回 (最新版本号, 该版本 manifest 的 config_hash)；无批次 → (0, None)"""
     best = (0, None)
@@ -1893,6 +1917,13 @@ def handle_export(params):
                    f"可用: {', '.join(EXPORT_TYPES)}", ERR_INVALID_ARGS)
 
     config_hash = _config_hash(config_file)
+    # A17：机房矩阵参与指纹（矩阵变更后不复用旧批次的机柜/空调统计）
+    room_matrix = _load_room_matrix(params)
+    if room_matrix is not None:
+        config_hash = hashlib.sha256(
+            (config_hash + json.dumps(room_matrix, sort_keys=True,
+                                       ensure_ascii=False)).encode('utf-8')
+        ).hexdigest()[:16]
 
     # 指纹复用：仅当全部请求类型都是落盘类型时才有意义（数据结果不入档）
     if not no_archive and not regenerate and not (set(output_types) & DATA_ONLY_TYPES):
@@ -1965,10 +1996,11 @@ def handle_export(params):
             results.append({"type": "bom", "file": fn, "status": "error", "error": str(e)})
 
     # V5.4.3-W3: al-hwlist/1.0 零价格硬件清单（五页式，价格由下游按设备ID join）
+    # B3（A16/A17）：一级 7 品类分节；机柜/空调取机房矩阵真值，未建模显示「未建模」
     if 'hwlist' in output_types:
         fn = os.path.join(batch_dir, f"硬件清单_{mode}模式_{ts}.xlsx")
         try:
-            export_hwlist(designer, fn)
+            export_hwlist(designer, fn, matrix=room_matrix)
             results.append({"type": "hwlist", "file": fn, "status": "success"})
         except Exception as e:
             results.append({"type": "hwlist", "file": fn, "status": "error", "error": str(e)})

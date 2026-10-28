@@ -4,6 +4,8 @@
  * 与 2D 平面保持「同一 store，同一数据源」：
  *   - 位置：以 room.store 的 matrix（rows/cols/cells 的 row/col）为唯一事实来源，
  *     而不是再造一份状态；每个已上架机柜按矩阵格子的行列落位。
+ *   - 尺寸（A20）：柜宽/柜深/柜高/排距全部读 matrix.geometry（米制），
+ *     与平面 mm 逻辑坐标同源；行数取矩阵 rows.length。
  *   - 朝向：按行号奇偶交替（偶数排朝 SE、奇数排朝经旋转与对面相向），铺开冷/热通道。
  *   - 热力：功率占比复用 getPowerColor 阈值（powerToHeatColor），无数据时中性灰。
  *   - 交互：点柜高亮（emissive + wireframe 放大）并联动 rack.store.selectCabinet +
@@ -17,17 +19,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Grid, Instances, Instance, Html } from '@react-three/drei'
 import { useTranslation } from 'react-i18next'
-import { Box as BoxIcon, Download, X } from 'lucide-react'
+import { Box as BoxIcon, Download, Lock, X } from 'lucide-react'
 import { useRoomStore } from '@/stores/room.store'
 import { useRackStore, RACK_TYPE_COLORS, type RackCabinet, type RackDevice } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { makeTimestampedFilename } from '@/utils/exportSvg'
+import { resolveGeometry, type RoomGeometryData } from '@/utils/roomGeometry'
 import {
+  cameraForScale,
+  roomSceneScale,
   roomToWorld,
   powerToHeatColor,
-  ROOM_CABINET_WIDTH,
-  ROOM_CABINET_DEPTH,
-  ROOM_U_HEIGHT,
+  uHeight,
+  type RoomCameraParams,
+  type RoomSceneScale,
 } from '@/utils/room3d'
 import { ROOM_3D_TOKENS } from '@/utils/room3dTokens'
 
@@ -80,20 +85,22 @@ function CabinetBodies({
   objects,
   rowCount,
   colCount,
+  geo,
   onSelect,
 }: {
   objects: CabinetObject[]
   rowCount: number
   colCount: number
+  geo: RoomGeometryData
   onSelect: (obj: CabinetObject) => void
 }) {
+  const h = geo.cabinetHeight
   return (
     <Instances range={objects.length} castShadow>
-      <boxGeometry args={[ROOM_CABINET_WIDTH, 1, ROOM_CABINET_DEPTH]} />
+      <boxGeometry args={[geo.cabinetWidth, 1, geo.cabinetDepth]} />
       <meshStandardMaterial metalness={0.18} roughness={0.55} />
       {objects.map((obj, i) => {
-        const h = Math.max(0.5, (obj.cabinet.totalU || 42) * ROOM_U_HEIGHT)
-        const { x, z } = roomToWorld(obj.ri, obj.ci, rowCount, colCount)
+        const { x, z } = roomToWorld(obj.ri, obj.ci, rowCount, colCount, geo)
         return (
           <Instance
             key={`${obj.cabinet.id}-${i}`}
@@ -113,33 +120,36 @@ function DeviceBlocks({
   objects,
   rowCount,
   colCount,
+  geo,
 }: {
   objects: CabinetObject[]
   rowCount: number
   colCount: number
+  geo: RoomGeometryData
 }) {
   const blocks = useMemo(() => {
     const out: Array<{ x: number; y: number; z: number; sy: number; color: string }> = []
+    const uh = uHeight(geo)
     for (const obj of objects) {
-      const { x, z } = roomToWorld(obj.ri, obj.ci, rowCount, colCount)
+      const { x, z } = roomToWorld(obj.ri, obj.ci, rowCount, colCount, geo)
       for (const dev of obj.cabinet.devices ?? []) {
         const hU = Math.max(1, (dev.endU ?? dev.startU) - (dev.startU ?? 0) + 1)
-        const y = ((dev.startU ?? 1) - 1 + hU / 2) * ROOM_U_HEIGHT
+        const y = ((dev.startU ?? 1) - 1 + hU / 2) * uh
         out.push({
           x,
           y,
           z,
-          sy: hU * ROOM_U_HEIGHT,
+          sy: hU * uh,
           color: dev.type === 'server' ? ROOM_3D_TOKENS.serverBlock : ROOM_3D_TOKENS.switchBlock,
         })
       }
     }
     return out
-  }, [objects, rowCount, colCount])
+  }, [objects, rowCount, colCount, geo])
   if (blocks.length === 0) return null
   return (
     <Instances range={blocks.length}>
-      <boxGeometry args={[ROOM_CABINET_WIDTH * 0.82, 1, ROOM_CABINET_DEPTH * 0.9]} />
+      <boxGeometry args={[geo.cabinetWidth * 0.82, 1, geo.cabinetDepth * 0.9]} />
       <meshStandardMaterial metalness={0.25} roughness={0.5} />
       {blocks.map((b, i) => (
         <Instance key={i} position={[b.x, b.y, b.z]} scale={[1, b.sy, 1]} color={b.color} />
@@ -153,32 +163,34 @@ function PlaceholderMeshes({
   placeholders,
   rowCount,
   colCount,
+  geo,
 }: {
   placeholders: PlaceholderObject[]
   rowCount: number
   colCount: number
+  geo: RoomGeometryData
 }) {
   return (
     <>
       {placeholders.map((p, i) => {
-        const { x, z } = roomToWorld(p.ri, p.ci, rowCount, colCount)
+        const { x, z } = roomToWorld(p.ri, p.ci, rowCount, colCount, geo)
         const isAc = p.kind === 'ac'
-        const h = isAc ? 3 : 2.4
+        const h = geo.cabinetHeight + (isAc ? 0.2 : 0)
         return (
           <group key={`ph-${p.position}-${i}`} position={[x, h / 2, z]}>
             {isAc ? (
               <mesh castShadow>
-                <cylinderGeometry args={[ROOM_CABINET_WIDTH * 0.42, ROOM_CABINET_WIDTH * 0.42, h, 16]} />
+                <cylinderGeometry args={[geo.cabinetWidth * 0.42, geo.cabinetWidth * 0.42, h, 16]} />
                 <meshStandardMaterial color={ROOM_3D_TOKENS.acBody} metalness={0.4} roughness={0.4} />
               </mesh>
             ) : (
               <mesh castShadow>
-                <boxGeometry args={[ROOM_CABINET_WIDTH * 0.3, h, ROOM_CABINET_DEPTH * 0.3]} />
+                <boxGeometry args={[geo.cabinetWidth * 0.3, h, geo.cabinetDepth * 0.3]} />
                 <meshStandardMaterial color={ROOM_3D_TOKENS.pillarBody} metalness={0.2} roughness={0.7} />
               </mesh>
             )}
             {/* 占位标签 */}
-            <Html center position={[0, h / 2 + 0.4, 0]} style={{ pointerEvents: 'none' }}>
+            <Html center position={[0, h / 2 + 0.2, 0]} style={{ pointerEvents: 'none' }}>
               <div className="text-[10px] px-1 rounded bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                 {isAc ? '空调' : '立柱'}
               </div>
@@ -195,6 +207,7 @@ interface CabinetMeshProps {
   col: number
   rowCount: number
   colCount: number
+  geo: RoomGeometryData
   cabinet: RackCabinet
   percent: number
   facingNorth: boolean
@@ -208,38 +221,39 @@ function CabinetOverlay({
   col,
   rowCount,
   colCount,
+  geo,
   cabinet,
   percent,
   facingNorth,
   selected,
   onClick,
 }: CabinetMeshProps) {
-  const { x, z } = roomToWorld(row, col, rowCount, colCount)
-  const height = Math.max(0.5, (cabinet.totalU || 42) * ROOM_U_HEIGHT)
+  const { x, z } = roomToWorld(row, col, rowCount, colCount, geo)
+  const height = geo.cabinetHeight
   const rotationY = facingNorth ? Math.PI : 0
   const heatColor = powerToHeatColor(percent)
 
   return (
     <group position={[x, height / 2, z]} rotation={[0, rotationY, 0]} onClick={onClick}>
       {/* 朝向板：正面中部竖向深色条，标识前面板方向 */}
-      <mesh position={[0, 0, ROOM_CABINET_DEPTH / 2 + 0.02]}>
-        <boxGeometry args={[ROOM_CABINET_WIDTH * 0.9, height * 0.92, 0.02]} />
+      <mesh position={[0, 0, geo.cabinetDepth / 2 + 0.02]}>
+        <boxGeometry args={[geo.cabinetWidth * 0.9, height * 0.92, 0.02]} />
         <meshStandardMaterial color={ROOM_3D_TOKENS.frontPanel} metalness={0.3} roughness={0.4} />
       </mesh>
       {/* 功率热力条：柜身顶部细条（绿→黄→红，复用 2D 口径） */}
       <mesh position={[0, height / 2 + 0.03, 0]}>
-        <boxGeometry args={[ROOM_CABINET_WIDTH * 0.98, 0.08, ROOM_CABINET_DEPTH * 0.98]} />
+        <boxGeometry args={[geo.cabinetWidth * 0.98, 0.06, geo.cabinetDepth * 0.98]} />
         <meshBasicMaterial color={heatColor} />
       </mesh>
       {/* 选中高亮：线框放大叠加 */}
       {selected && (
         <mesh scale={[1.06, 1.06, 1.06]}>
-          <boxGeometry args={[ROOM_CABINET_WIDTH, height, ROOM_CABINET_DEPTH]} />
+          <boxGeometry args={[geo.cabinetWidth, height, geo.cabinetDepth]} />
           <meshBasicMaterial color={ROOM_3D_TOKENS.selectionWireframe} wireframe transparent opacity={0.9} />
         </mesh>
       )}
       {/* 5.2.4-524-b：名称标签（Html overlay，始终朝向相机） */}
-      <Html center position={[0, height / 2 + 0.45, 0]} style={{ pointerEvents: 'none' }}>
+      <Html center position={[0, height / 2 + 0.35, 0]} style={{ pointerEvents: 'none' }}>
         <div
           className={`text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap shadow-sm border ${
             selected
@@ -255,7 +269,15 @@ function CabinetOverlay({
 }
 
 /** 3D 场景（读取同一份 room.store / rack.store） */
-function RoomScene() {
+function RoomScene({
+  geo,
+  scale,
+  camera,
+}: {
+  geo: RoomGeometryData
+  scale: RoomSceneScale
+  camera: RoomCameraParams
+}) {
   const matrix = useRoomStore((s) => s.matrix)
   const cabinets = useRackStore((s) => s.cabinets)
   const selectedCabinetId = useRackStore((s) => s.selectedCabinetId)
@@ -330,29 +352,34 @@ function RoomScene() {
   return (
     <>
       <ambientLight intensity={0.55} />
-      <directionalLight position={[60, 120, 80]} intensity={0.85} castShadow />
-      <pointLight position={[-60, 60, -80]} intensity={0.35} />
+      <directionalLight
+        position={[scale.span * 0.5, scale.span * 1.0, scale.span * 0.66]}
+        intensity={0.85}
+        castShadow
+      />
+      <pointLight position={[-scale.span * 0.5, scale.span * 0.5, -scale.span * 0.66]} intensity={0.35} />
 
+      {/* 网格尺度随 geometry 联动（cellSize = 柜宽，sectionSize = 5 柜） */}
       <Grid
-        args={[400, 400]}
-        position={[0, -0.05, 0]}
-        cellSize={ROOM_CABINET_WIDTH}
+        args={[scale.span * 3, scale.span * 3]}
+        position={[0, -0.01, 0]}
+        cellSize={geo.cabinetWidth}
         cellThickness={0.5}
         cellColor={ROOM_3D_TOKENS.gridCell}
-        sectionSize={ROOM_CABINET_WIDTH * 5}
+        sectionSize={geo.cabinetWidth * 5}
         sectionThickness={1}
         sectionColor={ROOM_3D_TOKENS.gridSection}
-        fadeDistance={400}
+        fadeDistance={scale.span * 3}
         fadeStrength={1}
         infiniteGrid={false}
       />
 
       {/* 5.2.4-524-c：柜身 InstancedMesh（一次 draw call） */}
-      <CabinetBodies objects={objects} rowCount={rowCount} colCount={colCount} onSelect={handleClick} />
+      <CabinetBodies objects={objects} rowCount={rowCount} colCount={colCount} geo={geo} onSelect={handleClick} />
       {/* 5.2.4-524-b：柜内设备块（按 U 位，InstancedMesh） */}
-      <DeviceBlocks objects={objects} rowCount={rowCount} colCount={colCount} />
+      <DeviceBlocks objects={objects} rowCount={rowCount} colCount={colCount} geo={geo} />
       {/* 5.2.4-524-b：空调/立柱占位体 */}
-      <PlaceholderMeshes placeholders={placeholders} rowCount={rowCount} colCount={colCount} />
+      <PlaceholderMeshes placeholders={placeholders} rowCount={rowCount} colCount={colCount} geo={geo} />
 
       {/* 5.2.4-524-b：名称标签/朝向板/功率热力条/选中高亮（逐柜叠加） */}
       {objects.map((obj) => (
@@ -362,6 +389,7 @@ function RoomScene() {
           col={obj.ci}
           rowCount={rowCount}
           colCount={colCount}
+          geo={geo}
           cabinet={obj.cabinet}
           percent={obj.percent}
           facingNorth={obj.ri % 2 === 1}
@@ -419,10 +447,10 @@ function RoomScene() {
         enablePan
         enableZoom
         enableRotate
-        minDistance={15}
-        maxDistance={800}
+        minDistance={camera.minDistance}
+        maxDistance={camera.maxDistance}
         maxPolarAngle={Math.PI / 2 + 0.25}
-        target={[0, 8, 0]}
+        target={camera.target}
       />
     </>
   )
@@ -451,6 +479,14 @@ export function Room3DView() {
     () => (matrix?.cells ?? []).filter((c) => c.cabinetId != null).length,
     [matrix],
   )
+
+  // A20：3D 与平面共用同一份 geometry（柜宽/柜深/柜高/通道宽），行数取矩阵 rows
+  const geo = useMemo(() => resolveGeometry(matrix), [matrix])
+  const sceneScale = useMemo(
+    () => roomSceneScale(geo, matrix?.rows.length ?? 0, matrix?.cols.length ?? 0),
+    [geo, matrix],
+  )
+  const camera = useMemo(() => cameraForScale(sceneScale), [sceneScale])
 
   const handleExport = () => {
     const canvas = canvasRef.current
@@ -502,6 +538,18 @@ export function Room3DView() {
         </button>
       </div>
 
+      {/* FR-A29（B5-06）：3D 只读态显式标注——本轮不做 3D 拖拽（FR-A28 关闭），
+          避免用户在 3D 中尝试拖拽无响应 */}
+      <div
+        data-testid="room3d-readonly-badge"
+        className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 bg-warning-50/90 dark:bg-warning-900/30 backdrop-blur rounded-md shadow-sm border border-warning-300 dark:border-warning-700"
+      >
+        <Lock size={10} className="text-warning-600 dark:text-warning-400" />
+        <span className="text-xs text-warning-700 dark:text-warning-300">
+          {t('rack:room3dReadonly', '只读预览 · 编辑请切 2D')}
+        </span>
+      </div>
+
       {/* 底部提示 */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1 bg-white/80 dark:bg-app-elevated/80 backdrop-blur rounded-md shadow-sm border border-gray-200 dark:border-gray-700">
         <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -511,11 +559,11 @@ export function Room3DView() {
 
       <Canvas
         gl={{ preserveDrawingBuffer: true }}
-        camera={{ position: [0, 110, 170], fov: 50, near: 0.1, far: 2000 }}
+        camera={{ position: camera.position, fov: 50, near: 0.05, far: camera.far }}
         shadows
         className="w-full h-full"
       >
-        <RoomScene />
+        <RoomScene geo={geo} scale={sceneScale} camera={camera} />
         <CanvasProbe onCanvas={setCanvas} />
       </Canvas>
     </div>

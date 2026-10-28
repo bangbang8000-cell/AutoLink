@@ -4,7 +4,10 @@ import * as XLSX from 'xlsx'
 import { useToastStore } from './toast.store'
 // 5.4.9-F549-4：机柜类型/推断抽到叶子模块（worker 复用，避免 xlsx/zustand 进 worker）。
 // 对外重导出保持既有 import 兼容；文件内引用走本地别名。
-import { toCabinetType as _toCabinetType, type CabinetType as _CabinetType } from '@/utils/rackCabinetTypes'
+import { toCabinetType as _toCabinetType, type CabinetType as _CabinetType, type DeviceDomain } from '@/utils/rackCabinetTypes'
+// B4-06 / FR-A25：柜内紧凑重排按柜型预留（与后端 rack_reserve_for 同源）
+import { resolveRackReserve, type RackReserve } from '@/shared/roomTaxonomy'
+import type { GpuShareMode } from '@/shared/gpuShare'
 export { toCabinetType, type CabinetType } from '@/utils/rackCabinetTypes'
 const toCabinetType = _toCabinetType
 type CabinetType = _CabinetType
@@ -25,6 +28,8 @@ export interface RackTopologyNode {
   type: string
   group: string
   podid: string
+  // B1-02 / FR-A04: 后端产出的设备域（gpu/compute/storage/network），柜型判定优先读取
+  domain?: DeviceDomain
   cabinetId?: number
   cabinetName?: string
   startU?: number
@@ -266,6 +271,42 @@ export function findFirstAvailableU(
   return null
 }
 
+export type CabinetCompactReason = 'not_found' | 'no_space'
+export interface CabinetCompactResult {
+  ok: boolean
+  /** 实际发生位移的设备数（0 表示本已紧凑） */
+  moved: number
+  reason: CabinetCompactReason | null
+}
+
+/**
+ * B4-06（FR-A25）：柜内紧凑重排纯函数——按当前 U 位顺序（保序）从可用区底部紧贴排布。
+ * - 可用区 = `[bottomReservedU + 1, totalU - topReservedU]`（按柜型预留，FR-A23）
+ * - 不跨柜、不改设备顺序、不丢设备
+ * - 设备总高超出可用区 → `no_space`，返回原列表（调用方不得落库）
+ */
+export function compactCabinetDevices(
+  cabinet: RackCabinet,
+  reserve: RackReserve,
+): { devices: RackDevice[]; moved: number; reason: CabinetCompactReason | null } {
+  const usableStart = reserve.bottomReservedU + 1
+  const usableEnd = cabinet.totalU - reserve.topReservedU
+  const ordered = [...cabinet.devices].sort((a, b) => a.startU - b.startU || a.id.localeCompare(b.id))
+  let cursor = usableStart
+  let moved = 0
+  const devices = ordered.map((d) => {
+    const height = d.endU - d.startU + 1
+    const startU = cursor
+    const endU = cursor + height - 1
+    cursor = endU + 1
+    if (startU !== d.startU) moved++
+    return { ...d, startU, endU }
+  })
+  const overflow = devices.length > 0 && devices[devices.length - 1].endU > usableEnd
+  if (overflow) return { devices: cabinet.devices, moved: 0, reason: 'no_space' }
+  return { devices, moved, reason: null }
+}
+
 /**
  * M5（AL-ED6）：批量 U 位偏移整批校验——任一选中设备越界/入预留区/与其他设备冲突即整批拒绝
  * （偏移为整体语义，部分应用会造成柜内间隙错乱）
@@ -334,9 +375,11 @@ interface RackState {
   /** M4/M5: 项目机柜配置（顶部预留 U / 每柜 GPU 服务器台数），上架校验与优化按此生效 */
   topReservedU: number
   gpuPerCabinet: number
+  /** B5-01 / FR-A26：GPU 共柜档位（fixed1 / byPower / manual），落盘到项目 rack_config */
+  gpuShareMode: GpuShareMode
   /** F2（5.4.4 可用性修复）：项目级默认机柜功率上限（ensureMatrixRacks 从 rack_config 接线） */
   defaultPowerLimit: number
-  setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number; defaultPowerLimit?: number }) => void
+  setRackConfig: (cfg: { topReservedU?: number; gpuPerCabinet?: number; gpuShareMode?: GpuShareMode; defaultPowerLimit?: number }) => void
   /** M4: 清空柜内设计（设备回待上架池），用于改布局后重新规划 */
   clearCabinets: () => void
   placeDevice: (cabinetId: number, device: UnplacedDevice, startU: number) => boolean
@@ -346,6 +389,8 @@ interface RackState {
   updateDevicesBulk: (cabinetId: number, deviceIds: string[], patch: DevicePatch) => BulkUpdateResult
   /** M5（AL-ED6）：同柜设备批量 U 位偏移（整批原子：任一越界/入预留区/冲突即整批拒绝） */
   shiftDevicesU: (cabinetId: number, deviceIds: string[], offset: number) => BulkUpdateResult
+  /** B4-06（FR-A25）：柜内一键紧凑重排（保序/保预留/不跨柜；有位移才压撤销栈） */
+  compactCabinet: (cabinetId: number) => CabinetCompactResult
   // ===== M3（AL-CP1/CP2）：应用内剪贴板复制/粘贴（机柜与设备） =====
   /** 应用内剪贴板态（机柜深拷贝 / 设备深拷贝；复制操作不压撤销栈） */
   clipboard: RackClipboard | null
@@ -591,12 +636,14 @@ export const useRackStore = create<RackState>()(
   // M4/M5: 项目机柜配置默认值（由 setRackConfig 覆盖）
   topReservedU: DEFAULT_TOP_RESERVED_U,
   gpuPerCabinet: 1,
+  gpuShareMode: 'fixed1',
   /** F2（5.4.4 可用性修复）：项目级默认机柜功率上限（ensureMatrixRacks 从 rack_config 接线） */
   defaultPowerLimit: 12000,
   setRackConfig: (cfg) =>
     set((s) => ({
       topReservedU: cfg.topReservedU ?? s.topReservedU,
       gpuPerCabinet: cfg.gpuPerCabinet ?? s.gpuPerCabinet,
+      gpuShareMode: cfg.gpuShareMode ?? s.gpuShareMode,
       defaultPowerLimit: cfg.defaultPowerLimit ?? s.defaultPowerLimit,
     })),
 
@@ -1211,6 +1258,23 @@ export const useRackStore = create<RackState>()(
       cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices } : c)),
     }))
     return { applied: idSet.size, skipped: 0, issues: [] }
+  },
+
+  // B4-06（FR-A25）：柜内一键紧凑重排——按当前顺序紧贴可用区底部，保留柜型预留，不跨柜
+  compactCabinet: (cabinetId) => {
+    const cabinet = get().cabinets.find((c) => c.id === cabinetId)
+    if (!cabinet) return { ok: false, moved: 0, reason: 'not_found' }
+    const reserve = resolveRackReserve(cabinet.type, get().topReservedU)
+    const result = compactCabinetDevices(cabinet, reserve)
+    if (result.reason) return { ok: false, moved: 0, reason: result.reason }
+    if (result.moved === 0) return { ok: true, moved: 0, reason: null }
+    const byId = new Map(result.devices.map((d) => [d.id, d]))
+    set((s) => ({
+      ...pushRackHistory(s),
+      cabinets: s.cabinets.map((c) => (c.id === cabinetId ? { ...c, devices: result.devices } : c)),
+      selectedDevice: s.selectedDevice ? (byId.get(s.selectedDevice.id) ?? s.selectedDevice) : null,
+    }))
+    return { ok: true, moved: result.moved, reason: null }
   },
 
   // ===== M3（AL-CP1/CP2）+ M-F2（F2-1）：应用内剪贴板复制/粘贴（机柜与设备；跨项目持久化到 localStorage） =====

@@ -1,7 +1,7 @@
 {
   "id": "万卡-B300-Q3400-二层-IB",
   "name": "万卡-B300-Q3400-二层-IB（示例）",
-  "description": "万卡集群 D：1250 台 DGX B300 / 10000 卡，NVIDIA Q3400（72×1.6T → 144×800G）k=144，IB 二层示例项目（PRD 场景⑥）",
+  "description": "万卡集群 D：1250 台 DGX B300 / 10000 卡，NVIDIA Q3400（72×1.6T → 144×800G）k=144，IB 二层示例项目（PRD 场景⑥）；机房矩阵超单排 24 柜上限，不可用于机房设计",
   "scenario": "万卡-B300-Q3400-二层-IB",
   "tags": [
     "B300",
@@ -13,5 +13,5 @@
   ],
   "updatedAt": "2026-09-03",
   "templateVersion": 2,
-  "isSample": true
+  "isSample": false
 }

@@ -16,6 +16,7 @@
  */
 import { useRackStore } from '@/stores/rack.store'
 import { useRoomStore } from '@/stores/room.store'
+import { inferGpuShareMode } from '@/shared/gpuShare'
 import type { RackTopologyNode } from '@/stores/rack.store'
 import type { RackMatrixLayoutOptions, RackMatrixLayoutStats } from '@/utils/rackMatrixLayout'
 
@@ -45,6 +46,8 @@ async function readProjectRackConfig(
     if (typeof rc.gpu_per_cabinet === 'number' && rc.gpu_per_cabinet > 0) {
       opts.gpuPerCabinet = rc.gpu_per_cabinet
     }
+    // B5-01 / FR-A26：档位（未写 + 存量 >1 → 人工指定）
+    opts.gpuShareMode = inferGpuShareMode(rc.gpu_share_mode, opts.gpuPerCabinet)
     if (typeof rc.top_reserved_u === 'number' && rc.top_reserved_u >= 0) {
       opts.topReservedU = rc.top_reserved_u
     }
@@ -68,10 +71,11 @@ export async function ensureMatrixRacks(
   // F2：调用方显式 opts 优先；缺省读项目 rack_config；再缺省走函数默认值（12000/42/1/2）
   const resolved = opts ?? (await readProjectRackConfig(projectName)) ?? undefined
   // F2：同步项目机柜配置到 rack.store（topReservedU/gpuPerCabinet 上架校验同源生效）
-  if (resolved?.topReservedU != null || resolved?.gpuPerCabinet != null) {
+  if (resolved?.topReservedU != null || resolved?.gpuPerCabinet != null || resolved?.gpuShareMode != null) {
     useRackStore.getState().setRackConfig({
       ...(resolved.topReservedU != null ? { topReservedU: resolved.topReservedU } : {}),
       ...(resolved.gpuPerCabinet != null ? { gpuPerCabinet: resolved.gpuPerCabinet } : {}),
+      ...(resolved.gpuShareMode != null ? { gpuShareMode: resolved.gpuShareMode } : {}),
     })
   }
   if (matrix) {

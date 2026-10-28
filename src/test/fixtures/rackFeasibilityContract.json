@@ -1,0 +1,174 @@
+{
+  "_comment": "B1-05 / FR-A01 前后端同输入同输出契约夹具。前端 src/test/rackFeasibilityContract.test.ts 与后端 tests/backend/test_rack_feasibility.py 同时读取本文件：同一 matrix + 同一 devices + 同一 opts 必须得到与 expected 完全一致的结论（含建议文案逐字）。matrix.fill 按行优先顺序依次铺格，未铺到的格子为 empty；rows/cols 仅决定 slots。devices 按 idPrefix-1..count 展开为拓扑节点（type/domain/group/uHeight/powerWatts）。",
+  "cases": [
+    {
+      "name": "60 柜位 / 128 台 GPU → 拒绝，并给出共柜档位解法",
+      "matrix": { "rows": 5, "cols": 12, "fill": [{ "type": "gpu", "count": 60 }] },
+      "devices": [
+        {
+          "idPrefix": "gpu",
+          "count": 128,
+          "type": "server",
+          "domain": "gpu",
+          "group": "GPU服务器组1",
+          "uHeight": 8,
+          "powerWatts": 10200
+        }
+      ],
+      "opts": {},
+      "expected": {
+        "ok": false,
+        "required": { "gpu": 128, "network": 0, "storage": 0, "compute": 0 },
+        "requiredCabinets": 128,
+        "capacity": {
+          "byType": { "gpu": 60, "network": 0, "storage": 0, "compute": 0 },
+          "total": 60,
+          "slots": 60
+        },
+        "shortage": {
+          "cabinets": 68,
+          "u": 0,
+          "power": 0,
+          "byType": {
+            "gpu": { "required": 128, "available": 60, "missing": 68 },
+            "network": { "required": 0, "available": 0, "missing": 0 },
+            "storage": { "required": 0, "available": 0, "missing": 0 },
+            "compute": { "required": 0, "available": 0, "missing": 0 }
+          }
+        },
+        "suggestions": [
+          "扩容至 6 排 × 24 列（共 144 柜位，当前可落位 60 柜位，缺 68 柜）",
+          "调整 GPU 共柜档位至 3 台/柜（128 台 GPU 仅需 60 个 GPU 柜位）"
+        ],
+        "gpuPerCabinetSuggest": 3,
+        "unplaceable": [],
+        "totalRequiredU": 1024,
+        "totalRequiredPowerW": 1305600
+      }
+    },
+    {
+      "name": "168 柜位 / 128 台 GPU → 通过，无缺口无建议",
+      "matrix": { "rows": 7, "cols": 24, "fill": [{ "type": "gpu", "count": 168 }] },
+      "devices": [
+        {
+          "idPrefix": "gpu",
+          "count": 128,
+          "type": "server",
+          "domain": "gpu",
+          "group": "GPU服务器组1",
+          "uHeight": 8,
+          "powerWatts": 10200
+        }
+      ],
+      "opts": {},
+      "expected": {
+        "ok": true,
+        "required": { "gpu": 128, "network": 0, "storage": 0, "compute": 0 },
+        "requiredCabinets": 128,
+        "capacity": {
+          "byType": { "gpu": 168, "network": 0, "storage": 0, "compute": 0 },
+          "total": 168,
+          "slots": 168
+        },
+        "shortage": {
+          "cabinets": 0,
+          "u": 0,
+          "power": 0,
+          "byType": {
+            "gpu": { "required": 128, "available": 168, "missing": 0 },
+            "network": { "required": 0, "available": 0, "missing": 0 },
+            "storage": { "required": 0, "available": 0, "missing": 0 },
+            "compute": { "required": 0, "available": 0, "missing": 0 }
+          }
+        },
+        "suggestions": [],
+        "gpuPerCabinetSuggest": null,
+        "unplaceable": [],
+        "totalRequiredU": 1024,
+        "totalRequiredPowerW": 1305600
+      }
+    },
+    {
+      "name": "2×6 混合机房：网络柜位为 0 → 拒绝，柜位/U/功率三项缺口",
+      "matrix": {
+        "rows": 2,
+        "cols": 6,
+        "fill": [
+          { "type": "gpu", "count": 4 },
+          { "type": "storage", "count": 2 },
+          { "type": "compute", "count": 2 }
+        ]
+      },
+      "devices": [
+        {
+          "idPrefix": "gpu",
+          "count": 4,
+          "type": "server",
+          "domain": "gpu",
+          "group": "GPU服务器组1",
+          "uHeight": 8,
+          "powerWatts": 1000
+        },
+        {
+          "idPrefix": "net",
+          "count": 10,
+          "type": "param_leaf",
+          "domain": "network",
+          "group": "参数面网络",
+          "uHeight": 1,
+          "powerWatts": 300
+        },
+        {
+          "idPrefix": "stor",
+          "count": 3,
+          "type": "server",
+          "domain": "storage",
+          "group": "存储服务器组",
+          "uHeight": 4,
+          "powerWatts": 900
+        },
+        {
+          "idPrefix": "comp",
+          "count": 2,
+          "type": "server",
+          "domain": "compute",
+          "group": "通算服务器组",
+          "uHeight": 2,
+          "powerWatts": 600
+        }
+      ],
+      "opts": {},
+      "expected": {
+        "ok": false,
+        "required": { "gpu": 4, "network": 1, "storage": 1, "compute": 1 },
+        "requiredCabinets": 7,
+        "capacity": {
+          "byType": { "gpu": 4, "network": 0, "storage": 2, "compute": 2 },
+          "total": 8,
+          "slots": 12
+        },
+        "shortage": {
+          "cabinets": 1,
+          "u": 10,
+          "power": 3000,
+          "byType": {
+            "gpu": { "required": 4, "available": 4, "missing": 0 },
+            "network": { "required": 1, "available": 0, "missing": 1 },
+            "storage": { "required": 1, "available": 2, "missing": 0 },
+            "compute": { "required": 1, "available": 2, "missing": 0 }
+          }
+        },
+        "suggestions": [
+          "扩容至 1 排 × 24 列（共 24 柜位，当前可落位 8 柜位，缺 1 柜）",
+          "或提高 网络柜 单柜密度（单柜功率上限 / 每柜台数），补足 1 柜",
+          "单柜可用 U 不足：需 58 U，现有格位仅可提供 48 U，建议提高机柜 U 数或减少高 U 设备",
+          "单柜功率不足：需 11 kW，现有格位仅可承载 8 kW，建议提高单柜功率上限"
+        ],
+        "gpuPerCabinetSuggest": null,
+        "unplaceable": [],
+        "totalRequiredU": 58,
+        "totalRequiredPowerW": 10900
+      }
+    }
+  ]
+}

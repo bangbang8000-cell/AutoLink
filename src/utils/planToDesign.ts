@@ -13,6 +13,7 @@
 import type { DesignConfig } from '@/stores/design.store'
 import type { PlanSummary } from '@/components/aidc/aidcTypes'
 import type { RackMatrixLayoutOptions } from '@/utils/rackMatrixLayout'
+import { normalizeGpuShareMode } from '@/shared/gpuShare'
 
 /** 正整数提取：非法/非正 → undefined */
 const posInt = (v: unknown): number | undefined => {
@@ -127,6 +128,13 @@ export function rackMatrixOptsFromProjectConfig(raw: string | null): RackMatrixL
     const opts: RackMatrixLayoutOptions = {}
     const gpuPerCabinet = posInt(rack.gpu_per_cabinet)
     if (gpuPerCabinet) opts.gpuPerCabinet = gpuPerCabinet
+    // B5-01 / FR-A26：GPU 共柜档位。显式写入的档位一律生效；
+    // 未写档位且存量 gpu_per_cabinet>1 → 视为「人工指定」；其余不写该字段（保持旧口径，等价 1 台/柜）
+    if (rack.gpu_share_mode != null) {
+      opts.gpuShareMode = normalizeGpuShareMode(rack.gpu_share_mode)
+    } else if (gpuPerCabinet && gpuPerCabinet > 1) {
+      opts.gpuShareMode = 'manual'
+    }
     const topReservedU = Number(rack.top_reserved_u)
     if (Number.isFinite(topReservedU)) opts.topReservedU = topReservedU
     const rackType = Number(rack.rack_type)

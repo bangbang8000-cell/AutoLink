@@ -15,8 +15,22 @@ import { toPng } from 'html-to-image'
 // 此处随导出器静态引入，保证任何入口导出时样式就绪。
 import '@xyflow/react/dist/style.css'
 import { computeTopologyLayout } from '@/components/workspace/tabs/topology/topologyLayout'
-import { TopologyViewCanvas } from '@/components/workspace/tabs/topology/TopologyViewCanvas'
+import {
+  TopologyViewCanvas,
+  type TopologyViewOptions,
+} from '@/components/workspace/tabs/topology/TopologyViewCanvas'
 import type { TopologyNode, TopologyEdge, TopologyLayout } from '@/stores/design.store'
+
+export type { TopologyViewOptions }
+
+/**
+ * 5.5.2 / A14：无画布上下文的默认视图参数（交付包 ZIP / plan 渲染共用）。
+ * 保持既有渲染语义：逐条边、不显示标签。
+ */
+export const DEFAULT_TOPOLOGY_VIEW_OPTIONS: Required<TopologyViewOptions> = {
+  labelVisible: false,
+  bundleActive: false,
+}
 
 /** 4K 上限（逻辑画布 × pixelRatio 2） */
 const MAX_W = 1920
@@ -73,11 +87,14 @@ export function evaluateTopologyExportSize(
 /**
  * 将 topology 渲染为 PNG（base64，无 data: 前缀）。
  * 1:1 还原交互视图渲染效果，默认 4K。
+ *
+ * 5.5.2 / A13：opts 透传屏幕视图参数（标签/束流），保证「导出 === 当前可见」。
  */
 export async function exportTopologyViewPng(
   nodes: TopologyNode[],
   edges: TopologyEdge[],
   savedLayout?: TopologyLayout | null,
+  opts?: TopologyViewOptions,
 ): Promise<string> {
   if (!nodes || nodes.length === 0) throw new Error('拓扑数据为空')
 
@@ -99,7 +116,7 @@ export async function exportTopologyViewPng(
     await new Promise<void>((resolve) => {
       root.render(
         <ReactFlowProvider>
-          <TopologyViewCanvas nodes={nodes} edges={edges} savedLayout={savedLayout} width={width} height={height} onReady={resolve} />
+          <TopologyViewCanvas nodes={nodes} edges={edges} savedLayout={savedLayout} options={opts} width={width} height={height} onReady={resolve} />
         </ReactFlowProvider>,
       )
     })

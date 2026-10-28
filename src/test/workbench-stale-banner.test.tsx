@@ -16,7 +16,7 @@ import { useProjectStore } from '@/stores/project.store'
 
 beforeEach(() => {
   localStorage.clear()
-  useWorkbenchStore.setState({ aidcDone: {}, stale: {}, configFingerprint: {}, planHash: {} })
+  useWorkbenchStore.setState({ stepDone: {}, stale: {}, configFingerprint: {}, planHash: {} })
   useUIStore.setState({ workbenchSubview: 'main' })
   useProjectStore.setState({
     projects: [{ id: 1, name: 'projA', index: 0, updatedAt: '2026-08-01' }],

@@ -18,6 +18,7 @@ import { useRackStore } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
 import { useSnapshotStore, defaultSnapshotName } from '@/stores/snapshot.store'
+import { inferGpuShareMode } from '@/shared/gpuShare'
 import { RackTab } from '@/components/workspace/tabs/RackTab'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -100,10 +101,12 @@ export function RackDesignTab({ projectName }: { projectName: string }) {
         if (!raw) return
         const cfg = JSON.parse(raw)
         const rack = cfg?.rack_config || {}
-        if (rack.top_reserved_u != null || rack.gpu_per_cabinet != null) {
+        if (rack.top_reserved_u != null || rack.gpu_per_cabinet != null || rack.gpu_share_mode != null) {
           useRackStore.getState().setRackConfig({
             topReservedU: rack.top_reserved_u,
             gpuPerCabinet: rack.gpu_per_cabinet,
+            // B5-01（FR-A26）：未写 gpu_share_mode + 存量 gpu_per_cabinet>1 → 视为人工指定
+            gpuShareMode: inferGpuShareMode(rack.gpu_share_mode, rack.gpu_per_cabinet),
           })
         }
       })

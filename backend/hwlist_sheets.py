@@ -110,7 +110,14 @@ def _setup_print(ws, repeat_rows=None):
 
 
 def write_hw_list(ws, lines, title, variant='contract'):
-    """组网清单（简版/契约版）。返回 (header_row, 小计行列表 [(net, row)])"""
+    """组网清单（简版/契约版）。
+
+    A16 双级结构：一级按 7 品类分节（服务器/交换机/光模块/线缆/机柜/空调/辅材，固定顺序，
+    无行跳过），二级在节内按 network_profile 子分组；每节一级小计 + 表末总计。
+    返回 (header_row, [(品类, 节小计行)])
+    """
+    from hwlist import CATEGORY_ORDER, category_of
+
     contract = (variant == 'contract')
     cols = HW_COLS_CONTRACT if contract else HW_COLS_SIMPLE
     nc = len(cols)
@@ -125,79 +132,144 @@ def write_hw_list(ws, lines, title, variant='contract'):
               '授权与软件 0% / GPU 整机不备件；可用 ratio_map 参数覆盖。' if contract else None))
     r = _header(ws, r, cols)
     hdr = r - 1
-    subtotal_rows = []
-    last_net, seq, sec_start = None, 0, r
+    qty_col = 7 if contract else 5
+    total_col = 11 if contract else None
+    net_spans = []      # [(分项名, 起始行, 结束行)] —— 用于「分类」列纵向合并
+    cat_sub_rows = []   # [(品类, 小计行)]
 
-    def _flush():
-        nonlocal r
-        tip = '含该分项全部明细；各行单位不同，数量合计仅供行数与档位核对'
+    def _range_formulas(start, end):
         if contract:
-            for col, formula in ((7, f'=SUM(G{sec_start}:G{r - 1})'),
-                                 (10, f'=SUM(J{sec_start}:J{r - 1})'),
-                                 (11, f'=SUM(K{sec_start}:K{r - 1})')):
-                c = ws.cell(r, col, formula)
-                c.font = F_BODY_B
-                c.number_format = FMT_INT
-                c.border = BD
-            ws.cell(r, 1, '小计').font = F_BODY_B
-            ws.cell(r, 3, f'{seq} 项')
-            ws.cell(r, nc, tip)
-        else:
-            c = ws.cell(r, 5, f'=SUM(E{sec_start}:E{r - 1})')
+            return {7: f'=SUM(G{start}:G{end})',
+                    10: f'=SUM(J{start}:J{end})',
+                    11: f'=SUM(K{start}:K{end})'}
+        return {5: f'=SUM(E{start}:E{end})'}
+
+    def _ref_formulas(rows):
+        if contract:
+            return {7: '=' + '+'.join(f'G{x}' for x in rows),
+                    11: '=' + '+'.join(f'K{x}' for x in rows)}
+        return {5: '=' + '+'.join(f'E{x}' for x in rows)}
+
+    def _mark_subtotal(seq_txt, tip):
+        nonlocal r
+        for col in range(1, nc + 1):
+            ws.cell(r, col).border = BD
+        ws.cell(r, 1, '小计').font = F_BODY_B
+        ws.cell(r, 3, seq_txt)
+        ws.cell(r, nc, tip)
+
+    def _emit_subtotal(formulas, seq, tip):
+        nonlocal r
+        _mark_subtotal(f'{seq} 项', tip)
+        for col, val in formulas.items():
+            c = ws.cell(r, col, val)
             c.font = F_BODY_B
             c.number_format = FMT_INT
-            c.border = BD
-            ws.cell(r, 1, '小计').font = F_BODY_B
-            ws.cell(r, 3, f'{seq} 项')
-            ws.cell(r, nc, tip)
-        subtotal_rows.append((last_net, r))
         r += 1
 
-    for ln in lines:
-        if ln['network_profile'] != last_net:
-            if last_net is not None:
-                _flush()
-            last_net, seq, sec_start = ln['network_profile'], 0, r
-        seq += 1
+    def _emit_unmodeled(tip):
+        nonlocal r
+        _mark_subtotal('未建模', tip)
+        ws.cell(r, qty_col, '未建模').font = F_BODY_B
         if contract:
-            vals = [seq, '', ln['name'], ln['model'], ln['device_id'], ln['line_type'],
-                    ln['qty'], ln['unit'], ln['spare_ratio'],
-                    f'=CEILING(G{r}*I{r},1)', f'=G{r}+J{r}', ln['qty_basis']]
-        else:
-            vals = [seq, '', ln['name'], ln['model'], ln['qty'], ln['unit'], ln['qty_basis']]
-        r = _row(ws, r, vals, spec_cols=(4, 5, 12) if contract else (4, 7), zebra=(seq % 2 == 0))
-        ws.cell(r - 1, 7 if contract else 5).number_format = FMT_INT
-        if contract:
-            ws.cell(r - 1, 9).number_format = FMT_PCT
-            ws.cell(r - 1, 10).number_format = FMT_INT
-            ws.cell(r - 1, 11).number_format = FMT_INT
-    if last_net is not None:
-        _flush()
-
-    # 合计 + 分类列纵向合并
-    if subtotal_rows:
-        if contract:
-            ws.cell(r, 3, '合计（数量清单 · 不含价格）').font = F_BODY_B
-            ws.cell(r, 7, '=' + '+'.join(f'G{sr}' for _, sr in subtotal_rows))
-            ws.cell(r, 11, '=' + '+'.join(f'K{sr}' for _, sr in subtotal_rows))
-            ws.cell(r, 7).number_format = FMT_INT
-            ws.cell(r, 11).number_format = FMT_INT
-        else:
-            ws.cell(r, 3, '合计（数量清单 · 不含价格）').font = F_BODY_B
-            ws.cell(r, 5, '=' + '+'.join(f'E{sr}' for _, sr in subtotal_rows))
-            ws.cell(r, 5).number_format = FMT_INT
+            ws.cell(r, total_col, '未建模').font = F_BODY_B
         r += 1
-        start = hdr + 1
-        for name, srow in subtotal_rows:
-            end = srow - 1
+
+    idx = '一二三四五六七八九十'
+    cats = [c for c in CATEGORY_ORDER if any(category_of(ln) == c for ln in lines)]
+    for ci, cat in enumerate(cats, 1):
+        cat_lines = [ln for ln in lines if category_of(ln) == cat]
+        if not cat_lines:  # pragma: no cover - 上面的 cats 已过滤
+            continue
+        r = _band(ws, r, nc, f'{idx[ci - 1]}、{cat}')
+
+        # 二级：network_profile 子分组（保持出现顺序）
+        net_order, groups = [], {}
+        for ln in cat_lines:
+            k = ln['network_profile']
+            if k not in groups:
+                net_order.append(k)
+                groups[k] = []
+            groups[k].append(ln)
+
+        seq = 0
+        detail_start = r
+        unmodeled = all(ln.get('not_modeled') for ln in cat_lines)
+        net_sub_rows = []
+        for k in net_order:
+            g = groups[k]
+            if unmodeled:
+                for ln in g:
+                    seq += 1
+                    r = _write_line(ws, r, ln, seq, contract, nc)
+                continue
+            sec_start = r
+            for ln in g:
+                seq += 1
+                r = _write_line(ws, r, ln, seq, contract, nc)
+            if len(net_order) > 1:
+                _emit_subtotal(_range_formulas(sec_start, r - 1), len(g),
+                               '含该分项全部明细；各行单位不同，数量合计仅供行数与档位核对')
+                net_sub_rows.append(r - 1)
+            net_spans.append((k, sec_start, r - 1))
+
+        tip = ('机房矩阵未建模：机柜/空调数量未统计，请在机房设计页建模后重新导出'
+               if unmodeled else
+               '含该品类全部明细；各行单位不同，数量合计仅供行数与档位核对')
+        if unmodeled:
+            _emit_unmodeled(tip)
+        elif net_sub_rows:
+            _emit_subtotal(_ref_formulas(net_sub_rows), seq, tip)
+        else:
+            _emit_subtotal(_range_formulas(detail_start, r - 1), seq, tip)
+        cat_sub_rows.append((cat, r - 1, not unmodeled))
+
+    # 表末总计 = 各节小计之和（「未建模」节不计入，避免公式引用文本）
+    if cat_sub_rows:
+        numeric_rows = [sr for _, sr, ok in cat_sub_rows if ok]
+        ws.cell(r, 3, '总计（数量清单 · 不含价格）').font = F_BODY_B
+        if numeric_rows:
+            for col, val in _ref_formulas(numeric_rows).items():
+                c = ws.cell(r, col, val)
+                c.font = F_BODY_B
+                c.number_format = FMT_INT
+        r += 1
+        for name, start, end in net_spans:
             if end >= start:
                 ws.merge_cells(start_row=start, start_column=2, end_row=end, end_column=2)
                 cc = ws.cell(start, 2, name)
                 cc.alignment = CT
                 cc.font = F_BODY_B
-            start = srow + 1
     ws.freeze_panes = f'A{hdr + 1}'
-    return hdr, subtotal_rows
+    return hdr, cat_sub_rows
+
+
+def _write_line(ws, r, ln, seq, contract, nc):
+    """写一条明细行（含「未建模」占位行）；返回下一行号"""
+    if ln.get('not_modeled'):
+        if contract:
+            vals = [seq, '', ln['name'], ln['model'], ln['device_id'], ln['line_type'],
+                    '未建模', '—', '', 0, '未建模', ln['qty_basis']]
+        else:
+            vals = [seq, '', ln['name'], ln['model'], '未建模', '—', ln['qty_basis']]
+        r = _row(ws, r, vals, spec_cols=(4, 5, 12) if contract else (4, 7),
+                 zebra=(seq % 2 == 0))
+        if contract:
+            ws.cell(r - 1, 10).number_format = FMT_INT
+        return r
+    if contract:
+        vals = [seq, '', ln['name'], ln['model'], ln['device_id'], ln['line_type'],
+                ln['qty'], ln['unit'], ln['spare_ratio'],
+                f'=CEILING(G{r}*I{r},1)', f'=G{r}+J{r}', ln['qty_basis']]
+    else:
+        vals = [seq, '', ln['name'], ln['model'], ln['qty'], ln['unit'], ln['qty_basis']]
+    r = _row(ws, r, vals, spec_cols=(4, 5, 12) if contract else (4, 7), zebra=(seq % 2 == 0))
+    ws.cell(r - 1, 7 if contract else 5).number_format = FMT_INT
+    if contract:
+        ws.cell(r - 1, 9).number_format = FMT_PCT
+        ws.cell(r - 1, 10).number_format = FMT_INT
+        ws.cell(r - 1, 11).number_format = FMT_INT
+    return r
 
 
 def write_hw_summary(ws, lines, title, scale_rows, stat, warn_extra=None):

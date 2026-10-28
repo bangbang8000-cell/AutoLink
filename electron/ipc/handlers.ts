@@ -1754,6 +1754,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
         configFile: configPath,
         outputDir,
         outputTypes,
+        // B3（A17）：后端据此读取 room_layout.json，统计机柜与空调真值
+        project: projectName,
       })
 
       mainWindow.webContents.send('render:progress', {

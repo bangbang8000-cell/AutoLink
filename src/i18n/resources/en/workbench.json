@@ -345,5 +345,19 @@
   "doc.thSize": "Size",
   "doc.thStatus": "Status",
   "doc.thAction": "Actions",
-  "knowledge.tagExample": "e.g. network, rack, device (press Enter to separate)"
+  "knowledge.tagExample": "e.g. network, rack, device (press Enter to separate)",
+  "subviewAction": {
+    "markDone": "Mark complete",
+    "done": "Completed",
+    "undo": "Undo",
+    "reconfirm": "Re-confirm completion",
+    "noop": "No action for this step",
+    "invalidatedTip": "Upstream changed — please re-confirm",
+    "reasonDesign": "Generate the network design first",
+    "reasonRoomMatrix": "Create a room matrix first",
+    "reasonRackMatrix": "Finalize the room matrix first",
+    "reasonRackCabinets": "Create racks first",
+    "reasonMainOutputs": "Select output types first",
+    "reasonRender": "Complete rendering first"
+  }
 }

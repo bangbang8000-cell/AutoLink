@@ -9,8 +9,8 @@
  *   主线程 → Worker: { type: 'cancel' }（分片点检查，丢弃未完成结果）
  */
 import { layoutRacksFromMatrix } from '@/utils/rackMatrixLayout'
-import type { RackTopologyNode, RackCabinet, UnplacedDevice } from '@/stores/rack.store'
-import type { RoomCellData, RoomMatrixData } from '@/stores/room.store'
+import type { RackTopologyNode } from '@/stores/rack.store'
+import type { RoomMatrixData } from '@/stores/room.store'
 import type { RackMatrixLayoutOptions } from '@/utils/rackMatrixLayout'
 
 let cancelled = false
@@ -52,7 +52,7 @@ self.onmessage = (e: MessageEvent) => {
 
   ;(self as unknown as Worker).postMessage({
     type: 'result',
-    result: result as { cabinets: RackCabinet[]; unplacedDevices: UnplacedDevice[]; cells: RoomCellData[]; stats: unknown },
+    result,
     token,
   })
 }

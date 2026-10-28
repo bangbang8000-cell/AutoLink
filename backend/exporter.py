@@ -1882,12 +1882,16 @@ def _generate_module_cost_chart(modules_data, font_name='Helvetica'):
 #  V5.4.3-W3: al-hwlist/1.0 零价格硬件清单（五页式）
 #  数据层 hwlist.py / 写表层 hwlist_sheets.py；价格由下游价格库按设备ID join。
 #  ================================================================
-def export_hwlist(designer, filename):
-    """导出 al-hwlist/1.0 硬件清单工作簿（设计汇总/简版/契约版/组网示意图/设计口径）"""
+def export_hwlist(designer, filename, matrix=None):
+    """导出 al-hwlist/1.0 硬件清单工作簿（设计汇总/简版/契约版/组网示意图/设计口径）
+
+    matrix: 机房矩阵（room_layout.json 的 dict / RoomMatrix），用于机柜与空调品类计数；
+            为 None 时该两品类显示「未建模」（A17）。
+    """
     import hwlist
     import hwlist_sheets
 
-    lines = hwlist.build_lines(designer)
+    lines = hwlist.build_lines(designer, matrix=matrix)
     # 零价格契约自检：命中金额特征串直接抛错（不产出带价格残留的清单）
     hits = hwlist.check_no_price(lines)
     if hits:

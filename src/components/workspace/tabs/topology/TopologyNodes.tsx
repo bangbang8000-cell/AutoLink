@@ -67,6 +67,8 @@ export interface TopologyNodeData {
   nodeType: string
   group?: string
   podid?: string
+  // B1-02 / FR-A04: 后端产出的设备域（仅供下游柜型判定透传）
+  domain?: string
   cabinetName?: string
   cabinetId?: number
   startU?: number

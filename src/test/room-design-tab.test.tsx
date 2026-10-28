@@ -2,20 +2,25 @@
  * M1（AL-D1）：机房设计独立子视图测试（RoomDesignTab）
  * - 子视图路由渲染（WorkbenchTab subview=roomdesign 分发到 RoomDesignTab）
  * - 矩阵加载 / 无矩阵创建引导（复用 DataCenterLayout）
- * - 定稿 / 撤销定稿状态保留（room.store.finalized）
- * - 工具栏按钮存在（定稿布局；M4/AL-N3：无「导出机房设计 Excel」按钮，导出统一到「本项目输出」）
+ * - 5.5.2 / A10：定稿动作已收敛到右上角统一动作条（SubviewActionBar），面板内不再有「定稿布局/撤销定稿」
+ * - M4/AL-N3：无「导出机房设计 Excel」按钮，导出统一到「本项目输出」
  */
 import '@/i18n'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { RoomDesignTab } from '@/components/workspace/tabs/RoomDesignTab'
 import { WorkbenchTab } from '@/components/workspace/tabs/WorkbenchTab'
+import { SubviewActionBar } from '@/components/workbench/SubviewActions'
 import { ProjectProvider } from '@/stores/ProjectContext'
 import { useRoomStore, type RoomMatrixData } from '@/stores/room.store'
 import { useRackStore, type RackCabinet } from '@/stores/rack.store'
 import { useToastStore } from '@/stores/toast.store'
 import { useProjectStore } from '@/stores/project.store'
+import { useWorkbenchStore } from '@/stores/workbench.store'
 import { useUIStore, type WorkbenchSubview } from '@/stores/ui.store'
+import { useDesignStore, type TopologyNode } from '@/stores/design.store'
+import { estimateCabinetDemand } from '@/utils/cabinetDemand'
+import { checkRackFeasibility } from '@/utils/rackFeasibility'
 
 const makeMatrix = (finalized = false): RoomMatrixData => ({
   schemaVersion: 1,
@@ -66,6 +71,7 @@ beforeEach(() => {
   useRoomStore.setState({ matrix: null, selectedPosition: null, markTool: 'select' })
   useRackStore.setState({ cabinets: [], unplacedDevices: [] })
   useToastStore.setState({ toasts: [] })
+  useWorkbenchStore.setState({ stepDone: {}, stale: {}, configFingerprint: {}, planHash: {} })
   useUIStore.setState({ workbenchSubview: 'main' })
   useProjectStore.setState({
     projects: [{ id: 1, name: 'p1', index: 0, updatedAt: '2026-01-01' }],
@@ -81,7 +87,7 @@ beforeEach(() => {
 })
 
 describe('RoomDesignTab', () => {
-  it('有矩阵（未定稿）→ 渲染机房设计工具栏（标题/定稿）与矩阵视图；AL-N3 无导出按钮', async () => {
+  it('有矩阵（未定稿）→ 渲染机房设计标题与矩阵视图；定稿按钮不在面板内；AL-N3 无导出按钮', async () => {
     mockGetFile(makeMatrix(false))
     render(
       <ProjectProvider>
@@ -89,7 +95,9 @@ describe('RoomDesignTab', () => {
       </ProjectProvider>,
     )
     expect(await screen.findByText('机房设计')).toBeInTheDocument()
-    expect(screen.getByText('定稿布局')).toBeInTheDocument()
+    // 5.5.2 / A10：定稿动作收敛到右上角动作条，面板内不再渲染
+    expect(screen.queryByText('定稿布局')).not.toBeInTheDocument()
+    expect(screen.queryByText('撤销定稿')).not.toBeInTheDocument()
     // AL-N3 / E-1：设计子视图无导出按钮（导出统一到「本项目输出」）
     expect(screen.queryByText(/导出机房设计/)).not.toBeInTheDocument()
     // DataCenterLayout 矩阵视图已挂载（矩阵名）
@@ -106,28 +114,37 @@ describe('RoomDesignTab', () => {
     expect(screen.queryByText('定稿布局')).not.toBeInTheDocument()
   })
 
-  it('点「定稿布局」→ room.store.finalized 置 true（定稿状态保留）', async () => {
-    mockGetFile(makeMatrix(false))
-    render(
-      <ProjectProvider>
-        <RoomDesignTab projectName="p1" />
-      </ProjectProvider>,
-    )
-    fireEvent.click(await screen.findByText('定稿布局'))
-    await waitFor(() => expect(useRoomStore.getState().matrix?.finalized).toBe(true))
+  it('A11：无矩阵时动作条禁用并给出原因「请先创建机房矩阵」', async () => {
+    useUIStore.setState({ workbenchSubview: 'roomdesign' as WorkbenchSubview })
+    render(<SubviewActionBar projectName="p1" />)
+    const btn = screen.getByRole('button', { name: /标记完成/ }) as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+    expect(btn.title).toBe('请先创建机房矩阵')
   })
 
-  it('已定稿 → 显示「撤销定稿」；点击后 finalized 置 false', async () => {
-    mockGetFile(makeMatrix(true))
-    render(
-      <ProjectProvider>
-        <RoomDesignTab projectName="p1" />
-      </ProjectProvider>,
-    )
-    expect(await screen.findByText('撤销定稿')).toBeInTheDocument()
-    expect(screen.queryByText('定稿布局')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByText('撤销定稿'))
-    await waitFor(() => expect(useRoomStore.getState().matrix?.finalized).toBe(false))
+  it('A10/A12：动作条「标记完成」→ stepDone 与 room.store.finalized 同源置位', async () => {
+    mockGetFile(makeMatrix(false))
+    useRoomStore.setState({ matrix: makeMatrix(false) })
+    useUIStore.setState({ workbenchSubview: 'roomdesign' as WorkbenchSubview })
+    render(<SubviewActionBar projectName="p1" />)
+    fireEvent.click(screen.getByRole('button', { name: /标记完成/ }))
+    await waitFor(() => {
+      expect(useWorkbenchStore.getState().stepDone.p1?.roomdesign?.done).toBe(true)
+      expect(useRoomStore.getState().matrix?.finalized).toBe(true)
+    })
+  })
+
+  it('A11：已完成 → 显示「已完成」+「撤销」，撤销后回到可执行态', async () => {
+    useRoomStore.setState({ matrix: makeMatrix(true) })
+    useWorkbenchStore.getState().markStepDone('p1', 'roomdesign')
+    useUIStore.setState({ workbenchSubview: 'roomdesign' as WorkbenchSubview })
+    render(<SubviewActionBar projectName="p1" />)
+    expect(screen.getByText('已完成')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '撤销' }))
+    await waitFor(() => {
+      expect(useWorkbenchStore.getState().stepDone.p1?.roomdesign).toBeUndefined()
+      expect(useRoomStore.getState().matrix?.finalized).toBe(false)
+    })
   })
 
   it('M3 选中已上架柜格 → 切到「机柜设计」子视图并选中该柜（格→柜联动）', async () => {
@@ -178,6 +195,76 @@ describe('RoomDesignTab', () => {
     const btn = await screen.findByText('前往机柜设计')
     fireEvent.click(btn)
     await waitFor(() => expect(useUIStore.getState().workbenchSubview).toBe('rackdesign' as WorkbenchSubview))
+  })
+})
+
+/** B1-11 / FR-A09：构造 rowCount × colCount 且全部标为同一柜型的矩阵（名义柜位 = rowCount × colCount） */
+const makeTypedMatrix = (
+  rowCount: number,
+  colCount: number,
+  type: RoomMatrixData['cells'][number]['type'],
+): RoomMatrixData => {
+  const rows = Array.from({ length: rowCount }, (_, i) => `R${i + 1}`)
+  const cols = Array.from({ length: colCount }, (_, i) => i + 1)
+  const cells = rows.flatMap((row) => cols.map((col) => ({ row, col, type, placeholder: null, cabinetId: null })))
+  return { schemaVersion: 1, name: '机房 A', rows, cols, cells, finalized: false }
+}
+
+const makeGpuNodes = (n: number): TopologyNode[] =>
+  Array.from({ length: n }, (_, i) => ({
+    id: `gpu-${i + 1}`,
+    type: 'server',
+    group: 'GPU服务器',
+    domain: 'gpu',
+    podid: 'p1',
+    uHeight: 8,
+    powerWatts: 6000,
+  }))
+
+describe('B1-11 差额状态条（FR-A09 / T-B1-24、T-B1-25）', () => {
+  beforeEach(() => {
+    useDesignStore.setState({ topology: null })
+  })
+
+  it('柜位 60 / 需求 168 → 红色并显示「缺 108 柜」+ 具名缺口', async () => {
+    const matrix = makeTypedMatrix(6, 10, 'gpu')
+    mockGetFile(matrix)
+    useRoomStore.setState({ matrix })
+    useDesignStore.setState({ topology: { nodes: makeGpuNodes(168), edges: [] } })
+    render(
+      <ProjectProvider>
+        <RoomDesignTab projectName="p1" />
+      </ProjectProvider>,
+    )
+    expect(await screen.findByText('柜位 60 / 需求 168')).toBeInTheDocument()
+    expect(screen.getByText('⚠ 缺 108 柜')).toBeInTheDocument()
+    // 具名缺口：按柜型列出（GPU柜 108）
+    expect(screen.getByText('(GPU柜 108)')).toBeInTheDocument()
+    // 不足即红色
+    expect(screen.getByText('柜位 60 / 需求 168').closest('button')?.className).toContain('text-error')
+  })
+
+  it('柜位 168 / 需求 168 → 绿色充足，且需求数 = A07 估算（同一次调用）', async () => {
+    const matrix = makeTypedMatrix(14, 12, 'gpu')
+    const nodes = makeGpuNodes(168)
+    mockGetFile(matrix)
+    useRoomStore.setState({ matrix })
+    useDesignStore.setState({ topology: { nodes, edges: [] } })
+    render(
+      <ProjectProvider>
+        <RoomDesignTab projectName="p1" />
+      </ProjectProvider>,
+    )
+    expect(await screen.findByText('柜位 168 / 需求 168')).toBeInTheDocument()
+    expect(screen.getByText('✅ 柜位充足')).toBeInTheDocument()
+    expect(screen.getByText('柜位 168 / 需求 168').closest('button')?.className).toContain('text-green')
+
+    // 三处同源（T-B1-26 前置断言）：估算精确需求 === 预检总柜位 === 差额条需求数
+    const estimate = estimateCabinetDemand(nodes)
+    const feasibility = checkRackFeasibility(matrix, nodes)
+    expect(estimate.totalCabinets).toBe(168)
+    expect(feasibility.requiredCabinets).toBe(estimate.totalCabinets)
+    expect(feasibility.capacity.slots).toBe(168)
   })
 })
 

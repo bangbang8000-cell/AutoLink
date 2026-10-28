@@ -86,6 +86,11 @@ export interface ProjectRackConfig {
   top_reserved_u?: number
   /** M4: 每柜 GPU 服务器台数（非超节点方案，默认 1 = 1 柜 1 台；计台数不计卡数） */
   gpu_per_cabinet?: number
+  /**
+   * B5-01（FR-A26）：GPU 共柜档位
+   * fixed1 固定 1 台/柜 / byPower 按功率计算 / manual 人工指定（缺省按 gpu_per_cabinet 推断）
+   */
+  gpu_share_mode?: 'fixed1' | 'byPower' | 'manual'
   cabinet_list?: string  // CSV file path or inline data
 }
 

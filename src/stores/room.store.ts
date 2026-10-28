@@ -11,6 +11,15 @@ import { create } from 'zustand'
 import { useToastStore } from './toast.store'
 import { useRackStore, type RackCabinet, type RackTopologyNode } from './rack.store'
 import type { RackMatrixLayoutOptions, RackMatrixLayoutStats } from '@/utils/rackMatrixLayout'
+import type { RackFeasibilityResult } from '@/utils/rackFeasibility'
+// A18/A19：机房几何参数（平面 mm 逻辑坐标与 3D 共用同一事实源）
+import {
+  GEOMETRY_CABINETS_PER_ROW_RANGE,
+  resolveGeometry,
+  type RoomGeometryData,
+} from '@/utils/roomGeometry'
+// B1-01：柜型/自由域/占位集合与后端 room.py 同源于 roomTaxonomy.json
+import { CABINET_TYPES, FREE_DOMAIN_TYPES, PLACEHOLDER_TYPES } from '@/shared/roomTaxonomy'
 // 5.4.9-F549-4：大规模矩阵落位走 Web Worker（避免同步阻塞主线程）
 import { runMatrixRackLayout } from '@/utils/matrixRackLayoutRunner'
 
@@ -28,6 +37,8 @@ export interface RoomCellData {
   type: string                   // gpu/network/storage/compute/combined/empty
   placeholder: string | null     // ac/pillar/null
   cabinetId: number | null
+  /** B1-07（FR-A03）：格子类型是否由落位时的「空白格按需改判」自动写入；人工改型后为 false/缺省 */
+  typeAuto?: boolean
 }
 
 /** 机房矩阵（对齐 backend/room.py RoomMatrix.to_dict） */
@@ -39,6 +50,64 @@ export interface RoomMatrixData {
   cells: RoomCellData[]
   /** M4: 机房机柜布局是否已定稿（定稿后才进入柜内规划；可撤销） */
   finalized?: boolean
+  /** A18/A19：机房几何参数（米制；v1 布局缺省，读取时按行列补齐默认值） */
+  geometry?: RoomGeometryData
+}
+
+/** A21：机房矩阵当前 schema 版本（与 backend room.py ROOM_SCHEMA_VERSION 同值） */
+export const ROOM_SCHEMA_VERSION = 2
+
+/** A22（FR-A22）：每排列数上限（与 backend GEOMETRY_CABINETS_PER_ROW_RANGE 上限同值） */
+export const ROOM_COL_LIMIT = GEOMETRY_CABINETS_PER_ROW_RANGE[1]
+
+/** A22：旧项目列数超上限的阻断信息（非空表示已阻断，矩阵不载入机房设计） */
+export interface RoomLimitBlock {
+  projectName: string
+  /** 当前列数 N */
+  currentCols: number
+  /** 超出上限的列数 M */
+  overflowCols: number
+  limit: number
+  /** 超出列中含机柜/占位/人工标记的柜位清单（要求先清空或改排） */
+  affected: Array<{ position: string; type: string; cabinetId: number | null; placeholder: string | null }>
+}
+
+/** A22：超出列上限的列号（按列顺序取第 25 列及之后） */
+export function overflowColNumbers(matrix: Pick<RoomMatrixData, 'cols'>): number[] {
+  return matrix.cols.slice(ROOM_COL_LIMIT)
+}
+
+/** A22：超出列中「非空」的柜位清单（已落柜 / 占位 / 人工标记类型，均不可静默丢弃） */
+export function occupiedOverflowCells(matrix: RoomMatrixData): RoomLimitBlock['affected'] {
+  const drop = new Set(overflowColNumbers(matrix))
+  return matrix.cells
+    .filter(
+      (c) =>
+        drop.has(c.col) &&
+        (c.cabinetId !== null || c.placeholder !== null || (!!c.type && c.type !== 'empty')),
+    )
+    .map((c) => ({
+      position: `${c.row}${c.col}`,
+      type: c.type,
+      cabinetId: c.cabinetId,
+      placeholder: c.placeholder,
+    }))
+}
+
+/**
+ * A22：裁掉超出上限的列（仅保留 ≤24 列的格子，逐字段不变）。
+ * 仅在超出列全为空时可直接调用；含非空时须先由用户清空/改排。
+ */
+export function trimOverflowCols(matrix: RoomMatrixData): RoomMatrixData {
+  const keep = matrix.cols.slice(0, ROOM_COL_LIMIT)
+  const keepSet = new Set(keep)
+  return {
+    ...matrix,
+    schemaVersion: ROOM_SCHEMA_VERSION,
+    cols: keep,
+    cells: matrix.cells.filter((c) => keepSet.has(c.col)),
+    geometry: { ...resolveGeometry(matrix), cabinetsPerRow: keep.length },
+  }
 }
 
 // ================================================================
@@ -74,14 +143,11 @@ export interface RoomOptimizeParams {
   resetExisting?: boolean
 }
 
-/** 可写入格子的机柜类型（对齐 RoomCellData.type 有效值；v1.4 加 power 电源柜；525-d 加 scaleup/security/custom，保证柜型回写不漂移） */
-export const ROOM_MARK_TYPES = new Set([
-  'gpu', 'network', 'storage', 'compute', 'combined', 'power',
-  'scaleup', 'security', 'custom',
-])
+/** 可写入格子的机柜类型（B1-01：来自 roomTaxonomy.json，与后端同源；含 power/scaleup/security/custom，保证柜型回写不漂移） */
+export const ROOM_MARK_TYPES: ReadonlySet<string> = new Set(CABINET_TYPES)
 
 /** M4（AL-ED3）：rack.store 机柜类型有效集（格子改类型 → 仅此域内联动机柜 type；combined/empty 不写回） */
-const CABINET_TYPE_SET = new Set(['gpu', 'network', 'storage', 'compute', 'security', 'custom', 'scaleup', 'power'])
+const CABINET_TYPE_SET = new Set(CABINET_TYPES.filter((t) => t !== 'combined'))
 
 /** 标记工具：select 选择；ac/pillar 占位；类型标记；clear 清除标记 */
 export type RoomMarkTool =
@@ -111,7 +177,7 @@ export const ROOM_TOOL_LABEL_KEYS: Record<RoomMarkTool, string> = {
 }
 
 const TYPE_TOOLS = new Set<RoomMarkTool>(['gpu', 'network', 'storage', 'compute', 'combined', 'power'])
-const PLACEHOLDER_TOOLS = new Set<RoomMarkTool>(['ac', 'pillar'])
+const PLACEHOLDER_TOOLS = new Set<RoomMarkTool>(Array.from(PLACEHOLDER_TYPES) as RoomMarkTool[])
 
 /** 机柜类型 → 设备域（对齐 backend RoomConstraints.type_device_map；域外类型如 security/custom/scaleup 视为无限制） */
 const CABINET_DEVICE_TYPE: Record<string, string> = {
@@ -134,6 +200,14 @@ interface RoomState {
   saveMatrix: (projectName: string) => Promise<boolean>
   /** M4: 机房布局定稿/撤销定稿（定稿后才进入柜内规划） */
   setFinalized: (finalized: boolean, projectName?: string) => void
+  /** A19/A20：更新几何参数（通道宽三档等）；平面与 3D 同源读取 */
+  updateGeometry: (patch: Partial<RoomGeometryData>, projectName?: string) => void
+  /** A22：旧项目列数超上限的阻断信息（非空 → 机房设计不可进入，需先清空/改排超出列） */
+  limitBlock: RoomLimitBlock | null
+  /** A22：关闭阻断提示（不迁移、不载入矩阵） */
+  clearLimitBlock: () => void
+  /** A22：清空超出列的柜位/占位/类型标记并裁剪到 ≤24 列，随后载入并写回 */
+  dropOverflowCols: (projectName: string) => Promise<boolean>
   setMarkTool: (tool: RoomMarkTool) => void
   markCell: (position: string) => void
   selectPosition: (position: string | null) => void
@@ -162,7 +236,13 @@ interface RoomState {
     projectName: string,
     nodes: RackTopologyNode[],
     opts?: RackMatrixLayoutOptions,
-  ) => Promise<{ ok: boolean; errors: string[]; stats?: RackMatrixLayoutStats }>
+  ) => Promise<{
+    ok: boolean
+    errors: string[]
+    stats?: RackMatrixLayoutStats
+    /** B1-04：预检未通过时的缺口明细与解法（O1 表格化拒绝弹窗；此时未写入任何落位） */
+    feasibility?: RackFeasibilityResult
+  }>
   mountCabinet: (position: string, cabinetId: number) => MountCheck
   unmountCabinet: (position: string) => MountCheck
   // V3.1.4-T8-2: 机房智能落位
@@ -221,7 +301,8 @@ export function checkMount(cabinet: RackCabinet, cell: RoomCellData): MountCheck
     return { ok: false, errors, warnings }
   }
   const deviceType = CABINET_DEVICE_TYPE[cabinet.type]
-  if (deviceType && cell.type !== 'combined' && cell.type !== 'empty' && cell.type !== deviceType) {
+  // B1-01：自由域柜型（combined/empty/scaleup/security/custom）不约束设备域，与后端同源
+  if (deviceType && !FREE_DOMAIN_TYPES.has(cell.type) && cell.type !== deviceType) {
     errors.push(`位置 ${cell.row}${cell.col} 类型为 ${cell.type}，不允许放置 ${cabinet.type} 机柜`)
     return { ok: false, errors, warnings }
   }
@@ -250,12 +331,27 @@ function targetFor(tool: RoomMarkTool, cell: RoomCellData): Partial<RoomCellData
   }
   if (TYPE_TOOLS.has(tool)) {
     const type = cell.type === tool ? 'empty' : tool
-    return { type }
+    // B1-07：人工改型 → 退出自动改判域（后续落位恒定跳过该格类型）
+    return { type, typeAuto: false }
   }
   if (tool === 'clear') {
-    return { type: 'empty', placeholder: null, cabinetId: null }
+    return { type: 'empty', placeholder: null, cabinetId: null, typeAuto: false }
   }
   return {}
+}
+
+/** A22：被阻断的超限矩阵（等用户清空/改排超出列后再迁移；仅内存会话） */
+let pendingLimitMatrix: RoomMatrixData | null = null
+
+/** A22：迁移结果直接写回 room_layout.json（不强制走后端校验，避免迁移被旧项目其他问题卡住） */
+async function writeRoomLayout(projectName: string, matrix: RoomMatrixData): Promise<void> {
+  if (!window.electron?.project?.saveFile) return
+  try {
+    await window.electron.project.saveFile(projectName, 'room_layout.json', JSON.stringify(matrix, null, 2))
+  } catch (err) {
+    console.error('writeRoomLayout:', err)
+    useToastStore.getState().addToast('error', '机房矩阵迁移写回失败', 5000)
+  }
 }
 
 export const useRoomStore = create<RoomState>()((set, get) => ({
@@ -263,6 +359,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   markTool: 'select',
   selectedPosition: null,
   multiSelected: [],
+  // A22：超限旧项目的阻断信息（清空/裁剪后才置空）
+  limitBlock: null,
   // M2（AL-UR1）：矩阵编辑撤销/重做命令栈（仅内存会话）
   undoStack: [],
   redoStack: [],
@@ -278,7 +376,47 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
         if (jsonStr) {
           const data = JSON.parse(jsonStr) as RoomMatrixData
           if (data && Array.isArray(data.rows) && Array.isArray(data.cols) && Array.isArray(data.cells)) {
-            set({ matrix: data, selectedPosition: null })
+            // A22：列上限 24——超出列全为空直接裁剪迁移（一次性写回）；含非空则阻断并列出受影响柜位
+            if (data.cols.length > ROOM_COL_LIMIT) {
+              const affected = occupiedOverflowCells(data)
+              if (affected.length > 0) {
+                pendingLimitMatrix = data
+                set({
+                  matrix: null,
+                  selectedPosition: null,
+                  limitBlock: {
+                    projectName,
+                    currentCols: data.cols.length,
+                    overflowCols: data.cols.length - ROOM_COL_LIMIT,
+                    limit: ROOM_COL_LIMIT,
+                    affected,
+                  },
+                })
+                useToastStore
+                  .getState()
+                  .addToast(
+                    'error',
+                    `机房共 ${data.cols.length} 列，超出上限 ${ROOM_COL_LIMIT} 列 ${data.cols.length - ROOM_COL_LIMIT} 列，请先清空或改排`,
+                    6000,
+                  )
+                return
+              }
+              const trimmed = trimOverflowCols(data)
+              pendingLimitMatrix = null
+              set({ matrix: trimmed, selectedPosition: null, limitBlock: null })
+              await writeRoomLayout(projectName, trimmed)
+              useToastStore
+                .getState()
+                .addToast(
+                  'success',
+                  `已裁剪 ${data.cols.length - ROOM_COL_LIMIT} 个全空列（列上限 ${ROOM_COL_LIMIT}）`,
+                  5000,
+                )
+              await restoreRoomUndoHistory(projectName).catch(() => {})
+              return
+            }
+            pendingLimitMatrix = null
+            set({ matrix: data, selectedPosition: null, limitBlock: null })
             // M-F2（F2-2）：加载完成后恢复上次会话持久化的撤销/重做栈（覆盖加载产生的快照）
             await restoreRoomUndoHistory(projectName).catch(() => {})
             return
@@ -289,7 +427,8 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       console.error('loadMatrix:', err)
       useToastStore.getState().addToast('error', '机房矩阵加载失败，已重置', 5000)
     }
-    set({ matrix: null, selectedPosition: null })
+    set({ matrix: null, selectedPosition: null, limitBlock: null })
+    pendingLimitMatrix = null
     // M-F2（F2-2）：空状态也恢复持久化撤销栈（可回退到重启前）
     await restoreRoomUndoHistory(projectName).catch(() => {})
   },
@@ -297,6 +436,13 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   createMatrix: async (projectName, rows, cols, name) => {
     if (!rows.length || !cols.length) {
       useToastStore.getState().addToast('error', '矩阵必须定义行与列', 5000)
+      return false
+    }
+    // A22：新建矩阵列数上限 24（超出直接拒绝，不静默截断）
+    if (cols.length > ROOM_COL_LIMIT) {
+      useToastStore
+        .getState()
+        .addToast('error', `每排列数上限 ${ROOM_COL_LIMIT}（当前 ${cols.length}）`, 5000)
       return false
     }
     try {
@@ -352,6 +498,51 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     // 避免切换项目/重启后 finalized 丢失；无项目名时不落盘（保持向后兼容）
     if (projectName) {
       void get().saveMatrix(projectName)
+    }
+  },
+
+  // A19：几何参数（通道宽等）——同一事实源，平面前端与 3D 都读 matrix.geometry
+  updateGeometry: (patch, projectName?) => {
+    const { matrix } = get()
+    if (!matrix) return
+    set({ matrix: { ...matrix, geometry: { ...resolveGeometry(matrix), ...patch } } })
+    if (projectName) {
+      void get().saveMatrix(projectName)
+    }
+  },
+
+  // A22：关闭阻断提示（不迁移、不载入矩阵；下次进入机房设计仍会再次阻断）
+  clearLimitBlock: () => {
+    pendingLimitMatrix = null
+    set({ limitBlock: null })
+  },
+
+  // A22：清空超出列的柜位/占位/类型标记，裁剪到 ≤24 列并写回（一次性迁移）
+  dropOverflowCols: async (projectName) => {
+    const data = pendingLimitMatrix
+    if (!data) return false
+    const drop = new Set(overflowColNumbers(data))
+    const cleared: RoomMatrixData = {
+      ...data,
+      cells: data.cells.map((c) =>
+        drop.has(c.col)
+          ? { ...c, type: 'empty', placeholder: null, cabinetId: null, typeAuto: false }
+          : c,
+      ),
+    }
+    const trimmed = trimOverflowCols(cleared)
+    try {
+      await writeRoomLayout(projectName, trimmed)
+      pendingLimitMatrix = null
+      set({ matrix: trimmed, selectedPosition: null, limitBlock: null })
+      useToastStore
+        .getState()
+        .addToast('success', `已清空超出列并裁剪到 ${ROOM_COL_LIMIT} 列`, 5000)
+      return true
+    } catch (err) {
+      console.error('dropOverflowCols:', err)
+      useToastStore.getState().addToast('error', '超出列清空失败', 5000)
+      return false
     }
   },
 
@@ -465,14 +656,16 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     const posSet = new Set(positions)
     const skipped: string[] = []
     let applied = 0
+    // B1-07：批量人工改型 → 退出自动改判域
+    const effPatch = patch.type != null ? { ...patch, typeAuto: false } : patch
     const cells = matrix.cells.map((cell) => {
       if (!posSet.has(`${cell.row}${cell.col}`)) return cell
       applied++
       if (patch.placeholder != null && cell.cabinetId != null) {
         skipped.push(`${cell.row}${cell.col}`)
-        return { ...cell, ...patch, cabinetId: null }
+        return { ...cell, ...effPatch, cabinetId: null }
       }
-      return { ...cell, ...patch }
+      return { ...cell, ...effPatch }
     })
     set((s) => ({
       ...(applied > 0 ? pushRoomHistory(s) : {}),
@@ -640,6 +833,14 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
       }
     })
     void cancel
+    // B1-04 / FR-A01：预检拒绝 → 不写 store、不改矩阵、不落盘（原布局逐字段不变）
+    if (!result.ok) {
+      const errors = result.feasibility.suggestions.length > 0
+        ? result.feasibility.suggestions
+        : ['落位预检未通过']
+      useToastStore.getState().addToast('error', `柜位不足，已取消落位：${errors[0]}`, 6000)
+      return { ok: false, errors, feasibility: result.feasibility }
+    }
     const { cabinets, unplacedDevices, cells, stats } = result
     useRackStore.getState().setRacks(cabinets, unplacedDevices, cabinets.length ? cabinets[0].id : null)
     // M2（AL-UR1）：按矩阵落位为跨 store 批量操作——room/rack 各压一次快照（撤销后矩阵↔柜内一致）
@@ -823,7 +1024,10 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
     return { ok: errors.length === 0, errors }
   },
 
-  reset: () => set({ matrix: null, selectedPosition: null, multiSelected: [] }),
+  reset: () => {
+    pendingLimitMatrix = null
+    set({ matrix: null, selectedPosition: null, multiSelected: [], limitBlock: null })
+  },
 }))
 
 // ===== M-F2（F2-2）：机房矩阵撤销/重做栈跨会话持久化（项目目录 + 容量受控 + 重启恢复） =====

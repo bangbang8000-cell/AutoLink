@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from room_taxonomy import rack_reserve_for
+
 
 def _device_cab_type(dtype: str) -> str:
     """设备类型 → 偏好柜型（gpu/storage/compute/network）"""
@@ -27,11 +29,15 @@ def _device_cab_type(dtype: str) -> str:
 
 
 def _find_slot(cab: Dict[str, Any], height: int, power: int, gpu_count: int, gpu_per_cabinet: int,
-               from_top: bool = False, top_reserved_u: int = 2) -> Optional[int]:
+               from_top: bool = False, top_reserved_u: int = 2,
+               bottom_reserved_u: int = 0) -> Optional[int]:
     """在柜内找可用 U 位（height 起，U 不冲突 + 功率不超 + GPU 台数上限）
-    M5 方向化：from_top=True 时从最高可用位向下找（网络设备），否则从底部向上找（服务器类）；顶部预留 top_reserved_u"""
+    M5 方向化：from_top=True 时从最高可用位向下找（网络设备），否则从底部向上找（服务器类）；
+    B4-04 / FR-A23：底部预留 bottom_reserved_u、顶部预留 top_reserved_u 按柜型由调用方传入"""
     total_u = int(cab.get('totalU') or 42)
-    usable_u = max(1, total_u - top_reserved_u)
+    low_u = max(1, bottom_reserved_u + 1)
+    high_u = max(low_u, total_u - top_reserved_u)
+    usable_u = high_u - low_u + 1
     power_limit = int(cab.get('power_limit') or 12000)
     devices = list(cab.get('devices') or [])
     if height <= 0 or height > usable_u:
@@ -44,12 +50,12 @@ def _find_slot(cab: Dict[str, Any], height: int, power: int, gpu_count: int, gpu
     ranges = [(int(d['startU']), int(d['endU'])) for d in devices
               if d.get('startU') is not None and d.get('endU') is not None]
     if from_top:
-        for start in range(usable_u - height + 1, 0, -1):
+        for start in range(high_u - height + 1, low_u - 1, -1):
             end = start + height - 1
             if all(end < s or start > e for s, e in ranges):
                 return start
     else:
-        for start in range(1, usable_u - height + 2):
+        for start in range(low_u, high_u - height + 2):
             end = start + height - 1
             if all(end < s or start > e for s, e in ranges):
                 return start
@@ -97,7 +103,10 @@ def optimize_rack_placements(
             gc = gpu_in(cab)
             # 仅 GPU 设备受每柜台数上限约束；网络/存储/通算不受
             cap = gpu_per_cabinet if pref == 'gpu' and cab['type'] == 'gpu' else 10 ** 9
-            start = _find_slot(cab, height, power, gc, cap, from_top=from_top, top_reserved_u=top_reserved_u)
+            reserve = rack_reserve_for(cab['type'], top_reserved_u)
+            start = _find_slot(cab, height, power, gc, cap, from_top=from_top,
+                               top_reserved_u=reserve['topReservedU'],
+                               bottom_reserved_u=reserve['bottomReservedU'])
             if start is not None:
                 end = start + height - 1
                 cab['devices'].append({

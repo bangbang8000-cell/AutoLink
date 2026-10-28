@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from typing import Any, Dict, List, Optional
 
 from rack_allocation import (
@@ -22,6 +23,13 @@ from rack_allocation import (
     CABINET_TYPE_SCALEUP,
     CABINET_TYPE_SECURITY,
     CABINET_TYPE_STORAGE,
+)
+# B1-01 / FR-A05：自由域与占位类型集合唯一真源在 roomTaxonomy.json，前端同源，禁止在此重写
+from room_taxonomy import (
+    FREE_DOMAIN_TYPES,
+    PLACEHOLDER_AC,
+    PLACEHOLDER_PILLAR,
+    PLACEHOLDER_TYPES,
 )
 
 # --- 矩阵单元机柜类型（在 rack_allocation 基础上扩展） ---
@@ -43,13 +51,17 @@ ROOM_TYPES = (ROOM_TYPE_GPU, ROOM_TYPE_NETWORK, ROOM_TYPE_STORAGE,
               ROOM_TYPE_SCALEUP, ROOM_TYPE_SECURITY, ROOM_TYPE_CUSTOM)
 
 # 自由域柜型（不约束设备域，等同 combined/empty，仅作可视化分类）
-ROOM_FREE_DOMAIN_TYPES = (ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY,
-                          ROOM_TYPE_SCALEUP, ROOM_TYPE_SECURITY, ROOM_TYPE_CUSTOM)
+# B1-01：集合来自 roomTaxonomy.json（前端同源），此处不再重复字面量
+ROOM_FREE_DOMAIN_TYPES = FREE_DOMAIN_TYPES
+_LOCAL_FREE_DOMAIN = (ROOM_TYPE_COMBINED, ROOM_TYPE_EMPTY,
+                      ROOM_TYPE_SCALEUP, ROOM_TYPE_SECURITY, ROOM_TYPE_CUSTOM)
+if set(_LOCAL_FREE_DOMAIN) != set(ROOM_FREE_DOMAIN_TYPES):
+    raise RuntimeError(
+        f'roomTaxonomy.json freeDomainTypes 与 room.py 柜型常量不一致：'
+        f'{sorted(ROOM_FREE_DOMAIN_TYPES)} != {sorted(_LOCAL_FREE_DOMAIN)}'
+    )
 
-# --- 占位类型（不可放置设备） ---
-PLACEHOLDER_AC = 'ac'          # 空调占位
-PLACEHOLDER_PILLAR = 'pillar'  # 柱子占位
-PLACEHOLDER_TYPES = (PLACEHOLDER_AC, PLACEHOLDER_PILLAR)
+# --- 占位类型（不可放置设备；PLACEHOLDER_AC='ac' / PLACEHOLDER_PILLAR='pillar' 见 room_taxonomy） ---
 
 # --- 设备类型（与 rack_allocation DEVICE_TYPE_* 对齐） ---
 DEVICE_TYPE_GPU = 'gpu'
@@ -57,11 +69,107 @@ DEVICE_TYPE_NETWORK = 'network'
 DEVICE_TYPE_STORAGE = 'storage'
 DEVICE_TYPE_COMPUTE = 'compute'
 
-ROOM_SCHEMA_VERSION = 1
+ROOM_SCHEMA_VERSION = 2
 LAYOUT_FILENAME = 'room_layout.json'
+# A21：v1 布局写回 v2 前的备份后缀（room_layout.json → room_layout.v1.bak.json）
+V1_BACKUP_SUFFIX = '.v1.bak.json'
+
+# ---- A18 机房几何参数（B3） ----
+GEOMETRY_CABINET_WIDTH = 0.6                 # 柜宽 m（固定）
+GEOMETRY_CABINET_DEPTH = 1.2                 # 柜深 m（固定）
+GEOMETRY_CABINET_HEIGHTS = (2.0, 2.2)        # 柜高 m：42U / 47U
+GEOMETRY_AISLE_WIDTHS = (1.2, 1.35, 1.6)     # 通道宽度 m
+GEOMETRY_ROW_RANGE = (1, 26)                 # 机柜行数
+GEOMETRY_CABINETS_PER_ROW_RANGE = (6, 24)    # 每排柜位（上限 24 硬校验）
 
 # 矩阵规模防御上限（避免误配超大矩阵）
 MAX_MATRIX_CELLS = 4096
+
+
+def _close(a: float, b: float, tol: float = 1e-6) -> bool:
+    return abs(float(a) - float(b)) <= tol
+
+
+class RoomGeometry:
+    """A18：机房几何参数（柜宽/柜深/柜高、通道宽度、行数、每排柜位）
+
+    v1 布局无此字段：读取时按矩阵 rows/cols 补齐默认值并写回 v2（A21）。
+    """
+
+    def __init__(
+        self,
+        cabinet_width: float = GEOMETRY_CABINET_WIDTH,
+        cabinet_depth: float = GEOMETRY_CABINET_DEPTH,
+        cabinet_height: float = 2.0,
+        aisle_width: float = 1.2,
+        row_count: int = 1,
+        cabinets_per_row: int = 6,
+    ) -> None:
+        self.cabinet_width = float(cabinet_width)
+        self.cabinet_depth = float(cabinet_depth)
+        self.cabinet_height = float(cabinet_height)
+        self.aisle_width = float(aisle_width)
+        self.row_count = int(row_count)
+        self.cabinets_per_row = int(cabinets_per_row)
+
+    @classmethod
+    def defaults_for(cls, rows: List[str], cols: List[int]) -> 'RoomGeometry':
+        """按矩阵行列补齐默认几何（v1 迁移与未显式传参时使用）"""
+        return cls(row_count=len(rows or []), cabinets_per_row=len(cols or []))
+
+    def to_dict(self) -> dict:
+        return {
+            'cabinetWidth': self.cabinet_width,
+            'cabinetDepth': self.cabinet_depth,
+            'cabinetHeight': self.cabinet_height,
+            'aisleWidth': self.aisle_width,
+            'rowCount': self.row_count,
+            'cabinetsPerRow': self.cabinets_per_row,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'RoomGeometry':
+        if not isinstance(data, dict):
+            raise TypeError("geometry 必须是 JSON 对象")
+        return cls(
+            cabinet_width=data.get('cabinetWidth', GEOMETRY_CABINET_WIDTH),
+            cabinet_depth=data.get('cabinetDepth', GEOMETRY_CABINET_DEPTH),
+            cabinet_height=data.get('cabinetHeight', 2.0),
+            aisle_width=data.get('aisleWidth', 1.2),
+            row_count=data.get('rowCount', 1),
+            cabinets_per_row=data.get('cabinetsPerRow', 6),
+        )
+
+    def validate(self, total_slots: Optional[int] = None) -> List[str]:
+        """几何参数校验（B3-08）：行 1–26 / 每排 6–24（上限 24 硬校验）/ 总和等于面板柜位
+
+        ``total_slots`` 为矩阵总柜位数；小于单排下限的历史小程序矩阵（测试/占位）
+        不做柜位范围与闭合校验，避免把非真实面板拒掉。
+        """
+        errors: List[str] = []
+        r_lo, r_hi = GEOMETRY_ROW_RANGE
+        if not r_lo <= self.row_count <= r_hi:
+            errors.append(f'机柜行数需在 {r_lo}–{r_hi} 行（当前 {self.row_count}）')
+        c_lo, c_hi = GEOMETRY_CABINETS_PER_ROW_RANGE
+        if total_slots is None or total_slots >= c_lo:
+            if self.cabinets_per_row > c_hi:
+                errors.append(f'单排上限 {c_hi} 柜（当前 {self.cabinets_per_row}）')
+            elif self.cabinets_per_row < c_lo:
+                errors.append(f'单排下限 {c_lo} 柜（当前 {self.cabinets_per_row}）')
+            if total_slots is not None:
+                slots = self.row_count * self.cabinets_per_row
+                if slots != total_slots:
+                    errors.append(
+                        f'rowCount × cabinetsPerRow（{self.row_count}×{self.cabinets_per_row}'
+                        f'={slots}）与面板总柜位 {total_slots} 不一致')
+        if not any(_close(self.cabinet_height, h) for h in GEOMETRY_CABINET_HEIGHTS):
+            errors.append(f'机柜高度仅支持 2.0 m（42U）/ 2.2 m（47U），当前 {self.cabinet_height:g} m')
+        if not any(_close(self.aisle_width, w) for w in GEOMETRY_AISLE_WIDTHS):
+            errors.append(f'通道宽度仅支持 1.2 / 1.35 / 1.6 m，当前 {self.aisle_width:g} m')
+        if self.cabinet_width <= 0 or self.cabinet_depth <= 0:
+            errors.append('柜宽/柜深必须为正数')
+        return errors
+
 
 
 class RoomCell:
@@ -118,11 +226,16 @@ class RoomMatrix:
         rows: List[str],
         cols: List[int],
         name: str = '机房',
+        geometry: Optional[RoomGeometry] = None,
     ) -> None:
         self.name = name or '机房'
         self.rows = [str(r) for r in (rows or [])]
         self.cols = [int(c) for c in (cols or [])]
         self.cells: Dict[str, RoomCell] = {}
+        # A18：几何参数（缺省按矩阵行列补齐；v1 迁移时同样走此默认）
+        self.geometry = geometry or RoomGeometry.defaults_for(self.rows, self.cols)
+        # A21：本次是否由 v1 布局迁移而来（供上层「提示一次」）
+        self.migrated_from_v1 = False
         self._init_cells()
 
     def _init_cells(self) -> None:
@@ -193,6 +306,7 @@ class RoomMatrix:
             'name': self.name,
             'rows': self.rows,
             'cols': self.cols,
+            'geometry': self.geometry.to_dict(),
             'cells': [c.to_dict() for c in self.cells.values()],
         }
 
@@ -203,6 +317,12 @@ class RoomMatrix:
             cols=[int(c) for c in data.get('cols', [])],
             name=str(data.get('name') or '机房'),
         )
+        # A21：v1 无 geometry → 保留按行列补齐的默认值（写回时落为 v2）
+        try:
+            if isinstance(data.get('geometry'), dict):
+                matrix.geometry = RoomGeometry.from_dict(data['geometry'])
+        except (TypeError, ValueError):
+            pass
         for cell_data in data.get('cells', []) or []:
             try:
                 cell = RoomCell.from_dict(cell_data)
@@ -219,6 +339,8 @@ class RoomMatrix:
             return errors
         if self.size > MAX_MATRIX_CELLS:
             errors.append(f"矩阵规模过大（{self.size} > {MAX_MATRIX_CELLS}）")
+        # B3-08：几何参数校验（行数/每排柜位/柜高/通道/闭合）
+        errors.extend(self.geometry.validate(self.size))
         for pos, cell in self.cells.items():
             if cell.position != pos:
                 errors.append(f"单元位置不一致: {pos} vs {cell.position}")
@@ -297,19 +419,50 @@ def create_default_room(rows: List[str], cols: List[int], name: str = '机房') 
     return RoomMatrix(rows=rows, cols=cols, name=name)
 
 
+def backup_v1_layout(path: str) -> Optional[str]:
+    """A21：写盘前备份 v1 布局（只备份一次，保留最初 v1 原件）；非 v1/不存在/损坏 → None"""
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        version = int(data.get('schemaVersion') or 1)
+    except Exception:  # noqa: BLE001 - 损坏文件不阻断写盘
+        return None
+    if version >= ROOM_SCHEMA_VERSION:
+        return None
+    bak = os.path.splitext(path)[0] + V1_BACKUP_SUFFIX
+    if not os.path.exists(bak):
+        shutil.copy2(path, bak)
+    return bak
+
+
 def save_room_layout(path: str, matrix: RoomMatrix) -> None:
-    """保存矩阵到 room_layout.json（UTF-8，ensure_ascii=False）"""
+    """保存矩阵到 room_layout.json（UTF-8，ensure_ascii=False；覆盖 v1 前先备份）"""
     path = os.path.abspath(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    backup_v1_layout(path)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(matrix.to_dict(), f, ensure_ascii=False, indent=2)
 
 
 def load_room_layout(path: str) -> RoomMatrix:
-    """从 room_layout.json 读取矩阵（文件不存在抛 FileNotFoundError）"""
+    """从 room_layout.json 读取矩阵（文件不存在抛 FileNotFoundError）
+
+    A21：读到 v1 时按默认几何补齐并写回 v2（写回前自动生成 ``.v1.bak.json``），
+    并在返回矩阵上置 ``migrated_from_v1=True`` 供上层提示一次。
+    """
     with open(path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    return RoomMatrix.from_dict(data)
+    try:
+        version = int(data.get('schemaVersion') or 1)
+    except (TypeError, ValueError):
+        version = 1
+    matrix = RoomMatrix.from_dict(data)
+    if version < ROOM_SCHEMA_VERSION:
+        matrix.migrated_from_v1 = True
+        save_room_layout(path, matrix)
+    return matrix
 
 
 def validate_room_layout(data: dict) -> List[str]:

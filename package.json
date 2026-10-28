@@ -1,6 +1,6 @@
 {
   "name": "autolink",
-  "version": "5.5.0",
+  "version": "5.5.11",
   "description": "AutoLink - AI智算中心网络规划与可视化工具",
   "type": "module",
   "main": "dist-electron/main.js",
@@ -122,6 +122,10 @@
       {
         "from": "backend",
         "to": "backend"
+      },
+      {
+        "from": "src/shared/roomTaxonomy.json",
+        "to": "backend/roomTaxonomy.json"
       },
       {
         "from": "dist/backend-dist",

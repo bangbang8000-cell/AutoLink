@@ -1,6 +1,6 @@
 /**
- * 5.2.1-521-b/c/d：工作台状态 store 单测
- * - aidcDone：AIDC 规划手动标记完成（D5）
+ * 5.2.1-521-b/c/d + 5.5.2 / A12：工作台状态 store 单测
+ * - stepDone：子视图完成标记（唯一完成判据）与失效来源
  * - stale：级联失效置"待调整"集合（downstreamOf 落 store）
  * - 变更指纹检测：designConfig/planHash 变化 → 通知下游失效
  */
@@ -10,29 +10,71 @@ import { useWorkbenchStore } from '@/stores/workbench.store'
 describe('WorkbenchStore', () => {
   beforeEach(() => {
     useWorkbenchStore.setState({
-      aidcDone: {},
+      stepDone: {},
       stale: {},
       configFingerprint: {},
       planHash: {},
     })
   })
 
-  describe('aidcDone（AIDC 规划手动完成，521-b）', () => {
-    it('markAidcDone 后该项目 aidc 状态为已完成', () => {
-      useWorkbenchStore.getState().markAidcDone('p1')
-      expect(useWorkbenchStore.getState().aidcDone['p1']).toBe(true)
-    })
-
-    it('unmarkAidcDone 撤销完成标记（参数变更自动回退入口）', () => {
+  describe('stepDone（唯一完成判据，5.5.2 A12）', () => {
+    it('markStepDone 记录完成时间，并解除该步待调整', () => {
       const s = useWorkbenchStore.getState()
-      s.markAidcDone('p1')
-      s.unmarkAidcDone('p1')
-      expect(useWorkbenchStore.getState().aidcDone['p1']).toBeUndefined()
+      s.invalidateDownstream('p1', ['aidc'])
+      expect(useWorkbenchStore.getState().getStale('p1')).toContain('design')
+      s.markStepDone('p1', 'design')
+      const rec = useWorkbenchStore.getState().getStepDone('p1', 'design')
+      expect(rec?.done).toBe(true)
+      expect(rec?.doneAt).toBeTruthy()
+      expect(useWorkbenchStore.getState().getStale('p1')).not.toContain('design')
     })
 
-    it('不同项目互不影响', () => {
-      useWorkbenchStore.getState().markAidcDone('p1')
-      expect(useWorkbenchStore.getState().aidcDone['p2']).toBeUndefined()
+    it('unmarkStepDone 撤销完成标记（参数变更自动回退入口）', () => {
+      const s = useWorkbenchStore.getState()
+      s.markStepDone('p1', 'aidc')
+      s.unmarkStepDone('p1', 'aidc')
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'aidc')).toBeUndefined()
+    })
+
+    it('不同项目/不同子视图互不影响', () => {
+      useWorkbenchStore.getState().markStepDone('p1', 'aidc')
+      expect(useWorkbenchStore.getState().getStepDone('p2', 'aidc')).toBeUndefined()
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'design')).toBeUndefined()
+    })
+  })
+
+  describe('invalidatedBy 级联标记（5.5.2 A12）', () => {
+    it('已完成的下游 → 上游变更时写入 invalidatedBy（待重新确认）', () => {
+      const s = useWorkbenchStore.getState()
+      s.markStepDone('p1', 'design')
+      s.markStepDone('p1', 'main')
+      s.invalidateDownstream('p1', ['design'])
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'main')?.invalidatedBy).toBe('design')
+    })
+
+    it('未完成的下游不写 invalidatedBy（只进 stale）', () => {
+      useWorkbenchStore.getState().invalidateDownstream('p1', ['design'])
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'main')).toBeUndefined()
+      expect(useWorkbenchStore.getState().getStale('p1')).toContain('main')
+    })
+
+    it('resolveStale 清除 invalidatedBy', () => {
+      const s = useWorkbenchStore.getState()
+      s.markStepDone('p1', 'main')
+      s.invalidateDownstream('p1', ['design'])
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'main')?.invalidatedBy).toBe('design')
+      s.resolveStale('p1', ['main'])
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'main')?.invalidatedBy).toBeUndefined()
+    })
+
+    it('resolveAllStale 一次性清除全部 invalidatedBy', () => {
+      const s = useWorkbenchStore.getState()
+      s.markStepDone('p1', 'design')
+      s.markStepDone('p1', 'main')
+      s.invalidateDownstream('p1', ['aidc'])
+      s.resolveAllStale('p1')
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'design')?.invalidatedBy).toBeUndefined()
+      expect(useWorkbenchStore.getState().getStepDone('p1', 'main')?.invalidatedBy).toBeUndefined()
     })
   })
 

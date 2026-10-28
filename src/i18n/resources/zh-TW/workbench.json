@@ -345,5 +345,19 @@
   "doc.thSize": "大小",
   "doc.thStatus": "狀態",
   "doc.thAction": "操作",
-  "knowledge.tagExample": "如：網路、機櫃、設備（Enter 分隔）"
+  "knowledge.tagExample": "如：網路、機櫃、設備（Enter 分隔）",
+  "subviewAction": {
+    "markDone": "標記完成",
+    "done": "已完成",
+    "undo": "撤銷",
+    "reconfirm": "重新確認完成",
+    "noop": "本步無操作",
+    "invalidatedTip": "上游已變更，請重新確認",
+    "reasonDesign": "請先生成組網設計",
+    "reasonRoomMatrix": "請先建立機房矩陣",
+    "reasonRackMatrix": "請先定稿機房矩陣",
+    "reasonRackCabinets": "請先建立機櫃",
+    "reasonMainOutputs": "請先勾選輸出類型",
+    "reasonRender": "請先完成渲染"
+  }
 }
