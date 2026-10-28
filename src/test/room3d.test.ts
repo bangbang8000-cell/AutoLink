@@ -17,8 +17,8 @@ import {
   ROOM_CABINET_GAP,
   ROOM_AISLE_SPACING,
   ROOM_U_HEIGHT,
-} from './room3d'
-import { defaultGeometry, type RoomGeometryData } from './roomGeometry'
+} from '../utils/room3d'
+import { defaultGeometry, type RoomGeometryData } from '../utils/roomGeometry'
 
 const geo = (patch: Partial<RoomGeometryData> = {}): RoomGeometryData => ({
   ...defaultGeometry(15, 15),
